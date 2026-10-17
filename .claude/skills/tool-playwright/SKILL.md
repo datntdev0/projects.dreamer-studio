@@ -22,7 +22,7 @@ allowed-tools: Bash(playwright-cli:*)
    - Snapshot again and compare, or `playwright-cli --raw eval "document.title"`.
    - Errors: `playwright-cli console error`, `playwright-cli requests`.
    - Theme: `playwright-cli --raw eval "document.documentElement.dataset.theme"`.
-6. **Evidence** — `playwright-cli screenshot --filename=<scratchpad>/<req-id>-ac<n>.png`.
+6. **Evidence** — `playwright-cli screenshot --filename=.claude/flows/<id>/<req-id>-ac<n>.png` (scratchpad outside `/solo-implement`).
 7. **Close** — `playwright-cli close` (or `-s=<name> close`); stop the dev server.
 
 ## Rules

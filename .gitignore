@@ -11,7 +11,7 @@ __pycache__/
 # Claude framework
 .claude/settings.local.json
 _docs/*.solution.html
-_docs/*.plan.md
+.claude/flows/
 
 # Build output
 node_modules/

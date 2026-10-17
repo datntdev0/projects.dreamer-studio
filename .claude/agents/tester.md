@@ -23,7 +23,8 @@ model: sonnet
 - One AC → at least one test or one manual check with evidence.
 - Do not change production code; report bugs to the architect instead.
 - Bug report: steps, expected, actual, evidence (log, screenshot path).
-- Save screenshots and temp files outside the repo (scratchpad) unless asked.
+- In `/solo-implement`: save results and screenshots in `.claude/flows/<id>/` (gitignored).
+- Otherwise save temp files in the scratchpad.
 
 ## Output
 

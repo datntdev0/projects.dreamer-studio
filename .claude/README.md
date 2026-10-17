@@ -28,7 +28,7 @@ onboard ──► analysis ──► solution ──► implement
 | `/solo-onboard` | architect | analyst, coder, human | `.claude/README.md`, `_docs/1.architecture-overview.html`, xlsx `Open Decisions` |
 | `/solo-analysis <idea\|ID>` | analyst | designer, architect, human | `_docs/0.requirements-analysis.xlsx` |
 | `/solo-solution <ID>` | architect | analyst, designer, human | `_docs/<ID>.solution.html` |
-| `/solo-implement <ID>` | architect | coder, tester, human | commits, `_docs/<ID>.plan.md`, report |
+| `/solo-implement <ID>` | architect | coder, tester, human | commits, `.claude/flows/<ID>/` (plan, evidence), report |
 | `tool-playwright` | tester / coder | — | UI checks with `playwright-cli` |
 
 ### Agents (`.claude/agents/`)
@@ -46,7 +46,7 @@ onboard ──► analysis ──► solution ──► implement
 1. Every skill ends with a **human gate**; nothing moves on without approval.
 2. Lead = main session; collaborators = sub-agents, spawned in parallel when independent.
 3. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
-4. Implementation: one plan step = one commit; last commit fixes review and test findings.
+4. Implementation: one plan step = one commit; then a fix commit for review and test findings; docs commit last.
 
 ## Layout
 
@@ -56,6 +56,7 @@ onboard ──► analysis ──► solution ──► implement
   skills/        solo-onboard, solo-analysis, solo-solution, solo-implement, tool-playwright
   scripts/       reqs.py (xlsx read/check/upsert), docs.py (new doc, serve), common.py
   templates/     architecture-decision.html, architecture-overview.html, solution.html, plan.md
+  flows/<ID>/    plan.md, verification.md, screenshots (gitignored)
     assets/      doc.css, doc.js (shared by all _docs/*.html)
 _docs/
   0.requirements-analysis.xlsx   requirements + Open Decisions sheet (source of truth)
@@ -63,7 +64,6 @@ _docs/
   0.architecture-decision.html   viewer of the Open Decisions sheet; human picks and exports
   1.architecture-overview.html   architecture
   <ID>.solution.html             solution per capacity / requirement
-  <ID>.plan.md                   implementation plan
 ```
 
 ## Scripts

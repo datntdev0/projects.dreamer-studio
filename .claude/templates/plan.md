@@ -1,6 +1,7 @@
 # {{ID}} Implementation Plan
 
 - Solution: `_docs/{{ID}}.solution.html`
+- Evidence: `.claude/flows/{{ID}}/` (`verification.md`, screenshots)
 - Created: {{DATE}}
 - Status: proposed <!-- proposed | approved | in-progress | done -->
 
@@ -18,10 +19,16 @@
   3. [tester] tests for AC-1, AC-2
 - Done when: <check>
 
-### Step N — fix
+### Step N-1 — fix
 
 - Commit: `fix(<scope>): resolve review and test findings [{{ID}}]`
 - Covers: review findings + bugs from testing
+
+### Step N — docs
+
+- Commit: `docs(<scope>): <summary> [{{ID}}]`
+- Covers: docs, ADs and requirement status match the final code (after fix; all ACs pass)
+- Done when: `reqs.py check` passes
 
 ## Progress
 

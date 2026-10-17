@@ -1,4 +1,4 @@
-"""Create _docs files from .claude/templates and serve them locally.
+"""Create _docs files and flow plans from .claude/templates and serve them locally.
 
 Usage:
   python .claude/scripts/docs.py new architecture-decision
@@ -12,14 +12,14 @@ import datetime
 import functools
 import http.server
 
-from common import DOCS, ROOT, TEMPLATES, fail
+from common import ROOT, TEMPLATES, fail
 
-# template name -> (template file, output file name pattern)
+# template name -> (template file, output path pattern from the repo root)
 DOC_TYPES = {
-    "architecture-decision": ("architecture-decision.html", "0.architecture-decision.html"),
-    "architecture-overview": ("architecture-overview.html", "1.architecture-overview.html"),
-    "solution": ("solution.html", "{id}.solution.html"),
-    "plan": ("plan.md", "{id}.plan.md"),
+    "architecture-decision": ("architecture-decision.html", "_docs/0.architecture-decision.html"),
+    "architecture-overview": ("architecture-overview.html", "_docs/1.architecture-overview.html"),
+    "solution": ("solution.html", "_docs/{id}.solution.html"),
+    "plan": ("plan.md", ".claude/flows/{id}/plan.md"),
 }
 
 
@@ -27,7 +27,7 @@ def cmd_new(args):
     template_name, output_pattern = DOC_TYPES[args.type]
     if "{id}" in output_pattern and not args.id:
         fail(f"'{args.type}' needs an ID, e.g. TH01-03 or REQ-013")
-    output = DOCS / output_pattern.format(id=args.id)
+    output = ROOT / output_pattern.format(id=args.id)
     if output.exists() and not args.force:
         fail(f"{output.relative_to(ROOT)} exists; edit it or pass --force")
 
@@ -38,6 +38,7 @@ def cmd_new(args):
         "{{DATE}}": datetime.date.today().isoformat(),
     }.items():
         content = content.replace(key, value)
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(content, encoding="utf-8")
     print(f"created {output.relative_to(ROOT)}")
 

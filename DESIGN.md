@@ -27,7 +27,7 @@ The theme is set by `data-theme="dark" | "light"` on `<html>` (`applyTheme` in `
 | `--color-surface-muted` | `#252a27` | `#eef1ef` | Hover, neutral pills, inline code |
 | `--color-text` | `#f0f3f1` | `#171917` | Body text |
 | `--color-text-secondary` | `#b5bcb8` | `#59615c` | Labels, ghost buttons, `.muted` |
-| `--color-text-tertiary` | `#8e9792` | `#6f7772` | Placeholders, metadata (`.meta`), disabled |
+| `--color-text-tertiary` | `#8e9792` | `#6b736e` | Placeholders, metadata (`.meta`), disabled |
 | `--color-border` | `#303632` | `#dce1de` | Default borders |
 | `--color-border-strong` | `#4a534e` | `#b9c1bc` | Hover borders, scrollbar thumb, `kbd` |
 | `--color-link` | `#6addaa` | `#176b4b` | Links, info and running pills |

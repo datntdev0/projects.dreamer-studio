@@ -57,7 +57,7 @@
           <li>AD-06 Renderer → main via typed IPC only; main → Python over HTTP</li>
           <li>AD-12 One log file per process, same format</li>
           <li>AD-13, AD-18 settings.json fixed in <code>%LOCALAPPDATA%/DreamerStudio</code>; app data movable</li>
-          <li>Risk: <code>node:sqlite</code> in Electron, prove in TSK-002 spike</li>
+          <li><code>node:sqlite</code> works in Electron 44.9.0 (SQLite 3.53.4), checked with the TSK-002 spike on 2026-10-17 (AD-03)</li>
         </ul></div>
       </div>
 
@@ -183,7 +183,7 @@
 └── cache/            <span class="note"># import staging and temp files</span></pre>
 
       <h2>Conventions</h2>
-      <p class="muted">Code style is set by the human. The other groups are proposals until TSK-001 is approved. <span class="pill warning">[unverified]</span></p>
+      <p class="muted">Code style is set by the human. TSK-001 is approved, so all groups below are final; the TSK-002 code follows them.</p>
       <details open><summary>Code style</summary><ul>
         <li>No comments on classes, functions, properties or methods.</li>
         <li>Keep other comments short; never explain code at length.</li>

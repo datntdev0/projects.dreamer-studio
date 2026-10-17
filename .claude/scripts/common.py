@@ -13,7 +13,7 @@ CATALOG_ID = "ID"
 CATALOG_NAME = "Capacity Full Name"
 REQ_ID = "Req ID"
 REQ_CAPACITY = "Capacity Name"
-STATUSES = ("0. Idea", "1. Draft", "2. Approve")
+STATUSES = ("0. Idea", "1. Draft", "2. Approve", "3. Implement", "4. Done")
 
 DECISIONS_SHEET = "Open Decisions"
 DECISION_ID = "Decision ID"

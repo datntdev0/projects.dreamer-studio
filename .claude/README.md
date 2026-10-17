@@ -45,7 +45,7 @@ onboard ──► analysis ──► solution ──► implement
 
 1. Every skill ends with a **human gate**; nothing moves on without approval.
 2. Lead = main session; collaborators = sub-agents, spawned in parallel when independent.
-3. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only).
+3. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
 4. Implementation: one plan step = one commit; last commit fixes review and test findings.
 
 ## Layout

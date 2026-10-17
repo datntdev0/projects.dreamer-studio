@@ -17,7 +17,7 @@ model: opus
 - `TH-nn <Theme>` sheets: one row per requirement; capacities separated by a blank row.
   - `REQ-nnn` = functional, `TSK-nnn` = technical; one shared number sequence.
   - ACs: one per line, `AC-1. <observable result>`.
-- Status: `0. Idea` → `1. Draft` → `2. Approve`. Only the human sets `2. Approve`.
+- Status: `0. Idea` → `1. Draft` → `2. Approve` → `3. Implement` → `4. Done`. Only the human sets `2. Approve`.
 - `Open Decisions`: architecture decisions `AD-nn`, owned by the architect; read it, do not edit it.
 
 ## Rules

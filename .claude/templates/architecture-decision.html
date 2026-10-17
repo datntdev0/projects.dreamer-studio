@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture Decisions</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <!--
+    AGENT GUIDE (architect) — delete nothing outside the <main>.
+    1. One <section class="decision"> per open question. data-id = AD-<nn>.
+    2. 2-4 options; mark the one you recommend with class "recommended".
+    3. When the human decides, set data-decided="<option value>" so the answer is kept in the file.
+    4. Human clicks "Export decisions" -> markdown is copied + downloaded -> paste it back to Claude.
+  -->
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Architecture Decisions</span>
+    <span class="spacer"></span>
+    <button class="btn" data-action="reset-decisions">Reset</button>
+    <button class="btn primary" data-action="export-decisions">Export decisions</button>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>Architecture Decisions</h1>
+      <div class="doc-meta"><span>Updated {{DATE}}</span><span>Owner: architect</span><span>Input: _docs/0.requirements-analysis.xlsx</span></div>
+
+      <div class="callout">Pick one option per question, add notes if needed, then click <b>Export decisions</b> and paste the result to Claude.</div>
+
+      <h2>Context</h2>
+      <p>Drivers taken from the requirements (release, constraints, quality attributes).</p>
+      <ul>
+        <li>Driver 1 — <span class="muted">source: TH01-01</span></li>
+      </ul>
+
+      <h2>Open Questions</h2>
+
+      <section class="decision" data-id="AD-01">
+        <header><h3>AD-01 · Question title</h3><span data-status></span></header>
+        <p class="muted">Why this matters, which requirements it affects.</p>
+        <label class="option recommended">
+          <input type="radio" name="AD-01" value="Option A">
+          <span><span class="title">Option A</span><br><span class="muted">Pros · Cons · Effort</span></span>
+        </label>
+        <label class="option">
+          <input type="radio" name="AD-01" value="Option B">
+          <span><span class="title">Option B</span><br><span class="muted">Pros · Cons · Effort</span></span>
+        </label>
+        <textarea class="input" data-note placeholder="Notes (optional)"></textarea>
+      </section>
+
+      <h2>Decision Log</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Decision</th><th>Date</th><th>Rationale</th></tr></thead>
+        <tbody>
+          <tr><td>AD-01</td><td class="muted">open</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>

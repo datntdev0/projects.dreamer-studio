@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# playwright-cli output
+.playwright-cli/
+
+# Excel lock files
+~$*.xlsx
+
+# Claude local settings
+.claude/settings.local.json

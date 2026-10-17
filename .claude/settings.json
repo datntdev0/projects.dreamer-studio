@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python .claude/scripts/reqs.py:*)",
+      "Bash(python .claude/scripts/docs.py new:*)",
+      "Bash(playwright-cli:*)"
+    ]
+  }
+}

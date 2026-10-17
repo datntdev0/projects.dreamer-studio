@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture Overview</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <!--
+    AGENT GUIDE (architect)
+    1. Keep the 4 sections: Overview, Context Diagrams, Repository Structure, Conventions.
+    2. Facts only from the codebase; mark guesses with a "[unverified]" pill.
+    3. Diagrams: <pre class="mermaid"> (rendered by doc.js).
+    4. Short sentences, bullets, tables. No long prose.
+  -->
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Architecture Overview</span>
+    <span class="spacer"></span>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>Architecture Overview</h1>
+      <div class="doc-meta"><span>Updated {{DATE}}</span><span>Owner: architect</span><span>Source: codebase + _docs/0.architecture-decision.html</span></div>
+
+      <h2>Overview</h2>
+      <p>One paragraph: what the product is, who uses it, how it runs.</p>
+      <div class="grid">
+        <div class="card"><h3>Tech stack</h3><ul><li>UI: …</li><li>Core: …</li><li>Storage: …</li><li>Build: …</li></ul></div>
+        <div class="card"><h3>Quality attributes</h3><ul><li>…</li></ul></div>
+        <div class="card"><h3>Key decisions</h3><ul><li>AD-01 …</li></ul></div>
+      </div>
+
+      <h2>Context Diagrams</h2>
+      <div class="tabs">
+        <button data-tab="context">System context</button>
+        <button data-tab="containers">Containers</button>
+        <button data-tab="flow">Main flow</button>
+      </div>
+      <div data-tab-panel="context">
+        <pre class="mermaid">flowchart LR
+  user([User]) --> app[Dreamer Studio]
+  app --> fs[(Local files)]
+  app --> llm[LLM providers]</pre>
+      </div>
+      <div data-tab-panel="containers">
+        <pre class="mermaid">flowchart TB
+  ui[UI] --> core[Core services]
+  core --> db[(SQLite)]
+  core --> workers[Pipeline workers]</pre>
+      </div>
+      <div data-tab-panel="flow">
+        <pre class="mermaid">sequenceDiagram
+  User->>UI: action
+  UI->>Core: request
+  Core-->>UI: result</pre>
+      </div>
+
+      <h2>Repository Structure</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Layer</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>path/</code></td><td>…</td><td>…</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Conventions</h2>
+      <details open><summary>Naming and formatting</summary><ul><li>…</li></ul></details>
+      <details><summary>Error handling and logging</summary><ul><li>…</li></ul></details>
+      <details><summary>Testing</summary><ul><li>…</li></ul></details>
+      <details><summary>Git and commits</summary><ul><li>One plan step = one commit: <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt; [&lt;req-id&gt;]</code></li></ul></details>
+      <details><summary>Commands</summary>
+        <table><thead><tr><th>Task</th><th>Command</th></tr></thead>
+          <tbody><tr><td>Dev</td><td><code>…</code></td></tr><tr><td>Test</td><td><code>…</code></td></tr><tr><td>Lint</td><td><code>…</code></td></tr><tr><td>Build</td><td><code>…</code></td></tr></tbody></table>
+      </details>
+    </main>
+  </div>
+</body>
+</html>

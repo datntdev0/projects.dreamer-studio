@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requirements Analysis</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    .stats { display: flex; gap: var(--sp-md); flex-wrap: wrap; margin: var(--sp-md) 0; }
+    .stat { padding: var(--sp-sm) var(--sp-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-raised); }
+    .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+    .dropzone { border: 2px dashed var(--color-border-strong); border-radius: var(--radius-md); padding: var(--sp-xxl); text-align: center; }
+    .dropzone.over { border-color: var(--color-primary); }
+    .req { margin: var(--sp-sm) 0; }
+    .req header { display: flex; gap: var(--sp-sm); align-items: center; flex-wrap: wrap; }
+    .req header b { flex: 1; }
+    .req ol { margin: var(--sp-xs) 0 0; padding-left: var(--sp-xl); }
+    .cap-row { cursor: pointer; }
+    .pre-line { white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Requirements Analysis</span>
+    <span class="pill info">View only</span>
+    <span class="spacer"></span>
+    <span class="meta" id="source"></span>
+    <button class="btn" id="reload">Reload</button>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <main class="doc-main wide">
+    <p class="muted">Reads <code>_docs/0.requirements-analysis.xlsx</code>. Edit the xlsx (or run <code>/solo-analysis</code>), then Reload.</p>
+
+    <section id="picker" class="dropzone" hidden>
+      <p>Cannot load the xlsx automatically (page opened from disk).</p>
+      <p>Run <code>python .claude/scripts/docs.py serve</code>, or pick / drop the file here:</p>
+      <input type="file" id="file" accept=".xlsx">
+    </section>
+
+    <section id="content" hidden>
+      <div class="stats" id="stats"></div>
+      <div class="toolbar">
+        <input class="input" id="search" type="search" placeholder="Search ID, name, text…" size="32">
+        <select class="input" id="release"><option value="">All releases</option></select>
+        <select class="input" id="status"><option value="">All statuses</option></select>
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div id="panels"></div>
+    </section>
+  </main>
+
+  <script>
+    const XLSX_FILE = "0.requirements-analysis.xlsx";
+    const CATALOG_SHEET = "Capacity Catalog";
+    const { $$, escapeHtml } = window.Doc;
+    let data = { capacities: [], themes: [] };
+
+    // ---------- load ----------
+
+    function parseWorkbook(buffer, sourceLabel) {
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const rows = (name) => XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: false })
+        .filter((row) => Object.values(row)[0]);
+      data = {
+        capacities: rows(CATALOG_SHEET),
+        themes: workbook.SheetNames.filter((name) => name !== CATALOG_SHEET)
+          .map((name) => ({ name, requirements: rows(name) })),
+      };
+      document.getElementById("source").textContent = sourceLabel;
+      document.getElementById("picker").hidden = true;
+      document.getElementById("content").hidden = false;
+      fillFilters();
+      render();
+    }
+
+    async function loadFromServer() {
+      try {
+        const response = await fetch(XLSX_FILE, { cache: "no-store" });
+        if (!response.ok) throw new Error(response.statusText);
+        parseWorkbook(await response.arrayBuffer(), `Loaded ${new Date().toLocaleTimeString()}`);
+      } catch {
+        document.getElementById("picker").hidden = false;
+      }
+    }
+
+    function loadFromFile(file) {
+      file.arrayBuffer().then((buffer) => parseWorkbook(buffer, `${file.name} · ${new Date().toLocaleTimeString()}`));
+    }
+
+    // ---------- filters ----------
+
+    function allRows() {
+      return [...data.capacities, ...data.themes.flatMap((theme) => theme.requirements)];
+    }
+
+    function fillFilters() {
+      const fill = (id, values, label) => {
+        const select = document.getElementById(id);
+        const current = select.value;
+        select.innerHTML = `<option value="">${label}</option>` +
+          [...new Set(values)].filter(Boolean).sort().map((v) => `<option>${escapeHtml(v)}</option>`).join("");
+        select.value = current;
+      };
+      fill("release", allRows().map((row) => row.Release), "All releases");
+      fill("status", allRows().map((row) => row.Status), "All statuses");
+    }
+
+    function visible(row) {
+      const query = document.getElementById("search").value.trim().toLowerCase();
+      const release = document.getElementById("release").value;
+      const status = document.getElementById("status").value;
+      return (!release || row.Release === release)
+        && (!status || row.Status === status)
+        && (!query || Object.values(row).join(" ").toLowerCase().includes(query));
+    }
+
+    // ---------- render ----------
+
+    function statusPill(status) {
+      const kind = { "2": "success", "1": "info", "0": "" }[String(status).charAt(0)] ?? "warning";
+      return `<span class="pill ${kind}">${escapeHtml(status || "No status")}</span>`;
+    }
+
+    function criteriaList(text) {
+      const items = String(text).split("\n").map((line) => line.trim()).filter(Boolean);
+      return items.length ? `<ol>${items.map((line) => `<li>${escapeHtml(line.replace(/^AC-\d+\.\s*/, ""))}</li>`).join("")}</ol>` : "";
+    }
+
+    function requirementCard(req) {
+      return `<article class="card req">
+        <header><code>${escapeHtml(req["Req ID"])}</code><b>${escapeHtml(req["Req Name"])}</b>
+          <span class="pill">${escapeHtml(req.Release)}</span>${statusPill(req.Status)}</header>
+        <p><b>Purpose:</b> ${escapeHtml(req.Purpose)}</p>
+        <p class="muted">${escapeHtml(req.Description)}</p>
+        <h4>Acceptance criteria</h4>${criteriaList(req["Acceptance Criteria"])}
+      </article>`;
+    }
+
+    function requirementsOf(capacityName) {
+      return data.themes.flatMap((theme) => theme.requirements).filter((req) => req["Capacity Name"] === capacityName);
+    }
+
+    function renderCatalog() {
+      const rows = data.capacities.filter(visible).map((cap) => {
+        const reqs = requirementsOf(cap["Capacity Full Name"]);
+        return `<tr class="cap-row" data-id="${escapeHtml(cap.ID)}">
+            <td><code>${escapeHtml(cap.ID)}</code></td><td>${escapeHtml(cap["Capacity Full Name"])}</td>
+            <td>${escapeHtml(cap.Purpose)}</td><td>${escapeHtml(cap.Release)}</td><td>${statusPill(cap.Status)}</td>
+            <td class="meta">${reqs.length}</td></tr>
+          <tr data-detail="${escapeHtml(cap.ID)}" hidden><td colspan="6">
+            <p>${escapeHtml(cap.Description)}</p>
+            <h4>Expectation</h4><p class="pre-line">${escapeHtml(cap.Expectation)}</p>
+            ${reqs.length ? `<h4>Requirements</h4>${reqs.map(requirementCard).join("")}` : ""}
+          </td></tr>`;
+      }).join("");
+      return `<table><thead><tr><th>ID</th><th>Capacity</th><th>Purpose</th><th>Release</th><th>Status</th><th>Reqs</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6" class="muted">No capacity matches the filters.</td></tr>`}</tbody></table>`;
+    }
+
+    function renderTheme(theme) {
+      const groups = {};
+      theme.requirements.filter(visible).forEach((req) => (groups[req["Capacity Name"]] ||= []).push(req));
+      const html = Object.entries(groups).map(([capacity, reqs]) =>
+        `<details open><summary>${escapeHtml(capacity)} <span class="meta">(${reqs.length})</span></summary>
+          ${reqs.map(requirementCard).join("")}</details>`).join("");
+      return html || `<p class="muted">No requirement matches the filters.</p>`;
+    }
+
+    function renderStats() {
+      const reqs = data.themes.flatMap((theme) => theme.requirements);
+      const byStatus = {};
+      reqs.forEach((req) => (byStatus[req.Status || "No status"] = (byStatus[req.Status || "No status"] || 0) + 1));
+      const stat = (label, value) => `<div class="stat"><b>${value}</b><span class="meta">${escapeHtml(label)}</span></div>`;
+      document.getElementById("stats").innerHTML = stat("Capacities", data.capacities.length) + stat("Requirements", reqs.length) +
+        Object.entries(byStatus).sort().map(([status, count]) => stat(status, count)).join("");
+    }
+
+    function render() {
+      renderStats();
+      const tabs = document.getElementById("tabs");
+      const selected = tabs.querySelector('[aria-selected="true"]')?.dataset.tab;
+      const panels = [{ key: "catalog", label: CATALOG_SHEET, html: renderCatalog() },
+        ...data.themes.map((theme, index) => ({ key: `theme-${index}`, label: theme.name, html: renderTheme(theme) }))];
+      tabs.innerHTML = panels.map((p) => `<button data-tab="${p.key}">${escapeHtml(p.label)}</button>`).join("");
+      document.getElementById("panels").innerHTML = panels.map((p) => `<div data-tab-panel="${p.key}">${p.html}</div>`).join("");
+      window.Doc.initTabs(document.getElementById("content"));
+      if (selected) tabs.querySelector(`[data-tab="${selected}"]`)?.click();
+      $$(".cap-row").forEach((row) => row.addEventListener("click", () => {
+        const detail = document.querySelector(`[data-detail="${row.dataset.id}"]`);
+        detail.hidden = !detail.hidden;
+      }));
+    }
+
+    // ---------- events ----------
+
+    ["search", "release", "status"].forEach((id) => document.getElementById(id).addEventListener("input", render));
+    document.getElementById("reload").addEventListener("click", loadFromServer);
+    document.getElementById("file").addEventListener("change", (event) => event.target.files[0] && loadFromFile(event.target.files[0]));
+    const picker = document.getElementById("picker");
+    picker.addEventListener("dragover", (event) => { event.preventDefault(); picker.classList.add("over"); });
+    picker.addEventListener("dragleave", () => picker.classList.remove("over"));
+    picker.addEventListener("drop", (event) => {
+      event.preventDefault();
+      picker.classList.remove("over");
+      if (event.dataTransfer.files[0]) loadFromFile(event.dataTransfer.files[0]);
+    });
+    loadFromServer();
+  </script>
+</body>
+</html>

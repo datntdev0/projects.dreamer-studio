@@ -1,0 +1,214 @@
+"""Read, check and update _docs/0.requirements-analysis.xlsx.
+
+Usage:
+  python .claude/scripts/reqs.py list [--capacity TH01-03] [--id REQ-013] [--release 0.1.0] [--status "1. Draft"] [--json]
+  python .claude/scripts/reqs.py check
+  python .claude/scripts/reqs.py next-id
+  python .claude/scripts/reqs.py upsert patch.json
+
+Patch file (only the given fields are written; new IDs are inserted):
+  {"capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
+   "requirements": [{"Req ID": "REQ-023", "Capacity Name": "...", "Status": "1. Draft"}]}
+"""
+import argparse
+import copy
+import json
+import re
+
+from common import (
+    CATALOG_ID, CATALOG_NAME, CATALOG_SHEET, REQ_CAPACITY, REQ_ID, STATUSES,
+    fail, headers, load_workbook, read_rows, save_workbook, theme_sheets,
+)
+
+CAPACITY_ID = re.compile(r"^TH\d{2}-\d{2}$")
+REQUIREMENT_ID = re.compile(r"^(REQ|TSK)-\d{3}$")
+AC_LINE = re.compile(r"^AC-\d+\. ")
+
+
+def theme_of(capacity_name):
+    """'TH-03 Library Management - ...' -> 'TH-03'."""
+    return str(capacity_name or "").split(" ")[0]
+
+
+def load_all(wb):
+    capacities = read_rows(wb[CATALOG_SHEET])
+    requirements = []
+    for ws in theme_sheets(wb):
+        for row in read_rows(ws):
+            row["_sheet"] = ws.title
+            requirements.append(row)
+    return capacities, requirements
+
+
+# ---------- list ----------
+
+def matches(row, args, capacity_ids):
+    if args.release and str(row.get("Release")) != args.release:
+        return False
+    if args.status and row.get("Status") != args.status:
+        return False
+    if args.id and not str(row.get(CATALOG_ID) or row.get(REQ_ID)).startswith(args.id):
+        return False
+    if args.capacity and capacity_ids.get(row.get(REQ_CAPACITY, row.get(CATALOG_NAME))) != args.capacity:
+        return False
+    return True
+
+
+def to_markdown(row, id_key):
+    fields = [f"- **{key}**: " + str(value).replace("\n", "\n  ") for key, value in row.items()
+              if not key.startswith("_") and key != id_key and value not in (None, "")]
+    return f"### {row[id_key]}\n" + "\n".join(fields) + "\n"
+
+
+def cmd_list(args):
+    capacities, requirements = load_all(load_workbook())
+    capacity_ids = {c[CATALOG_NAME]: c[CATALOG_ID] for c in capacities}
+    capacities = [c for c in capacities if matches(c, args, capacity_ids)]
+    requirements = [r for r in requirements if matches(r, args, capacity_ids)]
+    if args.json:
+        clean = lambda rows: [{k: v for k, v in r.items() if k != "_row"} for r in rows]
+        print(json.dumps({"capacities": clean(capacities), "requirements": clean(requirements)},
+                         ensure_ascii=False, indent=2, default=str))
+        return
+    print(f"## Capacities ({len(capacities)})\n")
+    print("\n".join(to_markdown(c, CATALOG_ID) for c in capacities))
+    print(f"## Requirements ({len(requirements)})\n")
+    print("\n".join(to_markdown(r, REQ_ID) for r in requirements))
+
+
+# ---------- check ----------
+
+def find_issues(capacities, requirements):
+    issues = []
+    seen = set()
+    for row, id_key, pattern in ([(c, CATALOG_ID, CAPACITY_ID) for c in capacities]
+                                 + [(r, REQ_ID, REQUIREMENT_ID) for r in requirements]):
+        row_id = row[id_key]
+        where = f"{row.get('_sheet', CATALOG_SHEET)}!{row['_row']} {row_id}"
+        if row_id in seen:
+            issues.append(f"{where}: duplicate ID")
+        seen.add(row_id)
+        if not pattern.match(str(row_id)):
+            issues.append(f"{where}: ID does not match {pattern.pattern}")
+        if row.get("Status") not in STATUSES:
+            issues.append(f"{where}: status '{row.get('Status')}' not in {STATUSES}")
+
+    capacity_names = {c[CATALOG_NAME] for c in capacities}
+    for r in requirements:
+        where = f"{r['_sheet']}!{r['_row']} {r[REQ_ID]}"
+        if r.get(REQ_CAPACITY) not in capacity_names:
+            issues.append(f"{where}: capacity not found in catalog")
+        elif not r["_sheet"].startswith(theme_of(r[REQ_CAPACITY])):
+            issues.append(f"{where}: capacity belongs to another theme sheet")
+        criteria = str(r.get("Acceptance Criteria") or "").strip()
+        if not criteria:
+            issues.append(f"{where}: missing acceptance criteria")
+        elif not all(AC_LINE.match(line) for line in criteria.splitlines() if line.strip()):
+            issues.append(f"{where}: acceptance criteria lines must start with 'AC-<n>. '")
+    return issues
+
+
+def cmd_check(_args):
+    issues = find_issues(*load_all(load_workbook()))
+    print("\n".join(issues) if issues else "OK: no issues found")
+    if issues:
+        raise SystemExit(1)
+
+
+# ---------- next-id ----------
+
+def cmd_next_id(_args):
+    _, requirements = load_all(load_workbook())
+    numbers = [int(r[REQ_ID][4:]) for r in requirements if REQUIREMENT_ID.match(str(r[REQ_ID]))]
+    print(f"{max(numbers, default=0) + 1:03d}  (use REQ-nnn for functional, TSK-nnn for technical)")
+
+
+# ---------- upsert ----------
+
+def write_row(ws, row_number, values):
+    keys = headers(ws)
+    for key, value in values.items():
+        if key not in keys:
+            fail(f"unknown column '{key}' in sheet '{ws.title}'")
+        ws.cell(row=row_number, column=keys.index(key) + 1, value=value)
+
+
+def insert_row(ws, after_row, values):
+    """Insert a row below `after_row`, copying its style (or the first data row's)."""
+    style_row = after_row if ws.cell(row=after_row, column=1).value else 2
+    ws.insert_rows(after_row + 1)
+    for column in range(1, ws.max_column + 1):
+        source = ws.cell(row=style_row, column=column)
+        target = ws.cell(row=after_row + 1, column=column)
+        if source.has_style:
+            target._style = copy.copy(source._style)
+    write_row(ws, after_row + 1, values)
+
+
+def upsert(ws, rows, id_key, values, group_of):
+    """Update the row with the same ID, or insert it after the last row of its group."""
+    existing = next((r for r in rows if r[id_key] == values[id_key]), None)
+    if existing:
+        write_row(ws, existing["_row"], values)
+        return "updated"
+    group = [r["_row"] for r in rows if group_of(r) == group_of(values)]
+    if group:
+        insert_row(ws, max(group), values)
+    elif rows:  # new group: leave one blank separator row after the last data row
+        insert_row(ws, max(r["_row"] for r in rows) + 1, values)
+    else:
+        insert_row(ws, 1, values)
+    return "inserted"
+
+
+def cmd_upsert(args):
+    with open(args.patch, encoding="utf-8") as file:
+        patch = json.load(file)
+    wb = load_workbook()
+    catalog = wb[CATALOG_SHEET]
+
+    for values in patch.get("capacities", []):
+        result = upsert(catalog, read_rows(catalog), CATALOG_ID, values,
+                        lambda r: str(r[CATALOG_ID])[:4])
+        print(f"{result}: {values[CATALOG_ID]}")
+
+    for values in patch.get("requirements", []):
+        sheet = next((ws for ws in theme_sheets(wb)
+                      if any(r[REQ_ID] == values[REQ_ID] for r in read_rows(ws))), None)
+        sheet = sheet or next((ws for ws in theme_sheets(wb)
+                               if ws.title.startswith(theme_of(values.get(REQ_CAPACITY)))), None)
+        if sheet is None:
+            fail(f"{values[REQ_ID]}: no theme sheet for capacity '{values.get(REQ_CAPACITY)}'")
+        result = upsert(sheet, read_rows(sheet), REQ_ID, values, lambda r: r.get(REQ_CAPACITY))
+        print(f"{result}: {values[REQ_ID]} ({sheet.title})")
+
+    save_workbook(wb)
+    issues = find_issues(*load_all(wb))
+    print("\n".join(["check:"] + issues) if issues else "check: OK")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    list_parser = commands.add_parser("list", help="print capacities and requirements")
+    list_parser.add_argument("--capacity", help="capacity ID, e.g. TH01-03")
+    list_parser.add_argument("--id", help="ID prefix, e.g. TH03, REQ-013")
+    list_parser.add_argument("--release")
+    list_parser.add_argument("--status")
+    list_parser.add_argument("--json", action="store_true")
+    list_parser.set_defaults(run=cmd_list)
+
+    commands.add_parser("check", help="validate IDs, statuses, capacities, ACs").set_defaults(run=cmd_check)
+    commands.add_parser("next-id", help="print the next free REQ/TSK number").set_defaults(run=cmd_next_id)
+
+    upsert_parser = commands.add_parser("upsert", help="apply a JSON patch")
+    upsert_parser.add_argument("patch")
+    upsert_parser.set_defaults(run=cmd_upsert)
+
+    args = parser.parse_args()
+    args.run(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ID}} Solution</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <!--
+    AGENT GUIDE (architect + designer)
+    1. Scope = one capacity (THnn-nn) or one functional requirement (REQ-nnn).
+    2. Every requirement in scope appears in the Traceability table with its ACs.
+    3. Open questions use <section class="decision"> (same widget as architecture-decision).
+    4. UI follows DESIGN.md tokens; the designer fills the UI Design section.
+    5. Implementation Outline lists commit-sized steps; /solo-implement turns them into a plan.
+  -->
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">{{ID}} · Solution</span>
+    <span class="spacer"></span>
+    <button class="btn primary" data-action="export-decisions">Export decisions</button>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>{{ID}} · {{TITLE}}</h1>
+      <div class="doc-meta"><span>Updated {{DATE}}</span><span>Owner: architect</span><span class="pill info">Draft</span></div>
+
+      <h2>Summary</h2>
+      <ul>
+        <li>Problem: …</li>
+        <li>Approach: …</li>
+        <li>Out of scope: …</li>
+      </ul>
+
+      <h2>Traceability</h2>
+      <table>
+        <thead><tr><th>Req</th><th>Name</th><th>Acceptance criteria</th><th>Covered by</th></tr></thead>
+        <tbody>
+          <tr><td><code>REQ-nnn</code></td><td>…</td><td>AC-1 …</td><td>Component / step</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Design</h2>
+      <h3>Components</h3>
+      <pre class="mermaid">flowchart LR
+  ui[UI component] --> svc[Service] --> repo[(Repository)]</pre>
+      <table>
+        <thead><tr><th>Component</th><th>Layer</th><th>New / Changed</th><th>Responsibility</th></tr></thead>
+        <tbody><tr><td>…</td><td>…</td><td>New</td><td>…</td></tr></tbody>
+      </table>
+
+      <h3>Main Flow</h3>
+      <pre class="mermaid">sequenceDiagram
+  User->>UI: action
+  UI->>Service: call
+  Service-->>UI: result</pre>
+
+      <h3>Data and Interfaces</h3>
+      <ul><li>Tables / files / settings: …</li><li>APIs / IPC / events: …</li></ul>
+
+      <h3>UI Design</h3>
+      <p class="muted">Designer: screens, states (empty, loading, error), DESIGN.md tokens used.</p>
+
+      <h3>Errors and Edge Cases</h3>
+      <ul><li>…</li></ul>
+
+      <h2>Open Questions</h2>
+      <section class="decision" data-id="Q-01">
+        <header><h3>Q-01 · Question</h3><span data-status></span></header>
+        <label class="option recommended"><input type="radio" name="Q-01" value="Option A"><span><span class="title">Option A</span><br><span class="muted">trade-off</span></span></label>
+        <label class="option"><input type="radio" name="Q-01" value="Option B"><span><span class="title">Option B</span><br><span class="muted">trade-off</span></span></label>
+        <textarea class="input" data-note placeholder="Notes (optional)"></textarea>
+      </section>
+
+      <h2>Implementation Outline</h2>
+      <ol>
+        <li>Step 1 — … <span class="meta">(REQ-nnn AC-1, AC-2)</span></li>
+      </ol>
+
+      <h2>Test Strategy</h2>
+      <ul><li>Unit: …</li><li>Integration: …</li><li>UI (playwright-cli): …</li></ul>
+
+      <h2>Risks</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr></thead>
+        <tbody><tr><td>…</td><td><span class="pill warning">Medium</span></td><td>…</td></tr></tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>

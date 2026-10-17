@@ -10,5 +10,8 @@
     "@dreamer/shared": "workspace:*",
     "electron": "44.9.0",
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "electron-log": "5.4.4"
   }
 }

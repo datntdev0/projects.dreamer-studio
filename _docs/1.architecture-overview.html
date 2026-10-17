@@ -42,6 +42,7 @@
           <li>Backend: Python FastAPI, pip + venv (AD-02, AD-09)</li>
           <li>Storage: SQLite via <code>node:sqlite</code> in main + files in app data (AD-03, AD-04)</li>
           <li>Tooling: pnpm workspaces; ESLint, Prettier, Vitest; Ruff, pytest (AD-09); esbuild for main + preload (AD-19)</li>
+          <li>Logging: electron-log in main (renderer via IPC), stdlib <code>logging</code> in Python; daily files, kept 7 days (AD-12, AD-20)</li>
           <li>Build: PyInstaller one-folder + electron-builder <code>zip</code> (AD-10, AD-11)</li>
         </ul></div>
         <div class="card"><h3>Quality attributes</h3><ul>
@@ -135,7 +136,8 @@
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap</span>
 │   │   ├── root.component.ts   <span class="note"># root component, hosts the shell</span>
-│   │   ├── components/         <span class="note"># base components: button, input, dialog, toast, table (REQ-001)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003)</span>
+│   │   ├── components/         <span class="note"># base components: error-banner (TSK-003); button, input, dialog, toast, table (REQ-001)</span>
 │   │   ├── shell/              <span class="note"># sidebar, header, content area, pipelines indicator (REQ-003)</span>
 │   │   ├── features/           <span class="note"># one module per feature, defined later</span>
 │   │   ├── styles/             <span class="note"># _tokens.scss, _base.scss, _fonts.scss, _bootstrap.scss (DESIGN.md)</span>
@@ -144,22 +146,22 @@
 │   └── .storybook/             <span class="note"># Storybook config (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
-│   │   ├── app/                <span class="note"># startup, window, global error handler</span>
+│   │   ├── app/                <span class="note"># startup, window, app:// protocol, global error handlers, native dialogs</span>
 │   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
-│   │   ├── storage/            <span class="note"># path resolver, database, migrations, repositories (TSK-005..007)</span>
+│   │   ├── storage/            <span class="note"># paths.ts (app data, logs); database, migrations, repositories (TSK-005..007)</span>
 │   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
-│   │   ├── backend/            <span class="note"># Python process lifecycle, HTTP client</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain</span>
-│   │   └── logging/            <span class="note"># logger, rotation (TSK-003)</span>
+│   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status, stop on quit (TSK-003)</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app, log, dev (dev:crash, dev only)</span>
+│   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   └── preload/                <span class="note"># contextBridge API for the renderer</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
 │   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
-│   ├── errors/                 <span class="note"># error codes translated by the UI</span>
+│   ├── errors/                 <span class="note"># AppError, error codes, English copy (i18n later), errorStack</span>
 │   └── core/                   <span class="note"># theme.ts (DESIGN.md)</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
-│   ├── app/                    <span class="note"># FastAPI app: main.py, jobs/, llm/, logging</span>
+│   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/, llm/ later</span>
 │   ├── tests/                  <span class="note"># pytest</span>
 │   └── requirements.txt        <span class="note"># pinned dependencies (pip)</span>
 ├── scripts/                    <span class="note"># dev.mjs (dev run), py.mjs (venv, ruff, pytest); build later (TSK-004)</span>
@@ -178,7 +180,7 @@
 ├── database.sqlite   <span class="note"># SQLite database (TSK-005)</span>
 ├── library/          
 │   └── &lt;novel-id&gt;/   <span class="note"># chapters and cover (TSK-013)</span>
-├── logs/             <span class="note"># main.log, backend.log (TSK-003, AD-12)</span>
+├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
 │   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run</span>
 └── cache/            <span class="note"># import staging and temp files</span></pre>
 
@@ -205,7 +207,9 @@
       <details><summary>Error handling and logging</summary><ul>
         <li>Errors cross process boundaries as <code>{ code, message, details }</code>; renderer translates <code>code</code> into a friendly message (TSK-003 AC-4, REQ-002)</li>
         <li>Global handlers: main <code>uncaughtException</code>/<code>unhandledRejection</code>, renderer <code>ErrorHandler</code>, FastAPI exception handler</li>
-        <li>Log line: <code>ISO time · level · process · module · message</code>; rotate by size, keep N files; never log secrets</li>
+        <li>Log line: <code>ISO UTC time · level · process · module · message</code>, stack on the next lines; a new file each local day, files older than 7 days deleted; never log secrets</li>
+        <li>Main: <code>createLogger(module)</code> from <code>electron/main/logging</code>; renderer: <code>DesktopApi.writeLog</code> → <code>log:write</code>; Python: <code>logging.getLogger(name)</code></li>
+        <li>Friendly errors: renderer and main rejections → error banner; main exception and renderer crash → native dialog; backend down → warning banner</li>
       </ul></details>
       <details><summary>Testing</summary><ul>
         <li>Tooling: Vitest (TS), pytest (Python), next to the code (AD-09)</li>

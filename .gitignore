@@ -8,5 +8,7 @@ __pycache__/
 # Excel lock files
 ~$*.xlsx
 
-# Claude local settings
+# Claude framework
 .claude/settings.local.json
+_docs/*.solution.html
+_docs/*.plan.md

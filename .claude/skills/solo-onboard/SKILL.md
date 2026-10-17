@@ -11,7 +11,8 @@ argument-hint: "[focus area]"
 - **Artifacts**:
   - `.claude/README.md` — project section
   - `_docs/1.architecture-overview.html` — overview, context diagrams, repository structure, conventions
-  - `_docs/0.architecture-decision.html` — only when architecture questions are open (e.g. greenfield)
+  - `Open Decisions` sheet in `_docs/0.requirements-analysis.xlsx` — architecture questions (source of truth)
+  - `_docs/0.architecture-decision.html` — viewer of that sheet, where the human picks options
 
 ## Workflow
 
@@ -27,10 +28,11 @@ argument-hint: "[focus area]"
    - Commands: dev, test, lint, build. Spawn `coder` to run them and report what works.
    - List gaps and open questions (missing stack choice, unclear layering, …).
 3. **Propose**
-   - Create docs: `python .claude/scripts/docs.py new architecture-overview` (and `architecture-decision` if questions are open).
+   - Create docs: `python .claude/scripts/docs.py new architecture-overview` (and `architecture-decision` if missing).
+   - Write questions to the sheet: `reqs.py upsert patch.json` with `"decisions": [...]` (`AD-nn`, options one per line `<title> — <details>`, `Recommended`, `Status` `Open`).
    - Fill each section with facts; mark guesses `[unverified]`.
    - Update the project section of `.claude/README.md` and the commands in `CLAUDE.md`.
 4. **Human gate**
    - Show: 5-line summary, artifact paths, open questions.
-   - Human answers decisions in the HTML → **Export decisions** → pastes back.
-   - Apply answers (set `data-decided`, update overview), repeat until the human approves.
+   - Human answers in the HTML (`docs.py serve`) → **Export decisions** → pastes back.
+   - Apply answers: upsert `Decision`, `Status` `Decided`, `Notes`, `Decided On`; update the overview; repeat until the human approves.

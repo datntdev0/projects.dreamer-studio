@@ -12,8 +12,11 @@
     AGENT GUIDE (architect)
     1. Keep the 4 sections: Overview, Context Diagrams, Repository Structure, Conventions.
     2. Facts only from the codebase; mark guesses with a "[unverified]" pill.
-    3. Diagrams: <pre class="mermaid"> (rendered by doc.js).
-    4. Short sentences, bullets, tables. No long prose.
+    3. Diagrams: hand-drawn inline <svg> inside <div class="diagram"> (no mermaid). Classes from doc.css:
+       node [primary|external|actor] (<rect> + text.title/.sub), node store (cylinder), group, edge [future],
+       label, marker path.arrow (one marker id per svg). Colors come from tokens; never set fill/stroke inline.
+    4. Repository Structure: directory tree, two levels below top folders,, two levels below top folders, in <pre class="tree">, notes as <span class="note"># ...</span>, aligned.
+    5. Short sentences, bullets, tables. No long prose.
   -->
   <header class="doc-header">
     <span class="brand">Dreamer Studio</span>
@@ -30,44 +33,33 @@
 
       <h2>Overview</h2>
       <p>One paragraph: what the product is, who uses it, how it runs.</p>
-      <div class="grid">
+      <div class="grid cols-3">
         <div class="card"><h3>Tech stack</h3><ul><li>UI: …</li><li>Core: …</li><li>Storage: …</li><li>Build: …</li></ul></div>
         <div class="card"><h3>Quality attributes</h3><ul><li>…</li></ul></div>
         <div class="card"><h3>Key decisions</h3><ul><li>AD-01 …</li></ul></div>
       </div>
 
       <h2>Context Diagrams</h2>
-      <div class="tabs">
-        <button data-tab="context">System context</button>
-        <button data-tab="containers">Containers</button>
-        <button data-tab="flow">Main flow</button>
-      </div>
+      <div class="tabs"><button data-tab="context">System context</button></div>
       <div data-tab-panel="context">
-        <pre class="mermaid">flowchart LR
-  user([User]) --> app[Dreamer Studio]
-  app --> fs[(Local files)]
-  app --> llm[LLM providers]</pre>
-      </div>
-      <div data-tab-panel="containers">
-        <pre class="mermaid">flowchart TB
-  ui[UI] --> core[Core services]
-  core --> db[(SQLite)]
-  core --> workers[Pipeline workers]</pre>
-      </div>
-      <div data-tab-panel="flow">
-        <pre class="mermaid">sequenceDiagram
-  User->>UI: action
-  UI->>Core: request
-  Core-->>UI: result</pre>
+        <div class="diagram">
+        <svg viewBox="0 0 960 160" role="img" aria-label="System context"><defs><marker id="arrow-context" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <g class="node actor"><rect x="30" y="50" width="150" height="56" rx="28.0"/><text class="title" x="105.0" y="69.0">User</text><text class="sub" x="105.0" y="87.0">role</text></g>
+          <g class="node primary"><rect x="330" y="40" width="260" height="76" rx="8"/><text class="title" x="460.0" y="69.0">System</text><text class="sub" x="460.0" y="87.0">what it is</text></g>
+          <g class="node external"><rect x="740" y="50" width="190" height="56" rx="8"/><text class="title" x="835.0" y="69.0">External system</text><text class="sub" x="835.0" y="87.0">what it provides</text></g>
+          <path class="edge " d="M180,78 L330,78" marker-end="url(#arrow-context)"/>
+          <text class="label" x="255" y="66" text-anchor="middle">uses</text>
+          <path class="edge " d="M590,78 L740,78" marker-end="url(#arrow-context)"/>
+          <text class="label" x="665" y="66" text-anchor="middle">calls</text>
+        </svg>
+        </div>
       </div>
 
       <h2>Repository Structure</h2>
-      <table>
-        <thead><tr><th>Path</th><th>Layer</th><th>Responsibility</th></tr></thead>
-        <tbody>
-          <tr><td><code>path/</code></td><td>…</td><td>…</td></tr>
-        </tbody>
-      </table>
+      <pre class="tree">&lt;repo&gt;/                
+├── &lt;folder&gt;/          <span class="note"># &lt;layer&gt;</span>
+│   └── &lt;subfolder&gt;/   <span class="note"># &lt;responsibility&gt;</span>
+└── &lt;file&gt;             <span class="note"># &lt;responsibility&gt;</span></pre>
 
       <h2>Conventions</h2>
       <details open><summary>Naming and formatting</summary><ul><li>…</li></ul></details>

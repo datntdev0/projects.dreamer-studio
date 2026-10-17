@@ -14,7 +14,7 @@ model: sonnet
 
 1. Read the task, the referenced solution section and the files to touch.
 2. Read nearby code; match its naming, structure and comment style.
-3. Implement; add or update unit tests for the changed logic.
+3. Implement; write unit tests only when the task or the human asks for them explicitly.
 4. Run lint and tests for the touched area.
 5. Report back.
 
@@ -22,7 +22,7 @@ model: sonnet
 
 - Stay inside the assigned files; ask the architect before touching others (parallel coders may own them).
 - Simple, readable code; reuse existing functions; no duplicated logic.
-- Follow `DESIGN.md` for UI and conventions in `_docs/1.architecture-overview.html`.
+- Follow `DESIGN.md` for UI and conventions in `_docs/1.architecture-overview.html` (Code style first).
 - No hard-coded UI strings (i18n), no raw style values.
 - Do not commit; the architect commits per step.
 

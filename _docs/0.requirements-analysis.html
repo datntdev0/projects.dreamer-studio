@@ -6,19 +6,15 @@
   <title>Requirements Analysis</title>
   <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
   <script src="../.claude/templates/assets/doc.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     .stats { display: flex; gap: var(--sp-md); flex-wrap: wrap; margin: var(--sp-md) 0; }
     .stat { padding: var(--sp-sm) var(--sp-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-raised); }
     .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
-    .dropzone { border: 2px dashed var(--color-border-strong); border-radius: var(--radius-md); padding: var(--sp-xxl); text-align: center; }
-    .dropzone.over { border-color: var(--color-primary); }
     .req { margin: var(--sp-sm) 0; }
     .req header { display: flex; gap: var(--sp-sm); align-items: center; flex-wrap: wrap; }
     .req header b { flex: 1; }
     .req ol { margin: var(--sp-xs) 0 0; padding-left: var(--sp-xl); }
     .cap-row { cursor: pointer; }
-    .pre-line { white-space: pre-line; }
   </style>
 </head>
 <body>
@@ -27,19 +23,15 @@
     <span class="muted">Requirements Analysis</span>
     <span class="pill info">View only</span>
     <span class="spacer"></span>
-    <span class="meta" id="source"></span>
-    <button class="btn" id="reload">Reload</button>
+    <span class="meta" data-xlsx-source></span>
+    <button class="btn" data-action="reload-xlsx">Reload</button>
     <button class="btn" data-action="toggle-theme">Theme</button>
   </header>
 
   <main class="doc-main wide">
     <p class="muted">Reads <code>_docs/0.requirements-analysis.xlsx</code>. Edit the xlsx (or run <code>/solo-analysis</code>), then Reload.</p>
 
-    <section id="picker" class="dropzone" hidden>
-      <p>Cannot load the xlsx automatically (page opened from disk).</p>
-      <p>Run <code>python .claude/scripts/docs.py serve</code>, or pick / drop the file here:</p>
-      <input type="file" id="file" accept=".xlsx">
-    </section>
+    <section data-xlsx-picker hidden></section>
 
     <section id="content" hidden>
       <div class="stats" id="stats"></div>
@@ -54,41 +46,22 @@
   </main>
 
   <script>
-    const XLSX_FILE = "0.requirements-analysis.xlsx";
     const CATALOG_SHEET = "Capacity Catalog";
-    const { $$, escapeHtml } = window.Doc;
+    const DECISIONS_SHEET = "Open Decisions";  // shown in 0.architecture-decision.html
+    const { $$, escapeHtml, sheetRows } = window.Doc;
     let data = { capacities: [], themes: [] };
 
     // ---------- load ----------
 
-    function parseWorkbook(buffer, sourceLabel) {
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const rows = (name) => XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: false })
-        .filter((row) => Object.values(row)[0]);
+    function showWorkbook(workbook) {
       data = {
-        capacities: rows(CATALOG_SHEET),
-        themes: workbook.SheetNames.filter((name) => name !== CATALOG_SHEET)
-          .map((name) => ({ name, requirements: rows(name) })),
+        capacities: sheetRows(workbook, CATALOG_SHEET),
+        themes: workbook.SheetNames.filter((name) => ![CATALOG_SHEET, DECISIONS_SHEET].includes(name))
+          .map((name) => ({ name, requirements: sheetRows(workbook, name) })),
       };
-      document.getElementById("source").textContent = sourceLabel;
-      document.getElementById("picker").hidden = true;
       document.getElementById("content").hidden = false;
       fillFilters();
       render();
-    }
-
-    async function loadFromServer() {
-      try {
-        const response = await fetch(XLSX_FILE, { cache: "no-store" });
-        if (!response.ok) throw new Error(response.statusText);
-        parseWorkbook(await response.arrayBuffer(), `Loaded ${new Date().toLocaleTimeString()}`);
-      } catch {
-        document.getElementById("picker").hidden = false;
-      }
-    }
-
-    function loadFromFile(file) {
-      file.arrayBuffer().then((buffer) => parseWorkbook(buffer, `${file.name} · ${new Date().toLocaleTimeString()}`));
     }
 
     // ---------- filters ----------
@@ -198,17 +171,7 @@
     // ---------- events ----------
 
     ["search", "release", "status"].forEach((id) => document.getElementById(id).addEventListener("input", render));
-    document.getElementById("reload").addEventListener("click", loadFromServer);
-    document.getElementById("file").addEventListener("change", (event) => event.target.files[0] && loadFromFile(event.target.files[0]));
-    const picker = document.getElementById("picker");
-    picker.addEventListener("dragover", (event) => { event.preventDefault(); picker.classList.add("over"); });
-    picker.addEventListener("dragleave", () => picker.classList.remove("over"));
-    picker.addEventListener("drop", (event) => {
-      event.preventDefault();
-      picker.classList.remove("over");
-      if (event.dataTransfer.files[0]) loadFromFile(event.dataTransfer.files[0]);
-    });
-    loadFromServer();
+    window.Doc.loadRequirementsWorkbook(showWorkbook);
   </script>
 </body>
 </html>

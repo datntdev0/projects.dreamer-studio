@@ -3,12 +3,17 @@
 ## Project
 
 - **What**: local desktop studio that uses AI to produce creative content (novels, music, video).
-- **Status**: pre-code. Requirements exist; architecture not decided yet (TSK-001).
-- **Releases**: `0.0.0` foundation · `0.1.0` novel library · `0.2.0` AI analysis.
+- **Status**: pre-code. Architecture decided (AD-01..13); next: requirement updates, then TSK-002 scaffolding.
+- **Releases**: `0.0.0` foundation (approved) · `0.1.0` novel library (draft) · `0.2.0` AI analysis (draft).
+- **Stack**: Electron main + renderer · Angular + Bootstrap · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
+- **Processes**: renderer (UI) ──IPC──► main (core services, DB, pipeline executor) ──HTTP──► Python (AI jobs, stateless).
+- **Folders**: `angular/src` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/` · `scripts/` (planned, TSK-002).
+- **Decisions**: AD-01..13 and AD-18 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
 - **Sources of truth**:
   - Requirements: `_docs/0.requirements-analysis.xlsx`
   - Visual design: `DESIGN.md`
-  - Architecture: `_docs/1.architecture-overview.html` (after `/solo-onboard`)
+  - Architecture: `_docs/1.architecture-overview.html`
+  - Decisions: sheet `Open Decisions` in the xlsx (viewer `_docs/0.architecture-decision.html`)
 
 > `/solo-onboard` rewrites this section from the codebase.
 
@@ -20,7 +25,7 @@ onboard ──► analysis ──► solution ──► implement
 
 | Skill | Lead | Collaborators | Artifacts |
 | --- | --- | --- | --- |
-| `/solo-onboard` | architect | analyst, coder, human | `.claude/README.md`, `_docs/1.architecture-overview.html`, `_docs/0.architecture-decision.html` |
+| `/solo-onboard` | architect | analyst, coder, human | `.claude/README.md`, `_docs/1.architecture-overview.html`, xlsx `Open Decisions` |
 | `/solo-analysis <idea\|ID>` | analyst | designer, architect, human | `_docs/0.requirements-analysis.xlsx` |
 | `/solo-solution <ID>` | architect | analyst, designer, human | `_docs/<ID>.solution.html` |
 | `/solo-implement <ID>` | architect | coder, tester, human | commits, `_docs/<ID>.plan.md`, report |
@@ -53,9 +58,9 @@ onboard ──► analysis ──► solution ──► implement
   templates/     architecture-decision.html, architecture-overview.html, solution.html, plan.md
     assets/      doc.css, doc.js (shared by all _docs/*.html)
 _docs/
-  0.requirements-analysis.xlsx   requirements (source of truth)
-  0.requirements-analysis.html   view-only viewer of the xlsx
-  0.architecture-decision.html   open architecture questions
+  0.requirements-analysis.xlsx   requirements + Open Decisions sheet (source of truth)
+  0.requirements-analysis.html   view-only viewer of the requirement sheets
+  0.architecture-decision.html   viewer of the Open Decisions sheet; human picks and exports
   1.architecture-overview.html   architecture
   <ID>.solution.html             solution per capacity / requirement
   <ID>.plan.md                   implementation plan
@@ -66,11 +71,12 @@ _docs/
 ```bash
 python .claude/scripts/reqs.py list --capacity TH01-03     # read (add --json)
 python .claude/scripts/reqs.py check                       # validate the xlsx
-python .claude/scripts/reqs.py next-id                     # next REQ/TSK number
+python .claude/scripts/reqs.py decisions --status Open     # architecture decisions
+python .claude/scripts/reqs.py next-id                     # next REQ/TSK and AD number
 python .claude/scripts/reqs.py upsert patch.json           # write changes
 python .claude/scripts/docs.py new solution TH01-03 --title "App Shell"
 python .claude/scripts/docs.py serve                       # http://localhost:8765/_docs/
 ```
 
 - Needs Python 3.10+ with `openpyxl`.
-- HTML docs work from disk; the xlsx viewer needs `docs.py serve` (or pick the file manually).
+- HTML docs work from disk; the two xlsx viewers need `docs.py serve` (or pick the file manually).

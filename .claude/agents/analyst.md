@@ -18,6 +18,7 @@ model: opus
   - `REQ-nnn` = functional, `TSK-nnn` = technical; one shared number sequence.
   - ACs: one per line, `AC-1. <observable result>`.
 - Status: `0. Idea` → `1. Draft` → `2. Approve`. Only the human sets `2. Approve`.
+- `Open Decisions`: architecture decisions `AD-nn`, owned by the architect; read it, do not edit it.
 
 ## Rules
 

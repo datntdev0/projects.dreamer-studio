@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture Overview</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <!--
+    AGENT GUIDE (architect)
+    1. Keep the 4 sections: Overview, Context Diagrams, Repository Structure, Conventions.
+    2. Facts only from the codebase; mark guesses with a "[unverified]" pill.
+    3. Diagrams: hand-drawn inline <svg> inside <div class="diagram"> (no mermaid). Classes from doc.css:
+       node [primary|external|actor] (<rect> + text.title/.sub), node store (cylinder), group, edge [future],
+       label, marker path.arrow (one marker id per svg). Colors come from tokens; never set fill/stroke inline.
+    4. Repository Structure: directory tree, two levels below top folders,, two levels below top folders, in <pre class="tree">, notes as <span class="note"># ...</span>, aligned.
+    5. Short sentences, bullets, tables. No long prose.
+  -->
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Architecture Overview</span>
+    <span class="spacer"></span>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>Architecture Overview</h1>
+      <div class="doc-meta"><span>Updated 2026-10-17</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
+
+      <div class="callout">Pre-code. AD-01..AD-13 and AD-18 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
+
+      <h2>Overview</h2>
+      <p>Dreamer Studio is a local Windows desktop studio for one user to manage a creative library (novels first, music and video later) and run AI analysis on it. It ships as a portable package: an Electron app that starts a bundled Python FastAPI backend on 127.0.0.1. All data stays on the machine.</p>
+      <div class="grid cols-3">
+        <div class="card"><h3>Tech stack</h3><ul>
+          <li>Shell: Electron main + preload + renderer (AD-01)</li>
+          <li>UI: Angular + Bootstrap + SCSS, Storybook (AD-07); i18n with own JSON files, no library (AD-07)</li>
+          <li>Backend: Python FastAPI, pip + venv (AD-02, AD-09)</li>
+          <li>Storage: SQLite via <code>node:sqlite</code> in main + files in app data (AD-03, AD-04)</li>
+          <li>Tooling: pnpm workspaces; ESLint, Prettier, Vitest; Ruff, pytest (AD-09)</li>
+          <li>Build: PyInstaller one-folder + electron-builder <code>zip</code> (AD-10, AD-11)</li>
+        </ul></div>
+        <div class="card"><h3>Quality attributes</h3><ul>
+          <li>Portable: runs after extract, no extra installs (TSK-004)</li>
+          <li>Responsive UI: long work runs as pipelines (TSK-008)</li>
+          <li>Data safety: migrations with rollback, atomic import (TSK-006, REQ-013)</li>
+          <li>Observable: file logs, diagnostics, error handler (TSK-003, TSK-011)</li>
+          <li>Localized and themed at runtime (REQ-002, REQ-007)</li>
+        </ul></div>
+        <div class="card"><h3>Key decisions</h3><ul>
+          <li>AD-04 DB owned by main; Python is stateless</li>
+          <li>AD-05 Pipeline executor in main; Python runs heavy steps</li>
+          <li>AD-06 Renderer → main via typed IPC only; main → Python over HTTP</li>
+          <li>AD-12 One log file per process, same format</li>
+          <li>AD-13, AD-18 settings.json fixed in <code>%LOCALAPPDATA%/DreamerStudio</code>; app data movable</li>
+          <li>Risk: <code>node:sqlite</code> in Electron, prove in TSK-002 spike</li>
+        </ul></div>
+      </div>
+
+      <h3>Layers</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Process</th><th>Responsibility</th><th>Talks to</th></tr></thead>
+        <tbody>
+          <tr><td>UI</td><td>Renderer</td><td>Screens, shell, design system, i18n, theme. No Node or Electron APIs; data via a typed client so Storybook can mock it (REQ-001 AC-5).</td><td>Preload API (IPC)</td></tr>
+          <tr><td>Bridge</td><td>Preload</td><td>Exposes a typed, minimal API with <code>contextBridge</code>; events main → renderer.</td><td>Main (IPC)</td></tr>
+          <tr><td>Core services</td><td>Main</td><td>Settings, path resolver, data access + migrations, pipeline executor, self-checks, logging, OS dialogs, backend lifecycle.</td><td>SQLite, files, backend (HTTP)</td></tr>
+          <tr><td>Storage</td><td>Main</td><td>SQLite file <code>&lt;app data&gt;/database.sqlite</code>; library files in <code>&lt;app data&gt;/library/&lt;novel-id&gt;</code>.</td><td>—</td></tr>
+          <tr><td>AI backend</td><td>Python</td><td>Heavy/AI steps (LLM analysis, translation) as cancellable jobs; no DB access.</td><td>LLM CLIs and cloud APIs</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Context Diagrams</h2>
+      <div class="tabs"><button data-tab="context">System context</button><button data-tab="containers">Containers</button></div>
+      <div data-tab-panel="context">
+        <div class="diagram">
+        <svg viewBox="0 0 960 400" role="img" aria-label="System context"><defs><marker id="arrow-context" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <g class="node actor"><rect x="30" y="170" width="130" height="56" rx="28.0"/><text class="title" x="95.0" y="189.0">User</text><text class="sub" x="95.0" y="207.0">one local user</text></g>
+          <g class="node primary"><rect x="250" y="146" width="250" height="104" rx="8"/><text class="title" x="375.0" y="180.0">Dreamer Studio</text><text class="sub" x="375.0" y="198.0">Electron + Python backend</text><text class="sub" x="375.0" y="213.0">portable Windows app</text></g>
+          <path class="edge " d="M160,198 L250,198" marker-end="url(#arrow-context)"/>
+          <text class="label" x="205" y="186" text-anchor="middle">uses</text>
+          <g class="node store"><path d="M690,27 v42 a125.0,7 0 0 0 250,0 v-42"/><ellipse cx="815.0" cy="27" rx="125.0" ry="7"/><text class="title" x="815.0" y="42.5">App data folder</text><text class="sub" x="815.0" y="60.5">database · library · logs · cache</text></g>
+          <path class="edge " d="M500,198 C550,198 550,48 590,48 L690,48" marker-end="url(#arrow-context)"/>
+          <text class="label" x="640" y="39" text-anchor="middle">read / write</text>
+          <g class="node store"><path d="M690,103 v42 a125.0,7 0 0 0 250,0 v-42"/><ellipse cx="815.0" cy="103" rx="125.0" ry="7"/><text class="title" x="815.0" y="118.5">settings.json</text><text class="sub" x="815.0" y="136.5">fixed in %LOCALAPPDATA%</text></g>
+          <path class="edge " d="M500,198 C550,198 550,124 590,124 L690,124" marker-end="url(#arrow-context)"/>
+          <text class="label" x="640" y="115" text-anchor="middle">read / write</text>
+          <g class="node "><rect x="690" y="172" width="250" height="56" rx="8"/><text class="title" x="815.0" y="191.0">Dreamer package (.zip)</text><text class="sub" x="815.0" y="209.0">novel import / export</text></g>
+          <path class="edge " d="M500,198 C550,198 550,200 590,200 L690,200" marker-end="url(#arrow-context)"/>
+          <text class="label" x="640" y="191" text-anchor="middle">import / export</text>
+          <g class="node external"><rect x="690" y="248" width="250" height="56" rx="8"/><text class="title" x="815.0" y="267.0">LLM CLIs</text><text class="sub" x="815.0" y="285.0">Codex · Claude · Antigravity</text></g>
+          <path class="edge future" d="M500,198 C550,198 550,276 590,276 L690,276" marker-end="url(#arrow-context)"/>
+          <text class="label" x="640" y="267" text-anchor="middle">spawn</text>
+          <g class="node external"><rect x="690" y="324" width="250" height="56" rx="8"/><text class="title" x="815.0" y="343.0">Cloud LLM APIs</text><text class="sub" x="815.0" y="361.0">OpenAI · Anthropic · Google</text></g>
+          <path class="edge future" d="M500,198 C550,198 550,352 590,352 L690,352" marker-end="url(#arrow-context)"/>
+          <text class="label" x="640" y="343" text-anchor="middle">HTTPS</text>
+        </svg>
+        <div class="diagram-legend"><span><i class="swatch primary"></i>Dreamer Studio</span><span><i class="swatch external"></i>External</span><span><i class="line"></i>0.0.0 – 0.1.0</span><span><i class="line future"></i>0.2.0</span></div>
+        </div>
+      </div>
+      <div data-tab-panel="containers">
+        <div class="diagram">
+        <svg viewBox="0 0 960 400" role="img" aria-label="Containers"><defs><marker id="arrow-containers" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+          <g class="group"><rect x="20" y="20" width="630" height="200" rx="12"/><text class="group-title" x="36" y="40">ELECTRON APP</text></g>
+          <g class="node "><rect x="44" y="70" width="170" height="126" rx="8"/><text class="title" x="129.0" y="106.0">Renderer</text><text class="sub" x="129.0" y="124.0">Angular UI</text><text class="sub" x="129.0" y="139.0">i18n · theme</text><text class="sub" x="129.0" y="154.0">no Node APIs</text></g>
+          <g class="node "><rect x="254" y="70" width="150" height="126" rx="8"/><text class="title" x="329.0" y="115.0">Preload</text><text class="sub" x="329.0" y="133.0">typed API</text><text class="sub" x="329.0" y="148.0">contextBridge</text></g>
+          <g class="node primary"><rect x="444" y="70" width="186" height="126" rx="8"/><text class="title" x="537.0" y="106.0">Main</text><text class="sub" x="537.0" y="124.0">core services</text><text class="sub" x="537.0" y="139.0">pipeline executor</text><text class="sub" x="537.0" y="154.0">settings · logging</text></g>
+          <path class="edge " d="M214,133 L254,133" marker-start="url(#arrow-containers)" marker-end="url(#arrow-containers)"/>
+          <text class="label" x="234" y="120" text-anchor="middle">IPC</text>
+          <path class="edge " d="M404,133 L444,133" marker-start="url(#arrow-containers)" marker-end="url(#arrow-containers)"/>
+          <text class="label" x="424" y="120" text-anchor="middle">IPC</text>
+          <g class="node "><rect x="720" y="70" width="220" height="126" rx="8"/><text class="title" x="830.0" y="106.0">Python backend</text><text class="sub" x="830.0" y="124.0">FastAPI · 127.0.0.1</text><text class="sub" x="830.0" y="139.0">AI jobs, stateless</text><text class="sub" x="830.0" y="154.0">PyInstaller exe</text></g>
+          <path class="edge " d="M630,133 L720,133" marker-start="url(#arrow-containers)" marker-end="url(#arrow-containers)"/>
+          <text class="label" x="675" y="120" text-anchor="middle">HTTP + token</text>
+          <g class="node store"><path d="M330,297 v76 a75.0,7 0 0 0 150,0 v-76"/><ellipse cx="405.0" cy="297" rx="75.0" ry="7"/><text class="title" x="405.0" y="320.5">SQLite</text><text class="sub" x="405.0" y="338.5">node:sqlite</text><text class="sub" x="405.0" y="353.5">database.sqlite</text></g>
+          <g class="node store"><path d="M500,297 v76 a75.0,7 0 0 0 150,0 v-76"/><ellipse cx="575.0" cy="297" rx="75.0" ry="7"/><text class="title" x="575.0" y="320.5">Files</text><text class="sub" x="575.0" y="338.5">library · logs · cache</text><text class="sub" x="575.0" y="353.5">&lt;app data&gt;</text></g>
+          <path class="edge " d="M515,196 C515,250 405,240 405,290" marker-end="url(#arrow-containers)"/>
+          <path class="edge " d="M560,196 C560,250 575,240 575,290" marker-end="url(#arrow-containers)"/>
+          <text class="label" x="600" y="248" text-anchor="start">data access layer</text>
+          <g class="node external"><rect x="720" y="290" width="220" height="90" rx="8"/><text class="title" x="830.0" y="326.0">LLM providers</text><text class="sub" x="830.0" y="344.0">CLIs · cloud APIs</text></g>
+          <path class="edge future" d="M830,196 L830,290" marker-end="url(#arrow-containers)"/>
+          <text class="label" x="842" y="243" text-anchor="start">0.2.0</text>
+        </svg>
+        <div class="diagram-legend"><span><i class="swatch primary"></i>Dreamer Studio</span><span><i class="swatch external"></i>External</span><span><i class="line"></i>0.0.0 – 0.1.0</span><span><i class="line future"></i>0.2.0</span></div>
+        </div>
+      </div>
+
+      <h2>Repository Structure</h2>
+      <p class="muted">Top-level folder per process (AD-08). JS folders are pnpm workspace projects; <code>backend/</code> is a pip project. Proposed layout, no code yet.</p>
+      <pre class="tree">dreamer-studio/                 
+├── angular/                    <span class="note"># UI (renderer)</span>
+│   ├── src/                    
+│   │   ├── main.ts             <span class="note"># bootstrap</span>
+│   │   ├── root.component.ts   <span class="note"># root component, hosts the shell</span>
+│   │   ├── components/         <span class="note"># base components: button, input, dialog, toast, table (REQ-001)</span>
+│   │   ├── shell/              <span class="note"># sidebar, header, content area, pipelines indicator (REQ-003)</span>
+│   │   ├── features/           <span class="note"># one module per feature, defined later</span>
+│   │   ├── styles/             <span class="note"># _tokens.scss, _base.scss, _fonts.scss, _bootstrap.scss (DESIGN.md)</span>
+│   │   └── assets/             <span class="note"># icons.svg, fonts/, i18n/ (vi.json, en.json)</span>
+│   ├── public/                 <span class="note"># icon.svg, brand/</span>
+│   └── .storybook/             <span class="note"># Storybook config (REQ-001)</span>
+├── electron/                   <span class="note"># Core services + bridge</span>
+│   ├── main/                   
+│   │   ├── app/                <span class="note"># startup, window, global error handler</span>
+│   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
+│   │   ├── storage/            <span class="note"># path resolver, database, migrations, repositories (TSK-005..007)</span>
+│   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
+│   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
+│   │   ├── backend/            <span class="note"># Python process lifecycle, HTTP client</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain</span>
+│   │   └── logging/            <span class="note"># logger, rotation (TSK-003)</span>
+│   └── preload/                <span class="note"># contextBridge API for the renderer</span>
+├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
+│   ├── ipc/                    <span class="note"># channel names, request/response types</span>
+│   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
+│   ├── errors/                 <span class="note"># error codes translated by the UI</span>
+│   └── core/                   <span class="note"># theme.ts (DESIGN.md)</span>
+├── backend/                    <span class="note"># AI backend (Python)</span>
+│   ├── app/                    <span class="note"># FastAPI app: main.py, jobs/, llm/, logging</span>
+│   ├── tests/                  <span class="note"># pytest</span>
+│   └── requirements.txt        <span class="note"># pinned dependencies (pip)</span>
+├── scripts/                    <span class="note"># build: Python freeze (PyInstaller) + Electron zip</span>
+├── _docs/                      <span class="note"># requirements xlsx, architecture, solutions, plans</span>
+├── .claude/                    <span class="note"># agents, skills, scripts, templates</span>
+├── package.json                <span class="note"># single app version (TSK-002 AC-4), root scripts</span>
+└── pnpm-workspace.yaml         <span class="note"># workspace projects: angular, electron, shared</span></pre>
+      <h3>App data layout</h3>
+      <ul>
+        <li><code>settings.json</code> always stays in <code>%LOCALAPPDATA%/DreamerStudio/</code>, so the app finds it at startup.</li>
+        <li>Everything else lives in <code>&lt;app data&gt;</code>. Moving or picking another folder (REQ-008) moves only this part.</li>
+      </ul>
+      <pre class="tree">%LOCALAPPDATA%/DreamerStudio/   <span class="note"># fixed folder, never moved</span>
+└── settings.json               <span class="note"># language, theme, app data path, pipelines (TSK-010)</span></pre>
+      <pre class="tree">&lt;app data&gt;/           <span class="note"># default %LOCALAPPDATA%/DreamerStudio/; user can move it (REQ-008)</span>
+├── database.sqlite   <span class="note"># SQLite database (TSK-005)</span>
+├── library/          
+│   └── &lt;novel-id&gt;/   <span class="note"># chapters and cover (TSK-013)</span>
+├── logs/             <span class="note"># main.log, backend.log (TSK-003, AD-12)</span>
+│   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run</span>
+└── cache/            <span class="note"># import staging and temp files</span></pre>
+
+      <h2>Conventions</h2>
+      <p class="muted">Code style is set by the human. The other groups are proposals until TSK-001 is approved. <span class="pill warning">[unverified]</span></p>
+      <details open><summary>Code style</summary><ul>
+        <li>No comments on classes, functions, properties or methods.</li>
+        <li>Keep other comments short; never explain code at length.</li>
+        <li>Keep code simple and readable.</li>
+        <li>One import statement per line; never wrap an import over several lines.</li>
+        <li>Do not break a line that is not too long.</li>
+        <li>No duplicated code; refactor into a function or class.</li>
+        <li>TypeScript: no <code>Omit</code> type; always write explicit types.</li>
+        <li>Write unit tests only when the human asks for them explicitly.</li>
+        <li>Use the <code>data-testid</code> attribute to target elements in tests.</li>
+      </ul></details>
+      <details><summary>Naming and formatting</summary><ul>
+        <li>TS: <code>kebab-case</code> files, <code>PascalCase</code> types/classes, <code>camelCase</code> functions; Prettier + ESLint</li>
+        <li>Python: <code>snake_case</code>, Ruff format + lint, type hints</li>
+        <li>IPC channels: <code>&lt;domain&gt;:&lt;action&gt;</code>, e.g. <code>pipeline:start</code>; types live in <code>shared/</code></li>
+        <li>UI text only from i18n keys in <code>angular/src/assets/i18n/{vi,en}.json</code>, read by an in-house service + pipe (no i18n library); missing key falls back to English</li>
+        <li>UI styles only from <code>DESIGN.md</code> tokens</li>
+      </ul></details>
+      <details><summary>Error handling and logging</summary><ul>
+        <li>Errors cross process boundaries as <code>{ code, message, details }</code>; renderer translates <code>code</code> into a friendly message (TSK-003 AC-4, REQ-002)</li>
+        <li>Global handlers: main <code>uncaughtException</code>/<code>unhandledRejection</code>, renderer <code>ErrorHandler</code>, FastAPI exception handler</li>
+        <li>Log line: <code>ISO time · level · process · module · message</code>; rotate by size, keep N files; never log secrets</li>
+      </ul></details>
+      <details><summary>Testing</summary><ul>
+        <li>Tooling: Vitest (TS), pytest (Python), next to the code (AD-09)</li>
+        <li>Unit tests only when the human asks; elements under test carry <code>data-testid</code></li>
+        <li>UI states: Storybook stories per component (REQ-001)</li>
+        <li>AC checks in the running app: <code>tool-playwright</code></li>
+      </ul></details>
+      <details><summary>Git and commits</summary><ul><li>One plan step = one commit: <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt; [&lt;req-id&gt;]</code></li></ul></details>
+      <details><summary>Commands</summary>
+        <p class="muted">Not defined yet; filled after TSK-002. Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.</p>
+        <table><thead><tr><th>Task</th><th>Command</th></tr></thead>
+          <tbody><tr><td>Dev</td><td><code>pnpm dev</code> <span class="pill warning">[unverified]</span></td></tr><tr><td>Test</td><td><code>pnpm test</code> <span class="pill warning">[unverified]</span></td></tr><tr><td>Lint</td><td><code>pnpm lint</code> <span class="pill warning">[unverified]</span></td></tr><tr><td>Build</td><td><code>pnpm package</code> <span class="pill warning">[unverified]</span></td></tr></tbody></table>
+      </details>
+    </main>
+  </div>
+</body>
+</html>

@@ -3,12 +3,16 @@
 Usage:
   python .claude/scripts/reqs.py list [--capacity TH01-03] [--id REQ-013] [--release 0.1.0] [--status "1. Draft"] [--json]
   python .claude/scripts/reqs.py check
+  python .claude/scripts/reqs.py decisions [--status Open] [--json]
   python .claude/scripts/reqs.py next-id
   python .claude/scripts/reqs.py upsert patch.json
 
 Patch file (only the given fields are written; new IDs are inserted):
   {"capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
-   "requirements": [{"Req ID": "REQ-023", "Capacity Name": "...", "Status": "1. Draft"}]}
+   "requirements": [{"Req ID": "REQ-023", "Capacity Name": "...", "Status": "1. Draft"}],
+   "decisions":    [{"Decision ID": "AD-14", "Title": "...", "Options": "A — pros\\nB — pros", "Status": "Open"}]}
+
+Decision options: one per line, "<title> — <details>"; Recommended and Decision hold an option title.
 """
 import argparse
 import copy
@@ -16,12 +20,15 @@ import json
 import re
 
 from common import (
-    CATALOG_ID, CATALOG_NAME, CATALOG_SHEET, REQ_CAPACITY, REQ_ID, STATUSES,
-    fail, headers, load_workbook, read_rows, save_workbook, theme_sheets,
+    CATALOG_ID, CATALOG_NAME, CATALOG_SHEET, DECISION_ID, DECISION_STATUSES, DECISIONS_SHEET,
+    REQ_CAPACITY, REQ_ID, STATUSES,
+    decisions_sheet, fail, headers, load_workbook, read_rows, save_workbook, theme_sheets,
 )
 
 CAPACITY_ID = re.compile(r"^TH\d{2}-\d{2}$")
 REQUIREMENT_ID = re.compile(r"^(REQ|TSK)-\d{3}$")
+DECISION_ID_PATTERN = re.compile(r"^AD-\d{2}$")
+OPTION_SEPARATOR = " — "
 AC_LINE = re.compile(r"^AC-\d+\. ")
 
 
@@ -38,6 +45,15 @@ def load_all(wb):
             row["_sheet"] = ws.title
             requirements.append(row)
     return capacities, requirements
+
+
+def load_decisions(wb):
+    return read_rows(wb[DECISIONS_SHEET]) if DECISIONS_SHEET in wb.sheetnames else []
+
+
+def option_titles(decision):
+    lines = str(decision.get("Options") or "").splitlines()
+    return [line.split(OPTION_SEPARATOR)[0].strip() for line in lines if line.strip()]
 
 
 # ---------- list ----------
@@ -76,6 +92,16 @@ def cmd_list(args):
     print("\n".join(to_markdown(r, REQ_ID) for r in requirements))
 
 
+def cmd_decisions(args):
+    decisions = [d for d in load_decisions(load_workbook()) if not args.status or d.get("Status") == args.status]
+    if args.json:
+        print(json.dumps([{k: v for k, v in d.items() if k != "_row"} for d in decisions],
+                         ensure_ascii=False, indent=2, default=str))
+        return
+    print(f"## Decisions ({len(decisions)})\n")
+    print("\n".join(to_markdown(d, DECISION_ID) for d in decisions))
+
+
 # ---------- check ----------
 
 def find_issues(capacities, requirements):
@@ -108,8 +134,31 @@ def find_issues(capacities, requirements):
     return issues
 
 
+def find_decision_issues(decisions):
+    issues = []
+    seen = set()
+    for d in decisions:
+        where = f"{DECISIONS_SHEET}!{d['_row']} {d[DECISION_ID]}"
+        if d[DECISION_ID] in seen:
+            issues.append(f"{where}: duplicate ID")
+        seen.add(d[DECISION_ID])
+        if not DECISION_ID_PATTERN.match(str(d[DECISION_ID])):
+            issues.append(f"{where}: ID does not match {DECISION_ID_PATTERN.pattern}")
+        if d.get("Status") not in DECISION_STATUSES:
+            issues.append(f"{where}: status '{d.get('Status')}' not in {DECISION_STATUSES}")
+        if d.get("Status") == "Decided" and not d.get("Decision"):
+            issues.append(f"{where}: decided without a Decision")
+        if d.get("Recommended") and d["Recommended"] not in option_titles(d):
+            issues.append(f"{where}: Recommended is not one of the option titles")
+    return issues
+
+
+def all_issues(wb):
+    return find_issues(*load_all(wb)) + find_decision_issues(load_decisions(wb))
+
+
 def cmd_check(_args):
-    issues = find_issues(*load_all(load_workbook()))
+    issues = all_issues(load_workbook())
     print("\n".join(issues) if issues else "OK: no issues found")
     if issues:
         raise SystemExit(1)
@@ -118,9 +167,12 @@ def cmd_check(_args):
 # ---------- next-id ----------
 
 def cmd_next_id(_args):
-    _, requirements = load_all(load_workbook())
+    wb = load_workbook()
+    _, requirements = load_all(wb)
     numbers = [int(r[REQ_ID][4:]) for r in requirements if REQUIREMENT_ID.match(str(r[REQ_ID]))]
     print(f"{max(numbers, default=0) + 1:03d}  (use REQ-nnn for functional, TSK-nnn for technical)")
+    decisions = [int(d[DECISION_ID][3:]) for d in load_decisions(wb) if DECISION_ID_PATTERN.match(str(d[DECISION_ID]))]
+    print(f"AD-{max(decisions, default=0) + 1:02d}  (next decision)")
 
 
 # ---------- upsert ----------
@@ -135,13 +187,11 @@ def write_row(ws, row_number, values):
 
 def insert_row(ws, after_row, values):
     """Insert a row below `after_row`, copying its style (or the first data row's)."""
-    style_row = after_row if ws.cell(row=after_row, column=1).value else 2
+    style_row = after_row if after_row > 1 and ws.cell(row=after_row, column=1).value else 2
+    styles = [copy.copy(ws.cell(row=style_row, column=column)._style) for column in range(1, ws.max_column + 1)]
     ws.insert_rows(after_row + 1)
-    for column in range(1, ws.max_column + 1):
-        source = ws.cell(row=style_row, column=column)
-        target = ws.cell(row=after_row + 1, column=column)
-        if source.has_style:
-            target._style = copy.copy(source._style)
+    for column, style in enumerate(styles, start=1):
+        ws.cell(row=after_row + 1, column=column)._style = style
     write_row(ws, after_row + 1, values)
 
 
@@ -182,8 +232,14 @@ def cmd_upsert(args):
         result = upsert(sheet, read_rows(sheet), REQ_ID, values, lambda r: r.get(REQ_CAPACITY))
         print(f"{result}: {values[REQ_ID]} ({sheet.title})")
 
+    if patch.get("decisions"):
+        sheet = decisions_sheet(wb)
+        for values in patch["decisions"]:
+            result = upsert(sheet, read_rows(sheet), DECISION_ID, values, lambda r: DECISIONS_SHEET)
+            print(f"{result}: {values[DECISION_ID]}")
+
     save_workbook(wb)
-    issues = find_issues(*load_all(wb))
+    issues = all_issues(wb)
     print("\n".join(["check:"] + issues) if issues else "check: OK")
 
 
@@ -199,7 +255,12 @@ def main():
     list_parser.add_argument("--json", action="store_true")
     list_parser.set_defaults(run=cmd_list)
 
-    commands.add_parser("check", help="validate IDs, statuses, capacities, ACs").set_defaults(run=cmd_check)
+    decisions_parser = commands.add_parser("decisions", help="print architecture decisions")
+    decisions_parser.add_argument("--status", choices=DECISION_STATUSES)
+    decisions_parser.add_argument("--json", action="store_true")
+    decisions_parser.set_defaults(run=cmd_decisions)
+
+    commands.add_parser("check", help="validate IDs, statuses, capacities, ACs, decisions").set_defaults(run=cmd_check)
     commands.add_parser("next-id", help="print the next free REQ/TSK number").set_defaults(run=cmd_next_id)
 
     upsert_parser = commands.add_parser("upsert", help="apply a JSON patch")

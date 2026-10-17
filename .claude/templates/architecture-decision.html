@@ -9,16 +9,19 @@
 </head>
 <body>
   <!--
-    AGENT GUIDE (architect) — delete nothing outside the <main>.
-    1. One <section class="decision"> per open question. data-id = AD-<nn>.
-    2. 2-4 options; mark the one you recommend with class "recommended".
-    3. When the human decides, set data-decided="<option value>" so the answer is kept in the file.
-    4. Human clicks "Export decisions" -> markdown is copied + downloaded -> paste it back to Claude.
+    AGENT GUIDE (architect) — do not edit decisions here.
+    1. Source of truth: sheet "Open Decisions" in _docs/0.requirements-analysis.xlsx.
+       Write it with `python .claude/scripts/reqs.py upsert patch.json` ("decisions": [...]).
+    2. Columns: Decision ID (AD-nn), Title, Context, Affects, Options (one per line "<title> — <details>"),
+       Recommended (option title), Decision (option title), Status (Open | Decided | Deferred), Notes, Decided On.
+    3. Human picks options here -> "Export decisions" -> pastes the markdown back -> architect upserts the sheet.
   -->
   <header class="doc-header">
     <span class="brand">Dreamer Studio</span>
     <span class="muted">Architecture Decisions</span>
     <span class="spacer"></span>
+    <span class="meta" data-xlsx-source></span>
+    <button class="btn" data-action="reload-xlsx">Reload</button>
     <button class="btn" data-action="reset-decisions">Reset</button>
     <button class="btn primary" data-action="export-decisions">Export decisions</button>
     <button class="btn" data-action="toggle-theme">Theme</button>
@@ -28,40 +31,77 @@
     <nav class="doc-toc"></nav>
     <main class="doc-main">
       <h1>Architecture Decisions</h1>
-      <div class="doc-meta"><span>Updated {{DATE}}</span><span>Owner: architect</span><span>Input: _docs/0.requirements-analysis.xlsx</span></div>
+      <div class="doc-meta"><span>Owner: architect</span><span>Source: _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
 
       <div class="callout">Pick one option per question, add notes if needed, then click <b>Export decisions</b> and paste the result to Claude.</div>
 
-      <h2>Context</h2>
-      <p>Drivers taken from the requirements (release, constraints, quality attributes).</p>
-      <ul>
-        <li>Driver 1 — <span class="muted">source: TH01-01</span></li>
-      </ul>
-
-      <h2>Open Questions</h2>
-
-      <section class="decision" data-id="AD-01">
-        <header><h3>AD-01 · Question title</h3><span data-status></span></header>
-        <p class="muted">Why this matters, which requirements it affects.</p>
-        <label class="option recommended">
-          <input type="radio" name="AD-01" value="Option A">
-          <span><span class="title">Option A</span><br><span class="muted">Pros · Cons · Effort</span></span>
-        </label>
-        <label class="option">
-          <input type="radio" name="AD-01" value="Option B">
-          <span><span class="title">Option B</span><br><span class="muted">Pros · Cons · Effort</span></span>
-        </label>
-        <textarea class="input" data-note placeholder="Notes (optional)"></textarea>
-      </section>
-
-      <h2>Decision Log</h2>
-      <table>
-        <thead><tr><th>ID</th><th>Decision</th><th>Date</th><th>Rationale</th></tr></thead>
-        <tbody>
-          <tr><td>AD-01</td><td class="muted">open</td><td></td><td></td></tr>
-        </tbody>
-      </table>
+      <section data-xlsx-picker hidden></section>
+      <div id="content"></div>
     </main>
   </div>
+
+  <script>
+    const DECISIONS_SHEET = "Open Decisions";
+    const OPTION_SEPARATOR = " — ";
+    const GROUPS = [
+      { status: "Open", title: "Open Questions" },
+      { status: "Decided", title: "Decided" },
+    ];
+    const { escapeHtml, sheetRows } = window.Doc;
+
+    function optionsOf(row) {
+      return String(row.Options).split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+        const [title, ...details] = line.split(OPTION_SEPARATOR);
+        return { title: title.trim(), details: details.join(OPTION_SEPARATOR) };
+      });
+    }
+
+    function decisionSection(row) {
+      const id = escapeHtml(row["Decision ID"]);
+      const decided = row.Decision ? ` data-decided="${escapeHtml(row.Decision)}"` : "";
+      const options = optionsOf(row).map((option) => `
+        <label class="option${option.title === row.Recommended ? " recommended" : ""}">
+          <input type="radio" name="${id}" value="${escapeHtml(option.title)}">
+          <span><span class="title">${escapeHtml(option.title)}</span><br><span class="muted">${escapeHtml(option.details)}</span></span>
+        </label>`).join("");
+      return `<section class="decision" data-id="${id}"${decided}>
+        <header><h3>${id} · ${escapeHtml(row.Title)}</h3><span data-status></span></header>
+        <p class="muted pre-line">${escapeHtml(row.Context)}</p>
+        ${row.Affects ? `<p class="meta">Affects: ${escapeHtml(row.Affects)}</p>` : ""}
+        ${options}
+        ${row.Notes ? `<p class="meta pre-line">Notes: ${escapeHtml(row.Notes)}</p>` : ""}
+        <textarea class="input" data-note placeholder="Notes (optional)"></textarea>
+      </section>`;
+    }
+
+    function deferredList(rows) {
+      if (!rows.length) return "";
+      const items = rows.map((row) => `<li><b>${escapeHtml(row["Decision ID"])} · ${escapeHtml(row.Title)}</b> — ${escapeHtml(row.Context)}
+        ${row.Affects ? `<span class="meta">(${escapeHtml(row.Affects)})</span>` : ""}</li>`).join("");
+      return `<h2>Deferred</h2><p class="muted">Not needed yet; decided in the solution of the capacity.</p><ul>${items}</ul>`;
+    }
+
+    function decisionLog(rows) {
+      const body = rows.map((row) => `<tr><td>${escapeHtml(row["Decision ID"])}</td><td>${escapeHtml(row.Decision)}</td>
+        <td>${escapeHtml(row["Decided On"])}</td><td class="pre-line">${escapeHtml(row.Notes)}</td></tr>`).join("");
+      return `<h2>Decision Log</h2><table><thead><tr><th>ID</th><th>Decision</th><th>Date</th><th>Notes</th></tr></thead>
+        <tbody>${body || `<tr><td colspan="4" class="muted">Nothing decided yet.</td></tr>`}</tbody></table>`;
+    }
+
+    function showWorkbook(workbook) {
+      const rows = sheetRows(workbook, DECISIONS_SHEET);
+      const byStatus = (status) => rows.filter((row) => row.Status === status);
+      const content = document.getElementById("content");
+      content.innerHTML = rows.length
+        ? GROUPS.map((group) => byStatus(group.status).length
+            ? `<h2>${group.title}</h2>${byStatus(group.status).map(decisionSection).join("")}` : "").join("")
+          + deferredList(byStatus("Deferred")) + decisionLog(byStatus("Decided"))
+        : `<p class="muted">Sheet "${DECISIONS_SHEET}" is missing or empty.</p>`;
+      window.Doc.initDecisions(content);
+      window.Doc.buildToc();
+    }
+
+    window.Doc.loadRequirementsWorkbook(showWorkbook);
+  </script>
 </body>
 </html>

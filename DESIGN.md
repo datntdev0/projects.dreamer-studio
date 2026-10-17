@@ -6,7 +6,7 @@ Source of truth: `angular/src/styles/_tokens.scss`, `angular/src/styles/_base.sc
 
 ## 1. Colors
 
-The theme is set by `data-theme="dark" | "light"` on `<html>` (`applyTheme` in `shared/src/core/theme.ts`). Settings offers Dark and Light only.
+The theme is set by `data-theme="dark" | "light"` on `<html>` (`applyTheme` in `shared/core/theme.ts`). Settings offers Dark and Light only.
 
 ### Brand (same in both themes)
 

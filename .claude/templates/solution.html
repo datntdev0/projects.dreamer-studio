@@ -13,8 +13,11 @@
     1. Scope = one capacity (THnn-nn) or one functional requirement (REQ-nnn).
     2. Every requirement in scope appears in the Traceability table with its ACs.
     3. Open questions use <section class="decision"> (same widget as architecture-decision).
-    4. UI follows DESIGN.md tokens; the designer fills the UI Design section.
+       Once all are answered, replace them with one table (#, Question, Decision, Not chosen) and drop the Export button.
+    4. UI follows DESIGN.md tokens; the designer fills the UI Design section as nested lists (no cards).
     5. Implementation Outline lists commit-sized steps; /solo-implement turns them into a plan.
+    6. Components: directory tree in <pre class="tree"> with <span class="note"># ...</span>, no diagram.
+    7. Main Flow: <div class="flow"> (doc.js draws it); no mermaid. Steps: data-from, data-to (omit for self), data-kind="return" for responses; <b> is the arrow label.
   -->
   <header class="doc-header">
     <span class="brand">Dreamer Studio</span>
@@ -45,30 +48,6 @@
         </tbody>
       </table>
 
-      <h2>Design</h2>
-      <h3>Components</h3>
-      <pre class="mermaid">flowchart LR
-  ui[UI component] --> svc[Service] --> repo[(Repository)]</pre>
-      <table>
-        <thead><tr><th>Component</th><th>Layer</th><th>New / Changed</th><th>Responsibility</th></tr></thead>
-        <tbody><tr><td>…</td><td>…</td><td>New</td><td>…</td></tr></tbody>
-      </table>
-
-      <h3>Main Flow</h3>
-      <pre class="mermaid">sequenceDiagram
-  User->>UI: action
-  UI->>Service: call
-  Service-->>UI: result</pre>
-
-      <h3>Data and Interfaces</h3>
-      <ul><li>Tables / files / settings: …</li><li>APIs / IPC / events: …</li></ul>
-
-      <h3>UI Design</h3>
-      <p class="muted">Designer: screens, states (empty, loading, error), DESIGN.md tokens used.</p>
-
-      <h3>Errors and Edge Cases</h3>
-      <ul><li>…</li></ul>
-
       <h2>Open Questions</h2>
       <section class="decision" data-id="Q-01">
         <header><h3>Q-01 · Question</h3><span data-status></span></header>
@@ -76,6 +55,34 @@
         <label class="option"><input type="radio" name="Q-01" value="Option B"><span><span class="title">Option B</span><br><span class="muted">trade-off</span></span></label>
         <textarea class="input" data-note placeholder="Notes (optional)"></textarea>
       </section>
+
+      <h2>Design</h2>
+      <h3>Components</h3>
+      <p class="muted">All new except items marked (changed).</p>
+      <pre class="tree">dreamer-studio/
+├── angular/src/features/…   <span class="note"># UI component</span>
+└── electron/main/…          <span class="note"># (changed) service</span></pre>
+
+      <h3>Main Flow</h3>
+      <div class="flow">
+        <ol class="flow-lanes"><li>User</li><li>UI</li><li>Service</li></ol>
+        <ol class="flow-steps">
+          <li data-from="User" data-to="UI"><b>action</b> <span class="muted">— …</span></li>
+          <li data-from="UI" data-to="Service"><b>call</b> <span class="muted">— …</span></li>
+          <li data-from="Service" data-to="UI" data-kind="return"><b>result</b> <span class="muted">— …</span></li>
+        </ol>
+      </div>
+
+      <h3>Data and Interfaces</h3>
+      <ul><li>Tables / files / settings: …</li><li>APIs / IPC / events: …</li></ul>
+
+      <h3>UI Design</h3>
+      <ul>
+        <li><b>Screen / state</b><ul><li>Layout, copy, DESIGN.md tokens, <code>data-testid</code> values.</li></ul></li>
+      </ul>
+
+      <h3>Errors and Edge Cases</h3>
+      <ul><li>…</li></ul>
 
       <h2>Implementation Outline</h2>
       <ol>

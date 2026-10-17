@@ -17,7 +17,7 @@ argument-hint: "<capacity ID THnn-nn | requirement ID REQ-nnn>"
 1. **Collect**
    - Requirements: `python .claude/scripts/reqs.py list --capacity <THnn-nn>` or `--id <REQ-nnn>`.
    - Warn if any requirement is not `2. Approve`; ask the human to continue or run `/solo-analysis` first.
-   - `_docs/1.architecture-overview.html`, `_docs/0.architecture-decision.html`, related code, `DESIGN.md`.
+   - `_docs/1.architecture-overview.html`, decisions (`python .claude/scripts/reqs.py decisions`), related code, `DESIGN.md`.
 2. **Analyze**
    - Map each AC to components, data, interfaces and tests.
    - Spawn in parallel (one message):

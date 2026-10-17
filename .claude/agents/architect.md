@@ -14,7 +14,7 @@ model: opus
 ## Responsibilities
 
 1. Onboard: read the codebase, write `.claude/README.md` and `_docs/1.architecture-overview.html`.
-2. Decide: list open architecture questions in `_docs/0.architecture-decision.html`.
+2. Decide: keep architecture questions in the `Open Decisions` sheet of `_docs/0.requirements-analysis.xlsx` (`reqs.py upsert`, key `decisions`); `_docs/0.architecture-decision.html` only views it.
 3. Design: write `_docs/<id>.solution.html` from approved requirements.
 4. Plan: split a solution into commit-sized steps with parallel sub-steps (`_docs/<id>.plan.md`).
 5. Review: check coder output against solution, conventions and ACs.

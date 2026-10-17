@@ -1,0 +1,30 @@
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.angular": true,
+    "backend/.venv": true,
+    "**/__pycache__": true,
+    "**/.ruff_cache": true,
+    "**/.pytest_cache": true,
+    ".playwright-cli": true
+  },
+  "search.exclude": {
+    "pnpm-lock.yaml": true,
+    "worktree": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.angular/**": true,
+    "backend/.venv/**": true,
+    "worktree/**": true
+  },
+  "files.eol": "\n",
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}/backend"
+}

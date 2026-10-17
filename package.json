@@ -1,0 +1,26 @@
+{
+  "name": "dreamer-studio",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@11.10.0",
+  "scripts": {
+    "lint": "eslint . && node scripts/py.mjs lint",
+    "format": "prettier --write . && node scripts/py.mjs format",
+    "format:check": "prettier --check . && node scripts/py.mjs format:check",
+    "test": "vitest run && node scripts/py.mjs test",
+    "check": "pnpm lint && pnpm format:check && pnpm test",
+    "py:setup": "node scripts/py.mjs setup",
+    "dev": "node scripts/dev.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.5",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5"
+  }
+}

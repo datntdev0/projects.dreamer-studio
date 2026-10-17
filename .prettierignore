@@ -1,0 +1,11 @@
+node_modules
+dist
+out
+.angular
+backend
+_docs
+.claude
+worktree
+.playwright-cli
+pnpm-lock.yaml
+*.md

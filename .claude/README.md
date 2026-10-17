@@ -3,12 +3,12 @@
 ## Project
 
 - **What**: local desktop studio that uses AI to produce creative content (novels, music, video).
-- **Status**: pre-code. Architecture decided (AD-01..13); next: requirement updates, then TSK-002 scaffolding.
+- **Status**: skeleton in code (TSK-002): empty Electron window with app version. Next: TSK-003 logging and error handling.
 - **Releases**: `0.0.0` foundation (approved) · `0.1.0` novel library (draft) · `0.2.0` AI analysis (draft).
-- **Stack**: Electron main + renderer · Angular + Bootstrap · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
+- **Stack**: Electron 44 main + renderer (esbuild) · Angular 22 + Bootstrap · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
 - **Processes**: renderer (UI) ──IPC──► main (core services, DB, pipeline executor) ──HTTP──► Python (AI jobs, stateless).
-- **Folders**: `angular/src` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/` · `scripts/` (planned, TSK-002).
-- **Decisions**: AD-01..13 and AD-18 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
+- **Folders**: `angular/src` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/app` · `scripts/` (`dev.mjs`, `py.mjs`).
+- **Decisions**: AD-01..13, AD-18, AD-19 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
 - **Sources of truth**:
   - Requirements: `_docs/0.requirements-analysis.xlsx`
   - Visual design: `DESIGN.md`

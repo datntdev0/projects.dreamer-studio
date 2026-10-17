@@ -12,3 +12,14 @@ __pycache__/
 .claude/settings.local.json
 _docs/*.solution.html
 _docs/*.plan.md
+
+# Build output
+node_modules/
+dist/
+out/
+.angular/
+backend/.venv/
+backend/build/
+.ruff_cache/
+.pytest_cache/
+worktree/

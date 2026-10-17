@@ -1,0 +1,35 @@
+@use 'styles/tokens';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.1px;
+}
+
+.meta {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-meta);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,13 @@
+packages:
+  - angular
+  - electron
+  - shared
+allowBuilds:
+  '@parcel/watcher': false
+  electron: true
+  esbuild: true
+  lmdb: false
+  msgpackr-extract: false
+minimumReleaseAgeExclude:
+  - electron@44.9.0
+  - eslint@10.13.0

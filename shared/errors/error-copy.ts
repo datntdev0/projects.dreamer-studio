@@ -26,6 +26,11 @@ export const errorCopy: Record<ErrorCode, ErrorCopy> = {
     title: 'Local data is from a newer version.',
     message: 'This data was saved by a newer Dreamer Studio. Nothing was changed. Use the newer version.',
   },
+  APP_DATA_UNWRITABLE: {
+    title: 'Cannot write to the data folder.',
+    message:
+      'Dreamer Studio could not create a folder in the data folder. Check that the drive is connected and that you have permission, then start the app again.',
+  },
 };
 
 export function newerVersionNote(found: string, latest: string): string {

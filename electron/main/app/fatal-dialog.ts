@@ -2,6 +2,7 @@ import { app, dialog, MessageBoxReturnValue } from 'electron';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { ErrorCopy, errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
 import { openFolder } from '../ipc/app-ipc';
+import { isLoggingReady } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
 
 type FatalAction = 'openData' | 'openLogs' | 'quit';
@@ -31,11 +32,12 @@ export async function showFatalError(code: ErrorCode, file: string, paths: AppPa
   const quitIndex: number = buttons.length - 1;
   const copy: ErrorCopy = errorCopy[code];
   const noteLine: string = note ? `\n${note}` : '';
+  const savedLine: string = isLoggingReady() ? ` ${errorText.savedToLogs}` : '';
   const result: MessageBoxReturnValue = await dialog.showMessageBox({
     type: warningCodes.includes(code) ? 'warning' : 'error',
     title: errorText.dataDialogTitle,
     message: copy.title,
-    detail: `${copy.message}${noteLine}\n\n${errorText.code}: ${code}. ${errorText.file}: ${file}. ${errorText.savedToLogs}`,
+    detail: `${copy.message}${noteLine}\n\n${errorText.code}: ${code}. ${errorText.file}: ${file}.${savedLine}`,
     buttons: buttons.map((button: FatalButton) => button.label),
     defaultId: quitIndex,
     cancelId: quitIndex,

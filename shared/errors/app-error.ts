@@ -7,6 +7,7 @@ export const ErrorCode = {
   DbQueryFailed: 'DB_QUERY_FAILED',
   DbMigrationFailed: 'DB_MIGRATION_FAILED',
   DbNewerVersion: 'DB_NEWER_VERSION',
+  AppDataUnwritable: 'APP_DATA_UNWRITABLE',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

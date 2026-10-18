@@ -23,3 +23,11 @@ export function createWindow(): BrowserWindow {
   void window.loadURL(devUrl ?? `${appOrigin}/index.html`);
   return window;
 }
+
+export function focusWindow(window: BrowserWindow): void {
+  if (window.isMinimized()) {
+    window.restore();
+  }
+  window.show();
+  window.focus();
+}

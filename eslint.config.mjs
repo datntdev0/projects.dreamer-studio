@@ -2,6 +2,8 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const appDataPathMessage = 'Resolve app data paths with resolveAppPaths in storage/paths.ts.';
+
 export default tseslint.config(
   {
     ignores: [
@@ -43,6 +45,24 @@ export default tseslint.config(
               message: 'Only electron/main/storage and the composition root (index.ts) may import the Database.',
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['electron/**'],
+    ignores: ['electron/main/storage/paths.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.object.name='app'][callee.property.name='getPath']",
+          message: appDataPathMessage,
+        },
+        {
+          selector:
+            "MemberExpression[object.object.name='process'][object.property.name='env'][property.name='LOCALAPPDATA']",
+          message: appDataPathMessage,
         },
       ],
     },

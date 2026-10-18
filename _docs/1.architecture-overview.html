@@ -31,7 +31,7 @@
       <h1>Architecture Overview</h1>
       <div class="doc-meta"><span>Updated 2026-10-18</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
 
-      <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
+      <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005; app data folders and single instance since TSK-007. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
 
       <h2>Overview</h2>
       <p>Dreamer Studio is a local Windows desktop studio for one user to manage a creative library (novels first, music and video later) and run AI analysis on it. It ships as a portable package: an Electron app that starts a bundled Python FastAPI backend on 127.0.0.1. All data stays on the machine.</p>
@@ -48,7 +48,7 @@
         <div class="card"><h3>Quality attributes</h3><ul>
           <li>Portable: runs after extract, no extra installs (TSK-004)</li>
           <li>Responsive UI: long work runs as pipelines (TSK-008)</li>
-          <li>Data safety: migrations with rollback, atomic import (TSK-006, REQ-013)</li>
+          <li>Data safety: one backup before migrations (no rollback, AD-25), atomic import (TSK-006, REQ-013)</li>
           <li>Observable: file logs, diagnostics, error handler (TSK-003, TSK-011)</li>
           <li>Localized and themed at runtime (REQ-002, REQ-007)</li>
         </ul></div>
@@ -183,15 +183,17 @@
       <pre class="tree">&lt;app data&gt;/           <span class="note"># default %LOCALAPPDATA%/DreamerStudio/; user can move it (REQ-008)</span>
 ├── database.sqlite   <span class="note"># SQLite database (TSK-005)</span>
 ├── database.backup.sqlite <span class="note"># copy made before pending migrations, overwritten each time (TSK-006, AD-25)</span>
-├── library/          
+├── library/          <span class="note"># library, logs, cache recreated on every start (TSK-007)</span>
 │   └── &lt;novel-id&gt;/   <span class="note"># chapters and cover (TSK-013)</span>
 ├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
-│   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run</span>
+│   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run (TSK-008)</span>
 └── cache/            <span class="note"># import staging and temp files</span></pre>
 
       <h3>Storage and startup</h3>
-      <p class="muted">TSK-005, TSK-006. Electron main owns the database (AD-03, AD-04, AD-22..AD-25).</p>
+      <p class="muted">TSK-005, TSK-006, TSK-007. Electron main owns the database (AD-03, AD-04, AD-22..AD-25).</p>
       <ul>
+        <li>Startup order in <code>main/index.ts</code>: single-instance lock → paths → folders → logger → database → migrations → window. No lock → quit; a second launch restores and focuses the first window.</li>
+        <li>Folders: <code>ensureFolders(paths)</code> creates <code>library</code>, <code>logs</code>, <code>cache</code> on every start, before the logger (TSK-007 AC-2, AC-3). Failure → <code>APP_DATA_UNWRITABLE</code> dialog (Quit only), then quit; nothing else starts.</li>
         <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>main/index.ts</code> and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
         <li><code>storage/database.ts</code>: <code>Database.open(file)</code> sets <code>busy_timeout = 5000</code>, <code>journal_mode = WAL</code>, <code>synchronous = NORMAL</code>, <code>foreign_keys = ON</code>; <code>get</code> / <code>all</code> / <code>run</code> / <code>exec</code> / <code>transaction</code>; statements cached per SQL; <code>close()</code> checkpoints the WAL.</li>
         <li>Query error: logged (module <code>storage</code>, SQL text, no parameters), kept as last error, thrown as <code>DB_QUERY_FAILED</code>.</li>
@@ -269,7 +271,7 @@
         <li>Features read and write data only through repositories (TSK-005 AC-2, AD-22)</li>
         <li>Only <code>electron/main/storage/</code> and <code>main/index.ts</code> may import <code>node:sqlite</code> or <code>storage/database</code>; ESLint <code>no-restricted-imports</code> fails the build otherwise</li>
         <li>Raw SQL with <code>?</code> parameters; never build SQL from values</li>
-        <li>App data paths only from <code>AppPaths</code></li>
+        <li>App data paths only from <code>AppPaths</code>; ESLint <code>no-restricted-syntax</code> fails on <code>app.getPath</code> or <code>process.env.LOCALAPPDATA</code> outside <code>storage/paths.ts</code> (TSK-007 AC-4)</li>
         <li>Schema changes only as migration files <code>&lt;version&gt;_&lt;upgrade_num&gt;__&lt;name&gt;.sql</code> in <code>electron/main/storage/migrations/</code>: version = the app release that ships it, upgrade_num from 0 inside that release, name in <code>snake_case</code> (AD-24)</li>
         <li>Never edit a released migration file; ship a fix as a new file</li>
       </ul></details>

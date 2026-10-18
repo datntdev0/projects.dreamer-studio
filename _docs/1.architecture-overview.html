@@ -43,7 +43,7 @@
           <li>Storage: SQLite via <code>node:sqlite</code> in main + files in app data (AD-03, AD-04)</li>
           <li>Tooling: pnpm workspaces; ESLint, Prettier, Vitest; Ruff, pytest (AD-09); esbuild for main + preload (AD-19)</li>
           <li>Logging: electron-log in main (renderer via IPC), stdlib <code>logging</code> in Python; daily files, kept 7 days (AD-12, AD-20)</li>
-          <li>Build: PyInstaller one-folder + electron-builder <code>zip</code> (AD-10, AD-11)</li>
+          <li>Build: PyInstaller one-folder + electron-builder <code>zip</code>, Windows x64 only (AD-10, AD-11, AD-21)</li>
         </ul></div>
         <div class="card"><h3>Quality attributes</h3><ul>
           <li>Portable: runs after extract, no extra installs (TSK-004)</li>
@@ -154,7 +154,9 @@
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status, stop on quit (TSK-003)</span>
 │   │   ├── ipc/                <span class="note"># IPC handlers per domain: app, log, dev (dev:crash, dev only)</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
-│   └── preload/                <span class="note"># contextBridge API for the renderer</span>
+│   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
+│   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
+│   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer + backend (TSK-004)</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
 │   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
@@ -163,8 +165,9 @@
 ├── backend/                    <span class="note"># AI backend (Python)</span>
 │   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/, llm/ later</span>
 │   ├── tests/                  <span class="note"># pytest</span>
+│   ├── backend.spec            <span class="note"># PyInstaller one-folder: dreamer-backend.exe (TSK-004)</span>
 │   └── requirements.txt        <span class="note"># pinned dependencies (pip)</span>
-├── scripts/                    <span class="note"># dev.mjs (dev run), py.mjs (venv, ruff, pytest); build later (TSK-004)</span>
+├── scripts/                    <span class="note"># dev.mjs (dev run), py.mjs (venv, ruff, pytest, freeze), build.mjs (build, package)</span>
 ├── _docs/                      <span class="note"># requirements xlsx, architecture, solutions, plans</span>
 ├── .claude/                    <span class="note"># agents, skills, scripts, templates</span>
 ├── package.json                <span class="note"># single app version (TSK-002 AC-4), root scripts</span>
@@ -183,6 +186,35 @@
 ├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
 │   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run</span>
 └── cache/            <span class="note"># import staging and temp files</span></pre>
+
+      <h2>Build and Release</h2>
+      <p class="muted">TSK-004. Portable Windows package, no installer (AD-10, AD-11, AD-21).</p>
+      <ol>
+        <li>Prerequisites: Windows x64 dev machine, <code>pnpm install</code>, <code>pnpm py:setup</code>.</li>
+        <li>Set the version in the root <code>package.json</code> (single source, TSK-002 AC-4).</li>
+        <li>Run <code>pnpm package</code> (about 3 minutes). It runs, in order, and stops on the first failure:
+          <ol>
+            <li><code>ng build</code> → <code>angular/dist/browser/</code></li>
+            <li>esbuild → <code>electron/dist/</code> (main + preload, with <code>APP_VERSION</code>)</li>
+            <li><code>node scripts/py.mjs freeze</code> → PyInstaller → <code>backend/dist/dreamer-backend/</code></li>
+            <li>electron-builder → <code>dist/DreamerStudio-&lt;version&gt;-win-x64.zip</code> (about 165 MB)</li>
+          </ol>
+        </li>
+        <li>Release check: extract the zip on a clean Windows 10/11 x64 machine (or Windows Sandbox), run <code>DreamerStudio.exe</code>, and confirm the window, the version and no backend banner. Logs are in <code>%LOCALAPPDATA%/DreamerStudio/logs</code>.</li>
+      </ol>
+      <pre class="tree">DreamerStudio-&lt;version&gt;-win-x64/
+├── DreamerStudio.exe           <span class="note"># Electron app</span>
+└── resources/
+    ├── app.asar                <span class="note"># electron/dist + package.json; no node_modules (all bundled by esbuild)</span>
+    ├── renderer/               <span class="note"># Angular build, served from app://</span>
+    └── backend/                <span class="note"># dreamer-backend.exe + _internal/ (Python, libs, VC++ runtime DLLs)</span></pre>
+      <ul>
+        <li>Nothing to install on the target: Python, the libraries and the VC++ runtime ship inside <code>resources/backend</code>.</li>
+        <li>The backend is a console exe started with a hidden window, so its stderr goes to the main log.</li>
+        <li><code>dev:crash</code> is not registered in the package.</li>
+        <li>No code signing and no auto-updater yet. Antivirus may flag the PyInstaller exe; one-folder and no UPX lower the risk.</li>
+        <li>App icon is the Electron default until the brand mark lands (TH01-03).</li>
+      </ul>
 
       <h2>Conventions</h2>
       <p class="muted">Code style is set by the human. TSK-001 is approved, so all groups below are final; the TSK-002 code follows them.</p>
@@ -221,7 +253,7 @@
       <details><summary>Commands</summary>
         <p class="muted">From root <code>package.json</code> (TSK-002). First run: <code>pnpm install</code> then <code>pnpm py:setup</code>. Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.</p>
         <table><thead><tr><th>Task</th><th>Command</th></tr></thead>
-          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Package</td><td><code>pnpm package</code> <span class="pill warning">[unverified]</span> (TSK-004)</td></tr></tbody></table>
+          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Build (Angular + esbuild)</td><td><code>pnpm build</code></td></tr><tr><td>Portable package (see Build and Release)</td><td><code>pnpm package</code></td></tr></tbody></table>
       </details>
     </main>
   </div>

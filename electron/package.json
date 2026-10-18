@@ -1,6 +1,8 @@
 {
   "name": "@dreamer/electron",
   "private": true,
+  "description": "Local desktop studio that uses AI to produce creative content",
+  "author": "Dat Nguyen",
   "type": "module",
   "scripts": {
     "build": "node esbuild.mjs"
@@ -9,9 +11,8 @@
   "devDependencies": {
     "@dreamer/shared": "workspace:*",
     "electron": "44.9.0",
+    "electron-builder": "26.15.3",
+    "electron-log": "5.4.4",
     "esbuild": "0.28.2"
-  },
-  "dependencies": {
-    "electron-log": "5.4.4"
   }
 }

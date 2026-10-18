@@ -22,7 +22,7 @@ Dreamer Studio: local desktop studio that uses AI to produce creative content. P
 - Docs: `python .claude/scripts/docs.py new <type> [ID]`, `python .claude/scripts/docs.py serve`
 - First run: `pnpm install`, then `pnpm py:setup` (creates `backend/.venv`).
 - App: `pnpm dev | lint | format | format:check | test | check` (`check` = lint + format:check + test).
-- Package: `pnpm package` (TSK-004, not yet) `[unverified]`.
+- Build and package: `pnpm build`, `pnpm package` → `dist/DreamerStudio-<version>-win-x64.zip` (overview › Build and Release).
 - Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.
 
 ## Conventions

@@ -3,12 +3,12 @@
 ## Project
 
 - **What**: local desktop studio that uses AI to produce creative content (novels, music, video).
-- **Status**: skeleton (TSK-002) plus logging and error handling (TSK-003): daily log files per process in `<app data>/logs`, error banners and native error dialogs, Python backend started by main. Next: TSK-004 portable Windows build.
+- **Status**: skeleton (TSK-002) plus logging and error handling (TSK-003): daily log files per process in `<app data>/logs`, error banners and native error dialogs, Python backend started by main; portable Windows x64 zip via `pnpm package` (TSK-004). Next: TH01-02 (database), TH01-03 (shell, design system).
 - **Releases**: `0.0.0` foundation (approved) · `0.1.0` novel library (draft) · `0.2.0` AI analysis (draft).
 - **Stack**: Electron 44 main + renderer (esbuild, electron-log) · Angular 22 + Bootstrap · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
 - **Processes**: renderer (UI) ──IPC──► main (core services, DB, pipeline executor) ──HTTP──► Python (AI jobs, stateless).
-- **Folders**: `angular/src/<core|components>` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/app` · `scripts/` (`dev.mjs`, `py.mjs`).
-- **Decisions**: AD-01..13, AD-18, AD-19 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
+- **Folders**: `angular/src/<core|components>` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/app` · `scripts/` (`dev.mjs`, `py.mjs`, `build.mjs`).
+- **Decisions**: AD-01..13, AD-18..21 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
 - **Sources of truth**:
   - Requirements: `_docs/0.requirements-analysis.xlsx`
   - Visual design: `DESIGN.md`

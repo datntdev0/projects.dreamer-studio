@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const backendDir = fileURLToPath(new URL('../backend/', import.meta.url));
@@ -26,8 +26,16 @@ function setup() {
   return runVenv(['-m', 'pip', 'install', '-r', 'requirements-dev.txt']);
 }
 
+function freeze() {
+  for (const dir of ['build', 'dist']) {
+    rmSync(`${backendDir}${dir}`, { recursive: true, force: true });
+  }
+  return runVenv(['-m', 'PyInstaller', 'backend.spec', '--noconfirm', '--distpath', 'dist', '--workpath', 'build']);
+}
+
 const commands = {
   setup,
+  freeze,
   lint: () => runVenv(['-m', 'ruff', 'check']),
   format: () => runVenv(['-m', 'ruff', 'format']),
   'format:check': () => runVenv(['-m', 'ruff', 'format', '--check']),

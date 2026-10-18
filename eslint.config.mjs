@@ -27,6 +27,27 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['electron/**'],
+    ignores: ['electron/main/storage/**', 'electron/main/index.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: ['node:sqlite', 'sqlite'].map((name) => ({
+            name,
+            message: 'Use a repository from electron/main/storage/repositories; only storage/ may use node:sqlite.',
+          })),
+          patterns: [
+            {
+              regex: '(^|/)storage/database(\\.ts)?$',
+              message: 'Only electron/main/storage and the composition root (index.ts) may import the Database.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['angular/**'],
     languageOptions: { globals: globals.browser },
   },

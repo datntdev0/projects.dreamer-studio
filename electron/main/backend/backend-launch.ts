@@ -2,7 +2,6 @@ import { app } from 'electron';
 import { randomBytes } from 'node:crypto';
 import { createServer, AddressInfo, Server } from 'node:net';
 import { join } from 'node:path';
-import { logsDir } from '../storage/paths';
 
 export interface BackendLaunch {
   command: string;
@@ -32,12 +31,12 @@ export function backendUrl(port: number, path: string): string {
   return `http://${host}:${port}${path}`;
 }
 
-export function buildLaunch(port: number, token: string): BackendLaunch {
+export function buildLaunch(port: number, token: string, logsDir: string): BackendLaunch {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     DREAMER_PORT: String(port),
     DREAMER_TOKEN: token,
-    DREAMER_LOG_DIR: logsDir(),
+    DREAMER_LOG_DIR: logsDir,
     DREAMER_LOG_LEVEL: app.isPackaged ? 'info' : 'debug',
     DREAMER_VERSION: APP_VERSION,
   };

@@ -29,9 +29,9 @@
     <nav class="doc-toc"></nav>
     <main class="doc-main">
       <h1>Architecture Overview</h1>
-      <div class="doc-meta"><span>Updated 2026-10-17</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
+      <div class="doc-meta"><span>Updated 2026-10-18</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
 
-      <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI). AD-01..AD-13, AD-18 and AD-19 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
+      <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
 
       <h2>Overview</h2>
       <p>Dreamer Studio is a local Windows desktop studio for one user to manage a creative library (novels first, music and video later) and run AI analysis on it. It ships as a portable package: an Electron app that starts a bundled Python FastAPI backend on 127.0.0.1. All data stays on the machine.</p>
@@ -58,7 +58,8 @@
           <li>AD-06 Renderer → main via typed IPC only; main → Python over HTTP</li>
           <li>AD-12 One log file per process, same format</li>
           <li>AD-13, AD-18 settings.json fixed in <code>%LOCALAPPDATA%/DreamerStudio</code>; app data movable</li>
-          <li><code>node:sqlite</code> works in Electron 44.9.0 (SQLite 3.53.4), checked with the TSK-002 spike on 2026-10-17 (AD-03)</li>
+          <li>AD-22 Raw SQL + thin typed <code>Database</code> wrapper; features use repositories only</li>
+          <li><code>node:sqlite</code> works in Electron 44.9.0 (SQLite 3.53.4), dev and package (AD-03, TSK-005)</li>
         </ul></div>
       </div>
 
@@ -69,7 +70,7 @@
           <tr><td>UI</td><td>Renderer</td><td>Screens, shell, design system, i18n, theme. No Node or Electron APIs; data via a typed client so Storybook can mock it (REQ-001 AC-5).</td><td>Preload API (IPC)</td></tr>
           <tr><td>Bridge</td><td>Preload</td><td>Exposes a typed, minimal API with <code>contextBridge</code>; events main → renderer.</td><td>Main (IPC)</td></tr>
           <tr><td>Core services</td><td>Main</td><td>Settings, path resolver, data access + migrations, pipeline executor, self-checks, logging, OS dialogs, backend lifecycle.</td><td>SQLite, files, backend (HTTP)</td></tr>
-          <tr><td>Storage</td><td>Main</td><td>SQLite file <code>&lt;app data&gt;/database.sqlite</code>; library files in <code>&lt;app data&gt;/library/&lt;novel-id&gt;</code>.</td><td>—</td></tr>
+          <tr><td>Storage</td><td>Main</td><td>SQLite file <code>&lt;app data&gt;/database.sqlite</code> behind the <code>Database</code> wrapper and one repository per table (TSK-005, AD-22); library files in <code>&lt;app data&gt;/library/&lt;novel-id&gt;</code>.</td><td>—</td></tr>
           <tr><td>AI backend</td><td>Python</td><td>Heavy/AI steps (LLM analysis, translation) as cancellable jobs; no DB access.</td><td>LLM CLIs and cloud APIs</td></tr>
         </tbody>
       </table>
@@ -146,9 +147,9 @@
 │   └── .storybook/             <span class="note"># Storybook config (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
-│   │   ├── app/                <span class="note"># startup, window, app:// protocol, global error handlers, native dialogs</span>
+│   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
 │   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
-│   │   ├── storage/            <span class="note"># paths.ts (app data, logs); database, migrations, repositories (TSK-005..007)</span>
+│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase); migrations, repositories</span>
 │   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status, stop on quit (TSK-003)</span>
@@ -186,6 +187,22 @@
 ├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
 │   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run</span>
 └── cache/            <span class="note"># import staging and temp files</span></pre>
+
+      <h3>Storage and startup</h3>
+      <p class="muted">TSK-005. Electron main owns the database (AD-03, AD-04, AD-22).</p>
+      <ul>
+        <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>main/index.ts</code> and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
+        <li><code>storage/database.ts</code>: <code>Database.open(file)</code> sets <code>busy_timeout = 5000</code>, <code>journal_mode = WAL</code>, <code>synchronous = NORMAL</code>, <code>foreign_keys = ON</code>; <code>get</code> / <code>all</code> / <code>run</code> / <code>exec</code> / <code>transaction</code>; statements cached per SQL; <code>close()</code> checkpoints the WAL.</li>
+        <li>Query error: logged (module <code>storage</code>, SQL text, no parameters), kept as last error, thrown as <code>DB_QUERY_FAILED</code>.</li>
+        <li><code>checkDatabase(db)</code>: <code>SELECT 1</code> + <code>PRAGMA quick_check</code> + last error → ok / warning / error, for the self-checks (TSK-011).</li>
+        <li>Repositories: <code>storage/repositories/&lt;table&gt;-repository.ts</code>, take a <code>Database</code>, return <code>shared/models</code> types; the first one comes with TH01-04.</li>
+      </ul>
+      <ol>
+        <li>Module load: <code>AppPaths</code> → logger → global error handlers.</li>
+        <li><code>app.whenReady()</code>: log app and Electron versions → <code>Database.open(paths.database)</code>; on error log it, show the <code>DB_OPEN_FAILED</code> dialog (Open data folder / Open logs folder / Quit), then <code>app.exit(1)</code>.</li>
+        <li>IPC, <code>app://</code> protocol, window, backend.</li>
+        <li><code>will-quit</code>: <code>db.close()</code>.</li>
+      </ol>
 
       <h2>Build and Release</h2>
       <p class="muted">TSK-004. Portable Windows package, no installer (AD-10, AD-11, AD-21).</p>
@@ -241,7 +258,13 @@
         <li>Global handlers: main <code>uncaughtException</code>/<code>unhandledRejection</code>, renderer <code>ErrorHandler</code>, FastAPI exception handler</li>
         <li>Log line: <code>ISO UTC time · level · process · module · message</code>, stack on the next lines; a new file each local day, files older than 7 days deleted; never log secrets</li>
         <li>Main: <code>createLogger(module)</code> from <code>electron/main/logging</code>; renderer: <code>DesktopApi.writeLog</code> → <code>log:write</code>; Python: <code>logging.getLogger(name)</code></li>
-        <li>Friendly errors: renderer and main rejections → error banner; main exception and renderer crash → native dialog; backend down → warning banner</li>
+        <li>Friendly errors: renderer and main rejections → error banner; main exception and renderer crash → native dialog; backend down → warning banner; startup data error → fatal data dialog, then quit (<code>app/fatal-dialog.ts</code>)</li>
+      </ul></details>
+      <details><summary>Data access</summary><ul>
+        <li>Features read and write data only through repositories (TSK-005 AC-2, AD-22)</li>
+        <li>Only <code>electron/main/storage/</code> and <code>main/index.ts</code> may import <code>node:sqlite</code> or <code>storage/database</code>; ESLint <code>no-restricted-imports</code> fails the build otherwise</li>
+        <li>Raw SQL with <code>?</code> parameters; never build SQL from values</li>
+        <li>App data paths only from <code>AppPaths</code></li>
       </ul></details>
       <details><summary>Testing</summary><ul>
         <li>Tooling: Vitest (TS), pytest (Python), next to the code (AD-09)</li>

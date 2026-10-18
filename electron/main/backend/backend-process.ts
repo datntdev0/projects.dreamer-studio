@@ -1,5 +1,6 @@
 import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { createLogger, Logger } from '../logging/logger';
+import { AppPaths } from '../storage/paths';
 import { backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
 import { setBackendState, watchWindowLoads } from './backend-status';
 
@@ -70,10 +71,10 @@ function watchChild(proc: ChildProcess): void {
   });
 }
 
-async function launch(): Promise<void> {
+async function launch(paths: AppPaths): Promise<void> {
   const port: number = await findFreePort();
   const token: string = createToken();
-  const options: BackendLaunch = buildLaunch(port, token);
+  const options: BackendLaunch = buildLaunch(port, token, paths.logs);
   const proc: ChildProcess = spawn(options.command, options.args, {
     cwd: options.cwd,
     env: options.env,
@@ -85,10 +86,10 @@ async function launch(): Promise<void> {
   await waitUntilReady(port, token, proc);
 }
 
-export async function startBackend(): Promise<void> {
+export async function startBackend(paths: AppPaths): Promise<void> {
   watchWindowLoads();
   try {
-    await launch();
+    await launch(paths);
   } catch (error) {
     logger.error('Backend failed to start', error);
     setBackendState('unavailable');

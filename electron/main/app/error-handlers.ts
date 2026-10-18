@@ -3,8 +3,9 @@ import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
 import { errorStack } from '@dreamer/shared/errors/error-stack';
 import { AppChannel } from '@dreamer/shared/ipc/channels';
-import { openLogsFolder } from '../ipc/app-ipc';
+import { openFolder } from '../ipc/app-ipc';
 import { createLogger, isLoggingReady, Logger } from '../logging/logger';
+import { AppPaths } from '../storage/paths';
 
 const logger: Logger = createLogger('error');
 
@@ -32,7 +33,7 @@ async function showDialog(message: string, detail: string, buttons: string[]): P
   }
 }
 
-async function onUncaughtException(error: Error): Promise<void> {
+async function onUncaughtException(error: Error, paths: AppPaths): Promise<void> {
   if (!isLoggingReady()) {
     dialog.showErrorBox(errorText.dialogTitle, errorStack(error));
     app.exit(1);
@@ -46,7 +47,7 @@ async function onUncaughtException(error: Error): Promise<void> {
     errorText.quit,
   ]);
   if (choice === 0) {
-    await openLogsFolder();
+    await openFolder(paths.logs);
   }
   app.exit(1);
 }
@@ -59,7 +60,7 @@ function onUnhandledRejection(reason: unknown): void {
   }
 }
 
-async function onRenderProcessGone(contents: WebContents, reason: string): Promise<void> {
+async function onRenderProcessGone(contents: WebContents, reason: string, paths: AppPaths): Promise<void> {
   logger.error(`Renderer process gone: ${reason}`);
   const detail: string = `${errorText.code}: ${ErrorCode.RendererGone} (${reason}).`;
   const choice: number | null = await showDialog(errorCopy.RENDERER_GONE.title, detail, [
@@ -70,18 +71,21 @@ async function onRenderProcessGone(contents: WebContents, reason: string): Promi
   if (choice === 0) {
     contents.reload();
   } else if (choice === 1) {
-    await openLogsFolder();
+    await openFolder(paths.logs);
     app.quit();
   } else if (choice === 2) {
     app.quit();
   }
 }
 
-export function installErrorHandlers(): void {
-  process.on('uncaughtException', (error: Error) => void onUncaughtException(error));
+export function installErrorHandlers(paths: AppPaths): void {
+  process.on('uncaughtException', (error: Error) => void onUncaughtException(error, paths));
   process.on('unhandledRejection', onUnhandledRejection);
   app.on('web-contents-created', (_event, contents: WebContents) => {
-    contents.on('render-process-gone', (_goneEvent, details) => void onRenderProcessGone(contents, details.reason));
+    contents.on(
+      'render-process-gone',
+      (_goneEvent, details) => void onRenderProcessGone(contents, details.reason, paths),
+    );
   });
 }
 

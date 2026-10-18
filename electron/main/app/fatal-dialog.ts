@@ -13,22 +13,29 @@ interface FatalButton {
 
 const quitButton: FatalButton = { label: errorText.quit, action: 'quit' };
 
+const dataButtons: FatalButton[] = [
+  { label: errorText.openDataFolder, action: 'openData' },
+  { label: errorText.openLogs, action: 'openLogs' },
+];
+
 const fatalButtons: Partial<Record<ErrorCode, FatalButton[]>> = {
-  DB_OPEN_FAILED: [
-    { label: errorText.openDataFolder, action: 'openData' },
-    { label: errorText.openLogs, action: 'openLogs' },
-  ],
+  DB_OPEN_FAILED: dataButtons,
+  DB_MIGRATION_FAILED: dataButtons,
+  DB_NEWER_VERSION: [{ label: errorText.openDataFolder, action: 'openData' }],
 };
 
-export async function showFatalError(code: ErrorCode, file: string, paths: AppPaths): Promise<void> {
+const warningCodes: ErrorCode[] = [ErrorCode.DbNewerVersion];
+
+export async function showFatalError(code: ErrorCode, file: string, paths: AppPaths, note?: string): Promise<void> {
   const buttons: FatalButton[] = [...(fatalButtons[code] ?? []), quitButton];
   const quitIndex: number = buttons.length - 1;
   const copy: ErrorCopy = errorCopy[code];
+  const noteLine: string = note ? `\n${note}` : '';
   const result: MessageBoxReturnValue = await dialog.showMessageBox({
-    type: 'error',
+    type: warningCodes.includes(code) ? 'warning' : 'error',
     title: errorText.dataDialogTitle,
     message: copy.title,
-    detail: `${copy.message}\n\n${errorText.code}: ${code}. ${errorText.file}: ${file}. ${errorText.savedToLogs}`,
+    detail: `${copy.message}${noteLine}\n\n${errorText.code}: ${code}. ${errorText.file}: ${file}. ${errorText.savedToLogs}`,
     buttons: buttons.map((button: FatalButton) => button.label),
     defaultId: quitIndex,
     cancelId: quitIndex,

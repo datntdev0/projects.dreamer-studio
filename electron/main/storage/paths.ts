@@ -29,3 +29,9 @@ export function resolveAppPaths(root: string): AppPaths {
     cache: join(root, 'cache'),
   };
 }
+
+export function migrationsDir(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'migrations')
+    : join(app.getAppPath(), 'main', 'storage', 'migrations');
+}

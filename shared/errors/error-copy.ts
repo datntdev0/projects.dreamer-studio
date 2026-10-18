@@ -18,9 +18,22 @@ export const errorCopy: Record<ErrorCode, ErrorCopy> = {
     title: 'Local data could not be read or saved.',
     message: 'The app could not read or save local data. Try again; if it keeps failing, restart the app.',
   },
+  DB_MIGRATION_FAILED: {
+    title: 'Local data could not be updated.',
+    message: 'The update stopped part way and the data may be damaged.',
+  },
+  DB_NEWER_VERSION: {
+    title: 'Local data is from a newer version.',
+    message: 'This data was saved by a newer Dreamer Studio. Nothing was changed. Use the newer version.',
+  },
 };
 
+export function newerVersionNote(found: string, latest: string): string {
+  return `Data v${found}, this app supports v${latest}.`;
+}
+
 export const errorText = {
+  backupNote: 'A copy from before the update is in database.backup.sqlite.',
   code: 'Code',
   openLogs: 'Open logs folder',
   dismiss: 'Dismiss',

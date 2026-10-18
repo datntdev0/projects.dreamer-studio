@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { DatabaseSync, StatementSync } from 'node:sqlite';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { createLogger, Logger } from '../logging/logger';
 
 export type SqlParam = null | number | bigint | string | Uint8Array;
@@ -25,10 +26,6 @@ const openPragmas: string[] = [
   'PRAGMA foreign_keys = ON',
 ];
 
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export class Database {
   private readonly statements: Map<string, StatementSync> = new Map();
   private lastErrorMessage: string | null = null;
@@ -51,7 +48,7 @@ export class Database {
       return new Database(handle);
     } catch (error) {
       handle?.close();
-      throw new CodedError(ErrorCode.DbOpenFailed, messageOf(error), file);
+      throw new CodedError(ErrorCode.DbOpenFailed, errorMessage(error), file);
     }
   }
 
@@ -107,7 +104,7 @@ export class Database {
       return execute();
     } catch (error) {
       logger.error(`query failed: ${sql}`, error);
-      this.lastErrorMessage = messageOf(error);
+      this.lastErrorMessage = errorMessage(error);
       throw new CodedError(ErrorCode.DbQueryFailed, this.lastErrorMessage);
     }
   }
@@ -134,7 +131,7 @@ export function checkDatabase(db: Database): DatabaseCheck {
       };
     }
   } catch (error) {
-    return { status: 'error', message: messageOf(error), fix: 'Restart the app. If it persists, check the logs.' };
+    return { status: 'error', message: errorMessage(error), fix: 'Restart the app. If it persists, check the logs.' };
   }
   if (db.lastError()) {
     return { status: 'warning', message: `A recent query failed: ${db.lastError()}`, fix: 'Check the logs.' };

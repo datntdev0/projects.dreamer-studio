@@ -5,6 +5,8 @@ export const ErrorCode = {
   BackendUnavailable: 'BACKEND_UNAVAILABLE',
   DbOpenFailed: 'DB_OPEN_FAILED',
   DbQueryFailed: 'DB_QUERY_FAILED',
+  DbMigrationFailed: 'DB_MIGRATION_FAILED',
+  DbNewerVersion: 'DB_NEWER_VERSION',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

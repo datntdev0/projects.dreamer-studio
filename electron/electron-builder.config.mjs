@@ -11,6 +11,7 @@ export default {
   extraResources: [
     { from: '../angular/dist/browser', to: 'renderer' },
     { from: '../backend/dist/dreamer-backend', to: 'backend' },
+    { from: 'main/storage/migrations', to: 'migrations' },
   ],
   win: { target: [{ target: 'zip', arch: ['x64'] }] },
 };

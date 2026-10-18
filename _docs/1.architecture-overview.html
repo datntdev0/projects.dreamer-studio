@@ -149,7 +149,7 @@
 │   ├── main/                   
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
 │   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
-│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase); migrations, repositories</span>
+│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories</span>
 │   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status, stop on quit (TSK-003)</span>
@@ -157,7 +157,7 @@
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
-│   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer + backend (TSK-004)</span>
+│   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer, backend, migrations (TSK-004, TSK-006)</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
 │   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
@@ -182,6 +182,7 @@
 └── settings.json               <span class="note"># language, theme, app data path, pipelines (TSK-010)</span></pre>
       <pre class="tree">&lt;app data&gt;/           <span class="note"># default %LOCALAPPDATA%/DreamerStudio/; user can move it (REQ-008)</span>
 ├── database.sqlite   <span class="note"># SQLite database (TSK-005)</span>
+├── database.backup.sqlite <span class="note"># copy made before pending migrations, overwritten each time (TSK-006, AD-25)</span>
 ├── library/          
 │   └── &lt;novel-id&gt;/   <span class="note"># chapters and cover (TSK-013)</span>
 ├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
@@ -189,17 +190,21 @@
 └── cache/            <span class="note"># import staging and temp files</span></pre>
 
       <h3>Storage and startup</h3>
-      <p class="muted">TSK-005. Electron main owns the database (AD-03, AD-04, AD-22).</p>
+      <p class="muted">TSK-005, TSK-006. Electron main owns the database (AD-03, AD-04, AD-22..AD-25).</p>
       <ul>
         <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>main/index.ts</code> and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
         <li><code>storage/database.ts</code>: <code>Database.open(file)</code> sets <code>busy_timeout = 5000</code>, <code>journal_mode = WAL</code>, <code>synchronous = NORMAL</code>, <code>foreign_keys = ON</code>; <code>get</code> / <code>all</code> / <code>run</code> / <code>exec</code> / <code>transaction</code>; statements cached per SQL; <code>close()</code> checkpoints the WAL.</li>
         <li>Query error: logged (module <code>storage</code>, SQL text, no parameters), kept as last error, thrown as <code>DB_QUERY_FAILED</code>.</li>
         <li><code>checkDatabase(db)</code>: <code>SELECT 1</code> + <code>PRAGMA quick_check</code> + last error → ok / warning / error, for the self-checks (TSK-011).</li>
+        <li><code>storage/migrator.ts</code>: <code>loadMigrations(dir)</code> reads <code>*.sql</code> from <code>migrationsDir()</code> (dev <code>electron/main/storage/migrations/</code>, packaged <code>&lt;resources&gt;/migrations/</code>), checks names and sorts them; <code>runMigrations(db, migrations, backupFile)</code> runs the pending ones.</li>
+        <li>Schema version: table <code>sys_migration_history(id, version, upgrade_num, applied_at)</code>, one row per applied file, created by the first migration <code>0.0.0_0__sys_migration_history_table.sql</code> (AD-23).</li>
+        <li>Run: applied id unknown to the app → <code>DB_NEWER_VERSION</code>, no writes; rows exist and files pending → <code>VACUUM INTO database.backup.sqlite</code> (AD-25); each file <code>exec</code>, then its row. A failure stops the run with no rollback → <code>DB_MIGRATION_FAILED</code>.</li>
+        <li>Dev only: <code>DREAMER_DEV_FAIL_MIGRATION=1</code> adds a failing migration <code>999.0.0_0__dev_fail</code>.</li>
         <li>Repositories: <code>storage/repositories/&lt;table&gt;-repository.ts</code>, take a <code>Database</code>, return <code>shared/models</code> types; the first one comes with TH01-04.</li>
       </ul>
       <ol>
         <li>Module load: <code>AppPaths</code> → logger → global error handlers.</li>
-        <li><code>app.whenReady()</code>: log app and Electron versions → <code>Database.open(paths.database)</code>; on error log it, show the <code>DB_OPEN_FAILED</code> dialog (Open data folder / Open logs folder / Quit), then <code>app.exit(1)</code>.</li>
+        <li><code>app.whenReady()</code>: log app and Electron versions → <code>Database.open(paths.database)</code> → <code>loadMigrations</code> → <code>runMigrations</code>; on error log it, close the DB, show the fatal data dialog for its code (<code>DB_OPEN_FAILED</code>, <code>DB_MIGRATION_FAILED</code>: Open data folder / Open logs folder / Quit; <code>DB_NEWER_VERSION</code> warning: Open data folder / Quit), then <code>app.exit(1)</code>.</li>
         <li>IPC, <code>app://</code> protocol, window, backend.</li>
         <li><code>will-quit</code>: <code>db.close()</code>.</li>
       </ol>
@@ -265,6 +270,8 @@
         <li>Only <code>electron/main/storage/</code> and <code>main/index.ts</code> may import <code>node:sqlite</code> or <code>storage/database</code>; ESLint <code>no-restricted-imports</code> fails the build otherwise</li>
         <li>Raw SQL with <code>?</code> parameters; never build SQL from values</li>
         <li>App data paths only from <code>AppPaths</code></li>
+        <li>Schema changes only as migration files <code>&lt;version&gt;_&lt;upgrade_num&gt;__&lt;name&gt;.sql</code> in <code>electron/main/storage/migrations/</code>: version = the app release that ships it, upgrade_num from 0 inside that release, name in <code>snake_case</code> (AD-24)</li>
+        <li>Never edit a released migration file; ship a fix as a new file</li>
       </ul></details>
       <details><summary>Testing</summary><ul>
         <li>Tooling: Vitest (TS), pytest (Python), next to the code (AD-09)</li>

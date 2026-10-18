@@ -1,7 +1,9 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "cli": { "analytics": false },
+  "cli": {
+    "analytics": false
+  },
   "newProjectRoot": "projects",
   "projects": {
     "dreamer": {
@@ -20,10 +22,16 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "styles": ["src/styles.scss"],
-            "optimization": { "styles": { "inlineCritical": false } }
+            "optimization": {
+              "styles": {
+                "inlineCritical": false
+              }
+            }
           },
           "configurations": {
-            "production": { "outputHashing": "all" },
+            "production": {
+              "outputHashing": "all"
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,
@@ -34,12 +42,28 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": { "port": 4200, "host": "localhost" },
+          "options": {
+            "port": 4200,
+            "host": "localhost"
+          },
           "configurations": {
-            "production": { "buildTarget": "dreamer:build:production" },
-            "development": { "buildTarget": "dreamer:build:development" }
+            "production": {
+              "buildTarget": "dreamer:build:production"
+            },
+            "development": {
+              "buildTarget": "dreamer:build:development"
+            }
           },
           "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "::development",
+            "tsConfig": "tsconfig.spec.json",
+            "runnerConfig": "vitest.config.ts",
+            "coverageInclude": ["src/**/*.ts"]
+          }
         }
       }
     }

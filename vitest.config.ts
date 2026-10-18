@@ -5,5 +5,12 @@ export default defineConfig({
     environment: 'node',
     include: ['electron/**/*.test.ts', 'shared/**/*.test.ts', 'scripts/**/*.test.{ts,mjs}'],
     passWithNoTests: true,
+    coverage: {
+      provider: 'v8',
+      include: ['electron/**/*.{ts,mjs}', 'shared/**/*.ts', 'scripts/**/*.mjs'],
+      exclude: ['**/dist/**', '**/node_modules/**'],
+      reporter: ['text-summary', 'html'],
+      reportsDirectory: 'coverage/electron',
+    },
   },
 });

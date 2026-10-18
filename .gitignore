@@ -22,4 +22,6 @@ backend/.venv/
 backend/build/
 .ruff_cache/
 .pytest_cache/
+coverage/
+.coverage
 worktree/

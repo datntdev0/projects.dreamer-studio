@@ -1,8 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { writeCoverageReport } from './py-coverage.mjs';
 
 const backendDir = fileURLToPath(new URL('../backend/', import.meta.url));
+const coverageDir = fileURLToPath(new URL('../coverage/python/', import.meta.url));
 const venvPython = `${backendDir}.venv/Scripts/python.exe`;
 const PYTEST_NO_TESTS = 5;
 
@@ -33,6 +35,20 @@ function freeze() {
   return runVenv(['-m', 'PyInstaller', 'backend.spec', '--noconfirm', '--distpath', 'dist', '--workpath', 'build']);
 }
 
+function testCoverage() {
+  rmSync(coverageDir, { recursive: true, force: true });
+  const jsonPath = `${coverageDir}coverage.json`;
+  const code = runVenv(
+    ['-m', 'pytest', '--cov=app', '--cov-branch', `--cov-report=json:${jsonPath}`],
+    [0, PYTEST_NO_TESTS],
+  );
+  if (code !== 0 || !existsSync(jsonPath)) {
+    return code;
+  }
+  writeCoverageReport(jsonPath, backendDir, coverageDir);
+  return 0;
+}
+
 const commands = {
   setup,
   freeze,
@@ -40,6 +56,7 @@ const commands = {
   format: () => runVenv(['-m', 'ruff', 'format']),
   'format:check': () => runVenv(['-m', 'ruff', 'format', '--check']),
   test: () => runVenv(['-m', 'pytest'], [0, PYTEST_NO_TESTS]),
+  'test:coverage': testCoverage,
 };
 
 const command = commands[process.argv[2]];

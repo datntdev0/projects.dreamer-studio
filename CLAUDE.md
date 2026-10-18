@@ -30,4 +30,4 @@ Dreamer Studio: local desktop studio that uses AI to produce creative content. P
 - Docs and markdown: short, bullets and ordered lists.
 - IDs: capacity `THnn-nn`, requirement `REQ-nnn` (functional) / `TSK-nnn` (technical), decision `AD-nn`.
 - Commits: `<type>(<scope>): <summary> [<req-id>]`, one plan step per commit.
-- Code style: `_docs/1.architecture-overview.html` › Conventions › Code style (no member comments, single-line imports, no `Omit`, `data-testid`, unit tests only on request).
+- Code style: `_docs/1.architecture-overview.html` › Conventions › Code style (no member comments, single-line imports, no `Omit`, `data-testid`, unit tests only on request; Angular: separate `.html` + `.ts`, styles only in global SCSS, no component per state/variant).

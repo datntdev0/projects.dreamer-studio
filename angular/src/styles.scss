@@ -1,4 +1,6 @@
 @use 'styles/tokens';
+@use 'styles/components/root';
+@use 'styles/components/banner';
 
 * {
   box-sizing: border-box;

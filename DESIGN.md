@@ -107,7 +107,7 @@ The reader changes these values from the Reading tab (font size, line width, lin
 - One inline SVG sprite: `angular/src/assets/icons.svg`, injected once into `<body>` by `provideIconSprite()`.
 - Each icon is a `<symbol id="i-<name>" viewBox="0 0 24 24">`, outline style.
 - Stroke: `currentColor`, width `1.75` (`1.5` at xl), round caps and joins, no fill. Icons take the text color of their parent.
-- Use the component: `<ns-icon name="search" size="sm" />`. It is decorative (`aria-hidden="true"`); the button or link must carry the label or tooltip.
+- Use the component: `<ds-icon name="search" size="sm" />`. It is decorative (`aria-hidden="true"`); the button or link must carry the label or tooltip.
 
 | Size | Class | Pixels | Use |
 | --- | --- | --- | --- |

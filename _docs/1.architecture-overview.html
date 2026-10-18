@@ -136,12 +136,12 @@
 ├── angular/                    <span class="note"># UI (renderer)</span>
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap</span>
-│   │   ├── root.component.ts   <span class="note"># root component, hosts the shell</span>
+│   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
 │   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003)</span>
-│   │   ├── components/         <span class="note"># base components: error-banner (TSK-003); button, input, dialog, toast, table (REQ-001)</span>
+│   │   ├── components/         <span class="note"># base components: banner with info/success/warning/danger variants (TSK-003); button, input, dialog, toast, table (REQ-001)</span>
 │   │   ├── shell/              <span class="note"># sidebar, header, content area, pipelines indicator (REQ-003)</span>
 │   │   ├── features/           <span class="note"># one module per feature, defined later</span>
-│   │   ├── styles/             <span class="note"># _tokens.scss, _base.scss, _fonts.scss, _bootstrap.scss (DESIGN.md)</span>
+│   │   ├── styles/             <span class="note"># _tokens.scss, _base.scss, _fonts.scss, _bootstrap.scss (DESIGN.md); components/ = one partial per component</span>
 │   │   └── assets/             <span class="note"># icons.svg, fonts/, i18n/ (vi.json, en.json)</span>
 │   ├── public/                 <span class="note"># icon.svg, brand/</span>
 │   └── .storybook/             <span class="note"># Storybook config (REQ-001)</span>
@@ -252,6 +252,9 @@
         <li>TypeScript: no <code>Omit</code> type; always write explicit types.</li>
         <li>Write unit tests only when the human asks for them explicitly.</li>
         <li>Use the <code>data-testid</code> attribute to target elements in tests.</li>
+        <li>Angular: each component has its own <code>&lt;name&gt;.component.html</code> (<code>templateUrl</code>) and <code>&lt;name&gt;.component.ts</code>; no inline <code>template</code>.</li>
+        <li>Angular: no component stylesheet (<code>styles</code>, <code>styleUrl</code>); add styles as global SCSS partials in <code>angular/src/styles/components/_&lt;name&gt;.scss</code>, scoped under the component selector and loaded from <code>styles.scss</code>.</li>
+        <li>Angular: do not split a component only to show another state or variant; use inputs (e.g. <code>variant</code>) on the same component.</li>
       </ul></details>
       <details><summary>Naming and formatting</summary><ul>
         <li>TS: <code>kebab-case</code> files, <code>PascalCase</code> types/classes, <code>camelCase</code> functions; Prettier + ESLint</li>

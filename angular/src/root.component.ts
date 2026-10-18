@@ -1,76 +1,53 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { ErrorBannerComponent } from './components/error-banner.component';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ErrorCode } from '@dreamer/shared/errors/app-error';
+import { errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
+import { BannerComponent } from './components/banner.component';
+import type { BannerVariant } from './components/banner.component';
 import { BackendStatus } from './core/backend-status';
 import { DesktopApi } from './core/desktop-api';
 import { ErrorStore } from './core/error-store';
+import type { ErrorEntry } from './core/error-store';
+
+interface ErrorBanner extends ErrorEntry {
+  variant: BannerVariant;
+  dismissible: boolean;
+  testId: string;
+}
 
 @Component({
-  selector: 'ns-root',
-  imports: [ErrorBannerComponent],
-  template: `
-    @if (errorStore.errors().length > 0 || backendStatus.state() === 'unavailable') {
-      <div class="banners">
-        @if (backendStatus.state() === 'unavailable') {
-          <div data-testid="backend-banner">
-            <ns-error-banner
-              code="BACKEND_UNAVAILABLE"
-              variant="warning"
-              [dismissible]="false"
-              (openLogs)="desktopApi.openLogs()"
-            />
-          </div>
-        }
-        @for (entry of errorStore.errors(); track entry.code) {
-          <ns-error-banner
-            [code]="entry.code"
-            [count]="entry.count"
-            (openLogs)="desktopApi.openLogs()"
-            (dismiss)="errorStore.dismiss(entry.code)"
-          />
-        }
-      </div>
-    }
-    <main class="empty" data-testid="app-empty">
-      <h1 data-testid="app-name">Dreamer Studio</h1>
-      <p class="meta num" data-testid="app-version">Version {{ version() }}</p>
-    </main>
-  `,
-  styles: `
-    :host {
-      display: flex;
-      flex-direction: column;
-      width: 100vw;
-      height: 100vh;
-      background: var(--color-background);
-    }
-    .banners {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sp-sm);
-      padding: var(--sp-md);
-    }
-    .empty {
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--sp-sm);
-    }
-    h1,
-    p {
-      margin: 0;
-    }
-  `,
+  selector: 'ds-root',
+  imports: [BannerComponent],
+  templateUrl: './root.component.html',
 })
 export class RootComponent implements OnInit {
   protected readonly desktopApi: DesktopApi = inject(DesktopApi);
   protected readonly errorStore: ErrorStore = inject(ErrorStore);
   protected readonly backendStatus: BackendStatus = inject(BackendStatus);
+  protected readonly copy = errorCopy;
+  protected readonly text = errorText;
   readonly version = signal<string>('…');
+
+  protected readonly errorBanners = computed<ErrorBanner[]>(() => {
+    const errors = this.errorStore
+      .errors()
+      .map((entry): ErrorBanner => ({ ...entry, variant: 'danger', dismissible: true, testId: 'error-banner' }));
+    if (this.backendStatus.state() !== 'unavailable') return errors;
+    const backend: ErrorBanner = {
+      code: ErrorCode.BackendUnavailable,
+      count: 1,
+      variant: 'warning',
+      dismissible: false,
+      testId: 'backend-banner',
+    };
+    return [backend, ...errors];
+  });
 
   async ngOnInit(): Promise<void> {
     const info = await this.desktopApi.info();
     if (info) this.version.set(info.version);
+  }
+
+  protected codeLine(banner: ErrorBanner): string {
+    return `${errorText.code}: ${banner.code}${banner.count > 1 ? ` (×${banner.count})` : ''}`;
   }
 }

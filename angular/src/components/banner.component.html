@@ -1,0 +1,58 @@
+<section [class]="['banner', variant()]" [attr.role]="role()" data-testid="banner">
+  <ng-container [ngTemplateOutlet]="icon" [ngTemplateOutletContext]="{ $implicit: variant() }" />
+  <div class="body">
+    <strong class="title">{{ heading() }}</strong>
+    @if (message()) {
+      <span class="message">{{ message() }}</span>
+    }
+    @if (meta()) {
+      <span class="meta" data-testid="banner-meta">{{ meta() }}</span>
+    }
+  </div>
+  <ng-content />
+  @if (dismissible()) {
+    <button
+      class="btn icon-btn"
+      type="button"
+      [attr.aria-label]="text.dismiss"
+      data-testid="banner-dismiss"
+      (click)="dismiss.emit()"
+    >
+      <ng-container [ngTemplateOutlet]="icon" [ngTemplateOutletContext]="{ $implicit: 'close' }" />
+    </button>
+  }
+</section>
+<ng-template #icon let-name>
+  <svg
+    class="icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    @switch (name) {
+      @case ('info') {
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4M12 8h.01" />
+      }
+      @case ('success') {
+        <circle cx="12" cy="12" r="10" />
+        <path d="m9 12 2 2 4-4" />
+      }
+      @case ('warning') {
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+        <path d="M12 9v4M12 17h.01" />
+      }
+      @case ('close') {
+        <path d="M18 6 6 18M6 6l12 12" />
+      }
+      @default {
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4M12 16h.01" />
+      }
+    }
+  </svg>
+</ng-template>

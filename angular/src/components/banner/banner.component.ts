@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, input, output, booleanAttribute } from '@angular/core';
 import { errorText } from '@dreamer/shared/errors/error-copy';
 
 export type BannerVariant = 'info' | 'success' | 'warning' | 'danger';
@@ -14,7 +14,7 @@ export class BannerComponent {
   readonly heading = input.required<string>();
   readonly message = input<string>('');
   readonly meta = input<string>('');
-  readonly dismissible = input<boolean>(true);
+  readonly dismissible = input<boolean, unknown>(true, { transform: booleanAttribute });
   readonly dismiss = output<void>();
 
   protected readonly text = errorText;

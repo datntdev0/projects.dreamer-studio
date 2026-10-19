@@ -1,0 +1,68 @@
+@use 'sass:map';
+
+@import 'bootstrap/scss/functions';
+
+$spacers: (
+  0: 0,
+  1: var(--sp-xs),
+  2: var(--sp-sm),
+  3: var(--sp-md),
+  4: var(--sp-lg),
+  5: var(--sp-xl),
+  6: var(--sp-xxl),
+);
+
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/utilities';
+
+$utilities: map.remove(
+  $utilities,
+  'color',
+  'background-color',
+  'border-color',
+  'link-opacity',
+  'link-offset',
+  'link-underline',
+  'link-underline-opacity',
+  'text-opacity',
+  'bg-opacity',
+  'border-opacity'
+);
+
+@import 'bootstrap/scss/helpers';
+@import 'bootstrap/scss/utilities/api';
+
+:root {
+  --bs-body-font-family: var(--font-sans);
+  --bs-body-font-size: var(--font-size-base);
+  --bs-body-line-height: var(--line-height-base);
+  --bs-body-color: var(--color-text);
+  --bs-body-bg: var(--color-background);
+  --bs-secondary-color: var(--color-text-secondary);
+  --bs-tertiary-color: var(--color-text-tertiary);
+  --bs-emphasis-color: var(--color-text);
+  --bs-secondary-bg: var(--color-surface-muted);
+  --bs-tertiary-bg: var(--color-surface);
+  --bs-border-color: var(--color-border);
+  --bs-border-radius: var(--radius-sm);
+  --bs-border-radius-sm: var(--radius-xs);
+  --bs-border-radius-lg: var(--radius-md);
+  --bs-border-radius-xl: var(--radius-lg);
+  --bs-border-radius-pill: var(--radius-full);
+  --bs-link-color: var(--color-link);
+  --bs-link-hover-color: var(--color-link);
+  --bs-code-color: var(--color-text);
+  --bs-highlight-bg: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  --bs-highlight-color: var(--color-text);
+  --bs-font-monospace: var(--font-mono);
+  --bs-primary: var(--color-primary);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger: var(--color-danger);
+  --bs-info: var(--color-link);
+}

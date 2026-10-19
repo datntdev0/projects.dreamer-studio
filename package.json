@@ -14,7 +14,9 @@
     "py:setup": "node scripts/py.mjs setup",
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs build",
-    "package": "node scripts/build.mjs package"
+    "package": "node scripts/build.mjs package",
+    "storybook": "pnpm --filter @dreamer/angular storybook",
+    "storybook:build": "pnpm --filter @dreamer/angular storybook:build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

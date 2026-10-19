@@ -1,37 +1,19 @@
 @use 'styles/tokens';
+@use 'styles/fonts';
+@use 'styles/bootstrap';
+@use 'styles/base';
+@use 'styles/layout';
 @use 'styles/components/root';
 @use 'styles/components/banner';
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  height: 100%;
-}
-
-body {
-  background: var(--color-background);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-}
-
-h1 {
-  font-size: var(--font-size-h1);
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.1px;
-}
-
-.meta {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-meta);
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
+@use 'styles/components/icon';
+@use 'styles/components/button';
+@use 'styles/components/status';
+@use 'styles/components/card';
+@use 'styles/components/form';
+@use 'styles/components/dialog';
+@use 'styles/components/toast';
+@use 'styles/components/table';
+@use 'styles/components/tooltip';
+@use 'styles/components/splitter';
+@use 'styles/components/area-state';
+@use 'styles/storybook';

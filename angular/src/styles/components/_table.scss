@@ -1,0 +1,60 @@
+.ds-table-wrap {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.ds-table {
+  width: 100%;
+  margin: 0;
+  font-size: var(--font-size-meta);
+  border-collapse: collapse;
+
+  th {
+    padding: var(--sp-sm) var(--sp-md);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-meta);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+
+  td {
+    padding: var(--sp-sm) var(--sp-md);
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  tbody tr:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  td.ds-table-empty {
+    padding: var(--sp-xl);
+    color: var(--color-text-tertiary);
+    text-align: center;
+  }
+}
+
+.skeleton {
+  height: var(--sp-md);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-muted);
+  animation: ds-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ds-skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

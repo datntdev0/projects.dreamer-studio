@@ -1,0 +1,10 @@
+<div class="ds-card-head">
+  @if (icon(); as name) {
+    <ds-icon [name]="name" size="lg" />
+  }
+  @if (heading(); as text) {
+    <h3>{{ text }}</h3>
+  }
+  <ng-content select="[dsCardEnd]" />
+</div>
+<ng-content />

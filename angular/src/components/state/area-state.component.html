@@ -1,0 +1,25 @@
+<div [class]="classes()" [attr.role]="role()" [attr.data-testid]="'area-' + kind()">
+  @if (kind() === 'loading') {
+    <ds-progress [value]="null" />
+    @if (heading()) {
+      <span>{{ heading() }}</span>
+    }
+  } @else {
+    @if (iconName()) {
+      <ds-icon class="ds-area-state-icon" [name]="iconName()" [size]="iconSize()" />
+    }
+    @if (heading()) {
+      <h3 class="ds-area-state-title">{{ heading() }}</h3>
+    }
+    @if (description()) {
+      <p class="ds-area-state-description">{{ description() }}</p>
+    }
+    @if (kind() === 'error' && details()) {
+      <details class="ds-area-state-details">
+        <summary>{{ detailsLabel() }}</summary>
+        <pre>{{ details() }}</pre>
+      </details>
+    }
+  }
+  <ng-content />
+</div>

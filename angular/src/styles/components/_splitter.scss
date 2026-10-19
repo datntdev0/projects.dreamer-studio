@@ -1,0 +1,50 @@
+.ds-splitter {
+  position: relative;
+  flex: none;
+  display: block;
+  background: var(--color-border);
+  touch-action: none;
+  transition:
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+
+  &::before {
+    position: absolute;
+    content: '';
+  }
+
+  &.left,
+  &.right {
+    width: var(--gutter);
+    cursor: col-resize;
+
+    &::before {
+      inset: 0 calc(-1 * var(--sp-xs));
+    }
+  }
+
+  &.bottom {
+    height: var(--gutter);
+    cursor: row-resize;
+
+    &::before {
+      inset: calc(-1 * var(--sp-xs)) 0;
+    }
+  }
+
+  &:hover,
+  &:focus-visible,
+  &.dragging {
+    z-index: 1;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 var(--gutter) var(--color-primary);
+  }
+
+  &:focus-visible {
+    outline: 0;
+  }
+
+  &.dragging {
+    user-select: none;
+  }
+}

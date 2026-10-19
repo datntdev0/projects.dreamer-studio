@@ -1,12 +1,14 @@
 # DESIGN.md
 
-Visual foundations of Dreamer Studio (Novel Studio): colors, typography, iconography and spacing.
+Visual foundations of Dreamer Studio (Novel Studio): colors, typography, iconography, spacing, components and layout.
 
-Source of truth: `angular/src/styles/_tokens.scss`, `angular/src/styles/_base.scss`, `angular/src/styles/_fonts.scss`, `angular/src/assets/icons.svg`. Always use the CSS tokens below, never raw values.
+Live reference: Storybook (`pnpm storybook`, stories in `angular/stories`), with a light/dark theme toolbar (REQ-001).
+
+Source of truth: `angular/src/styles/_tokens.scss`, `_base.scss`, `_fonts.scss`, `_bootstrap.scss`, `_layout.scss`, `components/_<name>.scss`, and `angular/src/assets/icons.svg`. Always use the CSS tokens below, never raw values.
 
 ## 1. Colors
 
-The theme is set by `data-theme="dark" | "light"` on `<html>` (`applyTheme` in `shared/core/theme.ts`). Settings offers Dark and Light only.
+The theme is set by `data-theme="dark" | "light"` on `<html>` (Storybook: theme toolbar; app: theme service with REQ-003). Settings offers Dark and Light only.
 
 ### Brand (same in both themes)
 
@@ -63,9 +65,9 @@ The theme is set by `data-theme="dark" | "light"` on `<html>` (`applyTheme` in `
 | --- | --- | --- |
 | `--font-sans` | Inter, Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif | UI: navigation, headings, controls, metadata |
 | `--font-serif` | Source Serif 4, Cambria, Noto Serif CJK SC, Source Han Serif SC, Times New Roman, serif | Reading column, side-by-side text (class `.serif`) |
-| `--font-mono` | ui-monospace, Consolas, Menlo, Monaco, Liberation Mono, monospace | `code`, `kbd`, `.input.mono` |
+| `--font-mono` | ui-monospace, Consolas, Menlo, Monaco, Liberation Mono, monospace | `code`, `kbd`, `.ds-input.mono` |
 
-- Inter and Source Serif 4 are bundled as variable fonts in `angular/src/assets/fonts` (SIL OFL).
+- Inter and Source Serif 4 are variable fonts from npm `@fontsource-variable/inter` and `@fontsource-variable/source-serif-4` (SIL OFL), declared in `_fonts.scss` (latin, latin-ext, vietnamese) and bundled by the Angular build.
 - Cambria is the serif fallback because it has full Vietnamese tone marks. Do not use Georgia (missing glyphs such as ẳ, ễ, ở, ự).
 - Noto Serif CJK SC / Source Han Serif SC cover Chinese source text.
 
@@ -116,6 +118,8 @@ The reader changes these values from the Reading tab (font size, line width, lin
 | `lg` | `.icon.lg` | 20px | Larger controls, headers |
 | `xl` | `.icon.xl` | 28px | Empty states |
 
+Size tokens: `--icon-sm|md|lg|xl`, rail icon `--icon-rail` (18px), stroke `--icon-stroke` / `--icon-stroke-xl`.
+
 ### Available icons
 
 ```
@@ -132,6 +136,7 @@ file file-zip folder download upload filter sliders palette
 user building pin tag clock hash diamond merge sparkles message send
 headphones mic pronounce music volume waveform film video image image-off camera
 puzzle box cube storyboard nodes anchor move rotate scale pointer hand map
+languages eye
 ```
 
 ### Adding an icon
@@ -141,7 +146,7 @@ puzzle box cube storyboard nodes anchor move rotate scale pointer hand map
 
 ### Brand
 
-- Files: `angular/public/icon.svg` (app icon), `angular/public/brand/dreamer-studio-mark-dark.svg` and `-light.svg`.
+- Files: `angular/public/logo.svg` (app icon; not `icon.svg`, so it is not confused with the sprite), `angular/public/brand/dreamer-studio-mark-dark.svg` and `-light.svg`.
 - App icon (dark rounded tile) is used where the OS shows the app. Minimum size 16px.
 - In the top bar the mark is shown at 22px, switching between dark and light variants by theme.
 - Keep about 1/4 of the mark height clear on every side.
@@ -176,14 +181,15 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 
 ### Control heights
 
-| Control | Height |
-| --- | --- |
-| Button / input / select (default) | 28px |
-| Small button | 24px |
-| Large button | 36px |
-| Pill | 20px |
-| Badge | 16px |
-| Status dot | 7px |
+| Control | Token | Size |
+| --- | --- | --- |
+| Button / input / select (default) | `--control-h` | 28px |
+| Small button | `--control-h-sm` | 24px |
+| Large button | `--control-h-lg` | 36px |
+| Pill | `--pill-h` | 20px |
+| Badge | `--badge-h` | 16px |
+| Status dot | `--dot-size` | 7px |
+| Progress bar | `--progress-h` × `--progress-w` | 4px × 140px |
 
 ### Shell layout
 
@@ -196,13 +202,51 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 | `--left-w` | 272px | Left panel (default) |
 | `--right-w` | 304px | Right panel (default) |
 | `--bottom-h` | 208px | Bottom panel (default) |
-| `--gutter` | 4px | Gap between panels (`--gl`, `--gr`, `--gb`) |
+| `--gutter` | 1px | Splitter (`ds-splitter`) line between a panel and the center; hit area 9px |
+| `--panel-min-w` / `--panel-min-h` | 160px / 120px | Panel minimum width (left, right) / height (bottom) |
+| `--rail-row-h` | 30px | Rail entry, expanded |
+| `--rail-entry` | 32px | Rail entry, collapsed (square) |
+| `--page-max-w` | 1040px | Page body `.narrow` (Home) |
+| `--dialog-w` | 420px | Dialog width |
+| `--toast-w` | 340px | Toast width |
+| `--tooltip-max-w` | 280px | Tooltip max width |
+| `--area-text-w` / `--area-details-w` | 360px / 480px | Area state text / Details max width |
 
+- Panels are resizable with `ds-splitter`: minimum is `--panel-min-w` / `--panel-min-h`, maximum is 50% of the workspace width (left, right) or 60% of the center height (bottom). Default sizes are the tokens above; Enter or double-click resets.
 - Minimum window: 1280×720.
 - When the workspace is narrower than 760px, toolbar segmented buttons and toggles show icons only (label in tooltip).
 
 ## 5. Focus and motion
 
-- Focus: `2px solid var(--color-focus)` with `2px` offset on every interactive element (inputs use `-1px` offset).
-- Transitions are short (`120ms` on color and border).
+- Focus: `var(--focus-width) solid var(--color-focus)` (2px) with `--focus-offset` (2px) on every interactive element (inputs use `--focus-offset-inset`, -1px).
+- Transitions are short (`--motion-fast`, 120ms, on color and border).
 - `prefers-reduced-motion: reduce` turns off all animations and transitions.
+- Scrollbar: thin (`--scrollbar-size` 10px, `--scrollbar-gap` 3px), thumb `--color-border-strong`, radius full.
+
+## 6. Components and layout
+
+Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in `angular/src/styles/components/_<name>.scss`, one story file per component in `angular/stories/components/`. Text a component shows by itself (close, cancel, details) is an input; callers pass translated text.
+
+| Component | Use | Class / API |
+| --- | --- | --- |
+| Button | `<button dsBtn variant size iconOnly loading>` | `.ds-btn` + `primary`, `ghost`, `danger`, `danger-solid`, `sm`, `lg`, `icon-only` |
+| Input / select | native elements in `<ds-field label hint error required span>` | `.ds-input` (`.mono`), `span.ds-select > select.ds-input + ds-icon` |
+| Segmented, checkbox | `<ds-segmented [options] [(value)]>`, `<ds-checkbox [(checked)]>` | radio-group with arrow keys |
+| Form grid | 2 columns when the grid is 760px or wider, 1 below; long fields `span="full"` | `.ds-form-grid > .ds-form-grid-fields` (container query) |
+| Card | `<ds-card icon heading interactive>`, right slot `[dsCardEnd]` | `.ds-card`, `.interactive` = button role, hover border, focus ring |
+| Status | `<ds-pill kind>`, `<ds-badge>`, `<ds-dot kind pulse>`, `<ds-progress [value]>` (null = indeterminate) | `.ds-pill`, `.ds-badge`, `.ds-dot`, `.ds-progress` |
+| Dialog | `<ds-dialog [open] heading closeLabel (closed)>`; `ConfirmService.confirm()` + `<ds-confirm-host />` once | native `<dialog>`: scrim, focus trap, Esc |
+| Toast | `ToastService.show({ kind, title, message, action })` + `<ds-toast-outlet closeLabel>` once | bottom-right, max 3, success hides after 5 s, danger stays |
+| Table | native `<table>` | `.ds-table-wrap > .ds-table`, `.num`, `td.ds-table-empty`, `.skeleton` rows |
+| Tooltip | `[dsTooltip]="text"`, `dsTooltipWhenTruncated` | inverted, 11px, `--shadow-2`, on hover and focus |
+| Splitter | `<ds-splitter [target] edge label min max (resized)>`, edge = left, right, bottom | `role="separator"`, drag, arrows (16px), Home / End, Enter or double-click resets; 1px line (`--gutter`), 3px primary on hover, focus and drag |
+| Area state | `<ds-area-state kind icon heading description details detailsLabel compact>`, kind = empty, loading, error | loading `role="status"`, error `role="alert"` with Details |
+
+Layout (`_layout.scss`, stories in `angular/stories/layout/`):
+
+- App grid `.ds-app` (`.rail-collapsed`): `.ds-app-top` · `.ds-app-rail` | `.ds-app-main` · `.ds-app-status`; optional `.ds-panel-left` · `.ds-app-center` (page + optional `.ds-panel-bottom`) · `.ds-panel-right`, split by `ds-splitter` (`--gutter`); `.ds-toast-area` inside it is positioned in the shell.
+- Top bar: `.ds-app-brand` button (`.ds-brand-mark` 22px, `--brand-mark-size`, + `.version`), `.ds-app-crumbs` (`.sep`, `.page`), `.ds-spacer`, `.ds-app-tools` (language `.lang` at `--lang-btn-w`, theme, Settings; ghost buttons). `.ds-only-light` / `.ds-only-dark` show an element in one theme only (brand mark, sun / moon).
+- Rail: `.ds-rail-group` (`.ds-rail-title`, `.ds-rail-sep`, `.ds-rail-entry` with `.label`); expanded shows titles and 30px rows, collapsed shows 32px entries split by `.ds-rail-sep` with a tooltip. Active entry: `aria-current="page"`, muted background + 2px primary bar. System group (Pipelines, Settings) pinned to the bottom in `.ds-rail-bottom` (D-03).
+- Status bar: `.ds-app-status` with `.item` (`.path` truncates first; `button.item` has a hover background), `.ds-spacer`.
+- Page frame `.ds-page`: `.ds-page-toolbar` (`--top-h`, `h1` styled as h3, `.ds-page-actions` right) + `.ds-page-body` (scrolls, padding `--sp-lg`; `.narrow`, `.center`) + optional `.ds-page-footer`.
+- Patterns: list (toolbar + table), detail (`.ds-split`, `.ds-meta-list`), form (form grid + footer actions), empty state (centered area state).

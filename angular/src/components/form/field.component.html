@@ -1,0 +1,24 @@
+@if (controlId()) {
+  <label class="ds-field-label" [attr.for]="controlId()" data-testid="field-label">
+    <ng-container *ngTemplateOutlet="labelContent" />
+  </label>
+} @else {
+  <span class="ds-field-label" data-testid="field-label">
+    <ng-container *ngTemplateOutlet="labelContent" />
+  </span>
+}
+<ng-content />
+@if (hint() && !error()) {
+  <span class="ds-field-hint" data-testid="field-hint">{{ hint() }}</span>
+}
+@if (error()) {
+  <span class="ds-field-error" role="alert" data-testid="field-error">
+    <ds-icon name="alert-circle" size="sm" />{{ error() }}
+  </span>
+}
+<ng-template #labelContent>
+  {{ label() }}
+  @if (required()) {
+    <span class="ds-field-required" aria-hidden="true">*</span>
+  }
+</ng-template>

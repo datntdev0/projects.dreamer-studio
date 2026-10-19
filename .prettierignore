@@ -10,3 +10,4 @@ worktree
 .playwright-cli
 pnpm-lock.yaml
 *.md
+storybook-static

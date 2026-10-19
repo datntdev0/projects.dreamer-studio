@@ -1,0 +1,21 @@
+<dialog #dialog class="ds-dialog" data-testid="dialog" [attr.aria-labelledby]="headingId" (close)="closed.emit()">
+  <header>
+    @if (icon()) {
+      <ds-icon [name]="icon()" size="lg" [class.danger]="danger()" />
+    }
+    <h2 [id]="headingId" class="t-dialog">{{ heading() }}</h2>
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      [iconOnly]="true"
+      type="button"
+      [attr.aria-label]="closeLabel()"
+      (click)="close()"
+    >
+      <ds-icon name="x" size="sm" />
+    </button>
+  </header>
+  <div class="body"><ng-content /></div>
+  <footer><ng-content select="[dialogFooter]" /></footer>
+</dialog>

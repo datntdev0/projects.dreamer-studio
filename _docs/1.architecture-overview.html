@@ -38,7 +38,7 @@
       <div class="grid cols-3">
         <div class="card"><h3>Tech stack</h3><ul>
           <li>Shell: Electron main + preload + renderer (AD-01)</li>
-          <li>UI: Angular + Bootstrap + SCSS, Storybook (AD-07); i18n with own JSON files, no library (AD-07)</li>
+          <li>UI: Angular + Bootstrap reboot and utilities only (AD-26) + SCSS, Storybook 10 (AD-07, AD-28); fonts from npm (AD-27); i18n with own JSON files, no library (AD-07)</li>
           <li>Backend: Python FastAPI, pip + venv (AD-02, AD-09)</li>
           <li>Storage: SQLite via <code>node:sqlite</code> in main + files in app data (AD-03, AD-04)</li>
           <li>Tooling: pnpm workspaces; ESLint, Prettier, Vitest; Ruff, pytest (AD-09); esbuild for main + preload (AD-19)</li>
@@ -137,14 +137,15 @@
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap</span>
 │   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
-│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003)</span>
-│   │   ├── components/         <span class="note"># base components: banner with info/success/warning/danger variants (TSK-003); button, input, dialog, toast, table (REQ-001)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001)</span>
+│   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001)</span>
 │   │   ├── shell/              <span class="note"># sidebar, header, content area, pipelines indicator (REQ-003)</span>
 │   │   ├── features/           <span class="note"># one module per feature, defined later</span>
-│   │   ├── styles/             <span class="note"># _tokens.scss, _base.scss, _fonts.scss, _bootstrap.scss (DESIGN.md); components/ = one partial per component</span>
-│   │   └── assets/             <span class="note"># icons.svg, fonts/, i18n/ (vi.json, en.json)</span>
-│   ├── public/                 <span class="note"># icon.svg, brand/</span>
-│   └── .storybook/             <span class="note"># Storybook config (REQ-001)</span>
+│   │   ├── styles/             <span class="note"># _tokens, _fonts, _bootstrap, _base, _layout, _storybook (DESIGN.md); components/ = one partial per component</span>
+│   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg); i18n/ (vi.json, en.json) later</span>
+│   ├── public/                 <span class="note"># logo.svg (app icon), brand/ (mark dark, light)</span>
+│   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001)</span>
+│   └── .storybook/             <span class="note"># main.ts, preview.ts (theme toolbar, icon sprite), tsconfig.json (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
@@ -237,7 +238,7 @@
         <li>The backend is a console exe started with a hidden window, so its stderr goes to the main log.</li>
         <li><code>dev:crash</code> is not registered in the package.</li>
         <li>No code signing and no auto-updater yet. Antivirus may flag the PyInstaller exe; one-folder and no UPX lower the risk.</li>
-        <li>App icon is the Electron default until the brand mark lands (TH01-03).</li>
+        <li>App icon is the Electron default; the brand mark is in <code>angular/public/logo.svg</code> (REQ-001) but not wired into the package yet.</li>
       </ul>
 
       <h2>Conventions</h2>
@@ -254,6 +255,9 @@
         <li>Use the <code>data-testid</code> attribute to target elements in tests.</li>
         <li>Angular: each component has its own <code>&lt;name&gt;.component.html</code> (<code>templateUrl</code>) and <code>&lt;name&gt;.component.ts</code>; no inline <code>template</code>.</li>
         <li>Angular: no component stylesheet (<code>styles</code>, <code>styleUrl</code>); add styles as global SCSS partials in <code>angular/src/styles/components/_&lt;name&gt;.scss</code>, scoped under the component selector and loaded from <code>styles.scss</code>.</li>
+        <li>Angular: import base components through the alias <code>@components/*</code> (<code>angular/src/components/*</code>), set in <code>angular/tsconfig.json</code>.</li>
+        <li>Angular: every <code>boolean</code> input uses <code>{ transform: booleanAttribute }</code>, so a bare attribute (<code>&lt;ds-card interactive&gt;</code>) works.</li>
+        <li>Storybook: stories in <code>angular/stories/&lt;group&gt;/&lt;name&gt;.stories.ts</code>, not next to the code; inline templates are allowed in stories only.</li>
         <li>Angular: do not split a component only to show another state or variant; use inputs (e.g. <code>variant</code>) on the same component.</li>
       </ul></details>
       <details><summary>Naming and formatting</summary><ul>
@@ -281,14 +285,14 @@
       <details><summary>Testing</summary><ul>
         <li>Tooling: Vitest (TS), pytest (Python), next to the code (AD-09)</li>
         <li>Unit tests only when the human asks; elements under test carry <code>data-testid</code></li>
-        <li>UI states: Storybook stories per component (REQ-001)</li>
+        <li>UI states: Storybook stories per component in <code>angular/stories</code> (REQ-001); check with <code>pnpm storybook</code> + tool-playwright</li>
         <li>AC checks in the running app: <code>tool-playwright</code></li>
       </ul></details>
       <details><summary>Git and commits</summary><ul><li>One plan step = one commit: <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt; [&lt;req-id&gt;]</code></li></ul></details>
       <details><summary>Commands</summary>
         <p class="muted">From root <code>package.json</code> (TSK-002). First run: <code>pnpm install</code> then <code>pnpm py:setup</code>. Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.</p>
         <table><thead><tr><th>Task</th><th>Command</th></tr></thead>
-          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + Angular unit-test + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>Coverage HTML report (<code>coverage/electron</code>, <code>coverage/angular</code>, <code>coverage/python</code>)</td><td><code>pnpm test:coverage</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Build (Angular + esbuild)</td><td><code>pnpm build</code></td></tr><tr><td>Portable package (see Build and Release)</td><td><code>pnpm package</code></td></tr></tbody></table>
+          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + Angular unit-test + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>Coverage HTML report (<code>coverage/electron</code>, <code>coverage/angular</code>, <code>coverage/python</code>)</td><td><code>pnpm test:coverage</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Storybook (design system, port 6006)</td><td><code>pnpm storybook</code> · <code>pnpm storybook:build</code> → <code>angular/storybook-static</code></td></tr><tr><td>Build (Angular + esbuild)</td><td><code>pnpm build</code></td></tr><tr><td>Portable package (see Build and Release)</td><td><code>pnpm package</code></td></tr></tbody></table>
       </details>
     </main>
   </div>

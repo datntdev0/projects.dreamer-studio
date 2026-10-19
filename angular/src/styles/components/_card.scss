@@ -1,0 +1,39 @@
+ds-card {
+  display: block;
+}
+
+.ds-card {
+  padding: var(--sp-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+
+  &.interactive {
+    cursor: pointer;
+    transition: border-color var(--motion-fast);
+  }
+
+  &.interactive:hover {
+    border-color: var(--color-border-strong);
+  }
+}
+
+.ds-card-head {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  margin-bottom: var(--sp-xs);
+
+  &:not(:has(*)) {
+    display: none;
+  }
+
+  > ds-icon {
+    color: var(--color-text-secondary);
+  }
+
+  > h3 {
+    flex: 1;
+    min-width: 0;
+  }
+}

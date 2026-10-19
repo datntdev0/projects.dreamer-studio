@@ -12,6 +12,8 @@
   --font-size-h1: 22px;
   --font-size-h2: 18px;
   --font-size-h3: 14px;
+  --font-size-h4: 12px;
+  --font-size-dialog: 16px;
   --font-size-meta: 12px;
   --font-size-small: 11px;
   --font-size-badge: 10px;
@@ -35,6 +37,35 @@
   --radius-xl: 16px;
   --radius-full: 9999px;
 
+  --control-h: 28px;
+  --control-h-sm: 24px;
+  --control-h-lg: 36px;
+  --pill-h: 20px;
+  --badge-h: 16px;
+  --dot-size: 7px;
+  --progress-h: 4px;
+  --progress-w: 140px;
+  --rail-row-h: 30px;
+  --rail-entry: 32px;
+  --area-text-w: 360px;
+  --area-details-w: 480px;
+  --tooltip-max-w: 280px;
+
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+  --icon-xl: 28px;
+  --icon-rail: 18px;
+  --icon-stroke: 1.75;
+  --icon-stroke-xl: 1.5;
+
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-offset-inset: -1px;
+  --motion-fast: 120ms;
+  --scrollbar-size: 10px;
+  --scrollbar-gap: 3px;
+
   --top-h: 40px;
   --status-h: 24px;
   --rail-w: 48px;
@@ -42,7 +73,14 @@
   --left-w: 272px;
   --right-w: 304px;
   --bottom-h: 208px;
-  --gutter: 4px;
+  --gutter: 1px;
+  --dialog-w: 420px;
+  --toast-w: 340px;
+  --page-max-w: 1040px;
+  --brand-mark-size: 22px;
+  --lang-btn-w: 56px;
+  --panel-min-w: 160px;
+  --panel-min-h: 120px;
 }
 
 [data-theme='dark'] {
@@ -75,7 +113,7 @@
   --color-surface-muted: #eef1ef;
   --color-text: #171917;
   --color-text-secondary: #59615c;
-  --color-text-tertiary: #6f7772;
+  --color-text-tertiary: #6b736e;
   --color-border: #dce1de;
   --color-border-strong: #b9c1bc;
   --color-link: #176b4b;

@@ -3,11 +3,11 @@
 ## Project
 
 - **What**: local desktop studio that uses AI to produce creative content (novels, music, video).
-- **Status**: skeleton (TSK-002) plus logging and error handling (TSK-003): daily log files per process in `<app data>/logs`, error banners and native error dialogs, Python backend started by main; portable Windows x64 zip via `pnpm package` (TSK-004); SQLite database and data access layer in main (TSK-005); schema migrations on startup (TSK-006); app data folders, single-instance lock and path lint rule (TSK-007). Next: TH01-03 (shell, design system).
+- **Status**: skeleton (TSK-002) plus logging and error handling (TSK-003): daily log files per process in `<app data>/logs`, error banners and native error dialogs, Python backend started by main; portable Windows x64 zip via `pnpm package` (TSK-004); SQLite database and data access layer in main (TSK-005); schema migrations on startup (TSK-006); app data folders, single-instance lock and path lint rule (TSK-007); design system in Storybook: tokens, fonts, icons, base components, layout patterns (REQ-001, AC-5 with REQ-003). Next: REQ-002 (i18n), REQ-003 (shell, homepage).
 - **Releases**: `0.0.0` foundation (approved) · `0.1.0` novel library (draft) · `0.2.0` AI analysis (draft).
-- **Stack**: Electron 44 main + renderer (esbuild, electron-log) · Angular 22 + Bootstrap · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
+- **Stack**: Electron 44 main + renderer (esbuild, electron-log) · Angular 22 + Bootstrap reboot/utilities + Storybook 10 · Python FastAPI (pip) · SQLite via `node:sqlite` · pnpm workspaces · PyInstaller + electron-builder zip.
 - **Processes**: renderer (UI) ──IPC──► main (core services, DB, pipeline executor) ──HTTP──► Python (AI jobs, stateless).
-- **Folders**: `angular/src/<core|components>` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/app` · `scripts/` (`dev.mjs`, `py.mjs`, `build.mjs`).
+- **Folders**: `angular/src/<core|components|styles>`, `angular/stories` · `electron/main`, `electron/preload` · `shared/<ipc|models|errors|core>` · `backend/app` · `scripts/` (`dev.mjs`, `py.mjs`, `build.mjs`).
 - **Decisions**: AD-01..13, AD-18..21 decided, AD-14..17 deferred — `python .claude/scripts/reqs.py decisions`.
 - **Sources of truth**:
   - Requirements: `_docs/0.requirements-analysis.xlsx`

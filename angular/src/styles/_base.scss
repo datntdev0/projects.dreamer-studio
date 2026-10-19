@@ -1,0 +1,146 @@
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  background-clip: padding-box;
+  border: var(--scrollbar-gap) solid transparent;
+  border-radius: var(--radius-full);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  line-height: 1.4;
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-base);
+}
+
+h4 {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-h4);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+p {
+  margin: 0 0 var(--sp-sm);
+}
+
+.meta {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-meta);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+}
+
+code {
+  padding: 1px var(--sp-xs);
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-muted);
+}
+
+kbd {
+  padding: 1px var(--sp-xs);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-raised);
+}
+
+mark {
+  padding: 0;
+  color: inherit;
+  background: color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: var(--focus-offset-inset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

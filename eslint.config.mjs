@@ -17,6 +17,7 @@ export default tseslint.config(
       '.claude',
       'worktree',
       '.playwright-cli',
+      '**/storybook-static',
     ],
   },
   {

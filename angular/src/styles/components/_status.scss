@@ -1,0 +1,120 @@
+ds-pill,
+ds-badge,
+ds-dot,
+ds-progress {
+  display: inline-flex;
+}
+
+.ds-pill {
+  gap: var(--sp-xs);
+  align-items: center;
+  height: var(--pill-h);
+  padding: 0 var(--sp-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+
+  &.success {
+    color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  }
+
+  &.warning {
+    color: var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+  }
+
+  &.danger {
+    color: var(--color-danger);
+    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  }
+
+  &.info {
+    color: var(--color-link);
+    background: color-mix(in srgb, var(--color-link) 14%, transparent);
+  }
+}
+
+.ds-badge {
+  align-items: center;
+  justify-content: center;
+  min-width: var(--badge-h);
+  height: var(--badge-h);
+  padding: 0 var(--sp-xs);
+  color: var(--color-on-primary);
+  font: 700 var(--font-size-badge) / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+
+.ds-dot {
+  flex: none;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: var(--radius-full);
+  background: var(--color-text-tertiary);
+
+  &.success {
+    background: var(--color-success);
+  }
+
+  &.warning {
+    background: var(--color-warning);
+  }
+
+  &.danger {
+    background: var(--color-danger);
+  }
+
+  &.primary {
+    background: var(--color-primary);
+  }
+
+  &.pulse {
+    animation: ds-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+.ds-progress {
+  position: relative;
+  width: var(--progress-w);
+  height: var(--progress-h);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+
+  > span {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    transition: width var(--motion-fast);
+  }
+
+  &.indeterminate > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 35%;
+    animation: ds-slide 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes ds-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes ds-slide {
+  from {
+    left: -35%;
+  }
+
+  to {
+    left: 100%;
+  }
+}

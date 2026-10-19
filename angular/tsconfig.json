@@ -5,7 +5,11 @@
     "noFallthroughCasesInSwitch": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "lib": ["ES2022", "DOM"]
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@components/*": ["./src/components/*"],
+      "@dreamer/shared/*": ["../shared/*"]
+    }
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,

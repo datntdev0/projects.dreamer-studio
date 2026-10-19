@@ -1,8 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
-import { BannerComponent } from './components/banner.component';
-import type { BannerVariant } from './components/banner.component';
+import { BannerComponent } from '@components/banner/banner.component';
+import type { BannerVariant } from '@components/banner/banner.component';
 import { BackendStatus } from './core/backend-status';
 import { DesktopApi } from './core/desktop-api';
 import { ErrorStore } from './core/error-store';

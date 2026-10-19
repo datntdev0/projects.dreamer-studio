@@ -26,6 +26,22 @@
               "styles": {
                 "inlineCritical": false
               }
+            },
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "public"
+              },
+              {
+                "glob": "icons.svg",
+                "input": "src/assets",
+                "output": "/"
+              }
+            ],
+            "stylePreprocessorOptions": {
+              "sass": {
+                "silenceDeprecations": ["import", "global-builtin", "color-functions", "if-function"]
+              }
             }
           },
           "configurations": {
@@ -63,6 +79,28 @@
             "tsConfig": "tsconfig.spec.json",
             "runnerConfig": "vitest.config.ts",
             "coverageInclude": ["src/**/*.ts"]
+          }
+        },
+        "storybook": {
+          "builder": "@storybook/angular:start-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "tsConfig": ".storybook/tsconfig.json",
+            "styles": ["src/styles.scss"],
+            "browserTarget": "dreamer:build:development",
+            "compodoc": false,
+            "port": 6006
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular:build-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "tsConfig": ".storybook/tsconfig.json",
+            "styles": ["src/styles.scss"],
+            "browserTarget": "dreamer:build:development",
+            "compodoc": false,
+            "outputDir": "storybook-static"
           }
         }
       }

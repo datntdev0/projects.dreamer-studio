@@ -25,3 +25,5 @@ backend/build/
 coverage/
 .coverage
 worktree/
+storybook-static/
+debug-storybook.log

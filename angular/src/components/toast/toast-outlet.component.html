@@ -1,0 +1,37 @@
+<div class="ds-toast-area" data-testid="toast-area" aria-live="polite">
+  @for (toast of service.toasts(); track toast.id) {
+    <div
+      class="ds-toast {{ toast.kind }}"
+      data-testid="toast"
+      [attr.data-kind]="toast.kind"
+      [attr.role]="toast.kind === 'danger' ? 'alert' : 'status'"
+    >
+      <ds-icon [name]="icons[toast.kind]" />
+      <div class="toast-text">
+        <span class="toast-title">{{ toast.title }}</span>
+        @if (toast.message) {
+          <span class="toast-msg">{{ toast.message }}</span>
+        }
+        @if (toast.action; as action) {
+          <div class="toast-actions">
+            <button dsBtn size="sm" type="button" data-testid="toast-action" (click)="runAction(toast)">
+              {{ action.label }}
+            </button>
+          </div>
+        }
+      </div>
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        [iconOnly]="true"
+        type="button"
+        data-testid="toast-close"
+        [attr.aria-label]="closeLabel()"
+        (click)="service.dismiss(toast.id)"
+      >
+        <ds-icon name="x" size="sm" />
+      </button>
+    </div>
+  }
+</div>

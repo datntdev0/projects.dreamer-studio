@@ -1,0 +1,25 @@
+@let current = options();
+<ds-dialog
+  [open]="current !== null"
+  [heading]="current?.title ?? ''"
+  [icon]="current?.danger ? 'alert-triangle' : 'info'"
+  [danger]="!!current?.danger"
+  [closeLabel]="current?.cancelLabel ?? ''"
+  (closed)="service.settle(false)"
+>
+  {{ current?.message }}
+  <ng-container dialogFooter>
+    <button dsBtn type="button" autofocus data-testid="dialog-cancel" (click)="service.settle(false)">
+      {{ current?.cancelLabel }}
+    </button>
+    <button
+      dsBtn
+      type="button"
+      [variant]="current?.danger ? 'danger-solid' : 'primary'"
+      data-testid="dialog-confirm"
+      (click)="service.settle(true)"
+    >
+      {{ current?.confirmLabel }}
+    </button>
+  </ng-container>
+</ds-dialog>

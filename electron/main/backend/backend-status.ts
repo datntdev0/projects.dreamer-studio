@@ -1,19 +1,15 @@
-import { BrowserWindow, WebContents } from 'electron';
 import { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
 import { BackendChannel } from '@dreamer/shared/ipc/channels';
+import { broadcast } from '../ipc/broadcast';
 
 let currentState: BackendState = 'starting';
-
-function sendStatus(contents: WebContents): void {
-  contents.send(BackendChannel.Status, getBackendStatus());
-}
 
 export function setBackendState(state: BackendState): void {
   if (state === currentState) {
     return;
   }
   currentState = state;
-  BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => sendStatus(window.webContents));
+  broadcast(BackendChannel.Status, getBackendStatus());
 }
 
 export function getBackendStatus(): BackendStatus {

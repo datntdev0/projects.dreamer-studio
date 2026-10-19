@@ -29,7 +29,7 @@
     <nav class="doc-toc"></nav>
     <main class="doc-main">
       <h1>Architecture Overview</h1>
-      <div class="doc-meta"><span>Updated 2026-10-18</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
+      <div class="doc-meta"><span>Updated 2026-10-19</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
 
       <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005; app data folders and single instance since TSK-007. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
 
@@ -59,6 +59,7 @@
           <li>AD-12 One log file per process, same format</li>
           <li>AD-13, AD-18 settings.json fixed in <code>%LOCALAPPDATA%/DreamerStudio</code>; app data movable</li>
           <li>AD-22 Raw SQL + thin typed <code>Database</code> wrapper; features use repositories only</li>
+          <li>AD-30..AD-32 Pipeline runs: live log pushed, UUID run IDs, history in keyset pages of 50</li>
           <li><code>node:sqlite</code> works in Electron 44.9.0 (SQLite 3.53.4), dev and package (AD-03, TSK-005)</li>
         </ul></div>
       </div>
@@ -150,19 +151,19 @@
 │   ├── main/                   
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
 │   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
-│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories</span>
-│   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
+│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories/pipeline-run-repository.ts</span>
+│   │   ├── pipelines/          <span class="note"># pipeline-definition (steps, StepContext, sleep), pipeline-executor (queue, limit, cancel, recover, cancelAll), run-log, pipeline-registry (TSK-008); demo pipeline (TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003)</span>
 │   │   ├── i18n/               <span class="note"># MainI18n: same JSON as the renderer, language from app:set-language, for native dialogs; English until the renderer sends one (REQ-002)</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, dev (dev:crash, dev only)</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, pipeline (pipeline:*, payloads validated, TSK-008), dev (dev:crash, dev only); broadcast(channel, value) pushes to all windows</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
 │   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer, backend, migrations (TSK-004, TSK-006)</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
-│   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
+│   ├── models/                 <span class="note"># DTOs: pipeline.ts (PipelineRun, list query/page, log chunk; TSK-008); settings, novel later</span>
 │   ├── i18n/                   <span class="note"># en.json, vi.json (flat dotted keys), translate(): language → en → key, {name} params (REQ-002, AD-29)</span>
 │   └── errors/                 <span class="note"># AppError, error codes, errorStack; copy in i18n errors.&lt;CODE&gt;.title / .message</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
@@ -194,7 +195,7 @@
       <h3>Storage and startup</h3>
       <p class="muted">TSK-005, TSK-006, TSK-007. Electron main owns the database (AD-03, AD-04, AD-22..AD-25).</p>
       <ul>
-        <li>Startup order in <code>main/index.ts</code>: single-instance lock → paths → folders → logger → database → migrations → window. No lock → quit; a second launch restores and focuses the first window.</li>
+        <li>Startup order in <code>main/index.ts</code>: single-instance lock → paths → folders → logger → database → migrations → pipeline recover → IPC → window. No lock → quit; a second launch restores and focuses the first window.</li>
         <li>Folders: <code>ensureFolders(paths)</code> creates <code>library</code>, <code>logs</code>, <code>cache</code> on every start, before the logger (TSK-007 AC-2, AC-3). Failure → <code>APP_DATA_UNWRITABLE</code> dialog (Quit only), then quit; nothing else starts.</li>
         <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>main/index.ts</code> and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
         <li><code>storage/database.ts</code>: <code>Database.open(file)</code> sets <code>busy_timeout = 5000</code>, <code>journal_mode = WAL</code>, <code>synchronous = NORMAL</code>, <code>foreign_keys = ON</code>; <code>get</code> / <code>all</code> / <code>run</code> / <code>exec</code> / <code>transaction</code>; statements cached per SQL; <code>close()</code> checkpoints the WAL.</li>
@@ -204,12 +205,27 @@
         <li>Schema version: table <code>sys_migration_history(id, version, upgrade_num, applied_at)</code>, one row per applied file, created by the first migration <code>0.0.0_0__sys_migration_history_table.sql</code> (AD-23).</li>
         <li>Run: applied id unknown to the app → <code>DB_NEWER_VERSION</code>, no writes; rows exist and files pending → <code>VACUUM INTO database.backup.sqlite</code> (AD-25); each file <code>exec</code>, then its row. A failure stops the run with no rollback → <code>DB_MIGRATION_FAILED</code>.</li>
         <li>Dev only: <code>DREAMER_DEV_FAIL_MIGRATION=1</code> adds a failing migration <code>999.0.0_0__dev_fail</code>.</li>
-        <li>Repositories: <code>storage/repositories/&lt;table&gt;-repository.ts</code>, take a <code>Database</code>, return <code>shared/models</code> types; the first one comes with TH01-04.</li>
+        <li>Repositories: <code>storage/repositories/&lt;table&gt;-repository.ts</code>, take a <code>Database</code>, return <code>shared/models</code> types. First one: <code>PipelineRunRepository</code> (TSK-008).</li>
+        <li>Table <code>pipeline_run</code> (<code>0.0.0_1__pipeline_run_table.sql</code>): UUID id (AD-31), type, status (CHECK queued / running / succeeded / failed / cancelled), cancel_reason (user / appClosed), params JSON, progress, step_index / step_count / step_name (i18n key), error_code, error, ISO UTC times; no display text and no log path stored.</li>
+      </ul>
+      <h3>Pipeline executor</h3>
+      <p class="muted">TSK-008, AD-05. <code>electron/main/pipelines/</code>; created in <code>main/index.ts</code> after migrations.</p>
+      <ul>
+        <li><code>PipelineExecutor(repo, paths, registry, limit)</code>: in-memory queue; starts the oldest queued run while running &lt; <code>limit()</code> (fixed <code>() =&gt; 1</code> until REQ-009). The only writer of run status: queued → running | cancelled; running → succeeded | failed | cancelled.</li>
+        <li>A pipeline = <code>PipelineDefinition</code> with ordered async <code>PipelineStep</code>s and optional <code>cleanup</code>. Steps get a <code>StepContext</code> (params, signal, progress, log, checkpoint) and must use <code>sleep(ms, signal)</code> or <code>checkpoint()</code> so Cancel can stop them.</li>
+        <li>Progress: overall % from step index + step %; DB write and <code>pipeline:update</code> at most every 250 ms per run, at once on step or status change.</li>
+        <li>Cancel: queued → cancelled at once, no log file; running → <code>AbortController.abort()</code>, the step rejects at its next checkpoint, <code>cleanup</code> runs, then cancelled (reason user). A throwing step → failed with <code>error_code</code> (CodedError code) and message; stack in the run log and main log.</li>
+        <li>Run log: <code>&lt;app data&gt;/logs/pipelines/&lt;id&gt;.log</code>, AD-12 line format (module <code>pipeline.&lt;type&gt;</code>), new lines pushed as <code>pipeline:log</code> every 250 ms (AD-30); kept until the run is deleted (main log cleanup only matches <code>main-*.log</code>).</li>
+        <li>Recover at startup and <code>cancelAll</code> on quit: one <code>UPDATE</code> of queued / running rows → cancelled, reason appClosed, plus a sync "Cancelled: app closed" log line.</li>
+        <li>Registry: <code>PipelineRegistry(definitions)</code>; empty in TSK-008, so <code>pipeline:types</code> returns <code>[]</code>; the demo pipeline comes with TSK-009.</li>
+        <li>IPC (<code>PipelineChannel</code>, <code>DreamerApi.pipeline</code>): invoke <code>pipeline:types | start | cancel | list | get | get-log | delete</code>; push <code>pipeline:update</code> (whole run), <code>pipeline:deleted</code> (ids), <code>pipeline:log</code>. <code>list</code> = newest first, filters (finished, statuses, types), keyset cursor + total (AD-32). Errors <code>PIPELINE_NOT_FOUND</code>, <code>PIPELINE_UNKNOWN_TYPE</code>.</li>
       </ul>
       <ol>
         <li>Module load: <code>AppPaths</code> → logger → global error handlers.</li>
         <li><code>app.whenReady()</code>: log app and Electron versions → <code>Database.open(paths.database)</code> → <code>loadMigrations</code> → <code>runMigrations</code>; on error log it, close the DB, show the fatal data dialog for its code (<code>DB_OPEN_FAILED</code>, <code>DB_MIGRATION_FAILED</code>: Open data folder / Open logs folder / Quit; <code>DB_NEWER_VERSION</code> warning: Open data folder / Quit), then <code>app.exit(1)</code>.</li>
+        <li>Same try: <code>PipelineExecutor.recover()</code> → <code>pipeline:*</code> IPC; a failure shows the fatal data dialog.</li>
         <li>IPC, <code>app://</code> protocol, window, backend.</li>
+        <li><code>before-quit</code>: <code>executor.cancelAll('appClosed')</code> (sync DB update) → stop the backend.</li>
         <li><code>will-quit</code>: <code>db.close()</code>.</li>
       </ol>
 
@@ -282,7 +298,7 @@
       </ul></details>
       <details><summary>Data access</summary><ul>
         <li>Features read and write data only through repositories (TSK-005 AC-2, AD-22)</li>
-        <li>Only <code>electron/main/storage/</code> and <code>main/index.ts</code> may import <code>node:sqlite</code> or <code>storage/database</code>; ESLint <code>no-restricted-imports</code> fails the build otherwise</li>
+        <li>Only <code>electron/main/storage/</code> and <code>main/index.ts</code> may import <code>node:sqlite</code> or <code>storage/database</code>; ESLint <code>no-restricted-imports</code> fails the build otherwise (unit tests <code>electron/**/*.test.ts</code> are exempt, they open a temp DB)</li>
         <li>Raw SQL with <code>?</code> parameters; never build SQL from values</li>
         <li>App data paths only from <code>AppPaths</code>; ESLint <code>no-restricted-syntax</code> fails on <code>app.getPath</code> or <code>process.env.LOCALAPPDATA</code> outside <code>storage/paths.ts</code> (TSK-007 AC-4)</li>
         <li>Schema changes only as migration files <code>&lt;version&gt;_&lt;upgrade_num&gt;__&lt;name&gt;.sql</code> in <code>electron/main/storage/migrations/</code>: version = the app release that ships it, upgrade_num from 0 inside that release, name in <code>snake_case</code> (AD-24)</li>

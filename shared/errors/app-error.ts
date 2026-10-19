@@ -8,6 +8,8 @@ export const ErrorCode = {
   DbMigrationFailed: 'DB_MIGRATION_FAILED',
   DbNewerVersion: 'DB_NEWER_VERSION',
   AppDataUnwritable: 'APP_DATA_UNWRITABLE',
+  PipelineNotFound: 'PIPELINE_NOT_FOUND',
+  PipelineUnknownType: 'PIPELINE_UNKNOWN_TYPE',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

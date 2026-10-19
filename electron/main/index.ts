@@ -5,18 +5,23 @@ import { registerAppIpc } from './ipc/app-ipc';
 import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
+import { registerPipelineIpc } from './ipc/pipeline-ipc';
 import { handleAppProtocol, registerAppScheme } from './app/protocol';
 import { createWindow, focusWindow } from './app/window';
 import { showFatalError } from './app/fatal-dialog';
 import { startBackend, stopBackend } from './backend/backend-process';
 import { createLogger, initLogging, Logger } from './logging/logger';
+import { PipelineExecutor } from './pipelines/pipeline-executor';
+import { PipelineRegistry } from './pipelines/pipeline-registry';
 import { Database } from './storage/database';
 import { devFailMigration, loadMigrations, Migration, runMigrations } from './storage/migrator';
+import { PipelineRunRepository } from './storage/repositories/pipeline-run-repository';
 import { AppPaths, defaultAppDataRoot, ensureFolders, migrationsDir, resolveAppPaths } from './storage/paths';
 
 const logger: Logger = createLogger('startup');
 const paths: AppPaths = resolveAppPaths(defaultAppDataRoot());
 let db: Database | null = null;
+let executor: PipelineExecutor | null = null;
 let mainWindow: BrowserWindow | null = null;
 let unwritableFolder: string | null = null;
 
@@ -35,6 +40,17 @@ function migrateDatabase(database: Database): void {
     migrations.push(devFailMigration);
   }
   runMigrations(database, migrations, paths.databaseBackup);
+}
+
+function startPipelines(database: Database): void {
+  executor = new PipelineExecutor(new PipelineRunRepository(database), paths, new PipelineRegistry([]), () => 1);
+  executor.recover();
+  registerPipelineIpc(executor);
+}
+
+function onBeforeQuit(): void {
+  executor?.cancelAll('appClosed');
+  stopBackend();
 }
 
 function prepareAppData(): void {
@@ -63,6 +79,7 @@ async function onReady(): Promise<void> {
   try {
     db = Database.open(paths.database);
     migrateDatabase(db);
+    startPipelines(db);
   } catch (error) {
     logger.error('database startup failed', error);
     db?.close();
@@ -92,7 +109,7 @@ function startApp(): void {
   void app.whenReady().then(onReady);
   app.on('second-instance', onSecondInstance);
   app.on('will-quit', () => db?.close());
-  app.on('before-quit', stopBackend);
+  app.on('before-quit', onBeforeQuit);
   app.on('window-all-closed', () => app.quit());
 }
 

@@ -4,6 +4,8 @@ import { BackendStatus } from './backend';
 import { DevCrashKind } from './dev';
 import { Language } from '../i18n/translate';
 import { LogEntry } from './log';
+import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
+import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 
 export interface DreamerApi {
   app: {
@@ -19,6 +21,18 @@ export interface DreamerApi {
   backend: {
     status(): Promise<BackendStatus>;
     onStatus(listener: (status: BackendStatus) => void): () => void;
+  };
+  pipeline: {
+    types(): Promise<PipelineTypeInfo[]>;
+    start(request: PipelineStartRequest): Promise<PipelineRun>;
+    cancel(id: string): Promise<void>;
+    list(query: PipelineListQuery): Promise<PipelinePage>;
+    get(id: string): Promise<PipelineRun>;
+    log(id: string): Promise<string[]>;
+    delete(ids: string[]): Promise<string[]>;
+    onUpdate(listener: (run: PipelineRun) => void): () => void;
+    onDeleted(listener: (ids: string[]) => void): () => void;
+    onLog(listener: (chunk: PipelineLogChunk) => void): () => void;
   };
   dev: {
     crash(kind: DevCrashKind): Promise<void>;

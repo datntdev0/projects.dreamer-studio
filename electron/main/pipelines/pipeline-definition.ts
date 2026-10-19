@@ -1,0 +1,44 @@
+import { PipelineType } from '@dreamer/shared/models/pipeline';
+import { Logger } from '../logging/logger';
+
+export interface StepContext {
+  params: Record<string, unknown>;
+  signal: AbortSignal;
+  progress(percent: number): void;
+  log: Logger;
+  checkpoint(): void;
+}
+
+export interface PipelineStep {
+  key: string;
+  backend: boolean;
+  run(ctx: StepContext): Promise<void>;
+}
+
+export interface PipelineDefinition {
+  type: PipelineType;
+  steps: PipelineStep[];
+  cleanup?(ctx: StepContext): Promise<void>;
+}
+
+export function abortError(): DOMException {
+  return new DOMException('The operation was aborted.', 'AbortError');
+}
+
+export function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(abortError());
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(abortError());
+    };
+    const timer: NodeJS.Timeout = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}

@@ -17,7 +17,7 @@
       size="sm"
       [iconOnly]="true"
       type="button"
-      [attr.aria-label]="text.dismiss"
+      [attr.aria-label]="dismissLabel()"
       data-testid="banner-dismiss"
       (click)="dismiss.emit()"
     >

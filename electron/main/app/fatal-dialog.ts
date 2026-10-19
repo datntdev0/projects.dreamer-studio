@@ -1,6 +1,6 @@
 import { app, dialog, MessageBoxReturnValue } from 'electron';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
-import { ErrorCopy, errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
+import { t } from '../i18n/main-i18n';
 import { openFolder } from '../ipc/app-ipc';
 import { isLoggingReady } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
@@ -12,32 +12,36 @@ interface FatalButton {
   action: FatalAction;
 }
 
-const quitButton: FatalButton = { label: errorText.quit, action: 'quit' };
+function dataButtons(): FatalButton[] {
+  return [
+    { label: t('common.openDataFolder'), action: 'openData' },
+    { label: t('common.openLogs'), action: 'openLogs' },
+  ];
+}
 
-const dataButtons: FatalButton[] = [
-  { label: errorText.openDataFolder, action: 'openData' },
-  { label: errorText.openLogs, action: 'openLogs' },
-];
-
-const fatalButtons: Partial<Record<ErrorCode, FatalButton[]>> = {
-  DB_OPEN_FAILED: dataButtons,
-  DB_MIGRATION_FAILED: dataButtons,
-  DB_NEWER_VERSION: [{ label: errorText.openDataFolder, action: 'openData' }],
-};
+function fatalButtons(code: ErrorCode): FatalButton[] {
+  const quitButton: FatalButton = { label: t('common.quit'), action: 'quit' };
+  if (code === ErrorCode.DbOpenFailed || code === ErrorCode.DbMigrationFailed) {
+    return [...dataButtons(), quitButton];
+  }
+  if (code === ErrorCode.DbNewerVersion) {
+    return [{ label: t('common.openDataFolder'), action: 'openData' }, quitButton];
+  }
+  return [quitButton];
+}
 
 const warningCodes: ErrorCode[] = [ErrorCode.DbNewerVersion];
 
 export async function showFatalError(code: ErrorCode, file: string, paths: AppPaths, note?: string): Promise<void> {
-  const buttons: FatalButton[] = [...(fatalButtons[code] ?? []), quitButton];
+  const buttons: FatalButton[] = fatalButtons(code);
   const quitIndex: number = buttons.length - 1;
-  const copy: ErrorCopy = errorCopy[code];
   const noteLine: string = note ? `\n${note}` : '';
-  const savedLine: string = isLoggingReady() ? ` ${errorText.savedToLogs}` : '';
+  const savedLine: string = isLoggingReady() ? ` ${t('dialog.savedToLogs')}` : '';
   const result: MessageBoxReturnValue = await dialog.showMessageBox({
     type: warningCodes.includes(code) ? 'warning' : 'error',
-    title: errorText.dataDialogTitle,
-    message: copy.title,
-    detail: `${copy.message}${noteLine}\n\n${errorText.code}: ${code}. ${errorText.file}: ${file}.${savedLine}`,
+    title: t('dialog.dataTitle'),
+    message: t(`errors.${code}.title`),
+    detail: `${t(`errors.${code}.message`)}${noteLine}\n\n${t('common.code')}: ${code}. ${t('common.file')}: ${file}.${savedLine}`,
     buttons: buttons.map((button: FatalButton) => button.label),
     defaultId: quitIndex,
     cancelId: quitIndex,

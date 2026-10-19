@@ -5,13 +5,20 @@ import { map } from 'rxjs';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { PillComponent } from '@components/status/pill.component';
+import type { TranslateParams } from '@dreamer/shared/i18n/translate';
 import { AppInfoStore } from '../../core/app-info';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PageTitleDirective } from '../page-title.directive';
 import { AppModule, MODULES } from '../registry/modules';
 
+interface ReleaseText {
+  key: string;
+  params?: TranslateParams;
+}
+
 @Component({
   selector: 'ds-coming-soon-page',
-  imports: [RouterLink, ButtonDirective, IconComponent, PillComponent, PageTitleDirective],
+  imports: [RouterLink, ButtonDirective, IconComponent, PillComponent, PageTitleDirective, TranslatePipe],
   templateUrl: './coming-soon.page.html',
   host: { class: 'ds-page', 'data-testid': 'page-coming-soon' },
 })
@@ -22,11 +29,13 @@ export class ComingSoonPage {
   protected readonly module = computed<AppModule | undefined>(() =>
     MODULES.find((entry) => entry.id === this.moduleId()),
   );
-  protected readonly release = computed<string>(() => {
+  protected readonly release = computed<ReleaseText>(() => {
     const release = this.module()?.release ?? null;
     if (release === null) {
-      return 'Release not planned yet';
+      return { key: 'soon.tbd' };
     }
-    return release === this.appInfo.info()?.version ? 'Coming later in this release' : `Planned for v${release}`;
+    return release === this.appInfo.info()?.version
+      ? { key: 'soon.thisRelease' }
+      : { key: 'soon.release', params: { version: release } };
   });
 }

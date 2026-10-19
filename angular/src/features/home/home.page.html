@@ -1,31 +1,31 @@
 <div class="ds-page-toolbar" data-testid="page-toolbar">
-  <h1 dsPageTitle>Home</h1>
+  <h1 dsPageTitle>{{ 'nav.home' | t }}</h1>
   <div class="ds-page-actions">
     <a dsBtn size="sm" routerLink="/library" data-testid="home-import"
-      ><ds-icon name="download" size="sm" />Import novel…</a
+      ><ds-icon name="download" size="sm" />{{ 'home.import' | t }}</a
     >
     <a dsBtn variant="primary" size="sm" routerLink="/projects" data-testid="home-new-project"
-      ><ds-icon name="plus" size="sm" />New project</a
+      ><ds-icon name="plus" size="sm" />{{ 'home.newProject' | t }}</a
     >
   </div>
 </div>
 <div class="ds-page-body narrow">
   <div class="ds-page-stack">
     <div class="home-cards">
-      <ds-card icon="folder" heading="App data folder" data-testid="home-card-data">
+      <ds-card icon="folder" [heading]="'home.data.title' | t" data-testid="home-card-data">
         @if (appInfo.state() === 'ready') {
-          <ds-pill dsCardEnd kind="success" icon="check">Ready</ds-pill>
+          <ds-pill dsCardEnd kind="success" icon="check">{{ 'common.ready' | t }}</ds-pill>
         }
         @switch (appInfo.state()) {
           @case ('loading') {
-            <ds-area-state kind="loading" compact heading="Loading app data info…" />
+            <ds-area-state kind="loading" compact [heading]="'home.data.loading' | t" />
           }
           @case ('error') {
             <ds-area-state
               kind="error"
               compact
-              heading="Could not load app data info"
-              detailsLabel="Details"
+              [heading]="'home.data.error' | t"
+              [detailsLabel]="'home.details' | t"
               [details]="appInfo.error() ?? ''"
             />
           }
@@ -39,7 +39,7 @@
               data-testid="home-data-path"
               >{{ path }}</span
             >
-            <span class="meta">Library, logs, cache and database live here.</span>
+            <span class="meta">{{ 'home.data.hint' | t }}</span>
             <div class="home-card-actions">
               <button
                 dsBtn
@@ -49,42 +49,42 @@
                 data-testid="home-data-open"
                 (click)="openDataDir(path)"
               >
-                <ds-icon name="external" size="sm" />Open folder
+                <ds-icon name="external" size="sm" />{{ 'home.data.open' | t }}
               </button>
             </div>
           }
         }
       </ds-card>
 
-      <ds-card icon="terminal" heading="AI backend" data-testid="home-card-backend">
-        <a dsCardEnd class="home-link" routerLink="/settings">Settings</a>
+      <ds-card icon="terminal" [heading]="'home.backend.title' | t" data-testid="home-card-backend">
+        <a dsCardEnd class="home-link" routerLink="/settings">{{ 'nav.settings' | t }}</a>
         <div class="home-status-row">
           <span class="home-status-name">
             <ds-dot [kind]="backend().dot" [pulse]="backendState() === 'starting'" />
-            Local AI backend
+            {{ 'home.backend.name' | t }}
             @if (appInfo.info(); as info) {
               <span class="meta num">v{{ info.version }}</span>
             }
           </span>
           <ds-pill [kind]="backend().pill" data-testid="home-backend-state" [attr.data-state]="backendState()">{{
-            backend().label
+            backend().label | t
           }}</ds-pill>
         </div>
-        <span class="meta">AI providers come in v0.2.0.</span>
+        <span class="meta">{{ 'home.backend.hint' | t }}</span>
       </ds-card>
 
-      <ds-card icon="tasks" heading="Running now" data-testid="home-card-running">
-        <a dsCardEnd class="home-link" routerLink="/pipelines">Pipelines</a>
+      <ds-card icon="tasks" [heading]="'home.running.title' | t" data-testid="home-card-running">
+        <a dsCardEnd class="home-link" routerLink="/pipelines">{{ 'nav.pipelines' | t }}</a>
         @switch (active().state) {
           @case ('loading') {
-            <ds-area-state kind="loading" compact heading="Loading pipelines…" />
+            <ds-area-state kind="loading" compact [heading]="'home.running.loading' | t" />
           }
           @case ('error') {
             <ds-area-state
               kind="error"
               compact
-              heading="Could not load running pipelines"
-              detailsLabel="Details"
+              [heading]="'home.running.error' | t"
+              [detailsLabel]="'home.details' | t"
               [details]="active().error ?? ''"
             />
           }
@@ -96,7 +96,7 @@
                 <ds-progress [value]="row.run.progress" />
               </div>
             } @empty {
-              <ds-area-state kind="empty" compact icon="tasks" heading="No running pipelines" />
+              <ds-area-state kind="empty" compact icon="tasks" [heading]="'status.pipeline.idle' | t" />
             }
           }
         }
@@ -105,19 +105,21 @@
 
     <section data-testid="home-recent">
       <div class="home-section-row">
-        <h3>Recent pipelines</h3>
-        <a class="home-link" routerLink="/pipelines" data-testid="home-recent-view-all">View all</a>
+        <h3>{{ 'home.recent.title' | t }}</h3>
+        <a class="home-link" routerLink="/pipelines" data-testid="home-recent-view-all">{{
+          'home.recent.viewAll' | t
+        }}</a>
       </div>
       @switch (recent().state) {
         @case ('loading') {
-          <ds-area-state kind="loading" compact heading="Loading recent pipelines…" />
+          <ds-area-state kind="loading" compact [heading]="'home.recent.loading' | t" />
         }
         @case ('error') {
           <ds-area-state
             kind="error"
             compact
-            heading="Could not load recent pipelines"
-            detailsLabel="Details"
+            [heading]="'home.recent.error' | t"
+            [detailsLabel]="'home.details' | t"
             [details]="recent().error ?? ''"
           />
         }
@@ -134,14 +136,14 @@
               >
                 <span class="home-recent-tile"><ds-icon name="sparkles" size="lg" /></span>
                 <span class="home-recent-title">{{ row.run.name }}</span>
-                <span class="home-recent-sub">Demo pipeline · {{ row.run.steps }} steps</span>
+                <span class="home-recent-sub">{{ 'home.recent.demo' | t: { steps: row.run.steps } }}</span>
                 <span class="home-recent-facts num"><ds-icon name="clock" size="sm" />{{ row.duration }}</span>
                 <span class="home-recent-state">
                   @if (row.run.status === 'running') {
                     <ds-progress [value]="row.run.progress" />
                     <span class="num">{{ row.stepText }}</span>
                   } @else {
-                    <ds-pill [kind]="row.pill">{{ row.label }}</ds-pill>
+                    <ds-pill [kind]="row.pill">{{ row.label | t }}</ds-pill>
                   }
                 </span>
                 <span class="home-recent-when" [dsTooltip]="row.started">{{ row.when }}</span>
@@ -150,8 +152,8 @@
               <ds-area-state
                 kind="empty"
                 icon="inbox"
-                heading="No pipelines yet"
-                description="Pipelines you run, such as imports and analysis, will show up here."
+                [heading]="'home.recent.emptyTitle' | t"
+                [description]="'home.recent.emptyDesc' | t"
               />
             }
           </div>

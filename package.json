@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.10.0",
   "scripts": {
-    "lint": "eslint . && node scripts/py.mjs lint",
+    "lint": "node scripts/check-i18n.mjs && eslint . && node scripts/py.mjs lint",
     "format": "prettier --write . && node scripts/py.mjs format",
     "format:check": "prettier --check . && node scripts/py.mjs format:check",
     "test": "vitest run && pnpm --filter @dreamer/angular test && node scripts/py.mjs test",

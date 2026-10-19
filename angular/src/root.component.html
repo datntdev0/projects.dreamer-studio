@@ -5,14 +5,15 @@
         <ds-banner
           data-testid="error-banner"
           [variant]="banner.variant"
-          [heading]="copy[banner.code].title"
-          [message]="copy[banner.code].message"
+          [heading]="'errors.' + banner.code + '.title' | t"
+          [message]="'errors.' + banner.code + '.message' | t"
           [meta]="codeLine(banner)"
+          [dismissLabel]="'common.dismiss' | t"
           [dismissible]="banner.dismissible"
           (dismiss)="errorStore.dismiss(banner.code)"
         >
           <button dsBtn size="sm" type="button" data-testid="banner-open-logs" (click)="desktopApi.openLogs()">
-            {{ text.openLogs }}
+            {{ 'common.openLogs' | t }}
           </button>
         </ds-banner>
       }

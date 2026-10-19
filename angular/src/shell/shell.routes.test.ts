@@ -26,10 +26,9 @@ describe('buildRoutes', () => {
     expect(routes.find((route) => route.path === 'analysis')?.component).toBe(ComingSoonStub);
   });
 
-  it('puts the module id and title in route data', () => {
+  it('puts the module id in route data', () => {
     const route = routes.find((entry) => entry.path === 'settings');
     expect(route?.data).toEqual({ module: 'settings' });
-    expect(route?.title).toBe('Settings – Dreamer Studio');
   });
 
   it('redirects unknown paths to Home', () => {

@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { errorText, newerVersionNote } from '@dreamer/shared/errors/error-copy';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { t } from '../i18n/main-i18n';
 import { createLogger, Logger } from '../logging/logger';
 import { Database } from './database';
 
@@ -99,7 +99,7 @@ function assertNotNewer(rows: HistoryRow[], migrations: Migration[]): void {
   throw new CodedError(
     ErrorCode.DbNewerVersion,
     `database has unknown migration ${newest.id}`,
-    newerVersionNote(newest.version, latest),
+    t('dialog.newerVersionNote', { found: newest.version, latest }),
   );
 }
 
@@ -126,7 +126,7 @@ function applyMigration(db: Database, migration: Migration, backedUp: boolean): 
     throw new CodedError(
       ErrorCode.DbMigrationFailed,
       `${migration.id}: ${errorMessage(error)}`,
-      backedUp ? errorText.backupNote : undefined,
+      backedUp ? t('dialog.backupNote') : undefined,
     );
   }
   logger.info(`migration applied ${migration.id} in ${Date.now() - start} ms`);

@@ -3,6 +3,7 @@ export const AppChannel = {
   OpenLogs: 'app:open-logs',
   OpenDataDir: 'app:open-data-dir',
   Error: 'app:error',
+  SetLanguage: 'app:set-language',
 } as const;
 
 export const LogChannel = {

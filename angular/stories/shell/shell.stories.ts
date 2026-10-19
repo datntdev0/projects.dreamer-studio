@@ -1,9 +1,12 @@
 import { Component, inject, input, OnInit } from '@angular/core';
 import { provideRouter, Router, withHashLocation } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular';
-import { moduleMetadata } from '@storybook/angular';
+import { applicationConfig, moduleMetadata } from '@storybook/angular';
 import { ToastOptions, ToastService } from '@components/toast/toast.service';
+import en from '@dreamer/shared/i18n/en.json';
+import vi from '@dreamer/shared/i18n/vi.json';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
+import { I18N_DICTIONARIES } from '../../src/core/i18n/i18n.service';
 import type { PipelineRunView } from '../../src/core/slots';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { MODULES } from '../../src/shell/registry/modules';
@@ -100,4 +103,15 @@ export const ToastStack: Story = {
       { kind: 'info', title: 'Settings file was reset', message: 'settings.json was invalid; defaults are in use.' },
     ],
   },
+};
+
+const viWithoutLibrary: Record<string, string> = { ...vi };
+delete viWithoutLibrary['nav.library'];
+
+export const VietnameseWithMissingKey: Story = {
+  name: 'Vietnamese with a missing key',
+  globals: { locale: 'vi' },
+  decorators: [
+    applicationConfig({ providers: [{ provide: I18N_DICTIONARIES, useValue: { en, vi: viWithoutLibrary } }] }),
+  ],
 };

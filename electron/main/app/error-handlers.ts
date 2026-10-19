@@ -1,8 +1,8 @@
 import { app, BrowserWindow, dialog, MessageBoxReturnValue, WebContents } from 'electron';
 import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { errorCopy, errorText } from '@dreamer/shared/errors/error-copy';
 import { errorStack } from '@dreamer/shared/errors/error-stack';
 import { AppChannel } from '@dreamer/shared/ipc/channels';
+import { t } from '../i18n/main-i18n';
 import { openFolder } from '../ipc/app-ipc';
 import { createLogger, isLoggingReady, Logger } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
@@ -19,7 +19,7 @@ async function showDialog(message: string, detail: string, buttons: string[]): P
   try {
     const result: MessageBoxReturnValue = await dialog.showMessageBox({
       type: 'error',
-      title: errorText.dialogTitle,
+      title: t('dialog.unexpectedTitle'),
       message,
       detail,
       buttons,
@@ -35,16 +35,16 @@ async function showDialog(message: string, detail: string, buttons: string[]): P
 
 async function onUncaughtException(error: Error, paths: AppPaths): Promise<void> {
   if (!isLoggingReady()) {
-    dialog.showErrorBox(errorText.dialogTitle, errorStack(error));
+    dialog.showErrorBox(t('dialog.unexpectedTitle'), errorStack(error));
     app.exit(1);
     return;
   }
   logger.error('Uncaught exception in the main process', error);
   await app.whenReady();
-  const detail: string = `${errorText.code}: ${ErrorCode.MainUnexpected}. ${errorText.savedToLogs}`;
-  const choice: number | null = await showDialog(errorText.mainDialogMessage, detail, [
-    errorText.openLogs,
-    errorText.quit,
+  const detail: string = `${t('common.code')}: ${ErrorCode.MainUnexpected}. ${t('dialog.savedToLogs')}`;
+  const choice: number | null = await showDialog(t('dialog.mainMessage'), detail, [
+    t('common.openLogs'),
+    t('common.quit'),
   ]);
   if (choice === 0) {
     await openFolder(paths.logs);
@@ -54,7 +54,7 @@ async function onUncaughtException(error: Error, paths: AppPaths): Promise<void>
 
 function onUnhandledRejection(reason: unknown): void {
   logger.error('Unhandled promise rejection in the main process', reason);
-  const payload: AppError = { code: ErrorCode.MainUnexpected, message: errorCopy.MAIN_UNEXPECTED.message };
+  const payload: AppError = { code: ErrorCode.MainUnexpected, message: t('errors.MAIN_UNEXPECTED.message') };
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send(AppChannel.Error, payload);
   }
@@ -62,11 +62,11 @@ function onUnhandledRejection(reason: unknown): void {
 
 async function onRenderProcessGone(contents: WebContents, reason: string, paths: AppPaths): Promise<void> {
   logger.error(`Renderer process gone: ${reason}`);
-  const detail: string = `${errorText.code}: ${ErrorCode.RendererGone} (${reason}).`;
-  const choice: number | null = await showDialog(errorCopy.RENDERER_GONE.title, detail, [
-    errorText.reload,
-    errorText.openLogs,
-    errorText.quit,
+  const detail: string = `${t('common.code')}: ${ErrorCode.RendererGone} (${reason}).`;
+  const choice: number | null = await showDialog(t('errors.RENDERER_GONE.title'), detail, [
+    t('common.reload'),
+    t('common.openLogs'),
+    t('common.quit'),
   ]);
   if (choice === 0) {
     contents.reload();
@@ -90,11 +90,13 @@ export function installErrorHandlers(paths: AppPaths): void {
 }
 
 export function reportLogsNotWritable(dir: string): void {
-  console.error(`${errorText.logsNotWritable} ${dir}`);
-  void app.whenReady().then(() => showDialog(errorText.dialogTitle, `${errorText.logsNotWritable}\n${dir}`, []));
+  console.error(`${t('dialog.logsNotWritable')} ${dir}`);
+  void app
+    .whenReady()
+    .then(() => showDialog(t('dialog.unexpectedTitle'), `${t('dialog.logsNotWritable')}\n${dir}`, []));
 }
 
 export function reportStartupFailure(error: unknown): void {
-  dialog.showErrorBox(errorText.dialogTitle, errorStack(error));
+  dialog.showErrorBox(t('dialog.unexpectedTitle'), errorStack(error));
   app.exit(1);
 }

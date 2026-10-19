@@ -12,7 +12,7 @@
     @if (separator) {
       <span class="ds-rail-sep"></span>
     }
-    <span class="ds-rail-title">{{ group.title }}</span>
+    <span class="ds-rail-title">{{ group.title | t }}</span>
     @for (entry of group.entries; track entry.id) {
       <a
         class="ds-rail-entry"
@@ -20,12 +20,14 @@
         routerLinkActive
         ariaCurrentWhenActive="page"
         [routerLinkActiveOptions]="{ exact: entry.id === homeId }"
-        [attr.aria-label]="entry.label"
+        [attr.aria-label]="entry.label | t"
         [attr.data-testid]="'rail-entry-' + entry.id"
-        [dsTooltip]="collapsed() ? entry.label : ''"
+        [dsTooltip]="collapsed() ? (entry.label | t) : ''"
       >
         <ds-icon [name]="entry.icon" />
-        <span class="label" [dsTooltip]="collapsed() ? '' : entry.label" dsTooltipWhenTruncated>{{ entry.label }}</span>
+        <span class="label" [dsTooltip]="collapsed() ? '' : (entry.label | t)" dsTooltipWhenTruncated>{{
+          entry.label | t
+        }}</span>
       </a>
     }
   </div>

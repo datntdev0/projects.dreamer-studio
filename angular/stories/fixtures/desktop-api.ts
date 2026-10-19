@@ -30,6 +30,7 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       return () => undefined;
     },
     backendStatus: (): Promise<BackendStatus | null> => Promise.resolve({ state: fixture.backend ?? 'running' }),
+    setLanguage: (): void => undefined,
     writeLog: (): void => undefined,
   };
   return { provide: DesktopApi, useValue: api };

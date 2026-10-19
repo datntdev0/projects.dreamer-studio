@@ -8,7 +8,6 @@ export function buildRoutes(modules: AppModule[], comingSoon: Type<unknown>): Ro
       path: module.id === HOME_MODULE_ID ? '' : module.id,
       component: module.page ?? comingSoon,
       data: { module: module.id },
-      title: `${module.label} – Dreamer Studio`,
     })),
     { path: '**', redirectTo: '' },
   ];

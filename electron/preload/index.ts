@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { AppError } from '@dreamer/shared/errors/app-error';
+import { Language } from '@dreamer/shared/i18n/translate';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
 import { AppChannel, BackendChannel, DevChannel, LogChannel } from '@dreamer/shared/ipc/channels';
@@ -20,6 +21,7 @@ const api: DreamerApi = {
     info: (): Promise<AppInfo> => ipcRenderer.invoke(AppChannel.Info),
     openLogs: (): Promise<void> => ipcRenderer.invoke(AppChannel.OpenLogs),
     openDataDir: (): Promise<void> => ipcRenderer.invoke(AppChannel.OpenDataDir),
+    setLanguage: (language: Language): void => ipcRenderer.send(AppChannel.SetLanguage, language),
     onError: (listener: (error: AppError) => void): (() => void) => subscribe(AppChannel.Error, listener),
   },
   log: {

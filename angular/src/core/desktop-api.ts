@@ -4,6 +4,7 @@ import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
+import type { Language } from '@dreamer/shared/i18n/translate';
 
 @Injectable({ providedIn: 'root' })
 export class DesktopApi {
@@ -29,6 +30,10 @@ export class DesktopApi {
 
   async backendStatus(): Promise<BackendStatus | null> {
     return window.dreamer ? window.dreamer.backend.status() : null;
+  }
+
+  setLanguage(language: Language): void {
+    if (window.dreamer) window.dreamer.app.setLanguage(language);
   }
 
   writeLog(entry: LogEntry): void {

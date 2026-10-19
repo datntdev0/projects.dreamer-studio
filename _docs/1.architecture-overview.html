@@ -137,15 +137,15 @@
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap: providers, provideRouter(buildRoutes(MODULES, ComingSoonPage)) (REQ-003)</span>
 │   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
-│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language placeholder until REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language signal, t(), missing key warned once) + t pipe (REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003)</span>
 │   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001)</span>
 │   │   ├── shell/              <span class="note"># ShellComponent: topbar/, rail/, status-bar/, coming-soon/, registry/modules.ts, shell.routes.ts, page-title.directive.ts (REQ-003)</span>
 │   │   ├── features/           <span class="note"># one folder per feature page: home/ (REQ-003)</span>
 │   │   ├── styles/             <span class="note"># _tokens, _fonts, _bootstrap, _base, _layout, _storybook (DESIGN.md); components/ = one partial per component</span>
-│   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg); i18n/ (vi.json, en.json) later</span>
+│   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg)</span>
 │   ├── public/                 <span class="note"># logo.svg (app icon), brand/ (mark dark, light)</span>
 │   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001); shell/, pages/, fixtures/ (REQ-003)</span>
-│   └── .storybook/             <span class="note"># main.ts, preview.ts (theme toolbar drives ThemeService, icon sprite), tsconfig.json (REQ-001)</span>
+│   └── .storybook/             <span class="note"># main.ts, preview.ts (theme and locale toolbars drive ThemeService and I18nService, icon sprite), tsconfig.json (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
@@ -154,7 +154,8 @@
 │   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003)</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir), backend (backend:get-status), log, dev (dev:crash, dev only)</span>
+│   │   ├── i18n/               <span class="note"># MainI18n: same JSON as the renderer, language from app:set-language, for native dialogs; English until the renderer sends one (REQ-002)</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, dev (dev:crash, dev only)</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
@@ -162,13 +163,14 @@
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
 │   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
-│   └── errors/                 <span class="note"># AppError, error codes, English copy (i18n later), errorStack</span>
+│   ├── i18n/                   <span class="note"># en.json, vi.json (flat dotted keys), translate(): language → en → key, {name} params (REQ-002, AD-29)</span>
+│   └── errors/                 <span class="note"># AppError, error codes, errorStack; copy in i18n errors.&lt;CODE&gt;.title / .message</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
 │   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/, llm/ later</span>
 │   ├── tests/                  <span class="note"># pytest</span>
 │   ├── backend.spec            <span class="note"># PyInstaller one-folder: dreamer-backend.exe (TSK-004)</span>
 │   └── requirements.txt        <span class="note"># pinned dependencies (pip)</span>
-├── scripts/                    <span class="note"># dev.mjs (dev run), py.mjs (venv, ruff, pytest, freeze), build.mjs (build, package)</span>
+├── scripts/                    <span class="note"># dev.mjs (dev run), py.mjs (venv, ruff, pytest, freeze), build.mjs (build, package), check-i18n.mjs (keys used in code exist in en.json; part of pnpm lint)</span>
 ├── _docs/                      <span class="note"># requirements xlsx, architecture, solutions, plans</span>
 ├── .claude/                    <span class="note"># agents, skills, scripts, templates</span>
 ├── package.json                <span class="note"># single app version (TSK-002 AC-4), root scripts</span>
@@ -266,7 +268,9 @@
         <li>TS: <code>kebab-case</code> files, <code>PascalCase</code> types/classes, <code>camelCase</code> functions; Prettier + ESLint</li>
         <li>Python: <code>snake_case</code>, Ruff format + lint, type hints</li>
         <li>IPC channels: <code>&lt;domain&gt;:&lt;action&gt;</code>, e.g. <code>pipeline:start</code>; types live in <code>shared/</code></li>
-        <li>UI text only from i18n keys in <code>angular/src/assets/i18n/{vi,en}.json</code>, read by an in-house service + pipe (no i18n library); missing key falls back to English</li>
+        <li>UI text only from i18n keys in <code>shared/i18n/{en,vi}.json</code> (AD-29), read by <code>I18nService</code> + <code>t</code> pipe in the renderer and <code>MainI18n</code> in main (no i18n library); missing key falls back to English, then the key</li>
+        <li>i18n keys: single-quoted literals (<code>check-i18n</code> finds them), namespaces <code>app nav rail topbar status state home run soon module toast errors dialog common</code>; the only built key is <code>errors.&lt;CODE&gt;.*</code></li>
+        <li>Base components (<code>components/</code>) take text through inputs; the app passes translated text</li>
         <li>UI styles only from <code>DESIGN.md</code> tokens</li>
       </ul></details>
       <details><summary>Error handling and logging</summary><ul>
@@ -294,7 +298,7 @@
       <details><summary>Commands</summary>
         <p class="muted">From root <code>package.json</code> (TSK-002). First run: <code>pnpm install</code> then <code>pnpm py:setup</code>. Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.</p>
         <table><thead><tr><th>Task</th><th>Command</th></tr></thead>
-          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + Angular unit-test + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>Coverage HTML report (<code>coverage/electron</code>, <code>coverage/angular</code>, <code>coverage/python</code>)</td><td><code>pnpm test:coverage</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Storybook (design system, port 6006)</td><td><code>pnpm storybook</code> · <code>pnpm storybook:build</code> → <code>angular/storybook-static</code></td></tr><tr><td>Build (Angular + esbuild)</td><td><code>pnpm build</code></td></tr><tr><td>Portable package (see Build and Release)</td><td><code>pnpm package</code></td></tr></tbody></table>
+          <tbody><tr><td>Python venv</td><td><code>pnpm py:setup</code></td></tr><tr><td>Dev (Angular dev server + esbuild watch + Electron, CDP on 9222)</td><td><code>pnpm dev</code></td></tr><tr><td>Lint (check-i18n + ESLint + Ruff)</td><td><code>pnpm lint</code></td></tr><tr><td>Format (Prettier + Ruff)</td><td><code>pnpm format</code> · <code>pnpm format:check</code></td></tr><tr><td>Test (Vitest + Angular unit-test + pytest)</td><td><code>pnpm test</code></td></tr><tr><td>Coverage HTML report (<code>coverage/electron</code>, <code>coverage/angular</code>, <code>coverage/python</code>)</td><td><code>pnpm test:coverage</code></td></tr><tr><td>All checks</td><td><code>pnpm check</code></td></tr><tr><td>Storybook (design system, port 6006)</td><td><code>pnpm storybook</code> · <code>pnpm storybook:build</code> → <code>angular/storybook-static</code></td></tr><tr><td>Build (Angular + esbuild)</td><td><code>pnpm build</code></td></tr><tr><td>Portable package (see Build and Release)</td><td><code>pnpm package</code></td></tr></tbody></table>
       </details>
     </main>
   </div>

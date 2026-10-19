@@ -3,21 +3,21 @@
   type="button"
   data-testid="topbar-brand"
   [attr.aria-expanded]="railExpanded()"
-  dsTooltip="Expand or collapse the sidebar"
+  [dsTooltip]="'topbar.toggleSidebar' | t"
   (click)="toggleRail.emit()"
 >
   <img class="ds-brand-mark ds-only-dark" src="brand/dreamer-studio-mark-dark.svg" alt="" />
   <img class="ds-brand-mark ds-only-light" src="brand/dreamer-studio-mark-light.svg" alt="" />
-  <span>Dreamer Studio</span>
+  <span>{{ 'app.name' | t }}</span>
   @if (appInfo.info(); as info) {
     <span class="version" data-testid="topbar-version">v{{ info.version }}</span>
   }
 </button>
-<nav class="ds-app-crumbs" aria-label="Breadcrumb" data-testid="topbar-crumbs">
+<nav class="ds-app-crumbs" [attr.aria-label]="'topbar.crumbs' | t" data-testid="topbar-crumbs">
   @if (currentModule(); as module) {
-    <span>{{ groupTitles[module.group] }}</span>
+    <span>{{ groupTitles[module.group] | t }}</span>
     <span class="sep">·</span>
-    <span class="page">{{ module.label }}</span>
+    <span class="page">{{ module.label | t }}</span>
   }
 </nav>
 <span class="ds-spacer"></span>
@@ -29,8 +29,8 @@
     size="sm"
     type="button"
     data-testid="topbar-lang"
-    aria-label="Switch language"
-    dsTooltip="Switch language"
+    [attr.aria-label]="'topbar.language' | t"
+    [dsTooltip]="'topbar.language' | t"
     (click)="i18n.toggle()"
   >
     <ds-icon name="languages" size="sm" />{{ i18n.language() === 'en' ? 'EN' : 'VI' }}
@@ -41,8 +41,8 @@
     [iconOnly]="true"
     type="button"
     data-testid="topbar-theme"
-    aria-label="Switch theme"
-    dsTooltip="Switch theme"
+    [attr.aria-label]="'topbar.theme' | t"
+    [dsTooltip]="'topbar.theme' | t"
     (click)="theme.toggle()"
   >
     <ds-icon class="ds-only-light" name="sun" /><ds-icon class="ds-only-dark" name="moon" />
@@ -53,8 +53,8 @@
     [iconOnly]="true"
     type="button"
     data-testid="topbar-settings"
-    aria-label="Settings"
-    dsTooltip="Settings"
+    [attr.aria-label]="'nav.settings' | t"
+    [dsTooltip]="'nav.settings' | t"
     routerLink="/settings"
   >
     <ds-icon name="settings" />

@@ -16,7 +16,7 @@
 @if (backend() !== 'running') {
   <span class="item" data-testid="status-backend" [attr.data-state]="backend()">
     <ds-dot kind="warning" [pulse]="backend() === 'starting'" />
-    <span>{{ backend() === 'starting' ? 'Starting local backend…' : 'AI backend failed' }}</span>
+    <span>{{ (backend() === 'starting' ? 'status.backend.starting' : 'status.backend.failed') | t }}</span>
   </span>
 }
 <span class="ds-spacer"></span>

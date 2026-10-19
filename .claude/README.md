@@ -27,7 +27,7 @@ onboard ──► analysis ──► solution ──► implement
 | --- | --- | --- | --- |
 | `/solo-onboard` | architect | analyst, coder, human | `.claude/README.md`, `_docs/1.architecture-overview.html`, xlsx `Open Decisions` |
 | `/solo-analysis <idea\|ID>` | analyst | designer, architect, human | `_docs/0.requirements-analysis.xlsx` |
-| `/solo-solution <ID>` | architect | analyst, designer, human | `_docs/<ID>.solution.html` |
+| `/solo-solution <ID>` | architect | analyst, designers (parallel prototype slices), human | `_docs/<ID>.solution.html`, Storybook prototype |
 | `/solo-implement <ID>` | architect | coder, tester, human | commits, `.claude/flows/<ID>/` (plan, evidence), report |
 | `tool-playwright` | tester / coder | — | UI checks with `playwright-cli` |
 
@@ -36,7 +36,7 @@ onboard ──► analysis ──► solution ──► implement
 | Agent | Model | Owns |
 | --- | --- | --- |
 | analyst | opus | requirements xlsx |
-| designer | opus | UX, `DESIGN.md` compliance |
+| designer | opus | UX, `DESIGN.md` compliance, Storybook prototype slices (several in parallel) |
 | architect | opus | architecture, solutions, plans, review |
 | coder | sonnet | code for one sub-step |
 | tester | sonnet | tests, AC verification |
@@ -54,9 +54,9 @@ onboard ──► analysis ──► solution ──► implement
 .claude/
   agents/        analyst, designer, architect, coder, tester
   skills/        solo-onboard, solo-analysis, solo-solution, solo-implement, tool-playwright
-  scripts/       reqs.py (xlsx read/check/upsert), docs.py (new doc, serve), common.py
+  scripts/       reqs.py (xlsx read/check/upsert), docs.py (new doc, serve), i18n.py (merge i18n fragments), common.py
   templates/     architecture-decision.html, architecture-overview.html, solution.html, plan.md
-  flows/<ID>/    plan.md, verification.md, screenshots (gitignored)
+  flows/<ID>/    plan.md, verification.md, screenshots, i18n/ fragments (gitignored)
     assets/      doc.css, doc.js (shared by all _docs/*.html)
 _docs/
   0.requirements-analysis.xlsx   requirements + Open Decisions sheet (source of truth)
@@ -76,6 +76,7 @@ python .claude/scripts/reqs.py next-id                     # next REQ/TSK and AD
 python .claude/scripts/reqs.py upsert patch.json           # write changes
 python .claude/scripts/docs.py new solution TH01-03 --title "App Shell"
 python .claude/scripts/docs.py serve                       # http://localhost:8765/_docs/
+python .claude/scripts/i18n.py merge <fragment> --prefix settings.storage.  # parallel-safe i18n keys
 ```
 
 - Needs Python 3.10+ with `openpyxl`.

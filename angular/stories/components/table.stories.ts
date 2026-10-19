@@ -34,6 +34,16 @@ const meta: Meta<TableArgs> = {
           </table></div>
         </section>
         <section>
+          <h3>Dense flush (sticky header, current row)</h3>
+          <table class="ds-table dense">
+            <thead><tr><th>{{ name }}</th><th>{{ statusHeader }}</th><th class="num">{{ started }}</th><th class="num">{{ duration }}</th></tr></thead>
+            <tbody>
+              <tr tabindex="0" aria-current="true" data-testid="table-dense-current"><td>{{ name }} #5</td><td>{{ status }}</td><td class="num">10:42</td><td class="num">01:12</td></tr>
+              <tr tabindex="0"><td>{{ name }} #4</td><td>{{ status }}</td><td class="num">09:15</td><td class="num">00:41</td></tr>
+            </tbody>
+          </table>
+        </section>
+        <section>
           <h3>Empty row</h3>
           <div class="ds-table-wrap"><table class="ds-table">
             <thead><tr><th>{{ name }}</th><th>{{ statusHeader }}</th></tr></thead>

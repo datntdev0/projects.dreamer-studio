@@ -1,0 +1,134 @@
+<div class="pipeline-panel-head">
+  <h2>{{ 'pipelines.detail.label' | t }}</h2>
+  <span class="ds-spacer"></span>
+  @if (run(); as run) {
+    <div class="pipeline-detail-actions">
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="pipeline-details-copy-id"
+        [iconOnly]="true"
+        [attr.aria-label]="'pipelines.action.copyId' | t"
+        [dsTooltip]="'pipelines.action.copyId' | t"
+        (click)="actions.copy(run.id, 'toast.idCopied')"
+      >
+        <ds-icon name="copy" size="sm" />
+      </button>
+      @if (active()) {
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="pipeline-details-cancel"
+          [attr.aria-label]="'pipelines.action.cancelRun' | t"
+          [dsTooltip]="'pipelines.action.cancelRun' | t"
+          (click)="actions.cancel(run)"
+        >
+          <ds-icon name="stop" size="sm" />{{ 'pipelines.action.cancel' | t }}
+        </button>
+      }
+    </div>
+  }
+</div>
+@if (run(); as run) {
+  <div class="pipeline-detail-title">
+    <h2 data-testid="pipeline-details-name">{{ name() }}</h2>
+    <ds-run-status data-testid="pipeline-details-status" [status]="run.status" />
+  </div>
+  @switch (run.status) {
+    @case ('failed') {
+      <div class="pipeline-alert" data-kind="failed" data-testid="pipeline-details-error">
+        <ds-icon name="alert-circle" />
+        <strong>{{
+          run.stepIndex > 0 ? ('run.failedAt' | t: { step: run.stepIndex, name: stepName() }) : ('run.failed' | t)
+        }}</strong>
+        <span>{{ errorText() }}</span>
+        @if (run.errorCode === 'BACKEND_UNAVAILABLE') {
+          <span class="pipeline-muted">{{ 'run.backendHint' | t }}</span>
+        }
+      </div>
+    }
+    @case ('cancelled') {
+      <div class="pipeline-alert" data-kind="cancelled" data-testid="pipeline-details-error">
+        <ds-icon name="stop" />
+        <strong>{{
+          run.stepIndex > 0 ? ('run.cancelledAt' | t: { step: run.stepIndex, name: stepName() }) : ('run.cancelled' | t)
+        }}</strong>
+        <span class="pipeline-muted">{{ cancelText() }}</span>
+      </div>
+    }
+  }
+  @if (active()) {
+    <section class="pipeline-detail-section">
+      <h3>{{ 'run.progress' | t }}</h3>
+      <div class="pipeline-run-progress">
+        <ds-progress data-testid="pipeline-details-progress" [value]="run.progress" />
+        <span class="num">{{ run.progress }}%</span>
+      </div>
+      <span class="pipeline-muted num" data-testid="pipeline-details-step">{{ progressText() }}</span>
+    </section>
+  }
+  <section class="pipeline-detail-section">
+    <h3>{{ 'run.steps' | t }}</h3>
+    <ol class="pipeline-steps" data-testid="pipeline-details-steps">
+      @for (step of stepViews(); track step.index) {
+        <li data-testid="pipeline-details-step-item" [attr.data-state]="step.state" [attr.data-backend]="step.backend">
+          <ds-icon [name]="step.icon" size="sm" />
+          <span class="pipeline-step-index num">{{ step.index }}</span>
+          <span class="pipeline-step-name"
+            >{{ step.key | t }}
+            @if (step.backend) {
+              <span class="pipeline-tag" data-testid="pipeline-details-backend-tag"
+                ><ds-icon name="cpu" size="sm" />{{ 'run.tag.backend' | t }}</span
+              >
+            }
+          </span>
+          <span class="pipeline-step-state">{{ step.label | t }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+  <section class="pipeline-detail-section">
+    <h3>{{ 'pipelines.detail.properties' | t }}</h3>
+    <dl class="ds-meta-list" data-testid="pipeline-details-meta">
+      <dt>{{ 'run.meta.id' | t }}</dt>
+      <dd class="pipeline-id">
+        <code data-testid="pipeline-details-id" [dsTooltip]="run.id">{{ shortId() }}</code>
+      </dd>
+      <dt>{{ 'run.meta.type' | t }}</dt>
+      <dd>{{ typeName() }}</dd>
+      <dt>{{ 'run.meta.started' | t }}</dt>
+      <dd>{{ started() }}</dd>
+      <dt>{{ 'run.meta.finished' | t }}</dt>
+      <dd>{{ finished() }}</dd>
+      <dt>{{ 'run.meta.duration' | t }}</dt>
+      <dd class="num">{{ duration() }}</dd>
+    </dl>
+  </section>
+} @else if (loadState() === 'notFound') {
+  <ds-area-state
+    kind="empty"
+    compact
+    data-testid="pipeline-details-not-found"
+    [heading]="'run.notFound' | t"
+    [description]="'run.notFoundDesc' | t"
+  />
+} @else if (loadState() === 'error') {
+  <ds-area-state
+    kind="error"
+    compact
+    data-testid="pipeline-details-load-error"
+    [heading]="'pipelines.detail.error' | t"
+  />
+} @else if (runId() === null) {
+  <ds-area-state
+    kind="empty"
+    compact
+    data-testid="pipeline-details-empty"
+    [heading]="'pipelines.detail.emptyTitle' | t"
+    [description]="'pipelines.detail.emptyDesc' | t"
+  />
+}

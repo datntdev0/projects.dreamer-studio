@@ -1,5 +1,6 @@
 import type { Type } from '@angular/core';
 import { HomePage } from '../../features/home/home.page';
+import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 
 export type ModuleGroup = 'library' | 'analysis' | 'production' | 'system';
 
@@ -11,6 +12,7 @@ export interface AppModule {
   description: string;
   release: string | null;
   page: Type<unknown> | null;
+  detailRoute?: boolean;
 }
 
 export const HOME_MODULE_ID = 'home';
@@ -66,7 +68,8 @@ export const MODULES: AppModule[] = [
     label: 'nav.pipelines',
     description: 'module.pipelines.desc',
     release: '0.0.0',
-    page: null,
+    page: PipelinesPage,
+    detailRoute: true,
   },
   {
     id: 'settings',

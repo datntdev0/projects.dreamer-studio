@@ -2,13 +2,19 @@ import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { createLogger, Logger } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
 import { backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
-import { setBackendState } from './backend-status';
+import { getBackendStatus, setBackendState } from './backend-status';
+
+export interface BackendConnection {
+  port: number;
+  token: string;
+}
 
 const logger: Logger = createLogger('backend');
 const pollIntervalMs: number = 250;
 const startTimeoutMs: number = 15000;
 
 let child: ChildProcess | null = null;
+let connection: BackendConnection | null = null;
 let stopping: boolean = false;
 
 function delay(ms: number): Promise<void> {
@@ -45,6 +51,7 @@ async function waitUntilReady(port: number, token: string, proc: ChildProcess): 
 function clearChild(proc: ChildProcess): void {
   if (child === proc) {
     child = null;
+    connection = null;
   }
 }
 
@@ -82,6 +89,7 @@ async function launch(paths: AppPaths): Promise<void> {
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   child = proc;
+  connection = { port, token };
   watchChild(proc);
   await waitUntilReady(port, token, proc);
 }
@@ -102,4 +110,9 @@ export function stopBackend(): void {
   stopping = true;
   execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], () => undefined);
   child = null;
+  connection = null;
+}
+
+export function getBackendConnection(): BackendConnection | null {
+  return child && getBackendStatus().state === 'running' ? connection : null;
 }

@@ -20,6 +20,13 @@ export interface AppError {
   details?: string;
 }
 
+export function isAppError(value: unknown): value is AppError {
+  const error = value as Partial<AppError> | null;
+  return (
+    typeof error === 'object' && error !== null && typeof error.code === 'string' && typeof error.message === 'string'
+  );
+}
+
 export class CodedError extends Error {
   readonly code: ErrorCode;
   readonly details?: string;

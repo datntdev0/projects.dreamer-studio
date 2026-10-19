@@ -7,17 +7,16 @@ import en from '@dreamer/shared/i18n/en.json';
 import vi from '@dreamer/shared/i18n/vi.json';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
 import { I18N_DICTIONARIES } from '../../src/core/i18n/i18n.service';
-import type { PipelineRunView } from '../../src/core/slots';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { MODULES } from '../../src/shell/registry/modules';
 import { ShellComponent } from '../../src/shell/shell.component';
 import { buildRoutes } from '../../src/shell/shell.routes';
 import { provideDesktopApi } from '../fixtures/desktop-api';
-import { providePipelines, QUEUED_RUN, RUNNING_RUN } from '../fixtures/pipelines';
+import { providePipelines, QUEUED_RUN, RUNNING_RUN, type PipelineRunFixture } from '../fixtures/pipelines';
 
 interface ShellArgs {
   backend: BackendState;
-  activeRuns: PipelineRunView[];
+  activeRuns: PipelineRunFixture[];
   initialRoute: string;
   toasts: ToastOptions[];
 }

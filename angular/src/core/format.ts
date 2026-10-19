@@ -1,4 +1,4 @@
-import type { Language } from '../../core/i18n/i18n.service';
+import type { Language } from './i18n/i18n.service';
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 3600;

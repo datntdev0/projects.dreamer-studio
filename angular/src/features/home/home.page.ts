@@ -10,21 +10,16 @@ import { ProgressComponent } from '@components/status/progress.component';
 import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
+import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
 import { AppInfoStore } from '../../core/app-info';
 import { BackendStatus } from '../../core/backend-status';
 import { DesktopApi } from '../../core/desktop-api';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import {
-  ACTIVE_PIPELINES,
-  RECENT_PIPELINES,
-  formatRunStep,
-  type PipelineRunStatus,
-  type PipelineRunView,
-  type PipelineSlot,
-} from '../../core/slots';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES, formatRunStep, type PipelineSlot } from '../../core/slots';
 import { PageTitleDirective } from '../../shell/page-title.directive';
-import { formatDateTime, formatDuration, formatRelative } from './format';
+import { formatDateTime, formatDuration, formatRelative } from '../../core/format';
+import { isActiveRun, runName, runSeconds } from '../pipelines/run-status';
 
 interface BackendView {
   label: string;
@@ -33,7 +28,9 @@ interface BackendView {
 }
 
 interface RunRow {
-  run: PipelineRunView;
+  run: PipelineRun;
+  name: string;
+  typeName: string;
   stepText: string;
   duration: string;
   when: string;
@@ -43,7 +40,8 @@ interface RunRow {
 }
 
 interface RunningRow {
-  run: PipelineRunView;
+  run: PipelineRun;
+  name: string;
   text: string;
 }
 
@@ -95,9 +93,10 @@ export class HomePage {
   protected readonly backend: Signal<BackendView> = computed(() => BACKEND_VIEWS[this.backendStatus.state()]);
   protected readonly running: Signal<RunningRow[]> = computed(() =>
     this.active()
-      .runs.filter((run) => run.status === 'running' || run.status === 'queued')
+      .runs.filter(isActiveRun)
       .map((run) => ({
         run,
+        name: runName(run, this.i18n),
         text: run.status === 'running' ? formatRunStep(run, this.i18n) : this.i18n.t('run.queued'),
       })),
   );
@@ -106,10 +105,12 @@ export class HomePage {
       .runs.slice(0, RECENT_LIMIT)
       .map((run) => ({
         run,
+        name: runName(run, this.i18n),
+        typeName: this.i18n.t(`run.type.${run.type}`),
         stepText: formatRunStep(run, this.i18n),
-        duration: run.status === 'queued' ? '—' : formatDuration(run.seconds),
-        when: formatRelative(run.startedAt, this.i18n.language()),
-        started: formatDateTime(run.startedAt, this.i18n.language()),
+        duration: run.status === 'queued' ? '—' : formatDuration(runSeconds(run)),
+        when: formatRelative(run.startedAt ?? run.createdAt, this.i18n.language()),
+        started: formatDateTime(run.startedAt ?? run.createdAt, this.i18n.language()),
         pill: STATUS_VIEWS[run.status].pill,
         label: STATUS_VIEWS[run.status].label,
       })),

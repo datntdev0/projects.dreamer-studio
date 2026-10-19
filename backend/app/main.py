@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, Response
 from pydantic import BaseModel
 
 from app.errors import error_response, register_error_handlers
+from app.jobs.router import router as jobs_router
 
 
 class HealthResponse(BaseModel):
@@ -24,6 +25,7 @@ def create_app(token: str, version: str) -> FastAPI:
         return await call_next(request)
 
     register_error_handlers(app)
+    app.include_router(jobs_router)
 
     @app.get("/health")
     def health() -> HealthResponse:

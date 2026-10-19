@@ -95,6 +95,14 @@ ds-progress {
     transition: width var(--motion-fast);
   }
 
+  &.danger > span {
+    background: var(--color-danger);
+  }
+
+  &.neutral > span {
+    background: var(--color-text-tertiary);
+  }
+
   &.indeterminate > span {
     position: absolute;
     inset: 0 auto 0 0;

@@ -1,0 +1,60 @@
+<div class="ds-page-toolbar" data-testid="page-toolbar">
+  <h1 dsPageTitle>{{ 'nav.pipelines' | t }}</h1>
+  <ds-tabs
+    class="pipeline-tabs"
+    idPrefix="pipelines-tab"
+    controls="pipelines-main"
+    value="queue"
+    [label]="'pipelines.views' | t"
+    [tabs]="tabs()"
+  />
+  <div class="ds-page-actions">
+    @if (store.types().length) {
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="button"
+        data-testid="pipelines-start"
+        (click)="startOpen.set(true)"
+      >
+        <ds-icon name="play" size="sm" />{{ 'pipelines.start.title' | t }}
+      </button>
+    }
+  </div>
+</div>
+
+<div class="pipeline-workbench">
+  <div class="pipeline-center">
+    <main
+      id="pipelines-main"
+      class="pipeline-main"
+      role="tabpanel"
+      data-testid="pipelines-main"
+      aria-labelledby="pipelines-tab-queue"
+    >
+      <ds-queue-table [slot]="store.active()" [selectedId]="selectedId()" />
+    </main>
+    <ds-splitter edge="bottom" [target]="bottom" [label]="'pipelines.resize.log' | t" />
+    <aside
+      #bottom
+      class="ds-panel-bottom pipeline-log-panel"
+      data-testid="pipeline-log-panel"
+      [attr.aria-label]="'run.log.title' | t"
+    >
+      <ds-run-log [runId]="selectedId()" />
+    </aside>
+  </div>
+
+  <ds-splitter edge="right" [target]="right" [label]="'pipelines.resize.details' | t" />
+  <aside
+    #right
+    class="ds-panel-right pipeline-details-panel"
+    data-testid="pipelines-details-panel"
+    [attr.aria-label]="'pipelines.detail.label' | t"
+  >
+    <ds-run-details [runId]="selectedId()" />
+  </aside>
+</div>
+
+<ds-start-pipeline-dialog [open]="startOpen()" (closed)="startOpen.set(false)" (started)="onStarted($event)" />

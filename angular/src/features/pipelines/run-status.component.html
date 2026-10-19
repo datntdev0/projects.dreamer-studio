@@ -1,0 +1,6 @@
+@if (view().icon; as icon) {
+  <ds-icon [name]="icon" size="sm" />
+} @else {
+  <ds-dot kind="primary" pulse />
+}
+{{ view().label | t }}

@@ -16,6 +16,7 @@ describe('buildRoutes', () => {
       'analysis',
       'projects',
       'pipelines',
+      'pipelines/:id',
       'settings',
       '**',
     ]);
@@ -24,6 +25,12 @@ describe('buildRoutes', () => {
   it('uses the coming soon component only for entries without a page', () => {
     expect(routes.find((route) => route.path === 'library')?.component).toBe(LibraryPageStub);
     expect(routes.find((route) => route.path === 'analysis')?.component).toBe(ComingSoonStub);
+  });
+
+  it('adds a detail route only for modules that ask for it', () => {
+    const detail = routes.find((route) => route.path === 'pipelines/:id');
+    expect(detail?.data).toEqual({ module: 'pipelines' });
+    expect(routes.some((route) => route.path === 'settings/:id')).toBe(false);
   });
 
   it('puts the module id in route data', () => {

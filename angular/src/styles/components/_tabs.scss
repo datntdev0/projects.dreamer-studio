@@ -1,0 +1,46 @@
+// Tabs: underline strip; selected tab gets a primary underline.
+
+.ds-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: var(--sp-xs);
+
+  > [role='tab'] {
+    position: relative;
+    display: inline-flex;
+    gap: var(--sp-xs);
+    align-items: center;
+    padding: 0 var(--sp-sm);
+    color: var(--color-text-secondary);
+    font: 500 var(--font-size-meta) var(--font-sans);
+    white-space: nowrap;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    transition: color var(--motion-fast);
+
+    &:hover,
+    &[aria-selected='true'] {
+      color: var(--color-text);
+    }
+
+    &[aria-selected='true'] {
+      font-weight: 600;
+    }
+
+    &[aria-selected='true']::after {
+      position: absolute;
+      right: var(--sp-sm);
+      bottom: 0;
+      left: var(--sp-sm);
+      height: var(--sp-xxs);
+      background: var(--color-primary);
+      border-radius: var(--sp-xxs) var(--sp-xxs) 0 0;
+      content: '';
+    }
+
+    &:focus-visible {
+      outline-offset: var(--focus-offset-inset);
+    }
+  }
+}

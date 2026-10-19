@@ -11,6 +11,7 @@ import { createWindow, focusWindow } from './app/window';
 import { showFatalError } from './app/fatal-dialog';
 import { startBackend, stopBackend } from './backend/backend-process';
 import { createLogger, initLogging, Logger } from './logging/logger';
+import { demoPipeline } from './pipelines/demo-pipeline';
 import { PipelineExecutor } from './pipelines/pipeline-executor';
 import { PipelineRegistry } from './pipelines/pipeline-registry';
 import { Database } from './storage/database';
@@ -43,7 +44,12 @@ function migrateDatabase(database: Database): void {
 }
 
 function startPipelines(database: Database): void {
-  executor = new PipelineExecutor(new PipelineRunRepository(database), paths, new PipelineRegistry([]), () => 1);
+  executor = new PipelineExecutor(
+    new PipelineRunRepository(database),
+    paths,
+    new PipelineRegistry(app.isPackaged ? [] : [demoPipeline]),
+    () => 1,
+  );
   executor.recover();
   registerPipelineIpc(executor);
 }

@@ -1,0 +1,71 @@
+<div class="pipeline-panel-head">
+  <h2>{{ 'run.log.title' | t }}</h2>
+  @if (run(); as run) {
+    @if (run.status === 'running') {
+      <span class="pipeline-status" data-status="running" data-testid="pipeline-log-live"
+        ><ds-dot kind="primary" pulse />{{ 'run.log.live' | t }}</span
+      >
+    }
+    <span class="pipeline-muted num" data-testid="pipeline-log-count">{{
+      (lines().length === 1 ? 'run.log.line' : 'run.log.lines') | t: { count: lines().length }
+    }}</span>
+    <span class="ds-spacer"></span>
+    @if (active()) {
+      <ds-checkbox data-testid="pipeline-log-follow" [checked]="follow()" (checkedChange)="setFollow($event)">{{
+        'run.log.follow' | t
+      }}</ds-checkbox>
+    }
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      data-testid="pipeline-log-copy"
+      [iconOnly]="true"
+      [disabled]="!lines().length"
+      [attr.aria-label]="'run.log.copy' | t"
+      [dsTooltip]="'run.log.copy' | t"
+      (click)="copy()"
+    >
+      <ds-icon name="copy" size="sm" />
+    </button>
+  }
+</div>
+@if (runId()) {
+  <div
+    #log
+    class="pipeline-log"
+    role="log"
+    aria-live="off"
+    tabindex="0"
+    data-testid="pipeline-log"
+    [attr.aria-label]="'run.log.label' | t"
+    (scroll)="onScroll()"
+  >
+    @for (line of lines(); track $index) {
+      <div class="pipeline-log-line" data-testid="pipeline-log-line" [attr.data-level]="line.level.trim()">
+        <span>{{ line.time }}</span
+        ><span class="level">{{ line.level }}</span
+        ><span class="msg">{{ line.message }}</span>
+      </div>
+    } @empty {
+      <span>{{ emptyKey() | t }}</span>
+    }
+  </div>
+  @if (unseen() > 0) {
+    <button
+      dsBtn
+      size="sm"
+      type="button"
+      class="pipeline-log-latest"
+      data-testid="pipeline-log-latest"
+      (click)="setFollow(true)"
+    >
+      <ds-icon name="arrow-down" size="sm" />{{
+        (unseen() === 1 ? 'run.log.newLine' : 'run.log.newLines') | t: { count: unseen() }
+      }}
+    </button>
+  }
+} @else {
+  <p class="pipeline-log-empty" data-testid="pipeline-log-select">{{ 'run.log.select' | t }}</p>
+}

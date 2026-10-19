@@ -40,8 +40,9 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '../../src/core/i18n/i18n.service';
 import { TranslatePipe } from '../../src/core/i18n/translate.pipe';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../src/core/slots';
-import type { PipelineRunStatus, PipelineSlot } from '../../src/core/slots';
-import { formatDateTime, formatDuration } from '../../src/features/home/format';
+import type { PipelineSlot } from '../../src/core/slots';
+import type { PipelineRunStatus } from '@dreamer/shared/models/pipeline';
+import { formatDateTime, formatDuration } from '../../src/core/format';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { PageTitleDirective } from '../../src/shell/page-title.directive';
 import { MODULES } from '../../src/shell/registry/modules';
@@ -57,6 +58,7 @@ import {
   RUNNING_RUN,
   runLog,
   shortId,
+  toPipelineSlot,
   type PipelineRunFixture,
 } from '../fixtures/pipelines';
 
@@ -246,11 +248,13 @@ class PipelinesPreviewStore {
   );
   readonly loadedRuns = computed<PipelineRunFixture[]>(() => this.matchingRuns().slice(0, this.limit()));
   readonly hasMore = computed<boolean>(() => this.loadedRuns().length < this.matchingRuns().length);
-  readonly activeSlot: Signal<PipelineSlot> = computed(() => this.active());
-  readonly recentSlot: Signal<PipelineSlot> = computed(() => ({
-    ...this.history(),
-    runs: [...this.active().runs.filter((run) => run.status === 'running'), ...this.history().runs],
-  }));
+  readonly activeSlot: Signal<PipelineSlot> = computed(() => toPipelineSlot(this.active()));
+  readonly recentSlot: Signal<PipelineSlot> = computed(() =>
+    toPipelineSlot({
+      ...this.history(),
+      runs: [...this.active().runs.filter((run) => run.status === 'running'), ...this.history().runs],
+    }),
+  );
 
   constructor() {
     if (!this.preview.live) return;

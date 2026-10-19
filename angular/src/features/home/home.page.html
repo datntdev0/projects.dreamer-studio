@@ -90,11 +90,16 @@
           }
           @default {
             @for (row of running(); track row.run.id) {
-              <div class="home-running-row" data-testid="home-running-row" [attr.data-run-id]="row.run.id">
-                <span class="home-running-name">{{ row.run.name }}</span>
+              <a
+                class="home-running-row"
+                [routerLink]="['/pipelines', row.run.id]"
+                data-testid="home-running-row"
+                [attr.data-run-id]="row.run.id"
+              >
+                <span class="home-running-name">{{ row.name }}</span>
                 <span class="muted num">{{ row.text }}</span>
                 <ds-progress [value]="row.run.progress" />
-              </div>
+              </a>
             } @empty {
               <ds-area-state kind="empty" compact icon="tasks" [heading]="'status.pipeline.idle' | t" />
             }
@@ -129,14 +134,14 @@
               <button
                 type="button"
                 class="home-recent-row"
-                routerLink="/pipelines"
+                [routerLink]="['/pipelines', row.run.id]"
                 data-testid="home-recent-row"
                 [attr.data-run-id]="row.run.id"
                 [attr.data-status]="row.run.status"
               >
                 <span class="home-recent-tile"><ds-icon name="sparkles" size="lg" /></span>
-                <span class="home-recent-title">{{ row.run.name }}</span>
-                <span class="home-recent-sub">{{ 'home.recent.demo' | t: { steps: row.run.steps } }}</span>
+                <span class="home-recent-title">{{ row.name }}</span>
+                <span class="home-recent-sub">{{ row.typeName }}</span>
                 <span class="home-recent-facts num"><ds-icon name="clock" size="sm" />{{ row.duration }}</span>
                 <span class="home-recent-state">
                   @if (row.run.status === 'running') {

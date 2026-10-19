@@ -1,12 +1,13 @@
-import { app, ipcMain } from 'electron';
+import { app } from 'electron';
 import { DevChannel } from '@dreamer/shared/ipc/channels';
 import { DevCrashKind } from '@dreamer/shared/ipc/dev';
+import { handle } from './handle';
 
 export function registerDevIpc(): void {
   if (app.isPackaged) {
     return;
   }
-  ipcMain.handle(DevChannel.Crash, (event, kind: DevCrashKind): void => {
+  handle(DevChannel.Crash, (event, kind: DevCrashKind): void => {
     switch (kind) {
       case 'main-exception':
         setTimeout(() => {

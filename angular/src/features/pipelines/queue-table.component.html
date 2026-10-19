@@ -1,0 +1,106 @@
+@if (slot().state === 'error') {
+  <ds-area-state
+    kind="error"
+    compact
+    data-testid="pipelines-queue-error"
+    [heading]="'pipelines.queue.error' | t"
+    [detailsLabel]="'common.details' | t"
+    [details]="slot().error ?? ''"
+  >
+    <button dsBtn size="sm" type="button" data-testid="pipelines-queue-retry" (click)="store.reload()">
+      {{ 'common.retry' | t }}
+    </button>
+  </ds-area-state>
+} @else {
+  <table
+    class="ds-table dense pipeline-queue"
+    data-testid="pipelines-queue-table"
+    [attr.aria-label]="'pipelines.view.queue' | t"
+  >
+    <thead>
+      <tr>
+        <th>{{ 'pipelines.col.pipeline' | t }}</th>
+        <th class="col-status">{{ 'pipelines.col.status' | t }}</th>
+        <th class="col-progress">{{ 'run.progress' | t }}</th>
+        <th>{{ 'pipelines.col.step' | t }}</th>
+        <th class="col-number num">{{ 'pipelines.col.elapsed' | t }}</th>
+        <th class="col-action">
+          <span class="visually-hidden">{{ 'pipelines.col.actions' | t }}</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody [attr.aria-busy]="slot().state === 'loading'">
+      @if (slot().state === 'loading') {
+        @for (row of skeletonRows; track row) {
+          <tr data-testid="pipelines-queue-skeleton">
+            @for (cell of skeletonCells; track cell) {
+              <td><div class="skeleton"></div></td>
+            }
+            <td></td>
+            <td></td>
+          </tr>
+        }
+      } @else {
+        @for (row of rows(); track row.run.id) {
+          <tr
+            tabindex="0"
+            data-testid="pipelines-queue-row"
+            [attr.data-run-id]="row.run.id"
+            [attr.data-status]="row.run.status"
+            [attr.aria-current]="row.run.id === selectedId() ? 'true' : null"
+            (click)="actions.open(row.run.id)"
+            (keydown.enter)="actions.open(row.run.id)"
+          >
+            <td class="pipeline-name" data-testid="pipelines-run-name">{{ row.name }}</td>
+            <td><ds-run-status [status]="row.run.status" /></td>
+            <td>
+              @if (row.run.status === 'running') {
+                <span class="pipeline-progress-cell">
+                  <ds-progress data-testid="pipelines-run-progress" [value]="row.run.progress" />
+                  <span class="num">{{ row.run.progress }}%</span>
+                </span>
+              } @else {
+                <span class="pipeline-muted">—</span>
+              }
+            </td>
+            <td class="pipeline-muted" data-testid="pipelines-run-step">{{ row.step }}</td>
+            <td class="num" data-testid="pipelines-run-elapsed">{{ row.elapsed }}</td>
+            <td class="num col-action">
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                class="pipeline-row-action"
+                data-testid="pipelines-run-cancel"
+                [iconOnly]="true"
+                [attr.aria-label]="'pipelines.action.cancelRun' | t"
+                [dsTooltip]="'pipelines.action.cancelRun' | t"
+                (click)="$event.stopPropagation(); actions.cancel(row.run)"
+                (keydown.enter)="$event.stopPropagation()"
+              >
+                <ds-icon name="stop" size="sm" />
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td class="ds-table-empty" colspan="6" data-testid="pipelines-queue-empty">
+              <span class="pipeline-name">{{ 'status.pipeline.idle' | t }}</span> ·
+              {{ 'pipelines.active.emptyDesc' | t }}
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+  <div class="pipeline-grid-foot" data-testid="pipelines-queue-foot">
+    @if (rows().length) {
+      <span class="num" data-testid="pipelines-queue-counts">{{
+        'pipelines.active.counts' | t: { running: runningCount(), queued: queuedCount() }
+      }}</span>
+      <span>·</span>
+    }
+    <span data-testid="pipelines-concurrency-note">{{ 'pipelines.note.concurrency' | t }}</span>
+  </div>
+}

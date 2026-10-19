@@ -60,6 +60,8 @@
           <li>AD-13, AD-18 settings.json fixed in <code>%LOCALAPPDATA%/DreamerStudio</code>; app data movable</li>
           <li>AD-22 Raw SQL + thin typed <code>Database</code> wrapper; features use repositories only</li>
           <li>AD-30..AD-32 Pipeline runs: live log pushed, UUID run IDs, history in keyset pages of 50</li>
+          <li>AD-33, AD-34 Backend jobs: one streaming NDJSON request per job, cancel = abort the request; the demo's step 3 runs in Python</li>
+          <li>AD-35 IPC invoke results are <code>{ value } | { error: AppError }</code>; the preload rejects with the <code>AppError</code></li>
           <li><code>node:sqlite</code> works in Electron 44.9.0 (SQLite 3.53.4), dev and package (AD-03, TSK-005)</li>
         </ul></div>
       </div>
@@ -138,10 +140,10 @@
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap: providers, provideRouter(buildRoutes(MODULES, ComingSoonPage)) (REQ-003)</span>
 │   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
-│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language signal, t(), missing key warned once) + t pipe (REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003)</span>
-│   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language signal, t(), missing key warned once) + t pipe (REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003); pipeline-store.ts PipelineStore (active runs, types, toasts; fills ACTIVE_PIPELINES), format.ts (REQ-004)</span>
+│   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001); tabs, progress kind, dense table (REQ-004)</span>
 │   │   ├── shell/              <span class="note"># ShellComponent: topbar/, rail/, status-bar/, coming-soon/, registry/modules.ts, shell.routes.ts, page-title.directive.ts (REQ-003)</span>
-│   │   ├── features/           <span class="note"># one folder per feature page: home/ (REQ-003)</span>
+│   │   ├── features/           <span class="note"># one folder per feature page: home/ (REQ-003); pipelines/ (REQ-004)</span>
 │   │   ├── styles/             <span class="note"># _tokens, _fonts, _bootstrap, _base, _layout, _storybook (DESIGN.md); components/ = one partial per component</span>
 │   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg)</span>
 │   ├── public/                 <span class="note"># logo.svg (app icon), brand/ (mark dark, light)</span>
@@ -152,22 +154,22 @@
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
 │   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
 │   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories/pipeline-run-repository.ts</span>
-│   │   ├── pipelines/          <span class="note"># pipeline-definition (steps, StepContext, sleep), pipeline-executor (queue, limit, cancel, recover, cancelAll), run-log, pipeline-registry (TSK-008); demo pipeline (TSK-009)</span>
+│   │   ├── pipelines/          <span class="note"># pipeline-definition (steps, StepContext, sleep), pipeline-executor (queue, limit, cancel, recover, cancelAll), run-log, pipeline-registry (TSK-008); demo-pipeline (dev only, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
-│   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003)</span>
+│   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003); backend-job.ts runBackendJob (TSK-009)</span>
 │   │   ├── i18n/               <span class="note"># MainI18n: same JSON as the renderer, language from app:set-language, for native dialogs; English until the renderer sends one (REQ-002)</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, pipeline (pipeline:*, payloads validated, TSK-008), dev (dev:crash, dev only); broadcast(channel, value) pushes to all windows</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, pipeline (pipeline:*, payloads validated, TSK-008), dev (dev:crash, dev only); handle(channel, fn) wraps every invoke result (AD-35); broadcast(channel, value) pushes to all windows</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
 │   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer, backend, migrations (TSK-004, TSK-006)</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
-│   ├── ipc/                    <span class="note"># channel names, request/response types</span>
+│   ├── ipc/                    <span class="note"># channel names, request/response types, IpcResult (AD-35)</span>
 │   ├── models/                 <span class="note"># DTOs: pipeline.ts (PipelineRun, list query/page, log chunk; TSK-008); settings, novel later</span>
 │   ├── i18n/                   <span class="note"># en.json, vi.json (flat dotted keys), translate(): language → en → key, {name} params (REQ-002, AD-29)</span>
 │   └── errors/                 <span class="note"># AppError, error codes, errorStack; copy in i18n errors.&lt;CODE&gt;.title / .message</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
-│   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/, llm/ later</span>
+│   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/ (router, demo; TSK-009), llm/ later</span>
 │   ├── tests/                  <span class="note"># pytest</span>
 │   ├── backend.spec            <span class="note"># PyInstaller one-folder: dreamer-backend.exe (TSK-004)</span>
 │   └── requirements.txt        <span class="note"># pinned dependencies (pip)</span>
@@ -204,7 +206,7 @@
         <li><code>storage/migrator.ts</code>: <code>loadMigrations(dir)</code> reads <code>*.sql</code> from <code>migrationsDir()</code> (dev <code>electron/main/storage/migrations/</code>, packaged <code>&lt;resources&gt;/migrations/</code>), checks names and sorts them; <code>runMigrations(db, migrations, backupFile)</code> runs the pending ones.</li>
         <li>Schema version: table <code>sys_migration_history(id, version, upgrade_num, applied_at)</code>, one row per applied file, created by the first migration <code>0.0.0_0__sys_migration_history_table.sql</code> (AD-23).</li>
         <li>Run: applied id unknown to the app → <code>DB_NEWER_VERSION</code>, no writes; rows exist and files pending → <code>VACUUM INTO database.backup.sqlite</code> (AD-25); each file <code>exec</code>, then its row. A failure stops the run with no rollback → <code>DB_MIGRATION_FAILED</code>.</li>
-        <li>Dev only: <code>DREAMER_DEV_FAIL_MIGRATION=1</code> adds a failing migration <code>999.0.0_0__dev_fail</code>.</li>
+        <li>Dev only: <code>DREAMER_DEV_FAIL_MIGRATION=1</code> adds a failing migration <code>999.0.0_0__dev_fail</code>; <code>DREAMER_DEMO_TICK_MS</code> sets the demo pipeline tick (TSK-009).</li>
         <li>Repositories: <code>storage/repositories/&lt;table&gt;-repository.ts</code>, take a <code>Database</code>, return <code>shared/models</code> types. First one: <code>PipelineRunRepository</code> (TSK-008).</li>
         <li>Table <code>pipeline_run</code> (<code>0.0.0_1__pipeline_run_table.sql</code>): UUID id (AD-31), type, status (CHECK queued / running / succeeded / failed / cancelled), cancel_reason (user / appClosed), params JSON, progress, step_index / step_count / step_name (i18n key), error_code, error, ISO UTC times; no display text and no log path stored.</li>
       </ul>
@@ -217,8 +219,24 @@
         <li>Cancel: queued → cancelled at once, no log file; running → <code>AbortController.abort()</code>, the step rejects at its next checkpoint, <code>cleanup</code> runs, then cancelled (reason user). A throwing step → failed with <code>error_code</code> (CodedError code) and message; stack in the run log and main log.</li>
         <li>Run log: <code>&lt;app data&gt;/logs/pipelines/&lt;id&gt;.log</code>, AD-12 line format (module <code>pipeline.&lt;type&gt;</code>), new lines pushed as <code>pipeline:log</code> every 250 ms (AD-30); kept until the run is deleted (main log cleanup only matches <code>main-*.log</code>).</li>
         <li>Recover at startup and <code>cancelAll</code> on quit: one <code>UPDATE</code> of queued / running rows → cancelled, reason appClosed, plus a sync "Cancelled: app closed" log line.</li>
-        <li>Registry: <code>PipelineRegistry(definitions)</code>; empty in TSK-008, so <code>pipeline:types</code> returns <code>[]</code>; the demo pipeline comes with TSK-009.</li>
+        <li>Registry: <code>PipelineRegistry(definitions)</code>; dev holds the demo pipeline, the package holds none, so <code>pipeline:types</code> returns <code>[]</code> there and the Start button is hidden (TSK-009 AC-3).</li>
+        <li>Demo pipeline (<code>demo-pipeline.ts</code>, TSK-009): 5 steps × 10 ticks of <code>DREAMER_DEMO_TICK_MS</code> (default 300); step 3 runs as the backend job <code>demo</code>; <code>failAtStep = n</code> fails at the 5th tick of step n.</li>
         <li>IPC (<code>PipelineChannel</code>, <code>DreamerApi.pipeline</code>): invoke <code>pipeline:types | start | cancel | list | get | get-log | delete</code>; push <code>pipeline:update</code> (whole run), <code>pipeline:deleted</code> (ids), <code>pipeline:log</code>. <code>list</code> = newest first, filters (finished, statuses, types), keyset cursor + total (AD-32). Errors <code>PIPELINE_NOT_FOUND</code>, <code>PIPELINE_UNKNOWN_TYPE</code>.</li>
+      </ul>
+      <h3>Backend jobs</h3>
+      <p class="muted">TSK-009, AD-33, AD-34. Main <code>backend/backend-job.ts</code>, Python <code>backend/app/jobs/</code>.</p>
+      <ul>
+        <li><code>POST /jobs/{type}</code> with the token, body = params JSON; response <code>application/x-ndjson</code>, one event per line: <code>progress</code> (percent), <code>log</code> (level, message), <code>done</code>, <code>error</code> (<code>JOB_FAILED</code>, message). Unknown type → 404 <code>JOB_UNKNOWN</code>; body not an object → 422 <code>JOB_PARAMS_INVALID</code>. No state kept (AD-04).</li>
+        <li><code>runBackendJob(type, params, ctx)</code> maps events to <code>ctx.progress</code> / <code>ctx.log</code> (prefix <code>[backend.job]</code>); an <code>error</code> event fails the step with its message; no connection (<code>getBackendConnection()</code> is null unless the backend is running), non-2xx or a stream without <code>done</code> → <code>BACKEND_UNAVAILABLE</code>.</li>
+        <li>Cancel: <code>ctx.signal</code> aborts the fetch; Python stops on disconnect and logs "job cancelled" (verified through the token middleware).</li>
+      </ul>
+      <h3>Pipelines UI</h3>
+      <p class="muted">REQ-004. <code>angular/src/core/pipeline-store.ts</code>, <code>angular/src/features/pipelines/</code>.</p>
+      <ul>
+        <li><code>PipelineStore</code> (started by <code>provideAppInitializer</code>): subscribes <code>pipeline:update</code> first, then loads active runs; exposes <code>active</code> (provides <code>ACTIVE_PIPELINES</code>), <code>types</code>, <code>run(id)</code>, <code>load</code>, <code>start</code>, <code>cancel</code>, <code>reload</code>; toast when a run goes running → succeeded / failed, action opens <code>/pipelines/&lt;id&gt;</code>.</li>
+        <li>Status bar: running run text + "{n} queued", <code>aria-label</code> with counts; click opens the running run or <code>/pipelines</code>.</li>
+        <li><code>/pipelines</code> and <code>/pipelines/:id</code> (<code>AppModule.detailRoute</code>): Queue tab (<code>queue-table</code>), Start dialog (dev only, fail at step), details panel (<code>run-details</code>), live log panel (<code>run-log</code>: read the file, then append pushed lines not already read). No id selects the running run. History, filters and delete come with REQ-005; <code>RECENT_PIPELINES</code> stays empty until then.</li>
+        <li>Shared helpers: <code>run-status.ts</code> (status view, run name "{type} #{short id}", error text), <code>pipeline-actions.ts</code> (open, cancel with confirm, copy).</li>
       </ul>
       <ol>
         <li>Module load: <code>AppPaths</code> → logger → global error handlers.</li>
@@ -277,7 +295,8 @@
         <li>Storybook: stories in <code>angular/stories/&lt;group&gt;/&lt;name&gt;.stories.ts</code>, not next to the code; inline templates are allowed in stories only.</li>
         <li>Angular: do not split a component only to show another state or variant; use inputs (e.g. <code>variant</code>) on the same component.</li>
         <li>Angular: shell parts that sit in the <code>.ds-app</code> grid use attribute selectors on the landmark (<code>header[dsTopbar]</code>, <code>nav[dsRail]</code>, <code>footer[dsStatusBar]</code>); pages are <code>&lt;name&gt;.page.ts</code> with an <code>h1 dsPageTitle</code>.</li>
-        <li>Angular: modules, rail and routes come from one registry (<code>shell/registry/modules.ts</code>); a module with <code>page: null</code> opens the Coming soon page; unknown paths go to Home.</li>
+        <li>Angular: modules, rail and routes come from one registry (<code>shell/registry/modules.ts</code>); a module with <code>page: null</code> opens the Coming soon page; unknown paths go to Home. A module with <code>detailRoute</code> also gets <code>&lt;id&gt;/:id</code>.</li>
+        <li>Base href: <code>./</code> in the production build (loaded from <code>app://</code>), <code>/</code> in the development build so deep links like <code>/pipelines/&lt;id&gt;</code> reload under <code>pnpm dev</code>.</li>
         <li>Prettier formats <code>angular/src/**/*.html</code> with the <code>angular</code> parser (<code>.prettierrc</code> override), so control flow blocks stay indented.</li>
       </ul></details>
       <details><summary>Naming and formatting</summary><ul>
@@ -285,12 +304,13 @@
         <li>Python: <code>snake_case</code>, Ruff format + lint, type hints</li>
         <li>IPC channels: <code>&lt;domain&gt;:&lt;action&gt;</code>, e.g. <code>pipeline:start</code>; types live in <code>shared/</code></li>
         <li>UI text only from i18n keys in <code>shared/i18n/{en,vi}.json</code> (AD-29), read by <code>I18nService</code> + <code>t</code> pipe in the renderer and <code>MainI18n</code> in main (no i18n library); missing key falls back to English, then the key</li>
-        <li>i18n keys: single-quoted literals (<code>check-i18n</code> finds them), namespaces <code>app nav rail topbar status state home run soon module toast errors dialog common</code>; the only built key is <code>errors.&lt;CODE&gt;.*</code></li>
+        <li>i18n keys: single-quoted literals (<code>check-i18n</code> finds them), namespaces <code>app nav rail topbar status state home run soon module pipelines toast errors dialog common</code>; the only built key is <code>errors.&lt;CODE&gt;.*</code></li>
         <li>Base components (<code>components/</code>) take text through inputs; the app passes translated text</li>
         <li>UI styles only from <code>DESIGN.md</code> tokens</li>
       </ul></details>
       <details><summary>Error handling and logging</summary><ul>
         <li>Errors cross process boundaries as <code>{ code, message, details }</code>; renderer translates <code>code</code> into a friendly message (TSK-003 AC-4, REQ-002)</li>
+        <li>IPC invoke (AD-35): main registers handlers with <code>handle()</code>, which returns <code>{ value }</code> or <code>{ error: AppError }</code> (<code>CodedError</code> keeps its code, anything else is logged and becomes <code>MAIN_UNEXPECTED</code>); the preload <code>call()</code> rejects with the plain <code>AppError</code>, so the renderer can check <code>error.code</code> (<code>isAppError</code>); <code>AppErrorHandler</code> uses that code</li>
         <li>Global handlers: main <code>uncaughtException</code>/<code>unhandledRejection</code>, renderer <code>ErrorHandler</code>, FastAPI exception handler</li>
         <li>Log line: <code>ISO UTC time · level · process · module · message</code>, stack on the next lines; a new file each local day, files older than 7 days deleted; never log secrets</li>
         <li>Main: <code>createLogger(module)</code> from <code>electron/main/logging</code>; renderer: <code>DesktopApi.writeLog</code> → <code>log:write</code>; Python: <code>logging.getLogger(name)</code></li>

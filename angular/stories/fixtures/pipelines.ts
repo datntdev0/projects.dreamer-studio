@@ -1,11 +1,21 @@
 import { signal } from '@angular/core';
 import type { Provider } from '@angular/core';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../src/core/slots';
-import type { PipelineRunView, PipelineSlot } from '../../src/core/slots';
+import type { PipelineSlot } from '../../src/core/slots';
+import type { PipelineCancelReason, PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
+import type { ErrorCode } from '@dreamer/shared/errors/app-error';
 
-export type CancelReason = 'user' | 'appClosed';
+export type CancelReason = PipelineCancelReason;
 
-export interface PipelineRunFixture extends PipelineRunView {
+export interface PipelineRunFixture {
+  id: string;
+  name: string;
+  status: PipelineRunStatus;
+  progress: number;
+  step: number;
+  steps: number;
+  startedAt: string;
+  seconds: number;
   type: string;
   stepName: string;
   error: string | null;
@@ -13,6 +23,34 @@ export interface PipelineRunFixture extends PipelineRunView {
   cancelReason: CancelReason | null;
   failAt?: number | null;
   finishedAt: string | null;
+}
+
+export interface PipelineSlotFixture {
+  state: PipelineSlot['state'];
+  runs: PipelineRunFixture[];
+  error?: string;
+}
+
+export function toPipelineRun(run: PipelineRunFixture): PipelineRun {
+  return {
+    id: run.id,
+    type: 'demo',
+    status: run.status,
+    cancelReason: run.cancelReason,
+    progress: run.progress,
+    stepIndex: run.step,
+    stepCount: run.steps,
+    stepName: run.stepName || null,
+    errorCode: run.errorCode as ErrorCode | null,
+    error: run.error,
+    createdAt: run.startedAt,
+    startedAt: run.status === 'queued' ? null : run.startedAt,
+    finishedAt: run.finishedAt,
+  };
+}
+
+export function toPipelineSlot(slot: PipelineSlotFixture): PipelineSlot {
+  return { ...slot, runs: slot.runs.map(toPipelineRun) };
 }
 
 export const DEMO_STEPS: string[] = ['Prepare', 'Load source', 'Process chapters', 'Write output', 'Finish'];
@@ -224,13 +262,20 @@ export function runLog(run: PipelineRunFixture): string[] {
   return lines;
 }
 
-export const READY_EMPTY: PipelineSlot = { state: 'ready', runs: [] };
-export const LOADING: PipelineSlot = { state: 'loading', runs: [] };
-export const ERROR: PipelineSlot = { state: 'error', runs: [], error: 'SQLITE_CANTOPEN: unable to open database file' };
+export const READY_EMPTY: PipelineSlotFixture = { state: 'ready', runs: [] };
+export const LOADING: PipelineSlotFixture = { state: 'loading', runs: [] };
+export const ERROR: PipelineSlotFixture = {
+  state: 'error',
+  runs: [],
+  error: 'SQLITE_CANTOPEN: unable to open database file',
+};
 
-export function providePipelines(active: PipelineSlot = READY_EMPTY, recent: PipelineSlot = READY_EMPTY): Provider[] {
+export function providePipelines(
+  active: PipelineSlotFixture = READY_EMPTY,
+  recent: PipelineSlotFixture = READY_EMPTY,
+): Provider[] {
   return [
-    { provide: ACTIVE_PIPELINES, useValue: signal(active).asReadonly() },
-    { provide: RECENT_PIPELINES, useValue: signal(recent).asReadonly() },
+    { provide: ACTIVE_PIPELINES, useValue: signal(toPipelineSlot(active)).asReadonly() },
+    { provide: RECENT_PIPELINES, useValue: signal(toPipelineSlot(recent)).asReadonly() },
   ];
 }

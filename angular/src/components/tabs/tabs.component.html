@@ -1,0 +1,18 @@
+@for (tab of tabs(); track tab.id; let index = $index) {
+  <button
+    type="button"
+    role="tab"
+    [attr.id]="idPrefix() + '-' + tab.id"
+    [attr.aria-selected]="tab.id === value()"
+    [attr.aria-controls]="controls() || null"
+    [attr.tabindex]="isTabbable(tab, index) ? 0 : -1"
+    [attr.data-testid]="idPrefix() + '-' + tab.id"
+    (click)="value.set(tab.id)"
+    (keydown)="onKeydown($event, index)"
+  >
+    {{ tab.label }}
+    @if (tab.count != null) {
+      <ds-badge [attr.data-testid]="idPrefix() + '-' + tab.id + '-count'">{{ tab.count }}</ds-badge>
+    }
+  </button>
+}

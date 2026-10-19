@@ -31,7 +31,7 @@ dialog.ds-dialog {
     flex: 1;
   }
 
-  .body {
+  > .body {
     padding: var(--sp-sm) var(--sp-lg) var(--sp-lg);
     color: var(--color-text-secondary);
   }

@@ -197,6 +197,51 @@
   }
 }
 
+.pipeline-queue {
+  tbody tr[data-run-id] {
+    cursor: pointer;
+  }
+
+  .col-number {
+    width: var(--home-when-w);
+  }
+
+  .col-status {
+    width: calc(var(--home-when-w) + var(--sp-lg));
+  }
+
+  .col-progress {
+    width: var(--progress-w);
+  }
+
+  .col-action {
+    width: calc(var(--control-h-sm) + var(--sp-xl) + var(--sp-xs));
+  }
+
+  td.col-action {
+    text-overflow: clip;
+  }
+
+  td.ds-table-empty {
+    height: auto;
+    padding: var(--sp-xl) var(--sp-lg);
+    white-space: normal;
+    text-align: left;
+  }
+
+  .skeleton {
+    width: var(--progress-w);
+  }
+
+  td:nth-child(2) .skeleton {
+    width: var(--home-tile-size);
+  }
+
+  td:nth-child(4) .skeleton {
+    width: var(--home-when-w);
+  }
+}
+
 .pipeline-name {
   color: var(--color-text);
   font-weight: 500;
@@ -251,6 +296,8 @@
 
 .pipeline-grid tbody tr:hover .pipeline-row-action,
 .pipeline-grid tbody tr[aria-current='true'] .pipeline-row-action,
+.pipeline-queue tbody tr:hover .pipeline-row-action,
+.pipeline-queue tbody tr[aria-current='true'] .pipeline-row-action,
 .pipeline-row-action:focus-visible {
   visibility: visible;
 }
@@ -295,8 +342,10 @@
 
 .pipeline-detail {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-height: 0;
+  overflow: auto;
 
   > .ds-area-state {
     padding-top: var(--sp-xxl);
@@ -458,6 +507,13 @@
   gap: 0;
   padding: 0;
   overflow: hidden;
+}
+
+ds-run-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .pipeline-log {

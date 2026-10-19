@@ -4,6 +4,7 @@ import { AppChannel } from '@dreamer/shared/ipc/channels';
 import { createLogger, Logger } from '../logging/logger';
 import { isLanguage, setLanguage } from '../i18n/main-i18n';
 import { AppPaths } from '../storage/paths';
+import { handle } from './handle';
 
 const logger: Logger = createLogger('app');
 
@@ -27,9 +28,9 @@ async function openFolderOrThrow(folder: string): Promise<void> {
 }
 
 export function registerAppIpc(paths: AppPaths): void {
-  ipcMain.handle(AppChannel.Info, (): AppInfo => ({ version: APP_VERSION, appDataDir: paths.root }));
-  ipcMain.handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(paths.logs));
-  ipcMain.handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(paths.root));
+  handle(AppChannel.Info, (): AppInfo => ({ version: APP_VERSION, appDataDir: paths.root }));
+  handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(paths.logs));
+  handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(paths.root));
   ipcMain.on(AppChannel.SetLanguage, (_event, language: unknown): void => {
     if (isLanguage(language)) {
       setLanguage(language);

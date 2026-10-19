@@ -100,6 +100,22 @@ export const Progress: StoryObj = {
           </div>
         </section>
         <section>
+          <h3>Kinds</h3>
+          <div class="d-grid gap-3">
+            <ds-progress [value]="60" kind="default" />
+            <ds-progress [value]="60" kind="danger" />
+            <ds-progress [value]="60" kind="neutral" />
+          </div>
+        </section>
+        <section>
+          <h3>Kinds</h3>
+          <div class="d-grid gap-3">
+            <ds-progress [value]="60" kind="default" />
+            <ds-progress [value]="60" kind="danger" />
+            <ds-progress [value]="60" kind="neutral" />
+          </div>
+        </section>
+        <section>
           <h3>Indeterminate</h3>
           <ds-progress [value]="null" />
         </section>

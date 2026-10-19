@@ -1,0 +1,88 @@
+<ds-dialog
+  data-testid="pipeline-start-dialog"
+  icon="play"
+  [heading]="'pipelines.start.title' | t"
+  [closeLabel]="'common.dismiss' | t"
+  [open]="open()"
+  (closed)="closed.emit()"
+>
+  <div class="pipeline-start-form">
+    <p class="pipeline-start-note">
+      <ds-pill>{{ 'pipelines.start.devOnly' | t }}</ds-pill
+      >{{ 'pipelines.start.devNote' | t }}
+    </p>
+    <ds-field
+      controlId="pipeline-start-type"
+      [label]="'pipelines.start.type' | t"
+      [hint]="'pipelines.start.typeHint' | t: { steps: steps().length, step: backendStep() }"
+    >
+      <span class="ds-select">
+        <select
+          id="pipeline-start-type"
+          class="ds-input"
+          autofocus
+          data-testid="pipeline-start-type"
+          [value]="selectedInfo()?.type ?? ''"
+          (change)="selectType($any($event.target).value)"
+        >
+          @for (info of store.types(); track info.type) {
+            <option [value]="info.type">{{ typeName(info.type) }}</option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </ds-field>
+    <ds-field
+      controlId="pipeline-start-fail"
+      [label]="'pipelines.start.failAt' | t"
+      [hint]="'pipelines.start.failAtHint' | t"
+    >
+      <span class="ds-select">
+        <select
+          id="pipeline-start-fail"
+          class="ds-input"
+          data-testid="pipeline-start-fail-step"
+          [value]="failAt() ?? ''"
+          (change)="selectFailAt($any($event.target).value)"
+        >
+          <option value="">{{ 'pipelines.start.failNever' | t }}</option>
+          @for (step of steps(); track step.key; let index = $index) {
+            <option [value]="index + 1">
+              {{ 'pipelines.start.failStep' | t: { step: index + 1, name: (step.key | t) } }}
+            </option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </ds-field>
+    @if (runningName()) {
+      <p class="pipeline-start-note" data-testid="pipeline-start-queue-note">
+        <ds-icon name="info" size="sm" />{{ 'pipelines.start.queueNote' | t: { name: runningName() } }}
+      </p>
+    }
+    @if (error()) {
+      <ds-banner
+        variant="danger"
+        data-testid="pipeline-start-error"
+        [heading]="error()"
+        [dismissible]="false"
+        [dismissLabel]="'common.dismiss' | t"
+      />
+    }
+  </div>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="pipeline-start-cancel" (click)="closed.emit()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="pipeline-start-confirm"
+      [loading]="starting()"
+      (click)="start()"
+    >
+      <ds-icon name="play" size="sm" />{{ 'pipelines.start.confirm' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

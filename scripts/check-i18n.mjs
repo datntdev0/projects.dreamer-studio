@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const KEY_PATTERN =
-  /^(app|nav|rail|topbar|status|state|home|run|soon|module|toast|errors|dialog|common)\.[A-Za-z0-9_.-]+$/;
+  /^(app|nav|rail|topbar|status|state|home|run|soon|module|pipelines|toast|errors|dialog|common)\.[A-Za-z0-9_.-]+$/;
 const LITERAL_PATTERN = /'([^'\n]+)'/g;
 const FILE_NAME_PATTERN = /\.(py|ts|js|json|html|scss)$/;
 const SCAN_DIRS = [join('angular', 'src'), join('electron', 'main')];

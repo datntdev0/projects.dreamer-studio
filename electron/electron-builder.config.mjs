@@ -12,6 +12,7 @@ export default {
     { from: '../angular/dist/browser', to: 'renderer' },
     { from: '../backend/dist/dreamer-backend', to: 'backend' },
     { from: 'main/storage/migrations', to: 'migrations' },
+    { from: 'resources/icon.ico', to: 'icon.ico' },
   ],
-  win: { target: [{ target: 'zip', arch: ['x64'] }] },
+  win: { icon: 'resources/icon.ico', target: [{ target: 'zip', arch: ['x64'] }] },
 };

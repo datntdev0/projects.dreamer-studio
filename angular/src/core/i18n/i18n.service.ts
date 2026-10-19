@@ -2,7 +2,13 @@ import { DOCUMENT } from '@angular/common';
 import { InjectionToken, Injectable, effect, inject, signal } from '@angular/core';
 import en from '@dreamer/shared/i18n/en.json';
 import vi from '@dreamer/shared/i18n/vi.json';
-import { translate, type Dictionaries, type Language, type TranslateParams } from '@dreamer/shared/i18n/translate';
+import {
+  hasTranslation,
+  translate,
+  type Dictionaries,
+  type Language,
+  type TranslateParams,
+} from '@dreamer/shared/i18n/translate';
 import { DesktopApi } from '../desktop-api';
 
 export type { Language };
@@ -27,6 +33,10 @@ export class I18nService {
 
   t(key: string, params?: TranslateParams): string {
     return translate(this.dictionaries, this.language(), key, params, (missing: string) => this.warnMissing(missing));
+  }
+
+  has(key: string): boolean {
+    return hasTranslation(this.dictionaries, this.language(), key);
   }
 
   setLanguage(language: Language): void {

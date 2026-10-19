@@ -140,14 +140,14 @@
 │   ├── src/                    
 │   │   ├── main.ts             <span class="note"># bootstrap: providers, provideRouter(buildRoutes(MODULES, ComingSoonPage)) (REQ-003)</span>
 │   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
-│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language signal, t(), missing key warned once) + t pipe (REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003); pipeline-store.ts PipelineStore (active runs, types, toasts; fills ACTIVE_PIPELINES), format.ts (REQ-004)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language signal, t(), missing key warned once) + t pipe (REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003); pipeline-store.ts PipelineStore (active runs, types, toasts; fills ACTIVE_PIPELINES), format.ts (REQ-004); PipelineStore recent runs fill RECENT_PIPELINES, delete (REQ-005)</span>
 │   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001); tabs, progress kind, dense table (REQ-004)</span>
 │   │   ├── shell/              <span class="note"># ShellComponent: topbar/, rail/, status-bar/, coming-soon/, registry/modules.ts, shell.routes.ts, page-title.directive.ts (REQ-003)</span>
 │   │   ├── features/           <span class="note"># one folder per feature page: home/ (REQ-003); pipelines/ (REQ-004)</span>
 │   │   ├── styles/             <span class="note"># _tokens, _fonts, _bootstrap, _base, _layout, _storybook (DESIGN.md); components/ = one partial per component</span>
 │   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg)</span>
 │   ├── public/                 <span class="note"># logo.svg (app icon), brand/ (mark dark, light)</span>
-│   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001); shell/, pages/, fixtures/ (REQ-003)</span>
+│   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001); shell/, pages/, fixtures/ (REQ-003); fixtures/pipelines-api.ts fake DesktopApi with a live demo executor, Pages / Pipelines renders the real page (REQ-005)</span>
 │   └── .storybook/             <span class="note"># main.ts, preview.ts (theme and locale toolbars drive ThemeService and I18nService, icon sprite), tsconfig.json (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
@@ -231,12 +231,14 @@
         <li>Cancel: <code>ctx.signal</code> aborts the fetch; Python stops on disconnect and logs "job cancelled" (verified through the token middleware).</li>
       </ul>
       <h3>Pipelines UI</h3>
-      <p class="muted">REQ-004. <code>angular/src/core/pipeline-store.ts</code>, <code>angular/src/features/pipelines/</code>.</p>
+      <p class="muted">REQ-004, REQ-005. <code>angular/src/core/pipeline-store.ts</code>, <code>angular/src/features/pipelines/</code>.</p>
       <ul>
-        <li><code>PipelineStore</code> (started by <code>provideAppInitializer</code>): subscribes <code>pipeline:update</code> first, then loads active runs; exposes <code>active</code> (provides <code>ACTIVE_PIPELINES</code>), <code>types</code>, <code>run(id)</code>, <code>load</code>, <code>start</code>, <code>cancel</code>, <code>reload</code>; toast when a run goes running → succeeded / failed, action opens <code>/pipelines/&lt;id&gt;</code>.</li>
+        <li><code>PipelineStore</code> (started by <code>provideAppInitializer</code>): subscribes <code>pipeline:update</code> first, then loads active runs; exposes <code>active</code> (provides <code>ACTIVE_PIPELINES</code>), <code>types</code>, <code>run(id)</code>, <code>load</code>, <code>start</code>, <code>cancel</code>, <code>reload</code>; <code>recent</code> (5 newest runs of any status, live from <code>pipeline:update</code> / <code>pipeline:deleted</code>; provides <code>RECENT_PIPELINES</code> for Home), <code>delete(ids)</code>; toast when a run goes running → succeeded / failed, action opens <code>/pipelines/&lt;id&gt;</code>.</li>
         <li>Status bar: running run text + "{n} queued", <code>aria-label</code> with counts; click opens the running run or <code>/pipelines</code>.</li>
-        <li><code>/pipelines</code> and <code>/pipelines/:id</code> (<code>AppModule.detailRoute</code>): Queue tab (<code>queue-table</code>), Start dialog (dev only, fail at step), details panel (<code>run-details</code>), live log panel (<code>run-log</code>: read the file, then append pushed lines not already read). No id selects the running run. History, filters and delete come with REQ-005; <code>RECENT_PIPELINES</code> stays empty until then.</li>
-        <li>Shared helpers: <code>run-status.ts</code> (status view, run name "{type} #{short id}", error text), <code>pipeline-actions.ts</code> (open, cancel with confirm, copy).</li>
+        <li><code>/pipelines</code> and <code>/pipelines/:id</code> (<code>AppModule.detailRoute</code>): Queue tab (<code>queue-table</code>), Start dialog (dev only, fail at step), details panel (<code>run-details</code>), live log panel (<code>run-log</code>: read the file, then append pushed lines not already read). No id selects the running run.</li>
+        <li>History tab (<code>history-table</code>): finished runs in keyset pages of 50 + Load more (AD-32), Status / Type filters, checks across pages and filters, bulk Delete; details panel Delete for finished runs. Opening a run selects the tab of its status.</li>
+        <li><code>PipelinesViewStore</code> (tab, filters, history pages, checks) is <code>providedIn: 'root'</code>, not page-scoped: <code>pipelines</code> and <code>pipelines/:id</code> are two routes, so the page is recreated when moving between them. It stays live from <code>pipeline:update</code> (finished runs go on top) and <code>pipeline:deleted</code>.</li>
+        <li>Shared helpers: <code>run-status.ts</code> (status view, run name "{type} #{short id}", result text, error text: <code>errors.&lt;code&gt;.title</code> when translated, else the raw error), <code>pipeline-actions.ts</code> (open, cancel / delete with confirm, copy).</li>
       </ul>
       <ol>
         <li>Module load: <code>AppPaths</code> → logger → global error handlers.</li>

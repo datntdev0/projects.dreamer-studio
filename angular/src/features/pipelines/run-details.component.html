@@ -29,6 +29,20 @@
         >
           <ds-icon name="stop" size="sm" />{{ 'pipelines.action.cancel' | t }}
         </button>
+      } @else {
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="pipeline-details-delete"
+          [iconOnly]="true"
+          [attr.aria-label]="'pipelines.action.delete' | t"
+          [dsTooltip]="'pipelines.action.delete' | t"
+          (click)="actions.delete([run.id])"
+        >
+          <ds-icon name="trash" size="sm" />
+        </button>
       }
     </div>
   }

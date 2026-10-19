@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { AppErrorHandler } from './core/error-handler';
 import { provideIconSprite } from './core/icons/icon-sprite';
 import { PipelineStore } from './core/pipeline-store';
-import { ACTIVE_PIPELINES } from './core/slots';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES } from './core/slots';
 import { RootComponent } from './root.component';
 import { ComingSoonPage } from './shell/coming-soon/coming-soon.page';
 import { MODULES } from './shell/registry/modules';
@@ -17,6 +17,7 @@ bootstrapApplication(RootComponent, {
     provideIconSprite(),
     provideAppInitializer(() => inject(PipelineStore).init()),
     { provide: ACTIVE_PIPELINES, useFactory: () => inject(PipelineStore).active },
+    { provide: RECENT_PIPELINES, useFactory: () => inject(PipelineStore).recent },
     provideRouter(buildRoutes(MODULES, ComingSoonPage)),
   ],
 }).catch((error: unknown) => console.error(error));

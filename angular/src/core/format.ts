@@ -25,3 +25,13 @@ export function formatRelative(iso: string, language: Language, now: number = Da
 export function formatDateTime(iso: string, language: Language): string {
   return new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
 }
+
+export function formatShortDateTime(iso: string, language: Language): string {
+  return new Intl.DateTimeFormat(language, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(iso));
+}

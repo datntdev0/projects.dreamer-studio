@@ -32,6 +32,29 @@ export class PipelineActions {
     if (confirmed) await this.store.cancel(run.id);
   }
 
+  async delete(ids: string[]): Promise<boolean> {
+    const count: number = ids.length;
+    const many: boolean = count > 1;
+    const confirmed: boolean = await this.confirm.confirm({
+      title: many
+        ? this.i18n.t('pipelines.deleteConfirm.titleMany', { count })
+        : this.i18n.t('pipelines.deleteConfirm.titleOne'),
+      message: this.i18n.t(many ? 'pipelines.deleteConfirm.messageMany' : 'pipelines.deleteConfirm.messageOne'),
+      confirmLabel: this.i18n.t('pipelines.action.delete'),
+      cancelLabel: this.i18n.t('common.cancel'),
+      danger: true,
+    });
+    if (!confirmed) return false;
+    const deleted: string[] = await this.store.delete(ids);
+    this.toast.show({
+      kind: 'success',
+      title: many ? this.i18n.t('toast.runsDeleted', { count }) : this.i18n.t('toast.runDeleted'),
+    });
+    const openId: string | undefined = this.router.url.match(/^\/pipelines\/([^/?#]+)/)?.[1];
+    if (openId && deleted.includes(decodeURIComponent(openId))) void this.router.navigate(['/pipelines']);
+    return true;
+  }
+
   copy(text: string, titleKey: string): void {
     void navigator.clipboard?.writeText(text);
     this.toast.show({ kind: 'success', title: this.i18n.t(titleKey) });

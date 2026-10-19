@@ -1,0 +1,129 @@
+@if (store.history().state === 'error') {
+  <ds-area-state
+    kind="error"
+    compact
+    data-testid="pipelines-history-error"
+    [heading]="'pipelines.history.error' | t"
+    [detailsLabel]="'common.details' | t"
+    [details]="store.history().error ?? ''"
+  >
+    <button dsBtn size="sm" type="button" data-testid="pipelines-history-retry" (click)="store.reload()">
+      {{ 'common.retry' | t }}
+    </button>
+  </ds-area-state>
+} @else if (store.history().state === 'ready' && !rows().length) {
+  @if (store.filtered()) {
+    <ds-area-state
+      kind="empty"
+      compact
+      data-testid="pipelines-history-no-match"
+      [heading]="'pipelines.history.noMatch' | t"
+    >
+      <button dsBtn size="sm" type="button" (click)="store.clearFilters()">
+        {{ 'pipelines.filter.clear' | t }}
+      </button>
+    </ds-area-state>
+  } @else {
+    <ds-area-state
+      kind="empty"
+      compact
+      data-testid="pipelines-history-empty"
+      [heading]="'pipelines.history.emptyTitle' | t"
+      [description]="'pipelines.history.emptyDesc' | t"
+    />
+  }
+} @else {
+  <table
+    class="ds-table dense pipeline-grid"
+    data-testid="pipelines-history-table"
+    [attr.aria-label]="'pipelines.view.history' | t"
+  >
+    <thead>
+      <tr>
+        <th class="col-check pipeline-select-cell">
+          <ds-checkbox
+            data-testid="pipelines-select-all"
+            [checked]="allChecked()"
+            [disabled]="!rows().length"
+            (checkedChange)="store.checkLoaded($event)"
+            ><span class="visually-hidden">{{ 'pipelines.selectAll' | t }}</span></ds-checkbox
+          >
+        </th>
+        <th>{{ 'pipelines.col.pipeline' | t }}</th>
+        <th class="col-status">{{ 'pipelines.col.status' | t }}</th>
+        <th>{{ 'pipelines.col.result' | t }}</th>
+        <th class="col-time num">{{ 'run.meta.finished' | t }}</th>
+        <th class="col-number num">{{ 'run.meta.duration' | t }}</th>
+      </tr>
+    </thead>
+    <tbody [attr.aria-busy]="store.history().state === 'loading'">
+      @if (store.history().state === 'loading') {
+        @for (row of skeletonRows; track row) {
+          <tr data-testid="pipelines-history-skeleton">
+            <td></td>
+            @for (cell of skeletonCells; track cell) {
+              <td><div class="skeleton"></div></td>
+            }
+          </tr>
+        }
+      } @else {
+        @for (row of rows(); track row.run.id) {
+          <tr
+            tabindex="0"
+            data-testid="pipelines-history-row"
+            [attr.data-run-id]="row.run.id"
+            [attr.data-status]="row.run.status"
+            [attr.data-checked]="store.isChecked(row.run.id)"
+            [attr.aria-current]="row.run.id === selectedId() ? 'true' : null"
+            (click)="actions.open(row.run.id)"
+            (keydown.enter)="actions.open(row.run.id)"
+          >
+            <td
+              class="pipeline-select-cell"
+              (click)="$event.stopPropagation()"
+              (keydown.enter)="$event.stopPropagation()"
+            >
+              <ds-checkbox
+                data-testid="pipelines-row-select"
+                [checked]="store.isChecked(row.run.id)"
+                (checkedChange)="store.toggle(row.run.id, $event)"
+                ><span class="visually-hidden">{{ 'pipelines.selectRun' | t: { name: row.name } }}</span></ds-checkbox
+              >
+            </td>
+            <td class="pipeline-name" data-testid="pipelines-row-name">{{ row.name }}</td>
+            <td><ds-run-status [status]="row.run.status" /></td>
+            <td
+              class="pipeline-muted"
+              data-testid="pipelines-row-result"
+              [dsTooltip]="row.result"
+              dsTooltipWhenTruncated
+            >
+              {{ row.result }}
+            </td>
+            <td class="num pipeline-muted" [dsTooltip]="row.finishedTitle">{{ row.finished }}</td>
+            <td class="num">{{ row.duration }}</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+  @if (store.history().state === 'ready') {
+    <div class="pipeline-grid-foot" data-testid="pipelines-history-footer">
+      <span class="num" data-testid="pipelines-history-shown">{{
+        'pipelines.history.shown' | t: { shown: rows().length, total: store.history().total }
+      }}</span>
+      @if (store.history().next) {
+        <button
+          dsBtn
+          size="sm"
+          type="button"
+          data-testid="pipelines-history-load-more"
+          [loading]="store.history().loadingMore"
+          (click)="store.loadMore()"
+        >
+          {{ 'pipelines.history.loadMore' | t }}
+        </button>
+      }
+    </div>
+  }
+}

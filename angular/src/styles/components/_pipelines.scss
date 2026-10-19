@@ -164,6 +164,28 @@
     text-align: left;
   }
 
+  .skeleton {
+    width: var(--progress-w);
+  }
+
+  td:nth-child(3) .skeleton,
+  td:nth-child(5) .skeleton {
+    width: var(--home-tile-size);
+  }
+
+  td:nth-child(4) .skeleton {
+    width: var(--home-when-w);
+  }
+
+  td:nth-child(5) .skeleton,
+  td:nth-child(6) .skeleton {
+    margin-left: auto;
+  }
+
+  td:nth-child(6) .skeleton {
+    width: var(--sp-xxl);
+  }
+
   .col-check {
     width: calc(var(--sp-lg) + var(--icon-lg));
   }

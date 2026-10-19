@@ -34,20 +34,32 @@ export function runStepName(run: PipelineRun, i18n: I18nService): string {
   return run.stepName ? i18n.t(run.stepName) : '';
 }
 
-function errorTitle(code: ErrorCode, i18n: I18nService): string {
-  return i18n.t(`errors.${code}.title`);
+function errorTitle(code: ErrorCode | null | undefined, fallback: string, i18n: I18nService): string {
+  const key = `errors.${code}.title`;
+  return code && i18n.has(key) ? i18n.t(key) : fallback;
 }
 
 export function runError(run: PipelineRun, i18n: I18nService): string {
-  return run.errorCode ? errorTitle(run.errorCode, i18n) : (run.error ?? '');
+  return errorTitle(run.errorCode, run.error ?? '', i18n);
 }
 
 export function errorText(error: unknown, i18n: I18nService): string {
-  return isAppError(error) ? errorTitle(error.code, i18n) : errorMessage(error);
+  return errorTitle(isAppError(error) ? error.code : undefined, errorMessage(error), i18n);
 }
 
 export function runCancelReason(run: PipelineRun, i18n: I18nService): string {
   return i18n.t(run.cancelReason === 'appClosed' ? 'run.cancel.appClosed' : 'run.cancel.user');
+}
+
+export function runResult(run: PipelineRun, i18n: I18nService): string {
+  if (run.status === 'succeeded') {
+    return i18n.t('pipelines.result.steps', { done: run.stepCount, steps: run.stepCount });
+  }
+  const detail: string | null =
+    run.status === 'failed' ? runError(run, i18n) : run.status === 'cancelled' ? runCancelReason(run, i18n) : null;
+  if (detail === null) return '';
+  if (run.stepIndex === 0) return detail;
+  return `${i18n.t('pipelines.reason.step', { step: run.stepIndex })} · ${detail}`;
 }
 
 export function runSeconds(run: PipelineRun, now: number = Date.now()): number {

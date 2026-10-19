@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, type Signal, signal } from '@angular/core';
+import { computed, inject, Injectable, type Signal, signal, type WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastService } from '@components/toast/toast.service';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
@@ -20,6 +20,12 @@ interface SlotStatus {
 }
 
 const ACTIVE_QUERY: PipelineListQuery = { finished: false, statuses: [], types: [], limit: 50, after: null };
+const RECENT_LIMIT = 5;
+const RECENT_QUERY: PipelineListQuery = { finished: null, statuses: [], types: [], limit: RECENT_LIMIT, after: null };
+
+function newestFirst(a: PipelineRun, b: PipelineRun): number {
+  return b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
+}
 
 @Injectable({ providedIn: 'root' })
 export class PipelineStore {
@@ -30,6 +36,9 @@ export class PipelineStore {
 
   private readonly known = signal<Map<string, PipelineRun>>(new Map());
   private readonly activeState = signal<SlotStatus>({ state: 'loading' });
+  private readonly recentState = signal<SlotStatus>({ state: 'loading' });
+  private readonly recentRuns = signal<PipelineRun[]>([]);
+  private recentHasMore = false;
   private readonly typeList = signal<PipelineTypeInfo[]>([]);
 
   readonly types: Signal<PipelineTypeInfo[]> = this.typeList.asReadonly();
@@ -40,9 +49,13 @@ export class PipelineStore {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
   }));
 
+  readonly recent: Signal<PipelineSlot> = computed(() => ({ ...this.recentState(), runs: this.recentRuns() }));
+
   init(): void {
     this.desktopApi.onPipelineUpdate((run) => this.merge(run, true));
+    this.desktopApi.onPipelineDeleted((ids) => this.removeLocal(ids));
     void this.reload();
+    void this.loadRecent();
     void this.desktopApi.pipelineTypes().then((types) => this.typeList.set(types));
   }
 
@@ -65,20 +78,50 @@ export class PipelineStore {
     await this.desktopApi.cancelPipeline(id);
   }
 
+  async delete(ids: string[]): Promise<string[]> {
+    const deleted: string[] = await this.desktopApi.deletePipelines(ids);
+    this.removeLocal(deleted);
+    return deleted;
+  }
+
   async reload(): Promise<void> {
-    this.activeState.set({ state: 'loading' });
-    try {
+    await this.track(this.activeState, async () => {
       const page = await this.desktopApi.listPipelines(ACTIVE_QUERY);
       page.runs.filter((run) => !this.known().has(run.id)).forEach((run) => this.merge(run, false));
-      this.activeState.set({ state: 'ready' });
+    });
+  }
+
+  private async loadRecent(): Promise<void> {
+    await this.track(this.recentState, async () => {
+      const page = await this.desktopApi.listPipelines(RECENT_QUERY);
+      this.recentRuns.set(page.runs);
+      this.recentHasMore = page.total > RECENT_LIMIT || page.next != null;
+    });
+  }
+
+  private async track(status: WritableSignal<SlotStatus>, work: () => Promise<void>): Promise<void> {
+    status.set({ state: 'loading' });
+    try {
+      await work();
+      status.set({ state: 'ready' });
     } catch (error) {
-      this.activeState.set({ state: 'error', error: errorMessage(error) });
+      status.set({ state: 'error', error: errorMessage(error) });
     }
+  }
+
+  private removeLocal(ids: string[]): void {
+    const gone = new Set<string>(ids);
+    this.known.update((known) => new Map([...known].filter(([id]) => !gone.has(id))));
+    this.recentRuns.update((runs) => runs.filter((run) => !gone.has(run.id)));
+    if (this.recentRuns().length < RECENT_LIMIT && this.recentHasMore) void this.loadRecent();
   }
 
   private merge(run: PipelineRun, notify: boolean): void {
     const previous: PipelineRun | undefined = this.known().get(run.id);
     this.known.update((known) => new Map(known).set(run.id, run));
+    this.recentRuns.update((runs) =>
+      [run, ...runs.filter((item) => item.id !== run.id)].sort(newestFirst).slice(0, RECENT_LIMIT),
+    );
     if (notify && previous?.status === 'running') this.notifyFinished(run);
   }
 

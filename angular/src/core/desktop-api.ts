@@ -68,6 +68,14 @@ export class DesktopApi {
     return window.dreamer ? window.dreamer.pipeline.log(id) : [];
   }
 
+  async deletePipelines(ids: string[]): Promise<string[]> {
+    return window.dreamer ? window.dreamer.pipeline.delete(ids) : [];
+  }
+
+  onPipelineDeleted(listener: (ids: string[]) => void): () => void {
+    return window.dreamer ? window.dreamer.pipeline.onDeleted(listener) : () => undefined;
+  }
+
   onPipelineUpdate(listener: (run: PipelineRun) => void): () => void {
     return window.dreamer ? window.dreamer.pipeline.onUpdate(listener) : () => undefined;
   }

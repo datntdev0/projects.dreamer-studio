@@ -13,6 +13,10 @@ function fillParams(text: string, params?: TranslateParams): string {
   return text.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match));
 }
 
+export function hasTranslation(dictionaries: Dictionaries, language: Language, key: string): boolean {
+  return (dictionaries[language][key] ?? dictionaries[DEFAULT_LANGUAGE][key]) !== undefined;
+}
+
 export function translate(
   dictionaries: Dictionaries,
   language: Language,

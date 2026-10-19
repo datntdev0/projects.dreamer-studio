@@ -4,11 +4,81 @@
     class="pipeline-tabs"
     idPrefix="pipelines-tab"
     controls="pipelines-main"
-    value="queue"
+    [value]="viewStore.view()"
     [label]="'pipelines.views' | t"
     [tabs]="tabs()"
+    (valueChange)="onViewChange($event)"
   />
   <div class="ds-page-actions">
+    @if (showFilters()) {
+      <div class="pipeline-toolbar-group" data-testid="pipelines-filters">
+        <span class="ds-select">
+          <select
+            class="ds-input"
+            data-testid="pipelines-filter-status"
+            [attr.aria-label]="'pipelines.filter.status' | t"
+            (change)="onStatusChange($any($event.target).value)"
+          >
+            @for (option of statusOptions(); track option.value) {
+              <option [value]="option.value" [selected]="option.value === statusValue()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+          <ds-icon name="chevron-down" size="sm" />
+        </span>
+        <span class="ds-select">
+          <select
+            class="ds-input"
+            data-testid="pipelines-filter-type"
+            [attr.aria-label]="'pipelines.filter.type' | t"
+            (change)="onTypeChange($any($event.target).value)"
+          >
+            @for (option of typeOptions(); track option.value) {
+              <option [value]="option.value" [selected]="option.value === typeValue()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+          <ds-icon name="chevron-down" size="sm" />
+        </span>
+        @if (viewStore.filtered()) {
+          <button
+            dsBtn
+            variant="ghost"
+            size="sm"
+            type="button"
+            data-testid="pipelines-filter-clear"
+            [iconOnly]="true"
+            [attr.aria-label]="'pipelines.filter.clear' | t"
+            [dsTooltip]="'pipelines.filter.clear' | t"
+            (click)="viewStore.clearFilters()"
+          >
+            <ds-icon name="x" size="sm" />
+          </button>
+        }
+      </div>
+      <span class="pipeline-toolbar-sep"></span>
+      <div class="pipeline-toolbar-group">
+        @if (viewStore.checked().size) {
+          <span class="pipeline-muted num" data-testid="pipelines-selection-count" aria-live="polite">{{
+            'pipelines.selected' | t: { count: viewStore.checked().size }
+          }}</span>
+        }
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="pipelines-delete"
+          [disabled]="viewStore.checked().size === 0"
+          (click)="deleteChecked()"
+        >
+          <ds-icon name="trash" size="sm" />{{ 'pipelines.action.delete' | t }}
+        </button>
+      </div>
+      <span class="pipeline-toolbar-sep"></span>
+    }
     @if (store.types().length) {
       <button
         dsBtn
@@ -31,9 +101,13 @@
       class="pipeline-main"
       role="tabpanel"
       data-testid="pipelines-main"
-      aria-labelledby="pipelines-tab-queue"
+      [attr.aria-labelledby]="'pipelines-tab-' + viewStore.view()"
     >
-      <ds-queue-table [slot]="store.active()" [selectedId]="selectedId()" />
+      @if (viewStore.view() === 'queue') {
+        <ds-queue-table [slot]="store.active()" [selectedId]="selectedId()" />
+      } @else {
+        <ds-history-table [selectedId]="selectedId()" />
+      }
     </main>
     <ds-splitter edge="bottom" [target]="bottom" [label]="'pipelines.resize.log' | t" />
     <aside

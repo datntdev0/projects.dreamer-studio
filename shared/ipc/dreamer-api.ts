@@ -8,12 +8,14 @@ export interface DreamerApi {
   app: {
     info(): Promise<AppInfo>;
     openLogs(): Promise<void>;
+    openDataDir(): Promise<void>;
     onError(listener: (error: AppError) => void): () => void;
   };
   log: {
     write(entry: LogEntry): void;
   };
   backend: {
+    status(): Promise<BackendStatus>;
     onStatus(listener: (status: BackendStatus) => void): () => void;
   };
   dev: {

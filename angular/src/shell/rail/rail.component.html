@@ -1,0 +1,32 @@
+@for (group of topGroups; track group.id; let first = $first) {
+  <ng-container *ngTemplateOutlet="groupTemplate; context: { $implicit: group, separator: !first }" />
+}
+<div class="ds-rail-bottom">
+  @for (group of bottomGroups; track group.id) {
+    <ng-container *ngTemplateOutlet="groupTemplate; context: { $implicit: group, separator: true }" />
+  }
+</div>
+
+<ng-template #groupTemplate let-group let-separator="separator">
+  <div class="ds-rail-group" [attr.data-testid]="'rail-group-' + group.id">
+    @if (separator) {
+      <span class="ds-rail-sep"></span>
+    }
+    <span class="ds-rail-title">{{ group.title }}</span>
+    @for (entry of group.entries; track entry.id) {
+      <a
+        class="ds-rail-entry"
+        [routerLink]="link(entry)"
+        routerLinkActive
+        ariaCurrentWhenActive="page"
+        [routerLinkActiveOptions]="{ exact: entry.id === homeId }"
+        [attr.aria-label]="entry.label"
+        [attr.data-testid]="'rail-entry-' + entry.id"
+        [dsTooltip]="collapsed() ? entry.label : ''"
+      >
+        <ds-icon [name]="entry.icon" />
+        <span class="label" [dsTooltip]="collapsed() ? '' : entry.label" dsTooltipWhenTruncated>{{ entry.label }}</span>
+      </a>
+    }
+  </div>
+</ng-template>

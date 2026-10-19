@@ -1,0 +1,162 @@
+<div class="ds-page-toolbar" data-testid="page-toolbar">
+  <h1 dsPageTitle>Home</h1>
+  <div class="ds-page-actions">
+    <a dsBtn size="sm" routerLink="/library" data-testid="home-import"
+      ><ds-icon name="download" size="sm" />Import novel…</a
+    >
+    <a dsBtn variant="primary" size="sm" routerLink="/projects" data-testid="home-new-project"
+      ><ds-icon name="plus" size="sm" />New project</a
+    >
+  </div>
+</div>
+<div class="ds-page-body narrow">
+  <div class="ds-page-stack">
+    <div class="home-cards">
+      <ds-card icon="folder" heading="App data folder" data-testid="home-card-data">
+        @if (appInfo.state() === 'ready') {
+          <ds-pill dsCardEnd kind="success" icon="check">Ready</ds-pill>
+        }
+        @switch (appInfo.state()) {
+          @case ('loading') {
+            <ds-area-state kind="loading" compact heading="Loading app data info…" />
+          }
+          @case ('error') {
+            <ds-area-state
+              kind="error"
+              compact
+              heading="Could not load app data info"
+              detailsLabel="Details"
+              [details]="appInfo.error() ?? ''"
+            />
+          }
+          @default {
+            @let path = appInfo.info()?.appDataDir ?? '';
+            <span
+              class="home-path"
+              [dsTooltip]="path"
+              dsTooltipWhenTruncated
+              tabindex="0"
+              data-testid="home-data-path"
+              >{{ path }}</span
+            >
+            <span class="meta">Library, logs, cache and database live here.</span>
+            <div class="home-card-actions">
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="home-data-open"
+                (click)="openDataDir(path)"
+              >
+                <ds-icon name="external" size="sm" />Open folder
+              </button>
+            </div>
+          }
+        }
+      </ds-card>
+
+      <ds-card icon="terminal" heading="AI backend" data-testid="home-card-backend">
+        <a dsCardEnd class="home-link" routerLink="/settings">Settings</a>
+        <div class="home-status-row">
+          <span class="home-status-name">
+            <ds-dot [kind]="backend().dot" [pulse]="backendState() === 'starting'" />
+            Local AI backend
+            @if (appInfo.info(); as info) {
+              <span class="meta num">v{{ info.version }}</span>
+            }
+          </span>
+          <ds-pill [kind]="backend().pill" data-testid="home-backend-state" [attr.data-state]="backendState()">{{
+            backend().label
+          }}</ds-pill>
+        </div>
+        <span class="meta">AI providers come in v0.2.0.</span>
+      </ds-card>
+
+      <ds-card icon="tasks" heading="Running now" data-testid="home-card-running">
+        <a dsCardEnd class="home-link" routerLink="/pipelines">Pipelines</a>
+        @switch (active().state) {
+          @case ('loading') {
+            <ds-area-state kind="loading" compact heading="Loading pipelines…" />
+          }
+          @case ('error') {
+            <ds-area-state
+              kind="error"
+              compact
+              heading="Could not load running pipelines"
+              detailsLabel="Details"
+              [details]="active().error ?? ''"
+            />
+          }
+          @default {
+            @for (row of running(); track row.run.id) {
+              <div class="home-running-row" data-testid="home-running-row" [attr.data-run-id]="row.run.id">
+                <span class="home-running-name">{{ row.run.name }}</span>
+                <span class="muted num">{{ row.text }}</span>
+                <ds-progress [value]="row.run.progress" />
+              </div>
+            } @empty {
+              <ds-area-state kind="empty" compact icon="tasks" heading="No running pipelines" />
+            }
+          }
+        }
+      </ds-card>
+    </div>
+
+    <section data-testid="home-recent">
+      <div class="home-section-row">
+        <h3>Recent pipelines</h3>
+        <a class="home-link" routerLink="/pipelines" data-testid="home-recent-view-all">View all</a>
+      </div>
+      @switch (recent().state) {
+        @case ('loading') {
+          <ds-area-state kind="loading" compact heading="Loading recent pipelines…" />
+        }
+        @case ('error') {
+          <ds-area-state
+            kind="error"
+            compact
+            heading="Could not load recent pipelines"
+            detailsLabel="Details"
+            [details]="recent().error ?? ''"
+          />
+        }
+        @default {
+          <div class="home-recent-list">
+            @for (row of rows(); track row.run.id) {
+              <button
+                type="button"
+                class="home-recent-row"
+                routerLink="/pipelines"
+                data-testid="home-recent-row"
+                [attr.data-run-id]="row.run.id"
+                [attr.data-status]="row.run.status"
+              >
+                <span class="home-recent-tile"><ds-icon name="sparkles" size="lg" /></span>
+                <span class="home-recent-title">{{ row.run.name }}</span>
+                <span class="home-recent-sub">Demo pipeline · {{ row.run.steps }} steps</span>
+                <span class="home-recent-facts num"><ds-icon name="clock" size="sm" />{{ row.duration }}</span>
+                <span class="home-recent-state">
+                  @if (row.run.status === 'running') {
+                    <ds-progress [value]="row.run.progress" />
+                    <span class="num">{{ row.stepText }}</span>
+                  } @else {
+                    <ds-pill [kind]="row.pill">{{ row.label }}</ds-pill>
+                  }
+                </span>
+                <span class="home-recent-when" [dsTooltip]="row.started">{{ row.when }}</span>
+              </button>
+            } @empty {
+              <ds-area-state
+                kind="empty"
+                icon="inbox"
+                heading="No pipelines yet"
+                description="Pipelines you run, such as imports and analysis, will show up here."
+              />
+            }
+          </div>
+        }
+      }
+    </section>
+  </div>
+</div>

@@ -32,7 +32,7 @@ function formTemplate(suffix: string): string {
 }
 
 const meta: Meta = {
-  title: 'Components/Form grid',
+  title: 'Components/Forms',
   decorators: [moduleMetadata({ imports: [FieldComponent] })],
   render: () => ({
     template: `

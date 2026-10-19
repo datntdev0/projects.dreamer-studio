@@ -21,26 +21,45 @@ const TEXT_OPTIONS: SegmentedOption[] = [
 const meta: Meta = {
   title: 'Components/Segmented',
   decorators: [moduleMetadata({ imports: [FieldComponent, SegmentedComponent] })],
+};
+
+export default meta;
+
+export const WithIcons: StoryObj = {
   render: () => ({
-    props: { themes: THEME_OPTIONS, icons: ICON_OPTIONS, texts: TEXT_OPTIONS },
+    props: { themes: THEME_OPTIONS },
     template: `
       <div class="sb-doc">
-        <div class="sb-row">
-          <ds-field label="Theme">
-            <ds-segmented label="Theme" [options]="themes" value="dark" />
-          </ds-field>
-          <ds-field label="Icon only (tooltip)">
-            <ds-segmented label="View" [options]="icons" [iconOnly]="true" value="list" />
-          </ds-field>
-          <ds-field label="Nothing selected">
-            <ds-segmented label="Source" [options]="texts" />
-          </ds-field>
-        </div>
+        <ds-field label="Theme">
+          <ds-segmented label="Theme" [options]="themes" value="dark" />
+        </ds-field>
       </div>
     `,
   }),
 };
 
-export default meta;
+export const IconOnly: StoryObj = {
+  render: () => ({
+    props: { icons: ICON_OPTIONS },
+    template: `
+      <div class="sb-doc">
+        <ds-field label="Icon only (tooltip)">
+          <ds-segmented label="View" [options]="icons" [iconOnly]="true" value="list" />
+        </ds-field>
+      </div>
+    `,
+  }),
+};
 
-export const Segmented: StoryObj = {};
+export const NothingSelected: StoryObj = {
+  render: () => ({
+    props: { texts: TEXT_OPTIONS },
+    template: `
+      <div class="sb-doc">
+        <ds-field label="Nothing selected">
+          <ds-segmented label="Source" [options]="texts" />
+        </ds-field>
+      </div>
+    `,
+  }),
+};

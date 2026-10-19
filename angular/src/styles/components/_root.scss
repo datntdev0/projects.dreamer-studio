@@ -1,6 +1,5 @@
 ds-root {
-  display: flex;
-  flex-direction: column;
+  display: block;
   width: 100vw;
   height: 100vh;
   background: var(--color-background);
@@ -10,19 +9,11 @@ ds-root {
     flex-direction: column;
     gap: var(--sp-sm);
     padding: var(--sp-md);
+    background: var(--color-background);
   }
+}
 
-  .empty {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--sp-sm);
-  }
-
-  h1,
-  p {
-    margin: 0;
-  }
+ds-shell {
+  display: block;
+  height: 100%;
 }

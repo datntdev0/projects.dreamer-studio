@@ -1,0 +1,23 @@
+@if (dataDir()) {
+  <span class="item path" [title]="dataDir()" data-testid="status-data-path">
+    <ds-icon name="folder" size="sm" /><span>{{ dataDir() }}</span>
+  </span>
+}
+<button
+  class="item"
+  type="button"
+  data-testid="status-pipeline"
+  [attr.data-state]="running().length ? 'running' : 'idle'"
+  (click)="openPipelines()"
+>
+  <ds-dot [kind]="running().length ? 'primary' : 'neutral'" [pulse]="running().length > 0" />
+  <span>{{ pipelineText() }}</span>
+</button>
+@if (backend() !== 'running') {
+  <span class="item" data-testid="status-backend" [attr.data-state]="backend()">
+    <ds-dot kind="warning" [pulse]="backend() === 'starting'" />
+    <span>{{ backend() === 'starting' ? 'Starting local backend…' : 'AI backend failed' }}</span>
+  </span>
+}
+<span class="ds-spacer"></span>
+<span class="item" data-testid="status-lang-theme">{{ langTheme() }}</span>

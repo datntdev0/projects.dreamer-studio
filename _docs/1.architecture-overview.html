@@ -135,17 +135,17 @@
       <pre class="tree">dreamer-studio/                 
 ├── angular/                    <span class="note"># UI (renderer)</span>
 │   ├── src/                    
-│   │   ├── main.ts             <span class="note"># bootstrap</span>
+│   │   ├── main.ts             <span class="note"># bootstrap: providers, provideRouter(buildRoutes(MODULES, ComingSoonPage)) (REQ-003)</span>
 │   │   ├── root.component.*    <span class="note"># root component (.ts + .html), hosts the shell</span>
-│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001)</span>
+│   │   ├── core/               <span class="note"># app-wide services: DesktopApi, ErrorHandler, ErrorStore, BackendStatus (TSK-003); icons/ provideIconSprite (REQ-001); AppInfoStore, theme/ ThemeService, i18n/ I18nService (language placeholder until REQ-002), slots.ts ACTIVE_PIPELINES / RECENT_PIPELINES (REQ-003)</span>
 │   │   ├── components/         <span class="note"># base components, import as @components/&lt;name&gt;/…: banner (TSK-003); icon, button, form, card, status, dialog, toast, tooltip, state (REQ-001)</span>
-│   │   ├── shell/              <span class="note"># sidebar, header, content area, pipelines indicator (REQ-003)</span>
-│   │   ├── features/           <span class="note"># one module per feature, defined later</span>
+│   │   ├── shell/              <span class="note"># ShellComponent: topbar/, rail/, status-bar/, coming-soon/, registry/modules.ts, shell.routes.ts, page-title.directive.ts (REQ-003)</span>
+│   │   ├── features/           <span class="note"># one folder per feature page: home/ (REQ-003)</span>
 │   │   ├── styles/             <span class="note"># _tokens, _fonts, _bootstrap, _base, _layout, _storybook (DESIGN.md); components/ = one partial per component</span>
 │   │   └── assets/             <span class="note"># icons.svg sprite (served at /icons.svg); i18n/ (vi.json, en.json) later</span>
 │   ├── public/                 <span class="note"># logo.svg (app icon), brand/ (mark dark, light)</span>
-│   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001)</span>
-│   └── .storybook/             <span class="note"># main.ts, preview.ts (theme toolbar, icon sprite), tsconfig.json (REQ-001)</span>
+│   ├── stories/                <span class="note"># Storybook stories *.stories.ts: foundations/, components/, layout/ (REQ-001); shell/, pages/, fixtures/ (REQ-003)</span>
+│   └── .storybook/             <span class="note"># main.ts, preview.ts (theme toolbar drives ThemeService, icon sprite), tsconfig.json (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
 │   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
@@ -153,8 +153,8 @@
 │   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories</span>
 │   │   ├── pipelines/          <span class="note"># executor, run store, demo pipeline (TSK-008, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
-│   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status, stop on quit (TSK-003)</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app, log, dev (dev:crash, dev only)</span>
+│   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003)</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir), backend (backend:get-status), log, dev (dev:crash, dev only)</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
@@ -162,8 +162,7 @@
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types</span>
 │   ├── models/                 <span class="note"># DTOs: settings, pipeline run, novel</span>
-│   ├── errors/                 <span class="note"># AppError, error codes, English copy (i18n later), errorStack</span>
-│   └── core/                   <span class="note"># theme.ts (DESIGN.md)</span>
+│   └── errors/                 <span class="note"># AppError, error codes, English copy (i18n later), errorStack</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
 │   ├── app/                    <span class="note"># FastAPI app: main.py (token, /health), log.py, errors.py; jobs/, llm/ later</span>
 │   ├── tests/                  <span class="note"># pytest</span>
@@ -259,6 +258,9 @@
         <li>Angular: every <code>boolean</code> input uses <code>{ transform: booleanAttribute }</code>, so a bare attribute (<code>&lt;ds-card interactive&gt;</code>) works.</li>
         <li>Storybook: stories in <code>angular/stories/&lt;group&gt;/&lt;name&gt;.stories.ts</code>, not next to the code; inline templates are allowed in stories only.</li>
         <li>Angular: do not split a component only to show another state or variant; use inputs (e.g. <code>variant</code>) on the same component.</li>
+        <li>Angular: shell parts that sit in the <code>.ds-app</code> grid use attribute selectors on the landmark (<code>header[dsTopbar]</code>, <code>nav[dsRail]</code>, <code>footer[dsStatusBar]</code>); pages are <code>&lt;name&gt;.page.ts</code> with an <code>h1 dsPageTitle</code>.</li>
+        <li>Angular: modules, rail and routes come from one registry (<code>shell/registry/modules.ts</code>); a module with <code>page: null</code> opens the Coming soon page; unknown paths go to Home.</li>
+        <li>Prettier formats <code>angular/src/**/*.html</code> with the <code>angular</code> parser (<code>.prettierrc</code> override), so control flow blocks stay indented.</li>
       </ul></details>
       <details><summary>Naming and formatting</summary><ul>
         <li>TS: <code>kebab-case</code> files, <code>PascalCase</code> types/classes, <code>camelCase</code> functions; Prettier + ESLint</li>

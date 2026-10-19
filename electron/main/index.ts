@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { installErrorHandlers, reportLogsNotWritable, reportStartupFailure } from './app/error-handlers';
 import { registerAppIpc } from './ipc/app-ipc';
+import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
 import { handleAppProtocol, registerAppScheme } from './app/protocol';
@@ -71,6 +72,7 @@ async function onReady(): Promise<void> {
     return;
   }
   registerAppIpc(paths);
+  registerBackendIpc();
   registerLogIpc();
   registerDevIpc();
   handleAppProtocol();

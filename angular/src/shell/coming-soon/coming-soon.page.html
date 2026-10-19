@@ -1,0 +1,15 @@
+@if (module(); as module) {
+  <div class="ds-page-toolbar" data-testid="page-toolbar">
+    <h1 dsPageTitle>{{ module.label }}</h1>
+  </div>
+  <div class="ds-page-body center">
+    <div class="ds-area-state coming-soon" data-testid="coming-soon" [attr.data-module]="module.id">
+      <ds-icon class="ds-area-state-icon" [name]="module.icon" size="xl" />
+      <h3 class="ds-area-state-title">{{ module.label }}</h3>
+      <ds-pill icon="clock" data-testid="coming-soon-pill">Coming soon</ds-pill>
+      <p class="ds-area-state-description" data-testid="coming-soon-desc">{{ module.description }}</p>
+      <span class="coming-soon-release" data-testid="coming-soon-release">{{ release() }}</span>
+      <a dsBtn routerLink="/" data-testid="coming-soon-back"><ds-icon name="arrow-left" size="sm" />Back to Home</a>
+    </div>
+  </div>
+}

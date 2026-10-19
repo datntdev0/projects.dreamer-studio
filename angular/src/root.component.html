@@ -1,23 +1,21 @@
-@if (errorBanners().length > 0) {
-  <div class="banners">
-    @for (banner of errorBanners(); track banner.code) {
-      <ds-banner
-        [attr.data-testid]="banner.testId"
-        [variant]="banner.variant"
-        [heading]="copy[banner.code].title"
-        [message]="copy[banner.code].message"
-        [meta]="codeLine(banner)"
-        [dismissible]="banner.dismissible"
-        (dismiss)="errorStore.dismiss(banner.code)"
-      >
-        <button class="btn" type="button" data-testid="banner-open-logs" (click)="desktopApi.openLogs()">
-          {{ text.openLogs }}
-        </button>
-      </ds-banner>
-    }
-  </div>
-}
-<main class="empty" data-testid="app-empty">
-  <h1 data-testid="app-name">Dreamer Studio</h1>
-  <p class="meta num" data-testid="app-version">Version {{ version() }}</p>
-</main>
+<ds-shell>
+  @if (errorBanners().length > 0) {
+    <div banners class="banners">
+      @for (banner of errorBanners(); track banner.code) {
+        <ds-banner
+          data-testid="error-banner"
+          [variant]="banner.variant"
+          [heading]="copy[banner.code].title"
+          [message]="copy[banner.code].message"
+          [meta]="codeLine(banner)"
+          [dismissible]="banner.dismissible"
+          (dismiss)="errorStore.dismiss(banner.code)"
+        >
+          <button dsBtn size="sm" type="button" data-testid="banner-open-logs" (click)="desktopApi.openLogs()">
+            {{ text.openLogs }}
+          </button>
+        </ds-banner>
+      }
+    </div>
+  }
+</ds-shell>

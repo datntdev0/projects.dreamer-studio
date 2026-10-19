@@ -1,0 +1,40 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, booleanAttribute, input } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { IconComponent } from '@components/icon/icon.component';
+import { TooltipDirective } from '@components/tooltip/tooltip.directive';
+import { AppModule, GROUP_TITLES, HOME_MODULE_ID, MODULES, ModuleGroup } from '../registry/modules';
+
+interface RailGroup {
+  id: ModuleGroup;
+  title: string;
+  entries: AppModule[];
+}
+
+const toGroup = (id: ModuleGroup): RailGroup => ({
+  id,
+  title: GROUP_TITLES[id],
+  entries: MODULES.filter((module) => module.group === id),
+});
+
+@Component({
+  selector: 'nav[dsRail]',
+  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, IconComponent, TooltipDirective],
+  templateUrl: './rail.component.html',
+  host: {
+    class: 'ds-app-rail',
+    'aria-label': 'Modules',
+    'data-testid': 'rail',
+  },
+})
+export class RailComponent {
+  readonly collapsed = input(false, { transform: booleanAttribute });
+
+  protected readonly topGroups: RailGroup[] = (['library', 'analysis', 'production'] as const).map(toGroup);
+  protected readonly bottomGroups: RailGroup[] = [toGroup('system')];
+  protected readonly homeId: string = HOME_MODULE_ID;
+
+  protected link(entry: AppModule): string {
+    return entry.id === HOME_MODULE_ID ? '/' : `/${entry.id}`;
+  }
+}

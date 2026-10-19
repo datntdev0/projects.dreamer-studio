@@ -1,0 +1,62 @@
+<button
+  class="ds-app-brand"
+  type="button"
+  data-testid="topbar-brand"
+  [attr.aria-expanded]="railExpanded()"
+  dsTooltip="Expand or collapse the sidebar"
+  (click)="toggleRail.emit()"
+>
+  <img class="ds-brand-mark ds-only-dark" src="brand/dreamer-studio-mark-dark.svg" alt="" />
+  <img class="ds-brand-mark ds-only-light" src="brand/dreamer-studio-mark-light.svg" alt="" />
+  <span>Dreamer Studio</span>
+  @if (appInfo.info(); as info) {
+    <span class="version" data-testid="topbar-version">v{{ info.version }}</span>
+  }
+</button>
+<nav class="ds-app-crumbs" aria-label="Breadcrumb" data-testid="topbar-crumbs">
+  @if (currentModule(); as module) {
+    <span>{{ groupTitles[module.group] }}</span>
+    <span class="sep">·</span>
+    <span class="page">{{ module.label }}</span>
+  }
+</nav>
+<span class="ds-spacer"></span>
+<span class="ds-app-tools">
+  <button
+    dsBtn
+    class="lang"
+    variant="ghost"
+    size="sm"
+    type="button"
+    data-testid="topbar-lang"
+    aria-label="Switch language"
+    dsTooltip="Switch language"
+    (click)="i18n.toggle()"
+  >
+    <ds-icon name="languages" size="sm" />{{ i18n.language() === 'en' ? 'EN' : 'VI' }}
+  </button>
+  <button
+    dsBtn
+    variant="ghost"
+    [iconOnly]="true"
+    type="button"
+    data-testid="topbar-theme"
+    aria-label="Switch theme"
+    dsTooltip="Switch theme"
+    (click)="theme.toggle()"
+  >
+    <ds-icon class="ds-only-light" name="sun" /><ds-icon class="ds-only-dark" name="moon" />
+  </button>
+  <button
+    dsBtn
+    variant="ghost"
+    [iconOnly]="true"
+    type="button"
+    data-testid="topbar-settings"
+    aria-label="Settings"
+    dsTooltip="Settings"
+    routerLink="/settings"
+  >
+    <ds-icon name="settings" />
+  </button>
+</span>

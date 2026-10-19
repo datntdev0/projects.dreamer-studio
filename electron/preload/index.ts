@@ -19,12 +19,14 @@ const api: DreamerApi = {
   app: {
     info: (): Promise<AppInfo> => ipcRenderer.invoke(AppChannel.Info),
     openLogs: (): Promise<void> => ipcRenderer.invoke(AppChannel.OpenLogs),
+    openDataDir: (): Promise<void> => ipcRenderer.invoke(AppChannel.OpenDataDir),
     onError: (listener: (error: AppError) => void): (() => void) => subscribe(AppChannel.Error, listener),
   },
   log: {
     write: (entry: LogEntry): void => ipcRenderer.send(LogChannel.Write, entry),
   },
   backend: {
+    status: (): Promise<BackendStatus> => ipcRenderer.invoke(BackendChannel.GetStatus),
     onStatus: (listener: (status: BackendStatus) => void): (() => void) => subscribe(BackendChannel.Status, listener),
   },
   dev: {

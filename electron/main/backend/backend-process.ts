@@ -2,7 +2,7 @@ import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { createLogger, Logger } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
 import { backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
-import { setBackendState, watchWindowLoads } from './backend-status';
+import { setBackendState } from './backend-status';
 
 const logger: Logger = createLogger('backend');
 const pollIntervalMs: number = 250;
@@ -87,7 +87,6 @@ async function launch(paths: AppPaths): Promise<void> {
 }
 
 export async function startBackend(paths: AppPaths): Promise<void> {
-  watchWindowLoads();
   try {
     await launch(paths);
   } catch (error) {

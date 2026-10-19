@@ -1,0 +1,18 @@
+<div
+  class="ds-app"
+  data-testid="app-shell"
+  [class.rail-collapsed]="!railExpanded()"
+  [attr.data-rail]="railExpanded() ? 'expanded' : 'collapsed'"
+  [attr.data-theme]="theme.theme()"
+>
+  <header dsTopbar [railExpanded]="railExpanded()" (toggleRail)="railExpanded.set(!railExpanded())"></header>
+  <nav dsRail [collapsed]="!railExpanded()"></nav>
+  <main class="ds-app-main">
+    <div class="ds-app-center">
+      <ng-content select="[banners]" />
+      <router-outlet />
+    </div>
+  </main>
+  <footer dsStatusBar></footer>
+  <ds-toast-outlet [closeLabel]="text.dismiss" />
+</div>

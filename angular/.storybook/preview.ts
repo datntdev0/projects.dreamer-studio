@@ -1,10 +1,18 @@
 import type { Decorator, Preview } from '@storybook/angular';
 import { applicationConfig } from '@storybook/angular';
+import { inject, provideAppInitializer } from '@angular/core';
 import { provideIconSprite } from '../src/core/icons/icon-sprite';
+import { ThemeService, type Theme } from '../src/core/theme/theme.service';
 
 const themeDecorator: Decorator = (story, context) => {
-  document.documentElement.dataset['theme'] = context.globals['theme'];
-  return story();
+  const theme: Theme = context.globals['theme'];
+  document.documentElement.dataset['theme'] = theme;
+  const result = story();
+  const providers = [provideAppInitializer(() => inject(ThemeService).setTheme(theme))];
+  return {
+    ...result,
+    applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },
+  };
 };
 
 const preview: Preview = {

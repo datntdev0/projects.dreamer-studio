@@ -9,7 +9,7 @@ interface EmptyStateArgs {
 }
 
 const meta: Meta<EmptyStateArgs> = {
-  title: 'Layout/Empty state',
+  title: 'Layout/Empty',
   parameters: { layout: 'fullscreen' },
   decorators: [moduleMetadata({ imports: [ButtonDirective, IconComponent, AreaStateComponent] })],
   args: { kind: 'empty' },

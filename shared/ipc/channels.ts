@@ -1,6 +1,7 @@
 export const AppChannel = {
   Info: 'app:info',
   OpenLogs: 'app:open-logs',
+  OpenDataDir: 'app:open-data-dir',
   Error: 'app:error',
 } as const;
 
@@ -14,4 +15,5 @@ export const DevChannel = {
 
 export const BackendChannel = {
   Status: 'backend:status',
+  GetStatus: 'backend:get-status',
 } as const;

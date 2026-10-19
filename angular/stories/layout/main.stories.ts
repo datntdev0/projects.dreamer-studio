@@ -53,7 +53,7 @@ const RAIL_BOTTOM: RailGroup[] = [
 ];
 
 const meta: Meta<MainLayoutArgs> = {
-  title: 'Layout/Main layout',
+  title: 'Layout/Main',
   parameters: { layout: 'fullscreen' },
   decorators: [
     moduleMetadata({

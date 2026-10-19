@@ -129,6 +129,10 @@ mark {
   outline-offset: var(--focus-offset);
 }
 
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {

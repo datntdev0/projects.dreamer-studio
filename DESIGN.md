@@ -8,7 +8,7 @@ Source of truth: `angular/src/styles/_tokens.scss`, `_base.scss`, `_fonts.scss`,
 
 ## 1. Colors
 
-The theme is set by `data-theme="dark" | "light"` on `<html>` (Storybook: theme toolbar; app: theme service with REQ-003). Settings offers Dark and Light only.
+The theme is set by `data-theme="dark" | "light"` on `<html>` (Storybook: theme toolbar; app: `ThemeService`, top bar button, REQ-003). Every start is light until settings are saved (TSK-010). Settings offers Dark and Light only.
 
 ### Brand (same in both themes)
 
@@ -207,6 +207,9 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 | `--rail-row-h` | 30px | Rail entry, expanded |
 | `--rail-entry` | 32px | Rail entry, collapsed (square) |
 | `--page-max-w` | 1040px | Page body `.narrow` (Home) |
+| `--home-card-min-w` | 280px | Home status card minimum width (`auto-fit` grid) |
+| `--home-tile-size` | 44px | Home recent pipeline tile |
+| `--home-when-w` | 96px | Home recent pipeline relative time column |
 | `--dialog-w` | 420px | Dialog width |
 | `--toast-w` | 340px | Toast width |
 | `--tooltip-max-w` | 280px | Tooltip max width |
@@ -225,7 +228,7 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 
 ## 6. Components and layout
 
-Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in `angular/src/styles/components/_<name>.scss`, one story file per component in `angular/stories/components/`. Text a component shows by itself (close, cancel, details) is an input; callers pass translated text.
+Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in `angular/src/styles/components/_<name>.scss`, one story file per component in `angular/stories/components/`, one story per state (same structure as `card.stories.ts`). Text a component shows by itself (close, cancel, details) is an input; callers pass translated text.
 
 | Component | Use | Class / API |
 | --- | --- | --- |
@@ -250,3 +253,8 @@ Layout (`_layout.scss`, stories in `angular/stories/layout/`):
 - Status bar: `.ds-app-status` with `.item` (`.path` truncates first; `button.item` has a hover background), `.ds-spacer`.
 - Page frame `.ds-page`: `.ds-page-toolbar` (`--top-h`, `h1` styled as h3, `.ds-page-actions` right) + `.ds-page-body` (scrolls, padding `--sp-lg`; `.narrow`, `.center`) + optional `.ds-page-footer`.
 - Patterns: list (toolbar + table), detail (`.ds-split`, `.ds-meta-list`), form (form grid + footer actions), empty state (centered area state).
+- App shell (REQ-003, story `Shell/App shell`): `ShellComponent` = `header[dsTopbar]`, `nav[dsRail]`, `.ds-app-main` (error banners + router outlet), `footer[dsStatusBar]`, `ds-toast-outlet`. Rail entries are links (`routerLinkActive` → `aria-current="page"`).
+- Page: the page component host is the `.ds-page` (`host: { class: 'ds-page' }`), so `.ds-app-center > .ds-page` fills the center with `--color-background`.
+- Page title: `h1 dsPageTitle` gets `tabindex="-1"` and focus after navigation, without a focus ring.
+- Coming soon (`shell/coming-soon`): page toolbar + centered `.ds-area-state.coming-soon` (module icon, name, `clock` pill, description, release line, Back to Home).
+- Home (`features/home`, story `Pages/Home`): toolbar shortcuts, `.home-cards` (App data, AI backend, Running now), recent pipelines list `.home-recent-row` (tile tinted by `data-status`); each area has its own loading, error and empty state.

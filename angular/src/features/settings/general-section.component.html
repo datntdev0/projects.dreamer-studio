@@ -1,0 +1,42 @@
+<section class="settings-section" aria-labelledby="settings-general-title" data-testid="settings-general">
+  <header class="settings-section-head">
+    <h3 id="settings-general-title">{{ 'settings.general.title' | t }}</h3>
+    <div class="settings-section-actions">
+      <button dsBtn variant="ghost" size="sm" type="button" data-testid="settings-general-reset" (click)="reset()">
+        <ds-icon name="undo" size="sm" />{{ 'settings.page.reset' | t }}
+      </button>
+    </div>
+  </header>
+  <div class="settings-group">
+    <div class="settings-row" data-testid="settings-general-language-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label">{{ 'settings.general.language' | t }}</span>
+        <span class="settings-row-hint">{{ 'settings.general.languageHint' | t }}</span>
+      </div>
+      <div class="settings-row-control">
+        <ds-segmented
+          [options]="languageOptions()"
+          [value]="i18n.language()"
+          [label]="'settings.general.language' | t"
+          data-testid="settings-general-language"
+          (valueChange)="setLanguage($event)"
+        />
+      </div>
+    </div>
+    <div class="settings-row" data-testid="settings-general-theme-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label">{{ 'settings.general.theme' | t }}</span>
+        <span class="settings-row-hint">{{ 'settings.general.themeHint' | t }}</span>
+      </div>
+      <div class="settings-row-control">
+        <ds-segmented
+          [options]="themeOptions()"
+          [value]="theme.theme()"
+          [label]="'settings.general.theme' | t"
+          data-testid="settings-general-theme"
+          (valueChange)="setTheme($event)"
+        />
+      </div>
+    </div>
+  </div>
+</section>

@@ -7,7 +7,7 @@ import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { Language } from '@dreamer/shared/i18n/translate';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import type { SettingsState } from '@dreamer/shared/models/settings';
+import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 
 const EMPTY_PAGE: PipelinePage = { runs: [], total: 0, next: null };
 
@@ -47,6 +47,18 @@ export class DesktopApi {
 
   async settings(): Promise<SettingsState | null> {
     return window.dreamer ? window.dreamer.settings.get() : null;
+  }
+
+  async updateSettings(patch: SettingsPatch): Promise<AppSettings | null> {
+    return window.dreamer ? window.dreamer.settings.update(patch) : null;
+  }
+
+  async resetSettings(section: SettingsSection): Promise<AppSettings | null> {
+    return window.dreamer ? window.dreamer.settings.reset(section) : null;
+  }
+
+  onSettingsChanged(listener: (settings: AppSettings) => void): () => void {
+    return window.dreamer ? window.dreamer.settings.onChanged(listener) : () => undefined;
   }
 
   async pipelineTypes(): Promise<PipelineTypeInfo[]> {

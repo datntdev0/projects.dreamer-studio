@@ -50,6 +50,10 @@
   "errors.RENDERER_GONE.title": "Cửa sổ đã ngừng hoạt động.",
   "errors.UI_UNEXPECTED.message": "Ứng dụng gặp lỗi không mong muốn. Bạn vẫn có thể tiếp tục làm việc.",
   "errors.UI_UNEXPECTED.title": "Đã xảy ra sự cố",
+  "errors.SETTINGS_INVALID.message": "Giá trị không được phép. Chưa có gì được lưu.",
+  "errors.SETTINGS_INVALID.title": "Chưa lưu cài đặt",
+  "errors.SETTINGS_WRITE_FAILED.message": "Không ghi được tệp settings.json. Thay đổi chỉ có hiệu lực đến khi đóng ứng dụng.",
+  "errors.SETTINGS_WRITE_FAILED.title": "Không lưu được cài đặt",
   "home.backend.failed": "Lỗi",
   "home.backend.hint": "Nhà cung cấp AI sẽ có trong v0.2.0.",
   "home.backend.name": "Backend AI cục bộ",
@@ -384,5 +388,10 @@
   "settings.page.nav.llm": "Tích hợp LLM",
   "settings.page.comingLater": "Sắp có",
   "settings.page.plannedFor": "Dự kiến có ở phiên bản {release}",
-  "settings.page.autosave": "Thay đổi được lưu tự động"
+  "settings.page.autosave": "Thay đổi được lưu tự động",
+  "settings.invalid.language": "Ngôn ngữ giao diện phải là English hoặc Tiếng Việt.",
+  "settings.invalid.theme": "Giao diện phải là Sáng hoặc Tối.",
+  "settings.invalid.pipelines.maxConcurrent": "Số tác vụ song song phải là số nguyên từ 1 đến 5.",
+  "settings.invalid.patch": "Không thể thay đổi cài đặt này ở đây.",
+  "settings.page.diagnosticsPending": "Chẩn đoán và Giới thiệu sắp ra mắt"
 }

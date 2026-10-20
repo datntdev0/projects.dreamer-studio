@@ -1,0 +1,40 @@
+<section class="settings-section" aria-labelledby="settings-pipeline-title" data-testid="settings-pipeline">
+  <header class="settings-section-head">
+    <h3 id="settings-pipeline-title">{{ 'settings.pipeline.title' | t }}</h3>
+    <div class="settings-section-actions">
+      <button dsBtn variant="ghost" size="sm" type="button" data-testid="settings-pipeline-reset" (click)="reset()">
+        <ds-icon name="undo" size="sm" />{{ 'settings.page.reset' | t }}
+      </button>
+    </div>
+  </header>
+  <div class="settings-group">
+    <div class="settings-row" data-testid="settings-pipeline-max-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="settings-pipeline-max">{{ 'settings.pipeline.max' | t }}</label>
+        <span class="settings-row-hint" id="settings-pipeline-max-hint" data-testid="settings-pipeline-max-hint">
+          {{ 'settings.pipeline.maxHint' | t }}
+        </span>
+        @if (activeCount() > 0) {
+          <span class="settings-row-hint num" data-testid="settings-pipeline-active">
+            {{ 'settings.pipeline.activeNow' | t: { count: activeCount() } }}
+          </span>
+        }
+      </div>
+      <div class="settings-row-control settings-range">
+        <input
+          id="settings-pipeline-max"
+          type="range"
+          step="1"
+          [min]="min"
+          [max]="max"
+          [value]="value()"
+          aria-describedby="settings-pipeline-max-hint"
+          data-testid="settings-pipeline-max"
+          (input)="onInput($event)"
+          (change)="onChange($event)"
+        />
+        <output class="num" for="settings-pipeline-max" data-testid="settings-pipeline-max-value">{{ value() }}</output>
+      </div>
+    </div>
+  </div>
+</section>

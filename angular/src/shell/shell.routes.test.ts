@@ -18,6 +18,7 @@ describe('buildRoutes', () => {
       'pipelines',
       'pipelines/:id',
       'settings',
+      'settings/:id',
       '**',
     ]);
   });
@@ -30,7 +31,7 @@ describe('buildRoutes', () => {
   it('adds a detail route only for modules that ask for it', () => {
     const detail = routes.find((route) => route.path === 'pipelines/:id');
     expect(detail?.data).toEqual({ module: 'pipelines' });
-    expect(routes.some((route) => route.path === 'settings/:id')).toBe(false);
+    expect(routes.some((route) => route.path === 'library/:id')).toBe(false);
   });
 
   it('puts the module id in route data', () => {

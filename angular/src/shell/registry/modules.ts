@@ -1,6 +1,7 @@
 import type { Type } from '@angular/core';
 import { HomePage } from '../../features/home/home.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
+import { SettingsPage } from '../../features/settings/settings.page';
 
 export type ModuleGroup = 'library' | 'analysis' | 'production' | 'system';
 
@@ -78,6 +79,7 @@ export const MODULES: AppModule[] = [
     label: 'nav.settings',
     description: 'module.settings.desc',
     release: '0.0.0',
-    page: null,
+    page: SettingsPage,
+    detailRoute: true,
   },
 ];

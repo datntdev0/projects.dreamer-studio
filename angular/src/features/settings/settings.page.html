@@ -1,0 +1,69 @@
+<div class="ds-page-toolbar" data-testid="page-toolbar">
+  <h1 dsPageTitle>{{ 'nav.settings' | t }}</h1>
+  <div class="ds-page-actions">
+    <span class="meta" data-testid="settings-autosave">{{ 'settings.page.autosave' | t }}</span>
+  </div>
+</div>
+<div class="settings-layout" data-testid="settings-page">
+  <nav class="settings-nav" [attr.aria-label]="'settings.page.navLabel' | t" data-testid="settings-nav">
+    @for (item of navItems; track item.section) {
+      <a
+        class="settings-nav-item"
+        data-testid="settings-nav-item"
+        [routerLink]="['/settings', item.section]"
+        [attr.aria-current]="item.section === section() ? 'page' : null"
+        [attr.data-section]="item.section"
+      >
+        <ds-icon [name]="item.icon" />
+        <span class="label">{{ item.label | t }}</span>
+      </a>
+    }
+    @for (item of upcoming; track item.id) {
+      <span
+        class="settings-nav-item"
+        aria-disabled="true"
+        tabindex="0"
+        data-testid="settings-nav-upcoming"
+        [dsTooltip]="'settings.page.plannedFor' | t: { release: item.release }"
+        [attr.data-section]="item.id"
+      >
+        <ds-icon [name]="item.icon" />
+        <span class="label">{{ item.label | t }}</span>
+        <ds-pill>{{ 'settings.page.comingLater' | t }}</ds-pill>
+      </span>
+    }
+  </nav>
+  <div class="settings-main" data-testid="settings-main">
+    @if (!ready()) {
+      <div class="settings-loading">
+        <ds-area-state kind="loading" data-testid="settings-loading" [heading]="'settings.page.loading' | t" />
+      </div>
+    } @else {
+      <div class="settings-content" data-testid="settings-content">
+        @if (showResetNotice()) {
+          <ds-banner
+            class="settings-notice"
+            variant="warning"
+            data-testid="settings-reset-notice"
+            [heading]="'settings.page.resetNotice.title' | t"
+            [message]="'settings.page.resetNotice.message' | t"
+            [dismissLabel]="'common.dismiss' | t"
+            (dismiss)="dismissNotice()"
+          />
+        }
+        @switch (section()) {
+          @case ('diagnostics') {
+            <div class="settings-cols" data-testid="settings-diagnostics-pane">
+              <ds-area-state kind="empty" [heading]="'settings.page.diagnosticsPending' | t" />
+            </div>
+          }
+          @default {
+            <ds-settings-general />
+            <ds-settings-pipeline />
+            <ds-settings-storage />
+          }
+        }
+      </div>
+    }
+  </div>
+</div>

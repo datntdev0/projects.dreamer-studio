@@ -11,7 +11,7 @@ import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { SettingsState } from '@dreamer/shared/models/settings';
+import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
   const handler = (_event: IpcRendererEvent, value: T): void => listener(value);
@@ -58,6 +58,10 @@ const api: DreamerApi = {
   },
   settings: {
     get: (): Promise<SettingsState> => call(SettingsChannel.Get),
+    update: (patch: SettingsPatch): Promise<AppSettings> => call(SettingsChannel.Update, patch),
+    reset: (section: SettingsSection): Promise<AppSettings> => call(SettingsChannel.Reset, section),
+    onChanged: (listener: (settings: AppSettings) => void): (() => void) =>
+      subscribe(SettingsChannel.Changed, listener),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

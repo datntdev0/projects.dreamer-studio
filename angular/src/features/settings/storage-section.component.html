@@ -1,0 +1,48 @@
+<section class="settings-section settings-storage" data-testid="settings-storage">
+  <header class="settings-section-head">
+    <h3>{{ 'settings.storage.title' | t }}</h3>
+  </header>
+  <div class="settings-group">
+    <div class="settings-row settings-storage-current">
+      <div class="settings-row-text">
+        <span class="settings-row-label settings-storage-path-line">
+          <code class="settings-storage-path" data-testid="settings-storage-path">{{ appDataDir() }}</code>
+          <button
+            dsBtn
+            variant="ghost"
+            size="sm"
+            type="button"
+            data-testid="settings-storage-copy"
+            [iconOnly]="true"
+            [attr.aria-label]="'settings.storage.copy' | t"
+            [dsTooltip]="'settings.storage.copy' | t"
+            (click)="copy()"
+          >
+            <ds-icon name="copy" size="sm" />
+          </button>
+        </span>
+      </div>
+      <div class="settings-row-control">
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="settings-storage-open-explorer"
+          (click)="openExplorer()"
+        >
+          <ds-icon name="external" size="sm" />{{ 'settings.storage.openExplorer' | t }}
+        </button>
+      </div>
+    </div>
+    <div class="settings-row" data-testid="settings-storage-contents">
+      <div class="settings-row-text">
+        <span class="settings-row-label">{{ 'settings.storage.contents.label' | t }}</span>
+        <span class="settings-row-hint">{{ 'settings.storage.contents.hint' | t }}</span>
+        <span class="settings-row-hint">
+          {{ 'settings.storage.contents.settingsFile' | t: { path: settingsDir } }}
+        </span>
+      </div>
+    </div>
+  </div>
+</section>

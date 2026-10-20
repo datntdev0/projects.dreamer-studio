@@ -1,7 +1,9 @@
 import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppSettings, defaultSettings, isPlainObject, sanitizeSettings } from '@dreamer/shared/models/settings';
-import { SettingsNotice, SettingsState } from '@dreamer/shared/models/settings';
+import { SettingsNotice, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+import { validateSettingsPatch } from '@dreamer/shared/models/settings';
 import { createLogger, Logger } from '../logging/logger';
 
 const logger: Logger = createLogger('settings');
@@ -18,6 +20,7 @@ function isMissingFile(error: unknown): boolean {
 export class SettingsStore {
   private settings: AppSettings;
   private notice: SettingsNotice = 'none';
+  private listeners: ((settings: AppSettings) => void)[] = [];
 
   constructor(
     private readonly file: string,
@@ -71,6 +74,36 @@ export class SettingsStore {
     this.write();
   }
 
+  update(patch: SettingsPatch): AppSettings {
+    const field: string | null = validateSettingsPatch(patch);
+    if (field !== null) {
+      throw new CodedError(ErrorCode.SettingsInvalid, `Invalid settings patch: ${field}`, field);
+    }
+    return this.commit({ ...this.settings, ...patch });
+  }
+
+  reset(section: SettingsSection): AppSettings {
+    const defaults: AppSettings = defaultSettings(this.defaultDir);
+    if (section === 'general') {
+      return this.commit({ ...this.settings, language: defaults.language, theme: defaults.theme });
+    }
+    return this.commit({ ...this.settings, pipelines: defaults.pipelines });
+  }
+
+  onChange(listener: (settings: AppSettings) => void): void {
+    this.listeners.push(listener);
+  }
+
+  private commit(settings: AppSettings): AppSettings {
+    this.settings = settings;
+    const written: boolean = this.write();
+    this.listeners.forEach((listener: (settings: AppSettings) => void): void => listener(settings));
+    if (!written) {
+      throw new CodedError(ErrorCode.SettingsWriteFailed, 'settings.json could not be written');
+    }
+    return settings;
+  }
+
   private backup(): void {
     try {
       copyFileSync(this.file, `${this.file}.bak`);
@@ -79,14 +112,16 @@ export class SettingsStore {
     }
   }
 
-  private write(): void {
+  private write(): boolean {
     const temp: string = `${this.file}.tmp`;
     try {
       mkdirSync(dirname(this.file), { recursive: true });
       writeFileSync(temp, `${JSON.stringify(this.settings, null, 2)}\n`, 'utf-8');
       renameSync(temp, this.file);
+      return true;
     } catch (error) {
       logger.error('settings write failed', error);
+      return false;
     }
   }
 }

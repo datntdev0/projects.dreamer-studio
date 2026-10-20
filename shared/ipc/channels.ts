@@ -21,6 +21,9 @@ export const BackendChannel = {
 
 export const SettingsChannel = {
   Get: 'settings:get',
+  Update: 'settings:update',
+  Reset: 'settings:reset',
+  Changed: 'settings:changed',
 } as const;
 
 export const PipelineChannel = {

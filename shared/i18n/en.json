@@ -50,6 +50,10 @@
   "errors.RENDERER_GONE.title": "The window stopped working.",
   "errors.UI_UNEXPECTED.message": "The app hit an unexpected error. You can keep working.",
   "errors.UI_UNEXPECTED.title": "Something went wrong",
+  "errors.SETTINGS_INVALID.message": "The value is not allowed. Nothing was saved.",
+  "errors.SETTINGS_INVALID.title": "Setting not saved",
+  "errors.SETTINGS_WRITE_FAILED.message": "settings.json could not be written. The change applies until the app closes.",
+  "errors.SETTINGS_WRITE_FAILED.title": "Could not save settings",
   "home.backend.failed": "Failed",
   "home.backend.hint": "AI providers come in v0.2.0.",
   "home.backend.name": "Local AI backend",
@@ -384,5 +388,10 @@
   "settings.page.nav.llm": "LLM integrations",
   "settings.page.comingLater": "Coming later",
   "settings.page.plannedFor": "Planned for release {release}",
-  "settings.page.autosave": "Changes save automatically"
+  "settings.page.autosave": "Changes save automatically",
+  "settings.invalid.language": "UI language must be English or Tiếng Việt.",
+  "settings.invalid.theme": "Theme must be Light or Dark.",
+  "settings.invalid.pipelines.maxConcurrent": "Parallel pipelines must be a whole number from 1 to 5.",
+  "settings.invalid.patch": "This setting can't be changed here.",
+  "settings.page.diagnosticsPending": "Diagnostics and About are coming soon"
 }

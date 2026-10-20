@@ -10,6 +10,8 @@ export const ErrorCode = {
   AppDataUnwritable: 'APP_DATA_UNWRITABLE',
   PipelineNotFound: 'PIPELINE_NOT_FOUND',
   PipelineUnknownType: 'PIPELINE_UNKNOWN_TYPE',
+  SettingsInvalid: 'SETTINGS_INVALID',
+  SettingsWriteFailed: 'SETTINGS_WRITE_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

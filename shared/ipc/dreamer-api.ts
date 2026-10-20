@@ -6,7 +6,7 @@ import { Language } from '../i18n/translate';
 import { LogEntry } from './log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
-import { SettingsState } from '../models/settings';
+import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '../models/settings';
 
 export interface DreamerApi {
   app: {
@@ -25,6 +25,9 @@ export interface DreamerApi {
   };
   settings: {
     get(): Promise<SettingsState>;
+    update(patch: SettingsPatch): Promise<AppSettings>;
+    reset(section: SettingsSection): Promise<AppSettings>;
+    onChanged(listener: (settings: AppSettings) => void): () => void;
   };
   pipeline: {
     types(): Promise<PipelineTypeInfo[]>;

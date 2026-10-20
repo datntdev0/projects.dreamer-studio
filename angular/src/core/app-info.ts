@@ -13,6 +13,7 @@ export class AppInfoStore {
 
   constructor() {
     void this.load();
+    this.desktopApi.onAppDataChanged((info) => this.info.set(info));
   }
 
   async load(): Promise<void> {

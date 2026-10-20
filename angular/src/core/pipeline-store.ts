@@ -54,6 +54,7 @@ export class PipelineStore {
   init(): void {
     this.desktopApi.onPipelineUpdate((run) => this.merge(run, true));
     this.desktopApi.onPipelineDeleted((ids) => this.removeLocal(ids));
+    this.desktopApi.onAppDataChanged(() => this.forgetRuns());
     void this.reload();
     void this.loadRecent();
     void this.desktopApi.pipelineTypes().then((types) => this.typeList.set(types));
@@ -89,6 +90,13 @@ export class PipelineStore {
       const page = await this.desktopApi.listPipelines(ACTIVE_QUERY);
       page.runs.filter((run) => !this.known().has(run.id)).forEach((run) => this.merge(run, false));
     });
+  }
+
+  private forgetRuns(): void {
+    this.known.set(new Map());
+    this.recentRuns.set([]);
+    void this.reload();
+    void this.loadRecent();
   }
 
   private async loadRecent(): Promise<void> {

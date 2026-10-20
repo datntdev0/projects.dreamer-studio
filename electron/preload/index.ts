@@ -2,12 +2,20 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import { AppError } from '@dreamer/shared/errors/app-error';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
-import { AppChannel, BackendChannel, DevChannel, LogChannel, PipelineChannel } from '@dreamer/shared/ipc/channels';
+import {
+  AppChannel,
+  AppDataChannel,
+  BackendChannel,
+  DevChannel,
+  LogChannel,
+  PipelineChannel,
+} from '@dreamer/shared/ipc/channels';
 import { SettingsChannel } from '@dreamer/shared/ipc/channels';
 import { DevCrashKind } from '@dreamer/shared/ipc/dev';
 import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
+import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -60,6 +68,14 @@ const api: DreamerApi = {
     reset: (section: SettingsSection): Promise<AppSettings> => call(SettingsChannel.Reset, section),
     onChanged: (listener: (settings: AppSettings) => void): (() => void) =>
       subscribe(SettingsChannel.Changed, listener),
+  },
+  appData: {
+    pickFolder: (): Promise<string | null> => call(AppDataChannel.PickFolder),
+    inspect: (path: string): Promise<AppDataCandidate> => call(AppDataChannel.Inspect, path),
+    switch: (path: string): Promise<AppInfo> => call(AppDataChannel.Switch, path),
+    status: (): Promise<AppDataStatus> => call(AppDataChannel.Status),
+    onProgress: (listener: (step: AppDataStep) => void): (() => void) => subscribe(AppDataChannel.Progress, listener),
+    onChanged: (listener: (info: AppInfo) => void): (() => void) => subscribe(AppDataChannel.Changed, listener),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

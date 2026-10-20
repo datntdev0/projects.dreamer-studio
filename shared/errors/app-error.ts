@@ -8,6 +8,8 @@ export const ErrorCode = {
   DbMigrationFailed: 'DB_MIGRATION_FAILED',
   DbNewerVersion: 'DB_NEWER_VERSION',
   AppDataUnwritable: 'APP_DATA_UNWRITABLE',
+  AppDataPipelinesActive: 'APP_DATA_PIPELINES_ACTIVE',
+  AppDataSwitching: 'APP_DATA_SWITCHING',
   PipelineNotFound: 'PIPELINE_NOT_FOUND',
   PipelineUnknownType: 'PIPELINE_UNKNOWN_TYPE',
   SettingsInvalid: 'SETTINGS_INVALID',

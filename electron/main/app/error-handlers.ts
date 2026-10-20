@@ -33,7 +33,7 @@ async function showDialog(message: string, detail: string, buttons: string[]): P
   }
 }
 
-async function onUncaughtException(error: Error, paths: AppPaths): Promise<void> {
+async function onUncaughtException(error: Error, paths: () => AppPaths): Promise<void> {
   if (!isLoggingReady()) {
     dialog.showErrorBox(t('dialog.unexpectedTitle'), errorStack(error));
     app.exit(1);
@@ -47,7 +47,7 @@ async function onUncaughtException(error: Error, paths: AppPaths): Promise<void>
     t('common.quit'),
   ]);
   if (choice === 0) {
-    await openFolder(paths.logs);
+    await openFolder(paths().logs);
   }
   app.exit(1);
 }
@@ -60,7 +60,7 @@ function onUnhandledRejection(reason: unknown): void {
   }
 }
 
-async function onRenderProcessGone(contents: WebContents, reason: string, paths: AppPaths): Promise<void> {
+async function onRenderProcessGone(contents: WebContents, reason: string, paths: () => AppPaths): Promise<void> {
   logger.error(`Renderer process gone: ${reason}`);
   const detail: string = `${t('common.code')}: ${ErrorCode.RendererGone} (${reason}).`;
   const choice: number | null = await showDialog(t('errors.RENDERER_GONE.title'), detail, [
@@ -71,14 +71,14 @@ async function onRenderProcessGone(contents: WebContents, reason: string, paths:
   if (choice === 0) {
     contents.reload();
   } else if (choice === 1) {
-    await openFolder(paths.logs);
+    await openFolder(paths().logs);
     app.quit();
   } else if (choice === 2) {
     app.quit();
   }
 }
 
-export function installErrorHandlers(paths: AppPaths): void {
+export function installErrorHandlers(paths: () => AppPaths): void {
   process.on('uncaughtException', (error: Error) => void onUncaughtException(error, paths));
   process.on('unhandledRejection', onUnhandledRejection);
   app.on('web-contents-created', (_event, contents: WebContents) => {

@@ -26,12 +26,12 @@ export function formatDateTime(iso: string, language: Language): string {
   return new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
 }
 
+const TIME_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+
 export function formatShortDateTime(iso: string, language: Language): string {
-  return new Intl.DateTimeFormat(language, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(iso));
+  return new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric', ...TIME_OPTIONS }).format(new Date(iso));
+}
+
+export function formatTime(iso: string, language: Language): string {
+  return new Intl.DateTimeFormat(language, TIME_OPTIONS).format(new Date(iso));
 }

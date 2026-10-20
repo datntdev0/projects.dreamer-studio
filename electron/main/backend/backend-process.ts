@@ -69,7 +69,7 @@ function watchChild(proc: ChildProcess): void {
     setBackendState('unavailable');
   });
   proc.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
-    if (stopping) {
+    if (stopping || child !== proc) {
       return;
     }
     logger.error(`Backend exited (code ${code}, signal ${signal})`);
@@ -82,6 +82,7 @@ async function launch(paths: AppPaths): Promise<void> {
   const port: number = await findFreePort();
   const token: string = createToken();
   const options: BackendLaunch = buildLaunch(port, token, paths.logs);
+  stopping = false;
   const proc: ChildProcess = spawn(options.command, options.args, {
     cwd: options.cwd,
     env: options.env,

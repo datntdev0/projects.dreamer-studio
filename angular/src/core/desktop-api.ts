@@ -4,6 +4,7 @@ import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
+import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -54,6 +55,30 @@ export class DesktopApi {
 
   onSettingsChanged(listener: (settings: AppSettings) => void): () => void {
     return window.dreamer ? window.dreamer.settings.onChanged(listener) : () => undefined;
+  }
+
+  async pickAppDataFolder(): Promise<string | null> {
+    return window.dreamer ? window.dreamer.appData.pickFolder() : null;
+  }
+
+  async inspectAppData(path: string): Promise<AppDataCandidate | null> {
+    return window.dreamer ? window.dreamer.appData.inspect(path) : null;
+  }
+
+  async switchAppData(path: string): Promise<AppInfo | null> {
+    return window.dreamer ? window.dreamer.appData.switch(path) : null;
+  }
+
+  async appDataStatus(): Promise<AppDataStatus | null> {
+    return window.dreamer ? window.dreamer.appData.status() : null;
+  }
+
+  onAppDataProgress(listener: (step: AppDataStep) => void): () => void {
+    return window.dreamer ? window.dreamer.appData.onProgress(listener) : () => undefined;
+  }
+
+  onAppDataChanged(listener: (info: AppInfo) => void): () => void {
+    return window.dreamer ? window.dreamer.appData.onChanged(listener) : () => undefined;
   }
 
   async pipelineTypes(): Promise<PipelineTypeInfo[]> {

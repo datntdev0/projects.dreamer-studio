@@ -31,7 +31,12 @@ export default tseslint.config(
   },
   {
     files: ['electron/**'],
-    ignores: ['electron/main/storage/**', 'electron/main/index.ts', 'electron/**/*.test.ts'],
+    ignores: [
+      'electron/main/storage/**',
+      'electron/main/app-data/**',
+      'electron/main/index.ts',
+      'electron/**/*.test.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -43,7 +48,8 @@ export default tseslint.config(
           patterns: [
             {
               regex: '(^|/)storage/database(\\.ts)?$',
-              message: 'Only electron/main/storage and the composition root (index.ts) may import the Database.',
+              message:
+                'Only electron/main/storage, app-data and the composition root (index.ts) may import the Database.',
             },
           ],
         },

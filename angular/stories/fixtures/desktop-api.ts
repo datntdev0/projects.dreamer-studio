@@ -1,6 +1,7 @@
 import type { Provider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
+import type { AppDataCandidate, AppDataStatus } from '@dreamer/shared/models/app-data';
 import { defaultSettings } from '@dreamer/shared/models/settings';
 import type { AppSettings, SettingsPatch, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '../../src/core/desktop-api';
@@ -12,6 +13,14 @@ export interface DesktopApiFixture {
 }
 
 export const APP_INFO: AppInfo = { version: '0.0.0', appDataDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio' };
+
+export const APP_DATA_STATUS: AppDataStatus = {
+  path: APP_INFO.appDataDir,
+  freeBytes: 412 * 1024 ** 3,
+  writable: true,
+  schemaVersion: '0.0.0_1',
+  checkedAt: '2026-01-01T00:00:00.000Z',
+};
 
 export type FakeSettingsApi = Pick<DesktopApi, 'settings' | 'updateSettings' | 'resetSettings' | 'onSettingsChanged'>;
 
@@ -52,6 +61,12 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     },
     backendStatus: (): Promise<BackendStatus | null> => Promise.resolve({ state: fixture.backend ?? 'running' }),
     writeLog: (): void => undefined,
+    pickAppDataFolder: (): Promise<string | null> => Promise.resolve(null),
+    inspectAppData: (): Promise<AppDataCandidate | null> => Promise.resolve(null),
+    switchAppData: (): Promise<AppInfo | null> => Promise.resolve(null),
+    appDataStatus: (): Promise<AppDataStatus | null> => Promise.resolve(APP_DATA_STATUS),
+    onAppDataProgress: (): (() => void) => () => undefined,
+    onAppDataChanged: (): (() => void) => () => undefined,
     ...fakeSettingsApi(),
   };
   return { provide: DesktopApi, useValue: api };

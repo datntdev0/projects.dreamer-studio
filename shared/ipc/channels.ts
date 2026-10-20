@@ -25,6 +25,15 @@ export const SettingsChannel = {
   Changed: 'settings:changed',
 } as const;
 
+export const AppDataChannel = {
+  PickFolder: 'app-data:pick-folder',
+  Inspect: 'app-data:inspect',
+  Switch: 'app-data:switch',
+  Status: 'app-data:status',
+  Progress: 'app-data:progress',
+  Changed: 'app-data:changed',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

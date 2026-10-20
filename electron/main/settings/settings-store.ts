@@ -72,6 +72,7 @@ export class SettingsStore {
   setAppDataDir(dir: string): void {
     this.settings = { ...this.settings, appDataDir: dir };
     this.write();
+    this.notify();
   }
 
   update(patch: SettingsPatch): AppSettings {
@@ -97,11 +98,15 @@ export class SettingsStore {
   private commit(settings: AppSettings): AppSettings {
     this.settings = settings;
     const written: boolean = this.write();
-    this.listeners.forEach((listener: (settings: AppSettings) => void): void => listener(settings));
+    this.notify();
     if (!written) {
       throw new CodedError(ErrorCode.SettingsWriteFailed, 'settings.json could not be written');
     }
     return settings;
+  }
+
+  private notify(): void {
+    this.listeners.forEach((listener: (settings: AppSettings) => void): void => listener(this.settings));
   }
 
   private backup(): void {

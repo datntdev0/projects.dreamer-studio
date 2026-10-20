@@ -1,6 +1,21 @@
 <section class="settings-section settings-storage" data-testid="settings-storage">
   <header class="settings-section-head">
     <h3>{{ 'settings.storage.title' | t }}</h3>
+    <div class="settings-section-actions">
+      <span [dsTooltip]="resetTooltip()">
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="settings-storage-reset"
+          [disabled]="isDefault() || blocked()"
+          (click)="reset()"
+        >
+          <ds-icon name="undo" size="sm" />{{ 'settings.storage.reset' | t }}
+        </button>
+      </span>
+    </div>
   </header>
   <div class="settings-group">
     <div class="settings-row settings-storage-current">
@@ -21,8 +36,33 @@
             <ds-icon name="copy" size="sm" />
           </button>
         </span>
+        <span class="settings-row-hint settings-status-line" data-testid="settings-storage-status">
+          @for (part of statusParts(); track part.key) {
+            <span>{{ part.key | t: part.params }}</span>
+          }
+        </span>
+        @if (blocked()) {
+          <span id="settings-storage-blocked" class="settings-row-hint" data-testid="settings-storage-blocked">
+            {{ 'settings.storage.blocked.message' | t: { count: activeCount() } }}
+            <a routerLink="/pipelines" data-testid="settings-storage-blocked-link">{{
+              'settings.storage.blocked.link' | t
+            }}</a>
+          </span>
+        }
       </div>
       <div class="settings-row-control">
+        <button
+          dsBtn
+          size="sm"
+          type="button"
+          data-testid="settings-storage-change"
+          [disabled]="blocked()"
+          [loading]="checking()"
+          [attr.aria-describedby]="blocked() ? 'settings-storage-blocked' : null"
+          (click)="pick()"
+        >
+          {{ (checking() ? 'settings.storage.checking' : 'settings.storage.change') | t }}
+        </button>
         <button
           dsBtn
           variant="ghost"
@@ -46,3 +86,122 @@
     </div>
   </div>
 </section>
+
+<ds-dialog
+  data-testid="settings-storage-review"
+  [icon]="reviewView()?.dbStep ? 'folder' : 'alert-triangle'"
+  [danger]="!reviewView()?.dbStep"
+  [heading]="(reviewView()?.dbStep ? 'settings.storage.review.title' : 'settings.storage.error.title') | t"
+  [closeLabel]="'common.cancel' | t"
+  [open]="review() !== null"
+  (closed)="review.set(null)"
+>
+  @if (review(); as folder) {
+    @let view = reviewView()!;
+    <div class="settings-storage-review">
+      <span class="settings-storage-review-label">{{ 'settings.storage.review.to' | t }}</span>
+      <code class="settings-storage-path" data-testid="settings-storage-review-path">{{ folder.path }}</code>
+      @if (view.dbStep) {
+        <p class="settings-storage-review-outcome">
+          <ds-pill [kind]="view.pillKind" data-testid="settings-storage-review-kind">{{ view.pill | t }}</ds-pill>
+          <span>{{ view.message | t }}</span>
+        </p>
+        <span class="settings-storage-review-label">{{ 'settings.storage.review.from' | t }}</span>
+        <code class="settings-storage-path">{{ appDataDir() }}</code>
+        <p class="settings-storage-review-note">
+          <ds-icon name="shield" size="sm" />{{ 'settings.storage.review.keep' | t }}
+        </p>
+      } @else {
+        <p class="settings-storage-review-error" data-testid="settings-storage-review-error">
+          <ds-icon name="alert-circle" size="sm" />{{ view.message | t: view.params }}
+        </p>
+        <p class="settings-storage-review-note">
+          <ds-icon name="info" size="sm" />{{ 'settings.storage.error.stayed' | t: { path: appDataDir() } }}
+        </p>
+      }
+    </div>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="settings-storage-review-cancel" (click)="review.set(null)">
+      {{ 'common.cancel' | t }}
+    </button>
+    @if (reviewView()?.dbStep) {
+      <button
+        dsBtn
+        variant="primary"
+        type="button"
+        data-testid="settings-storage-review-confirm"
+        (click)="confirmReview()"
+      >
+        {{ 'settings.storage.review.confirm' | t }}
+      </button>
+    } @else {
+      <button
+        dsBtn
+        variant="primary"
+        type="button"
+        data-testid="settings-storage-review-choose"
+        (click)="chooseAnother()"
+      >
+        <ds-icon name="folder" size="sm" />{{ 'settings.storage.review.chooseAnother' | t }}
+      </button>
+    }
+  </ng-container>
+</ds-dialog>
+
+<ds-dialog
+  class="settings-storage-switch"
+  data-testid="settings-storage-switch"
+  [dismissible]="false"
+  [icon]="switchError() ? 'alert-circle' : 'folder'"
+  [danger]="!!switchError()"
+  [heading]="(switchError() ? 'settings.storage.switch.failed' : 'settings.storage.switch.title') | t"
+  [closeLabel]="'common.cancel' | t"
+  [open]="switchTarget() !== null"
+  [attr.aria-busy]="switchError() ? null : true"
+>
+  <code class="settings-storage-path">{{ switchTarget() }}</code>
+  @if (!switchError()) {
+    <p class="settings-storage-switch-wait">{{ 'settings.storage.switch.wait' | t }}</p>
+    <ds-progress [value]="switchProgress()" />
+  }
+  <ol class="settings-storage-steps" aria-live="polite">
+    @for (step of steps(); track step.id) {
+      <li [attr.data-state]="step.state" [attr.data-testid]="'settings-storage-switch-step-' + step.id">
+        <span class="settings-storage-step-mark">
+          @if (step.state === 'running') {
+            <ds-dot kind="primary" pulse />
+          } @else {
+            <ds-icon [name]="stepIcons[step.state]" size="sm" />
+          }
+        </span>
+        <span>{{ step.label | t }}</span>
+        <span class="visually-hidden">{{ stateLabels[step.state] | t }}</span>
+      </li>
+    }
+  </ol>
+  @if (switchError(); as error) {
+    <div data-testid="settings-storage-switch-error">
+      <ds-banner
+        variant="danger"
+        [dismissible]="false"
+        [heading]="error | t"
+        [message]="'settings.storage.error.stayed' | t: { path: appDataDir() }"
+        [dismissLabel]="'common.dismiss' | t"
+      />
+    </div>
+  }
+  <ng-container dialogFooter>
+    @if (switchError()) {
+      <button
+        #switchClose
+        dsBtn
+        type="button"
+        data-testid="settings-storage-switch-close"
+        (click)="switchTarget.set(null)"
+      >
+        {{ 'settings.storage.switch.close' | t }}
+      </button>
+    }
+  </ng-container>
+</ds-dialog>

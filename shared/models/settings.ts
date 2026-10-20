@@ -59,7 +59,7 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isAbsolutePath(value: unknown): value is string {
+export function isAbsolutePath(value: unknown): value is string {
   return typeof value === 'string' && WINDOWS_ABSOLUTE_PATH.test(value);
 }
 

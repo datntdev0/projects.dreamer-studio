@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { AppDataCandidate, AppDataContent } from '@dreamer/shared/models/app-data';
 import { t } from '../i18n/main-i18n';
 import { createLogger, Logger } from '../logging/logger';
 import { Database } from './database';
@@ -22,9 +23,11 @@ interface Versioned {
   upgradeNum: number;
 }
 
-interface HistoryRow extends Versioned {
+export interface HistoryRow extends Versioned {
   id: string;
 }
+
+export type AppDataSchemaInfo = Pick<AppDataCandidate, 'content' | 'foundVersion' | 'supportedVersion'>;
 
 const logger: Logger = createLogger('storage');
 
@@ -86,6 +89,37 @@ function readAppliedRows(db: Database): HistoryRow[] {
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sys_migration_history'",
   );
   return table ? db.all<HistoryRow>('SELECT id, version, upgrade_num AS upgradeNum FROM sys_migration_history') : [];
+}
+
+function versionLabel(item: Versioned): string {
+  return `${item.version}_${item.upgradeNum}`;
+}
+
+function newestLabel(items: Versioned[]): string | null {
+  const newest: Versioned | undefined = [...items].sort(compareVersions).at(-1);
+  return newest ? versionLabel(newest) : null;
+}
+
+export function readSchemaVersion(db: Database): string | null {
+  return newestLabel(readAppliedRows(db));
+}
+
+export function classifyHistory(rows: HistoryRow[], migrations: Migration[]): AppDataSchemaInfo {
+  const bundledIds: Set<string> = new Set(migrations.map((migration: Migration) => migration.id));
+  const appliedIds: Set<string> = new Set(rows.map((row: HistoryRow) => row.id));
+  let content: AppDataContent = 'current';
+  if (rows.length === 0) {
+    content = 'none';
+  } else if (rows.some((row: HistoryRow) => !bundledIds.has(row.id))) {
+    content = 'newer';
+  } else if (migrations.some((migration: Migration) => !appliedIds.has(migration.id))) {
+    content = 'older';
+  }
+  return {
+    content,
+    foundVersion: newestLabel(rows),
+    supportedVersion: newestLabel(migrations) ?? '0.0.0_0',
+  };
 }
 
 function assertNotNewer(rows: HistoryRow[], migrations: Migration[]): void {

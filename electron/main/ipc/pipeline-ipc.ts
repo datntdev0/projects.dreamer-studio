@@ -53,14 +53,16 @@ function handleValidated<T, R>(channel: string, guard: (value: unknown) => value
   });
 }
 
-export function registerPipelineIpc(executor: PipelineExecutor): void {
-  handle(PipelineChannel.Types, (): PipelineTypeInfo[] => executor.types());
+export function registerPipelineIpc(executor: () => PipelineExecutor): void {
+  handle(PipelineChannel.Types, (): PipelineTypeInfo[] => executor().types());
   handleValidated(PipelineChannel.Start, isStartRequest, (request: PipelineStartRequest): PipelineRun =>
-    executor.start(request),
+    executor().start(request),
   );
-  handleValidated(PipelineChannel.Cancel, isId, (id: string): void => executor.cancel(id));
-  handleValidated(PipelineChannel.List, isListQuery, (query: PipelineListQuery): PipelinePage => executor.list(query));
-  handleValidated(PipelineChannel.Get, isId, (id: string): PipelineRun => executor.get(id));
-  handleValidated(PipelineChannel.GetLog, isId, (id: string): string[] => executor.readLog(id));
-  handleValidated(PipelineChannel.Delete, isIdList, (ids: string[]): string[] => executor.delete(ids));
+  handleValidated(PipelineChannel.Cancel, isId, (id: string): void => executor().cancel(id));
+  handleValidated(PipelineChannel.List, isListQuery, (query: PipelineListQuery): PipelinePage =>
+    executor().list(query),
+  );
+  handleValidated(PipelineChannel.Get, isId, (id: string): PipelineRun => executor().get(id));
+  handleValidated(PipelineChannel.GetLog, isId, (id: string): string[] => executor().readLog(id));
+  handleValidated(PipelineChannel.Delete, isIdList, (ids: string[]): string[] => executor().delete(ids));
 }

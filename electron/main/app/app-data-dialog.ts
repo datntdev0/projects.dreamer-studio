@@ -1,4 +1,4 @@
-import { dialog, MessageBoxReturnValue, OpenDialogReturnValue } from 'electron';
+import { BrowserWindow, dialog, MessageBoxReturnValue, OpenDialogReturnValue, OpenDialogOptions } from 'electron';
 import { existsSync, mkdirSync } from 'node:fs';
 import { t } from '../i18n/main-i18n';
 import { SettingsStore } from '../settings/settings-store';
@@ -33,12 +33,16 @@ async function askAppDataAction(folder: string, canUseDefault: boolean): Promise
   return buttons[result.response].action;
 }
 
-async function pickFolder(): Promise<string | null> {
-  const result: OpenDialogReturnValue = await dialog.showOpenDialog({
+export async function pickFolder(parent?: BrowserWindow | null, defaultPath?: string): Promise<string | null> {
+  const options: OpenDialogOptions = {
     title: t('settings.storage.picker.title'),
     buttonLabel: t('settings.storage.picker.select'),
+    defaultPath,
     properties: ['openDirectory', 'createDirectory'],
-  });
+  };
+  const result: OpenDialogReturnValue = parent
+    ? await dialog.showOpenDialog(parent, options)
+    : await dialog.showOpenDialog(options);
   return result.canceled ? null : result.filePaths[0];
 }
 

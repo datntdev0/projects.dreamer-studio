@@ -72,6 +72,18 @@ export const DangerConfirm: Story = {
   }),
 };
 
+export const NotDismissible: Story = {
+  args: { open: true, heading: 'Opening folder…', icon: 'folder', dismissible: false, closeLabel: 'Close' },
+  render: (args) => ({
+    props: args,
+    template: `
+      <ds-dialog [open]="open" [heading]="heading" [icon]="icon" [dismissible]="dismissible" [closeLabel]="closeLabel">
+        Please wait. There is no close button and Esc is blocked.
+      </ds-dialog>
+    `,
+  }),
+};
+
 export const ConfirmServiceDemo: Story = {
   name: 'Confirm service',
   decorators: [moduleMetadata({ imports: [ConfirmDemoComponent] })],

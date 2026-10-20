@@ -26,8 +26,8 @@ async function openFolderOrThrow(folder: string): Promise<void> {
   }
 }
 
-export function registerAppIpc(paths: AppPaths): void {
-  handle(AppChannel.Info, (): AppInfo => ({ version: APP_VERSION, appDataDir: paths.root }));
-  handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(paths.logs));
-  handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(paths.root));
+export function registerAppIpc(paths: () => AppPaths): void {
+  handle(AppChannel.Info, (): AppInfo => ({ version: APP_VERSION, appDataDir: paths().root }));
+  handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(paths().logs));
+  handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(paths().root));
 }

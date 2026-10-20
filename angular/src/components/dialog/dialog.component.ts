@@ -14,11 +14,16 @@ export class DialogComponent {
   readonly heading = input.required<string>();
   readonly icon = input<string>('');
   readonly danger = input<boolean, unknown>(false, { transform: booleanAttribute });
+  readonly dismissible = input<boolean, unknown>(true, { transform: booleanAttribute });
   readonly closeLabel = input.required<string>();
   readonly closed = output<void>();
   protected readonly headingId: string = `ds-dialog-heading-${nextId++}`;
 
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+
+  protected blockCancel(event: Event): void {
+    if (!this.dismissible()) event.preventDefault();
+  }
 
   protected close(): void {
     this.dialog().nativeElement.close();

@@ -5,6 +5,7 @@ import { DevCrashKind } from './dev';
 import { LogEntry } from './log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
+import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '../models/settings';
 
 export interface DreamerApi {
@@ -26,6 +27,14 @@ export interface DreamerApi {
     update(patch: SettingsPatch): Promise<AppSettings>;
     reset(section: SettingsSection): Promise<AppSettings>;
     onChanged(listener: (settings: AppSettings) => void): () => void;
+  };
+  appData: {
+    pickFolder(): Promise<string | null>;
+    inspect(path: string): Promise<AppDataCandidate>;
+    switch(path: string): Promise<AppInfo>;
+    status(): Promise<AppDataStatus>;
+    onProgress(listener: (step: AppDataStep) => void): () => void;
+    onChanged(listener: (info: AppInfo) => void): () => void;
   };
   pipeline: {
     types(): Promise<PipelineTypeInfo[]>;

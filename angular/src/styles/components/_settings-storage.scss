@@ -125,7 +125,8 @@
   color: var(--color-danger);
 }
 
-dialog.settings-storage-switch {
+dialog.settings-storage-switch,
+ds-dialog.settings-storage-switch dialog.ds-dialog {
   &:focus-visible {
     outline: none;
   }

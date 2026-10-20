@@ -54,6 +54,10 @@
   "errors.SETTINGS_INVALID.title": "Chưa lưu cài đặt",
   "errors.SETTINGS_WRITE_FAILED.message": "Không ghi được tệp settings.json. Thay đổi chỉ có hiệu lực đến khi đóng ứng dụng.",
   "errors.SETTINGS_WRITE_FAILED.title": "Không lưu được cài đặt",
+  "errors.APP_DATA_PIPELINES_ACTIVE.title": "Đang có tác vụ chạy",
+  "errors.APP_DATA_PIPELINES_ACTIVE.message": "Hãy đợi các tác vụ đang chờ và đang chạy hoàn tất, hoặc hủy chúng, rồi thử lại.",
+  "errors.APP_DATA_SWITCHING.title": "Đang chuyển thư mục dữ liệu",
+  "errors.APP_DATA_SWITCHING.message": "Hãy thử lại khi việc chuyển hoàn tất.",
   "home.backend.failed": "Lỗi",
   "home.backend.hint": "Nhà cung cấp AI sẽ có trong v0.2.0.",
   "home.backend.name": "Backend AI cục bộ",
@@ -318,7 +322,7 @@
   "settings.storage.error.title": "Không thể mở thư mục này",
   "settings.storage.error.notWritable": "Dreamer Studio không ghi được vào thư mục này. Hãy chọn thư mục bạn có quyền ghi, hoặc kiểm tra quyền của thư mục.",
   "settings.storage.error.newer": "Thư mục này có dữ liệu từ phiên bản Dreamer Studio mới hơn (cơ sở dữ liệu phiên bản {found}; phiên bản này hỗ trợ tối đa {supported}). Hãy cập nhật Dreamer Studio để mở.",
-  "settings.storage.error.upgradeFailed": "Nâng cấp cơ sở dữ liệu thất bại và đã được hoàn tác. Dữ liệu trong thư mục đó vẫn như cũ.",
+  "settings.storage.error.upgradeFailed": "Nâng cấp cơ sở dữ liệu không thành công. Bản sao lưu được giữ là database.backup.sqlite trong thư mục đó.",
   "settings.storage.error.stayed": "Dreamer Studio vẫn đang dùng {path}.",
   "settings.storage.same": "Thư mục này đang được dùng",
   "settings.storage.sameMsg": "Không có gì thay đổi.",
@@ -393,5 +397,6 @@
   "settings.invalid.theme": "Giao diện phải là Sáng hoặc Tối.",
   "settings.invalid.pipelines.maxConcurrent": "Số tác vụ song song phải là số nguyên từ 1 đến 5.",
   "settings.invalid.patch": "Không thể thay đổi cài đặt này ở đây.",
-  "settings.page.diagnosticsPending": "Chẩn đoán và Giới thiệu sắp ra mắt"
+  "settings.page.diagnosticsPending": "Chẩn đoán và Giới thiệu sắp ra mắt",
+  "settings.storage.status.notWritable": "không thể ghi"
 }

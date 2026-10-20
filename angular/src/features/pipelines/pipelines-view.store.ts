@@ -44,9 +44,11 @@ export class PipelinesViewStore {
     const destroyRef: DestroyRef = inject(DestroyRef);
     const offUpdate: () => void = this.desktopApi.onPipelineUpdate((run) => this.applyUpdate(run));
     const offDeleted: () => void = this.desktopApi.onPipelineDeleted((ids) => this.applyDeleted(ids));
+    const offAppData: () => void = this.desktopApi.onAppDataChanged(() => this.forgetRuns());
     destroyRef.onDestroy(() => {
       offUpdate();
       offDeleted();
+      offAppData();
     });
     void this.reload();
   }
@@ -122,6 +124,11 @@ export class PipelinesViewStore {
     const status: HistoryStatusFilter | null = this.status();
     const type: PipelineType | null = this.type();
     return { finished: true, statuses: status ? [status] : [], types: type ? [type] : [], limit: PAGE_SIZE, after };
+  }
+
+  private forgetRuns(): void {
+    this.checked.set(new Set<string>());
+    void this.reload();
   }
 
   private matchesFilters(run: PipelineRun): boolean {

@@ -82,6 +82,7 @@ export function initLogging(dir: string): boolean {
   log.transports.console.format = formatMessage;
   log.transports.console.level = app.isPackaged && writable ? false : level;
   logDir = dir;
+  lastCleanupDay = '';
   cleanupOnNewDay(new Date());
   return writable;
 }

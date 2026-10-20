@@ -2,7 +2,8 @@ import { ipcMain, shell } from 'electron';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { AppChannel } from '@dreamer/shared/ipc/channels';
 import { createLogger, Logger } from '../logging/logger';
-import { isLanguage, setLanguage } from '../i18n/main-i18n';
+import { isLanguage } from '@dreamer/shared/i18n/translate';
+import { setLanguage } from '../i18n/main-i18n';
 import { AppPaths } from '../storage/paths';
 import { handle } from './handle';
 

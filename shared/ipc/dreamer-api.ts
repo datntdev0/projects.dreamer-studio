@@ -6,6 +6,7 @@ import { Language } from '../i18n/translate';
 import { LogEntry } from './log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
+import { SettingsState } from '../models/settings';
 
 export interface DreamerApi {
   app: {
@@ -21,6 +22,9 @@ export interface DreamerApi {
   backend: {
     status(): Promise<BackendStatus>;
     onStatus(listener: (status: BackendStatus) => void): () => void;
+  };
+  settings: {
+    get(): Promise<SettingsState>;
   };
   pipeline: {
     types(): Promise<PipelineTypeInfo[]>;

@@ -19,6 +19,10 @@ export const BackendChannel = {
   GetStatus: 'backend:get-status',
 } as const;
 
+export const SettingsChannel = {
+  Get: 'settings:get',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

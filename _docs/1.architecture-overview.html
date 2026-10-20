@@ -151,21 +151,21 @@
 │   └── .storybook/             <span class="note"># main.ts, preview.ts (theme and locale toolbars drive ThemeService and I18nService, icon sprite), tsconfig.json (REQ-001)</span>
 ├── electron/                   <span class="note"># Core services + bridge</span>
 │   ├── main/                   
-│   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog (startup in main/index.ts)</span>
-│   │   ├── settings/           <span class="note"># settings.json read, validate, defaults (TSK-010)</span>
-│   │   ├── storage/            <span class="note"># paths.ts (AppPaths), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories/pipeline-run-repository.ts</span>
+│   │   ├── app/                <span class="note"># window, app:// protocol, global error handlers, fatal data dialog, app-data-dialog (app data folder unavailable at startup, TSK-010); startup in main/index.ts</span>
+│   │   ├── settings/           <span class="note"># settings-store.ts: only reader / writer of settings.json: load (sanitize, .bak, create), get, state, setAppDataDir, atomic write (TSK-010)</span>
+│   │   ├── storage/            <span class="note"># paths.ts (AppPaths, settingsFilePath), folder-probe.ts (probeWritable), database.ts (Database, checkDatabase), migrator.ts, migrations/*.sql; repositories/pipeline-run-repository.ts</span>
 │   │   ├── pipelines/          <span class="note"># pipeline-definition (steps, StepContext, sleep), pipeline-executor (queue, limit, cancel, recover, cancelAll), run-log, pipeline-registry (TSK-008); demo-pipeline (dev only, TSK-009)</span>
 │   │   ├── diagnostics/        <span class="note"># self-check engine and checks (TSK-011)</span>
 │   │   ├── backend/            <span class="note"># spawn Python, /health poll, backend:status push on change + backend:get-status pull, stop on quit (TSK-003, REQ-003); backend-job.ts runBackendJob (TSK-009)</span>
-│   │   ├── i18n/               <span class="note"># MainI18n: same JSON as the renderer, language from app:set-language, for native dialogs; English until the renderer sends one (REQ-002)</span>
-│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), backend (backend:get-status), log, pipeline (pipeline:*, payloads validated, TSK-008), dev (dev:crash, dev only); handle(channel, fn) wraps every invoke result (AD-35); broadcast(channel, value) pushes to all windows</span>
+│   │   ├── i18n/               <span class="note"># MainI18n: same JSON as the renderer, language from settings.json at startup, then app:set-language, for native dialogs (REQ-002, TSK-010)</span>
+│   │   ├── ipc/                <span class="note"># IPC handlers per domain: app (app:info, app:open-logs, app:open-data-dir, app:set-language), settings (settings:get, TSK-010), backend (backend:get-status), log, pipeline (pipeline:*, payloads validated, TSK-008), dev (dev:crash, dev only); handle(channel, fn) wraps every invoke result (AD-35); broadcast(channel, value) pushes to all windows</span>
 │   │   └── logging/            <span class="note"># electron-log wrapper, dated files, 7-day cleanup, line format (TSK-003)</span>
 │   ├── preload/                <span class="note"># contextBridge API for the renderer</span>
 │   ├── esbuild.mjs             <span class="note"># bundles main + preload, injects APP_VERSION (AD-19)</span>
 │   └── electron-builder.config.mjs <span class="note"># zip target, x64, extraResources renderer, backend, migrations (TSK-004, TSK-006)</span>
 ├── shared/                     <span class="note"># Contracts used by angular/ and electron/</span>
 │   ├── ipc/                    <span class="note"># channel names, request/response types, IpcResult (AD-35)</span>
-│   ├── models/                 <span class="note"># DTOs: pipeline.ts (PipelineRun, list query/page, log chunk; TSK-008); settings, novel later</span>
+│   ├── models/                 <span class="note"># DTOs: pipeline.ts (PipelineRun, list query/page, log chunk; TSK-008); settings.ts (AppSettings, SettingsState, defaultSettings, sanitizeSettings; TSK-010); novel later</span>
 │   ├── i18n/                   <span class="note"># en.json, vi.json (flat dotted keys), translate(): language → en → key, {name} params (REQ-002, AD-29)</span>
 │   └── errors/                 <span class="note"># AppError, error codes, errorStack; copy in i18n errors.&lt;CODE&gt;.title / .message</span>
 ├── backend/                    <span class="note"># AI backend (Python)</span>
@@ -197,9 +197,11 @@
       <h3>Storage and startup</h3>
       <p class="muted">TSK-005, TSK-006, TSK-007. Electron main owns the database (AD-03, AD-04, AD-22..AD-25).</p>
       <ul>
-        <li>Startup order in <code>main/index.ts</code>: single-instance lock → paths → folders → logger → database → migrations → pipeline recover → IPC → window. No lock → quit; a second launch restores and focuses the first window.</li>
+        <li>Startup order in <code>main/index.ts</code>: settings.json load (module load, sync) → single-instance lock → <code>whenReady</code> → app data root check (dialog) → paths → folders → logger → error handlers → database → migrations → pipeline recover → IPC → window. No lock → quit; a second launch restores and focuses the first window.</li>
+        <li>Settings (TSK-010, AD-36): <code>SettingsStore</code> reads <code>settings.json</code> once at startup. Missing → defaults written. Invalid fields → their defaults, file rewritten. Bad JSON or not an object → copied to <code>settings.json.bak</code>, defaults written. Other read errors → defaults in memory, file untouched. Writes go through <code>settings.json.tmp</code> + rename; a write failure is logged and the value kept in memory. The notice is logged after the logger starts and reaches the renderer through <code>settings:get</code> (toast at startup).</li>
+        <li>App data root (TSK-010 AC-4): <code>app/app-data-dialog.ts</code> runs before anything else starts. The default root is always created; a custom root that is missing or not writable (<code>probeWritable</code>) → native dialog: Choose another folder… (picker, checked again) · Use default folder (hidden when the default fails) · Quit. The chosen folder is saved as <code>appDataDir</code>.</li>
         <li>Folders: <code>ensureFolders(paths)</code> creates <code>library</code>, <code>logs</code>, <code>cache</code> on every start, before the logger (TSK-007 AC-2, AC-3). Failure → <code>APP_DATA_UNWRITABLE</code> dialog (Quit only), then quit; nothing else starts.</li>
-        <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>main/index.ts</code> and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
+        <li>Paths: <code>resolveAppPaths(root)</code> → <code>AppPaths</code>, built once in <code>onReady</code> of <code>main/index.ts</code> from the checked root and passed to the logger, error handlers, IPC, backend and database. No other code joins app data paths.</li>
         <li><code>storage/database.ts</code>: <code>Database.open(file)</code> sets <code>busy_timeout = 5000</code>, <code>journal_mode = WAL</code>, <code>synchronous = NORMAL</code>, <code>foreign_keys = ON</code>; <code>get</code> / <code>all</code> / <code>run</code> / <code>exec</code> / <code>transaction</code>; statements cached per SQL; <code>close()</code> checkpoints the WAL.</li>
         <li>Query error: logged (module <code>storage</code>, SQL text, no parameters), kept as last error, thrown as <code>DB_QUERY_FAILED</code>.</li>
         <li><code>checkDatabase(db)</code>: <code>SELECT 1</code> + <code>PRAGMA quick_check</code> + last error → ok / warning / error, for the self-checks (TSK-011).</li>

@@ -1,26 +1,34 @@
 import { app, BrowserWindow } from 'electron';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { resolveAppDataRoot } from './app/app-data-dialog';
 import { installErrorHandlers, reportLogsNotWritable, reportStartupFailure } from './app/error-handlers';
 import { registerAppIpc } from './ipc/app-ipc';
 import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
 import { registerPipelineIpc } from './ipc/pipeline-ipc';
+import { registerSettingsIpc } from './ipc/settings-ipc';
 import { handleAppProtocol, registerAppScheme } from './app/protocol';
 import { createWindow, focusWindow } from './app/window';
 import { showFatalError } from './app/fatal-dialog';
 import { startBackend, stopBackend } from './backend/backend-process';
+import { setLanguage } from './i18n/main-i18n';
 import { createLogger, initLogging, Logger } from './logging/logger';
 import { demoPipeline } from './pipelines/demo-pipeline';
 import { PipelineExecutor } from './pipelines/pipeline-executor';
 import { PipelineRegistry } from './pipelines/pipeline-registry';
+import { SettingsLoadResult, SettingsStore } from './settings/settings-store';
 import { Database } from './storage/database';
 import { devFailMigration, loadMigrations, Migration, runMigrations } from './storage/migrator';
 import { PipelineRunRepository } from './storage/repositories/pipeline-run-repository';
 import { AppPaths, defaultAppDataRoot, ensureFolders, migrationsDir, resolveAppPaths } from './storage/paths';
+import { settingsFilePath } from './storage/paths';
 
 const logger: Logger = createLogger('startup');
-const paths: AppPaths = resolveAppPaths(defaultAppDataRoot());
+const settings: SettingsStore = new SettingsStore(settingsFilePath(), defaultAppDataRoot());
+const settingsLoad: SettingsLoadResult = settings.load();
+setLanguage(settings.get().language);
+let paths: AppPaths;
 let db: Database | null = null;
 let executor: PipelineExecutor | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -59,12 +67,22 @@ function onBeforeQuit(): void {
   stopBackend();
 }
 
+function logSettingsNotice(): void {
+  if (settingsLoad.notice === 'none') return;
+  const detail: string =
+    settingsLoad.notice === 'unreadable'
+      ? `settings.json unreadable, defaults used; invalid content is kept as ${paths.settingsFile}.bak`
+      : `settings.json invalid fields reset to defaults: ${settingsLoad.invalid.join(', ')}`;
+  logger.warn(`settings ${settingsLoad.notice}: ${detail}`);
+}
+
 function prepareAppData(): void {
   try {
     ensureFolders(paths);
     if (!initLogging(paths.logs)) {
       reportLogsNotWritable(paths.logs);
     }
+    logSettingsNotice();
     installErrorHandlers(paths);
   } catch (error) {
     if (error instanceof CodedError && error.code === ErrorCode.AppDataUnwritable) {
@@ -77,6 +95,13 @@ function prepareAppData(): void {
 }
 
 async function onReady(): Promise<void> {
+  const root: string | null = await resolveAppDataRoot(settings, defaultAppDataRoot());
+  if (root === null) {
+    app.exit(0);
+    return;
+  }
+  paths = resolveAppPaths(root);
+  prepareAppData();
   if (unwritableFolder) {
     await showFatalError(ErrorCode.AppDataUnwritable, unwritableFolder, paths);
     return;
@@ -95,6 +120,7 @@ async function onReady(): Promise<void> {
     return;
   }
   registerAppIpc(paths);
+  registerSettingsIpc(settings);
   registerBackendIpc();
   registerLogIpc();
   registerDevIpc();
@@ -111,7 +137,6 @@ function onSecondInstance(): void {
 
 function startApp(): void {
   registerAppScheme();
-  prepareAppData();
   void app.whenReady().then(onReady);
   app.on('second-instance', onSecondInstance);
   app.on('will-quit', () => db?.close());

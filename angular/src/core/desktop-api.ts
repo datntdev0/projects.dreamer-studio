@@ -7,6 +7,7 @@ import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { Language } from '@dreamer/shared/i18n/translate';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import type { SettingsState } from '@dreamer/shared/models/settings';
 
 const EMPTY_PAGE: PipelinePage = { runs: [], total: 0, next: null };
 
@@ -42,6 +43,10 @@ export class DesktopApi {
 
   writeLog(entry: LogEntry): void {
     if (window.dreamer) window.dreamer.log.write(entry);
+  }
+
+  async settings(): Promise<SettingsState | null> {
+    return window.dreamer ? window.dreamer.settings.get() : null;
   }
 
   async pipelineTypes(): Promise<PipelineTypeInfo[]> {

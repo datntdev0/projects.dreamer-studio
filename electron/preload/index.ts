@@ -4,12 +4,14 @@ import { Language } from '@dreamer/shared/i18n/translate';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
 import { AppChannel, BackendChannel, DevChannel, LogChannel, PipelineChannel } from '@dreamer/shared/ipc/channels';
+import { SettingsChannel } from '@dreamer/shared/ipc/channels';
 import { DevCrashKind } from '@dreamer/shared/ipc/dev';
 import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { SettingsState } from '@dreamer/shared/models/settings';
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
   const handler = (_event: IpcRendererEvent, value: T): void => listener(value);
@@ -53,6 +55,9 @@ const api: DreamerApi = {
     onUpdate: (listener: (run: PipelineRun) => void): (() => void) => subscribe(PipelineChannel.Update, listener),
     onDeleted: (listener: (ids: string[]) => void): (() => void) => subscribe(PipelineChannel.Deleted, listener),
     onLog: (listener: (chunk: PipelineLogChunk) => void): (() => void) => subscribe(PipelineChannel.Log, listener),
+  },
+  settings: {
+    get: (): Promise<SettingsState> => call(SettingsChannel.Get),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

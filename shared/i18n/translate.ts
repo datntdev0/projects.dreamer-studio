@@ -8,6 +8,10 @@ export type TranslateParams = Record<string, string | number>;
 
 export const DEFAULT_LANGUAGE: Language = 'en';
 
+export function isLanguage(value: unknown): value is Language {
+  return value === 'en' || value === 'vi';
+}
+
 function fillParams(text: string, params?: TranslateParams): string {
   if (!params) return text;
   return text.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match));

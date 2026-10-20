@@ -19,10 +19,14 @@ export function defaultAppDataRoot(): string {
   return join(process.env.LOCALAPPDATA ?? app.getPath('appData'), 'DreamerStudio');
 }
 
+export function settingsFilePath(): string {
+  return join(defaultAppDataRoot(), 'settings.json');
+}
+
 export function resolveAppPaths(root: string): AppPaths {
   const logs: string = join(root, 'logs');
   return {
-    settingsFile: join(defaultAppDataRoot(), 'settings.json'),
+    settingsFile: settingsFilePath(),
     root,
     database: join(root, 'database.sqlite'),
     databaseBackup: join(root, 'database.backup.sqlite'),

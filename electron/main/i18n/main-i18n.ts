@@ -18,10 +18,6 @@ function reportMissing(key: string): void {
   logger.warn(`Missing translation for "${key}" in ${currentLanguage}`);
 }
 
-export function isLanguage(value: unknown): value is Language {
-  return value === 'en' || value === 'vi';
-}
-
 export function setLanguage(language: Language): void {
   currentLanguage = language;
 }

@@ -127,7 +127,7 @@
   "pipelines.history.loadMore": "Load more",
   "pipelines.history.noMatch": "No runs match the filters.",
   "pipelines.history.shown": "{shown} of {total}",
-  "pipelines.note.concurrency": "One pipeline runs at a time. Others wait in the queue.",
+  "pipelines.note.concurrency": "Parallel pipelines: {count}. Others wait in the queue.",
   "pipelines.reason.step": "Step {step}",
   "pipelines.resize.details": "Resize the details panel",
   "pipelines.resize.log": "Resize the log panel",

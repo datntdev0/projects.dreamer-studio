@@ -1,9 +1,7 @@
-import { ipcMain, shell } from 'electron';
+import { shell } from 'electron';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { AppChannel } from '@dreamer/shared/ipc/channels';
 import { createLogger, Logger } from '../logging/logger';
-import { isLanguage } from '@dreamer/shared/i18n/translate';
-import { setLanguage } from '../i18n/main-i18n';
 import { AppPaths } from '../storage/paths';
 import { handle } from './handle';
 
@@ -32,9 +30,4 @@ export function registerAppIpc(paths: AppPaths): void {
   handle(AppChannel.Info, (): AppInfo => ({ version: APP_VERSION, appDataDir: paths.root }));
   handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(paths.logs));
   handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(paths.root));
-  ipcMain.on(AppChannel.SetLanguage, (_event, language: unknown): void => {
-    if (isLanguage(language)) {
-      setLanguage(language);
-    }
-  });
 }

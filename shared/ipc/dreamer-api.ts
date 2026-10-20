@@ -2,7 +2,6 @@ import { AppError } from '../errors/app-error';
 import { AppInfo } from './app';
 import { BackendStatus } from './backend';
 import { DevCrashKind } from './dev';
-import { Language } from '../i18n/translate';
 import { LogEntry } from './log';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
@@ -13,7 +12,6 @@ export interface DreamerApi {
     info(): Promise<AppInfo>;
     openLogs(): Promise<void>;
     openDataDir(): Promise<void>;
-    setLanguage(language: Language): void;
     onError(listener: (error: AppError) => void): () => void;
   };
   log: {

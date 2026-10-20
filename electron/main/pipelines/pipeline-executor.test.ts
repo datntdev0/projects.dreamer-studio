@@ -38,6 +38,14 @@ function sleepStep(key: string, ms: number): PipelineDefinition['steps'][number]
   return { key, backend: false, run: (ctx: StepContext): Promise<void> => sleep(ms, ctx.signal) };
 }
 
+function gatedStep(key: string, releases: Array<() => void>): PipelineDefinition['steps'][number] {
+  return {
+    key,
+    backend: false,
+    run: (): Promise<void> => new Promise<void>((resolve) => releases.push(resolve)),
+  };
+}
+
 function setup(definition: PipelineDefinition): void {
   executor = new PipelineExecutor(repository, paths, new PipelineRegistry([definition]), (): number => limit);
 }
@@ -165,6 +173,59 @@ describe('PipelineExecutor', () => {
     expect(executor.get(second.id).status).toBe('queued');
     await waitForStatus(first.id, 'succeeded');
     await waitForStatus(second.id, 'succeeded');
+  });
+
+  it('REQ-009 AC-2: raising the limit starts queued runs at once while the first is still running', async () => {
+    const releases: Array<() => void> = [];
+    setup(makeDefinition([gatedStep('gated', releases)]));
+    const runs: PipelineRun[] = [
+      executor.start(startRequest),
+      executor.start(startRequest),
+      executor.start(startRequest),
+    ];
+    await waitForStatus(runs[0].id, 'running');
+    expect(executor.get(runs[1].id).status).toBe('queued');
+    expect(executor.get(runs[2].id).status).toBe('queued');
+    limit = 3;
+    executor.limitChanged();
+    for (const run of runs) {
+      await waitForStatus(run.id, 'running');
+    }
+    releases.forEach((release) => release());
+    for (const run of runs) {
+      await waitForStatus(run.id, 'succeeded');
+    }
+  });
+
+  it('REQ-009 AC-3: lowering the limit keeps running runs and holds new runs until the active count drops', async () => {
+    const releases: Array<() => void> = [];
+    limit = 3;
+    setup(makeDefinition([gatedStep('gated', releases)]));
+    const runs: PipelineRun[] = [
+      executor.start(startRequest),
+      executor.start(startRequest),
+      executor.start(startRequest),
+    ];
+    for (const run of runs) {
+      await waitForStatus(run.id, 'running');
+    }
+    limit = 1;
+    executor.limitChanged();
+    const fourth: PipelineRun = executor.start(startRequest);
+    for (const run of runs) {
+      expect(executor.get(run.id).status).toBe('running');
+    }
+    expect(executor.get(fourth.id).status).toBe('queued');
+    for (let finished = 0; finished < runs.length; finished++) {
+      releases[finished]();
+      await waitForStatus(runs[finished].id, 'succeeded');
+      if (finished < runs.length - 1) {
+        expect(executor.get(fourth.id).status).toBe('queued');
+      }
+    }
+    await waitForStatus(fourth.id, 'running');
+    releases[3]();
+    await waitForStatus(fourth.id, 'succeeded');
   });
 
   it('fail: a step throwing a CodedError stores the code, message and stack, unknown type is rejected', async () => {

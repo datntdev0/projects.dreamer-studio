@@ -17,6 +17,7 @@ import { createLogger, initLogging, Logger } from './logging/logger';
 import { demoPipeline } from './pipelines/demo-pipeline';
 import { PipelineExecutor } from './pipelines/pipeline-executor';
 import { PipelineRegistry } from './pipelines/pipeline-registry';
+import { AppSettings } from '@dreamer/shared/models/settings';
 import { SettingsLoadResult, SettingsStore } from './settings/settings-store';
 import { Database } from './storage/database';
 import { devFailMigration, loadMigrations, Migration, runMigrations } from './storage/migrator';
@@ -28,6 +29,7 @@ const logger: Logger = createLogger('startup');
 const settings: SettingsStore = new SettingsStore(settingsFilePath(), defaultAppDataRoot());
 const settingsLoad: SettingsLoadResult = settings.load();
 setLanguage(settings.get().language);
+settings.onChange((value: AppSettings): void => setLanguage(value.language));
 let paths: AppPaths;
 let db: Database | null = null;
 let executor: PipelineExecutor | null = null;
@@ -56,8 +58,9 @@ function startPipelines(database: Database): void {
     new PipelineRunRepository(database),
     paths,
     new PipelineRegistry(app.isPackaged ? [] : [demoPipeline]),
-    () => 1,
+    (): number => settings.get().pipelines.maxConcurrent,
   );
+  settings.onChange((): void => executor?.limitChanged());
   executor.recover();
   registerPipelineIpc(executor);
 }
@@ -125,7 +128,7 @@ async function onReady(): Promise<void> {
   registerLogIpc();
   registerDevIpc();
   handleAppProtocol();
-  mainWindow = createWindow();
+  mainWindow = createWindow(settings.get().theme);
   void startBackend(paths);
 }
 

@@ -31,7 +31,7 @@
     data-testid="topbar-lang"
     [attr.aria-label]="'topbar.language' | t"
     [dsTooltip]="'topbar.language' | t"
-    (click)="i18n.toggle()"
+    (click)="toggleLanguage()"
   >
     <ds-icon name="languages" size="sm" />{{ i18n.language() === 'en' ? 'EN' : 'VI' }}
   </button>
@@ -43,7 +43,7 @@
     data-testid="topbar-theme"
     [attr.aria-label]="'topbar.theme' | t"
     [dsTooltip]="'topbar.theme' | t"
-    (click)="theme.toggle()"
+    (click)="toggleTheme()"
   >
     <ds-icon class="ds-only-light" name="sun" /><ds-icon class="ds-only-dark" name="moon" />
   </button>

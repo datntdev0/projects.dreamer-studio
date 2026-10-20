@@ -101,6 +101,8 @@
       }}</span>
       <span>·</span>
     }
-    <span data-testid="pipelines-concurrency-note">{{ 'pipelines.note.concurrency' | t }}</span>
+    <span data-testid="pipelines-concurrency-note">{{
+      'pipelines.note.concurrency' | t: { count: maxConcurrent() }
+    }}</span>
   </div>
 }

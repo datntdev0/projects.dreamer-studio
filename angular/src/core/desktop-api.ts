@@ -4,7 +4,6 @@ import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
-import type { Language } from '@dreamer/shared/i18n/translate';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -35,10 +34,6 @@ export class DesktopApi {
 
   async backendStatus(): Promise<BackendStatus | null> {
     return window.dreamer ? window.dreamer.backend.status() : null;
-  }
-
-  setLanguage(language: Language): void {
-    if (window.dreamer) window.dreamer.app.setLanguage(language);
   }
 
   writeLog(entry: LogEntry): void {

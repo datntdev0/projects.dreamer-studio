@@ -8,6 +8,7 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { filter, map, startWith } from 'rxjs';
 import { AppInfoStore } from '../../core/app-info';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { SettingsStore } from '../../core/settings-store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';
@@ -24,7 +25,8 @@ export class TopbarComponent {
   readonly toggleRail = output<void>();
 
   private readonly router: Router = inject(Router);
-  protected readonly theme: ThemeService = inject(ThemeService);
+  private readonly settings: SettingsStore = inject(SettingsStore);
+  private readonly theme: ThemeService = inject(ThemeService);
   protected readonly i18n: I18nService = inject(I18nService);
   protected readonly appInfo: AppInfoStore = inject(AppInfoStore);
   protected readonly groupTitles = GROUP_TITLES;
@@ -50,6 +52,14 @@ export class TopbarComponent {
         this.title.setTitle(this.i18n.t('app.windowTitle', { page: this.i18n.t(module.label) }));
       }
     });
+  }
+
+  protected toggleLanguage(): void {
+    void this.settings.update({ language: this.i18n.language() === 'en' ? 'vi' : 'en' });
+  }
+
+  protected toggleTheme(): void {
+    void this.settings.update({ theme: this.theme.theme() === 'light' ? 'dark' : 'light' });
   }
 
   private currentModuleId(): string | null {

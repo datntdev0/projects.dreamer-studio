@@ -127,7 +127,7 @@
   "pipelines.history.loadMore": "Tải thêm",
   "pipelines.history.noMatch": "Không có lượt chạy nào khớp bộ lọc.",
   "pipelines.history.shown": "{shown}/{total}",
-  "pipelines.note.concurrency": "Mỗi lúc chỉ chạy một tác vụ. Các tác vụ khác chờ trong hàng đợi.",
+  "pipelines.note.concurrency": "Tác vụ chạy song song: {count}. Các tác vụ khác chờ trong hàng đợi.",
   "pipelines.reason.step": "Bước {step}",
   "pipelines.resize.details": "Đổi kích thước bảng chi tiết",
   "pipelines.resize.log": "Đổi kích thước bảng nhật ký",

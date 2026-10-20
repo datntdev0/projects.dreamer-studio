@@ -13,9 +13,27 @@ export interface DesktopApiFixture {
 
 export const APP_INFO: AppInfo = { version: '0.0.0', appDataDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio' };
 
+export type FakeSettingsApi = Pick<DesktopApi, 'settings' | 'updateSettings' | 'resetSettings' | 'onSettingsChanged'>;
+
+export function fakeSettingsApi(): FakeSettingsApi {
+  let current: AppSettings = defaultSettings(APP_INFO.appDataDir);
+  return {
+    settings: (): Promise<SettingsState | null> =>
+      Promise.resolve({ settings: current, defaultAppDataDir: APP_INFO.appDataDir, notice: 'none' }),
+    updateSettings: (patch: SettingsPatch): Promise<AppSettings | null> => {
+      current = { ...current, ...patch };
+      return Promise.resolve(current);
+    },
+    resetSettings: (): Promise<AppSettings | null> => {
+      current = defaultSettings(APP_INFO.appDataDir);
+      return Promise.resolve(current);
+    },
+    onSettingsChanged: (): (() => void) => () => undefined,
+  };
+}
+
 export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
   const info: AppInfo | 'error' | 'loading' = fixture.info ?? APP_INFO;
-  let current: AppSettings = defaultSettings(APP_INFO.appDataDir);
   const api: Partial<DesktopApi> = {
     info: (): Promise<AppInfo | null> => {
       if (info === 'loading') return new Promise<AppInfo | null>(() => undefined);
@@ -33,19 +51,8 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       return () => undefined;
     },
     backendStatus: (): Promise<BackendStatus | null> => Promise.resolve({ state: fixture.backend ?? 'running' }),
-    setLanguage: (): void => undefined,
     writeLog: (): void => undefined,
-    settings: (): Promise<SettingsState | null> =>
-      Promise.resolve({ settings: current, defaultAppDataDir: APP_INFO.appDataDir, notice: 'none' }),
-    updateSettings: (patch: SettingsPatch): Promise<AppSettings | null> => {
-      current = { ...current, ...patch };
-      return Promise.resolve(current);
-    },
-    resetSettings: (): Promise<AppSettings | null> => {
-      current = defaultSettings(APP_INFO.appDataDir);
-      return Promise.resolve(current);
-    },
-    onSettingsChanged: (): (() => void) => () => undefined,
+    ...fakeSettingsApi(),
   };
   return { provide: DesktopApi, useValue: api };
 }

@@ -41,11 +41,6 @@ export class I18nService {
 
   setLanguage(language: Language): void {
     this.language.set(language);
-    this.desktopApi.setLanguage(language);
-  }
-
-  toggle(): void {
-    this.setLanguage(this.language() === 'en' ? 'vi' : 'en');
   }
 
   private warnMissing(key: string): void {

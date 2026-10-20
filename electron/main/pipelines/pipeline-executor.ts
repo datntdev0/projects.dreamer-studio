@@ -132,6 +132,12 @@ export class PipelineExecutor {
     return this.queue.length > 0 || this.active.size > 0;
   }
 
+  limitChanged(): void {
+    if (!this.closed) {
+      this.pump();
+    }
+  }
+
   private createState(definition: PipelineDefinition, request: PipelineStartRequest): RunState {
     const run: PipelineRun = {
       id: randomUUID(),

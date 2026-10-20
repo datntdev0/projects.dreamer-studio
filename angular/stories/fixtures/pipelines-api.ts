@@ -12,9 +12,11 @@ import type {
   PipelineStartRequest,
   PipelineTypeInfo,
 } from '@dreamer/shared/models/pipeline';
+import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '../../src/core/desktop-api';
 import { isActiveRun } from '../../src/features/pipelines/run-status';
-import { APP_INFO } from './desktop-api';
+import { APP_INFO, fakeSettingsApi } from './desktop-api';
+import type { FakeSettingsApi } from './desktop-api';
 import { DEMO_BACKEND_STEP, DEMO_STEPS, QUEUED_RUN, runLog, stepKey } from './pipelines';
 
 export interface FakePipelinesOptions {
@@ -51,6 +53,7 @@ class FakePipelinesApi extends DesktopApi {
   private readonly updateListeners = new Set<(run: PipelineRun) => void>();
   private readonly logListeners = new Set<(chunk: PipelineLogChunk) => void>();
   private readonly deletedListeners = new Set<(ids: string[]) => void>();
+  private readonly fakeSettings: FakeSettingsApi = fakeSettingsApi();
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -85,9 +88,23 @@ class FakePipelinesApi extends DesktopApi {
     return { state: 'running' };
   }
 
-  override setLanguage(): void {}
-
   override writeLog(): void {}
+
+  override settings(): Promise<SettingsState | null> {
+    return this.fakeSettings.settings();
+  }
+
+  override updateSettings(patch: SettingsPatch): Promise<AppSettings | null> {
+    return this.fakeSettings.updateSettings(patch);
+  }
+
+  override resetSettings(section: SettingsSection): Promise<AppSettings | null> {
+    return this.fakeSettings.resetSettings(section);
+  }
+
+  override onSettingsChanged(listener: (settings: AppSettings) => void): () => void {
+    return this.fakeSettings.onSettingsChanged(listener);
+  }
 
   override async pipelineTypes(): Promise<PipelineTypeInfo[]> {
     if (this.options.packaged) return [];

@@ -5,16 +5,22 @@ import { DesktopApi } from './desktop-api';
 @Injectable({ providedIn: 'root' })
 export class BackendStatus {
   readonly state = signal<BackendState>('starting');
+  readonly address = signal<string | null>(null);
 
   constructor() {
     const api: DesktopApi = inject(DesktopApi);
     let pushed: boolean = false;
     api.onBackendStatus((status: BackendStatusEvent) => {
       pushed = true;
-      this.state.set(status.state);
+      this.apply(status);
     });
     void api.backendStatus().then((status: BackendStatusEvent | null) => {
-      if (status && !pushed) this.state.set(status.state);
+      if (status && !pushed) this.apply(status);
     });
+  }
+
+  private apply(status: BackendStatusEvent): void {
+    this.state.set(status.state);
+    this.address.set(status.address);
   }
 }

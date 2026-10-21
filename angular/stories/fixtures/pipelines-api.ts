@@ -15,7 +15,7 @@ import type {
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '../../src/core/desktop-api';
 import { isActiveRun } from '../../src/features/pipelines/run-status';
-import { APP_INFO, fakeSettingsApi } from './desktop-api';
+import { APP_INFO, fakeBackendStatus, fakeSettingsApi } from './desktop-api';
 import type { FakeSettingsApi } from './desktop-api';
 import { DEMO_BACKEND_STEP, DEMO_STEPS, QUEUED_RUN, runLog, stepKey } from './pipelines';
 
@@ -75,17 +75,19 @@ class FakePipelinesApi extends DesktopApi {
 
   override async openDataDir(): Promise<void> {}
 
+  override async openLink(): Promise<void> {}
+
   override onError(): () => void {
     return () => undefined;
   }
 
   override onBackendStatus(listener: (status: BackendStatus) => void): () => void {
-    listener({ state: 'running' });
+    listener(fakeBackendStatus());
     return () => undefined;
   }
 
   override async backendStatus(): Promise<BackendStatus | null> {
-    return { state: 'running' };
+    return fakeBackendStatus();
   }
 
   override writeLog(): void {}

@@ -1,0 +1,72 @@
+<section class="settings-section about" data-testid="about">
+  <header class="settings-section-head">
+    <h3>{{ 'about.title' | t }}</h3>
+  </header>
+
+  <div class="about-body">
+    <div class="about-head">
+      <p class="about-title" data-testid="about-title">
+        <b data-testid="about-name">{{ 'app.name' | t }}</b>
+        @if (loading()) {
+          <span class="skeleton about-skeleton"></span>
+        } @else {
+          <span class="num" data-testid="about-version">{{ version() }}</span>
+        }
+        <span class="about-sep">·</span>
+        <span class="muted">{{ 'about.by' | t: { author: info()?.author ?? missing } }}</span>
+        @if (info() && !info()?.buildDate) {
+          <ds-pill kind="info" icon="terminal" data-testid="about-dev-build">{{ 'about.devBuild' | t }}</ds-pill>
+        }
+      </p>
+      <div class="about-links">
+        <button
+          type="button"
+          class="about-link"
+          data-testid="about-repository"
+          [attr.aria-label]="'about.opensInBrowser' | t: { label: ('about.repository' | t) }"
+          (click)="open('repository')"
+        >
+          <ds-icon name="external" size="sm" />{{ 'about.repository' | t }}
+        </button>
+        <button
+          type="button"
+          class="about-link"
+          data-testid="about-issues"
+          [attr.aria-label]="'about.opensInBrowser' | t: { label: ('about.reportIssue' | t) }"
+          (click)="open('issues')"
+        >
+          <ds-icon name="external" size="sm" />{{ 'about.reportIssue' | t }}
+        </button>
+      </div>
+    </div>
+
+    <dl class="settings-kv" data-testid="about-details">
+      <dt>{{ 'about.buildDate' | t }}</dt>
+      <dd data-testid="about-build-date">{{ buildDate() }}</dd>
+      <dt>{{ 'about.license' | t }}</dt>
+      <dd data-testid="about-license">{{ license }}</dd>
+      @for (line of details(); track line.id) {
+        <dt>{{ line.label | t }}</dt>
+        <dd class="num" [attr.data-testid]="'about-' + line.id">
+          @if (loading()) {
+            <span class="skeleton about-skeleton"></span>
+          } @else {
+            {{ line.value }}
+          }
+        </dd>
+      }
+      <dt>{{ 'about.aiBackend' | t }}</dt>
+      <dd data-testid="about-backend">
+        <ds-pill [kind]="backend().kind" [icon]="backend().icon">
+          {{ backend().label | t: { address: address() ?? missing } }}
+        </ds-pill>
+      </dd>
+    </dl>
+
+    <div class="about-actions">
+      <button dsBtn size="sm" type="button" data-testid="about-copy" [disabled]="loading()" (click)="copy()">
+        <ds-icon name="copy" size="sm" />{{ 'about.copy' | t }}
+      </button>
+    </div>
+  </div>
+</section>

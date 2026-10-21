@@ -23,7 +23,7 @@ Dreamer Studio: local desktop studio that uses AI to produce creative content. P
 - First run: `pnpm install`, then `pnpm py:setup` (creates `backend/.venv`).
 - App: `pnpm dev | lint | format | format:check | test | test:coverage | check` (`lint` runs `scripts/check-i18n.mjs` first; `check` = lint + format:check + test; `test:coverage` → `coverage/<electron|angular|python>`).
 - Design system: `pnpm storybook` (port 6006), `pnpm storybook:build`; stories in `angular/stories`, components imported via `@components/*`.
-- Build and package: `pnpm build`, `pnpm package` → `dist/DreamerStudio-<version>-win-x64.zip` (overview › Build and Release).
+- Build and package: `pnpm build`, `pnpm start` (runs the app from the `pnpm build` output), `pnpm package` → `dist/DreamerStudio-<version>-win-x64.zip` (overview › Build and Release).
 - Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.
 
 ## Conventions

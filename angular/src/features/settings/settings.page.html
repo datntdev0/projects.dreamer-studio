@@ -54,7 +54,12 @@
         @switch (section()) {
           @case ('diagnostics') {
             <div class="settings-cols" data-testid="settings-diagnostics-pane">
-              <ds-area-state kind="empty" [heading]="'settings.page.diagnosticsPending' | t" />
+              <div class="settings-col">
+                <ds-settings-about />
+              </div>
+              <div class="settings-col">
+                <ds-area-state kind="empty" [heading]="'settings.page.diagnosticsPending' | t" />
+              </div>
             </div>
           }
           @default {

@@ -12,13 +12,30 @@ export interface DesktopApiFixture {
   openDataDirFails?: boolean;
 }
 
-export const APP_INFO: AppInfo = { version: '0.0.0', appDataDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio' };
+const SCHEMA_VERSION = '0.0.0_1';
+const BACKEND_ADDRESS = '127.0.0.1:47123';
+
+export const APP_INFO: AppInfo = {
+  version: '0.0.0',
+  buildDate: '2026-10-19',
+  author: 'datntdev',
+  appDataDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio',
+  electron: '44.9.0',
+  chrome: '150.0.7800.45',
+  node: '24.11.0',
+  os: '10.0.19045 (x64)',
+  schemaVersion: SCHEMA_VERSION,
+};
+
+export function fakeBackendStatus(state: BackendState = 'running'): BackendStatus {
+  return { state, address: state === 'running' ? BACKEND_ADDRESS : null };
+}
 
 export const APP_DATA_STATUS: AppDataStatus = {
   path: APP_INFO.appDataDir,
   freeBytes: 412 * 1024 ** 3,
   writable: true,
-  schemaVersion: '0.0.0_1',
+  schemaVersion: SCHEMA_VERSION,
   checkedAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -54,12 +71,13 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       fixture.openDataDirFails
         ? Promise.reject(new Error(`Cannot open folder ${APP_INFO.appDataDir}`))
         : Promise.resolve(),
+    openLink: (): Promise<void> => Promise.resolve(),
     onError: (): (() => void) => () => undefined,
     onBackendStatus: (listener: (status: BackendStatus) => void): (() => void) => {
-      listener({ state: fixture.backend ?? 'running' });
+      listener(fakeBackendStatus(fixture.backend));
       return () => undefined;
     },
-    backendStatus: (): Promise<BackendStatus | null> => Promise.resolve({ state: fixture.backend ?? 'running' }),
+    backendStatus: (): Promise<BackendStatus | null> => Promise.resolve(fakeBackendStatus(fixture.backend)),
     writeLog: (): void => undefined,
     pickAppDataFolder: (): Promise<string | null> => Promise.resolve(null),
     inspectAppData: (): Promise<AppDataCandidate | null> => Promise.resolve(null),

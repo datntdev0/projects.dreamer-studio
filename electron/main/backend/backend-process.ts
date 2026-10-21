@@ -1,7 +1,7 @@
 import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { createLogger, Logger } from '../logging/logger';
 import { AppPaths } from '../storage/paths';
-import { backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
+import { backendAddress, backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
 import { getBackendStatus, setBackendState } from './backend-status';
 
 export interface BackendConnection {
@@ -37,7 +37,7 @@ async function waitUntilReady(port: number, token: string, proc: ChildProcess): 
   while (Date.now() < deadline && child === proc) {
     if (await isHealthy(port, token)) {
       logger.info(`Backend ready on port ${port}`);
-      setBackendState('running');
+      setBackendState('running', backendAddress(port));
       return;
     }
     await delay(pollIntervalMs);

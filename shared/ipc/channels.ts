@@ -2,6 +2,7 @@ export const AppChannel = {
   Info: 'app:info',
   OpenLogs: 'app:open-logs',
   OpenDataDir: 'app:open-data-dir',
+  OpenLink: 'app:open-link',
   Error: 'app:error',
 } as const;
 

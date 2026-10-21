@@ -15,6 +15,7 @@ import { DevCrashKind } from '@dreamer/shared/ipc/dev';
 import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
+import { AboutLink } from '@dreamer/shared/models/about';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
@@ -41,6 +42,7 @@ const api: DreamerApi = {
     info: (): Promise<AppInfo> => call(AppChannel.Info),
     openLogs: (): Promise<void> => call(AppChannel.OpenLogs),
     openDataDir: (): Promise<void> => call(AppChannel.OpenDataDir),
+    openLink: (link: AboutLink): Promise<void> => call(AppChannel.OpenLink, link),
     onError: (listener: (error: AppError) => void): (() => void) => subscribe(AppChannel.Error, listener),
   },
   log: {

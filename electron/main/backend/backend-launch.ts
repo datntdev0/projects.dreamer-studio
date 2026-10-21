@@ -27,8 +27,12 @@ export function findFreePort(): Promise<number> {
   });
 }
 
+export function backendAddress(port: number): string {
+  return `${host}:${port}`;
+}
+
 export function backendUrl(port: number, path: string): string {
-  return `http://${host}:${port}${path}`;
+  return `http://${backendAddress(port)}${path}`;
 }
 
 export function buildLaunch(port: number, token: string, logsDir: string): BackendLaunch {

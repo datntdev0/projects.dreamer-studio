@@ -3,6 +3,7 @@ import { AppInfo } from './app';
 import { BackendStatus } from './backend';
 import { DevCrashKind } from './dev';
 import { LogEntry } from './log';
+import { AboutLink } from '../models/about';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
@@ -13,6 +14,7 @@ export interface DreamerApi {
     info(): Promise<AppInfo>;
     openLogs(): Promise<void>;
     openDataDir(): Promise<void>;
+    openLink(link: AboutLink): Promise<void>;
     onError(listener: (error: AppError) => void): () => void;
   };
   log: {

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import '@dreamer/shared/ipc/dreamer-api';
 import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
+import type { AboutLink } from '@dreamer/shared/models/about';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
@@ -23,6 +24,10 @@ export class DesktopApi {
 
   async openDataDir(): Promise<void> {
     if (window.dreamer) await window.dreamer.app.openDataDir();
+  }
+
+  async openLink(link: AboutLink): Promise<void> {
+    if (window.dreamer) await window.dreamer.app.openLink(link);
   }
 
   onError(listener: (error: AppError) => void): () => void {

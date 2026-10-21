@@ -11,6 +11,7 @@ import { map } from 'rxjs';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { SettingsStore } from '../../core/stores/settings-store';
 import { PageTitleDirective } from '../../shell/page-title.directive';
+import { AboutSectionComponent } from './components/about-section.component';
 import { GeneralSectionComponent } from './components/general-section.component';
 import { PipelineSectionComponent } from './components/pipeline-section.component';
 import { StorageSectionComponent } from './components/storage-section.component';
@@ -52,6 +53,7 @@ function toSection(id: string | null): SettingsPane {
 @Component({
   selector: 'ds-settings-page',
   imports: [
+    AboutSectionComponent,
     AreaStateComponent,
     BannerComponent,
     GeneralSectionComponent,

@@ -604,8 +604,13 @@ ds-dialog.settings-storage-switch dialog.ds-dialog {
   display: inline-flex;
   gap: var(--sp-xs);
   align-items: center;
+  padding: 0;
+  font: inherit;
   color: var(--color-link);
   text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: 0;
   border-radius: var(--radius-xs);
 
   &:hover {

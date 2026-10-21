@@ -38,19 +38,17 @@ import { DesktopApi } from '../../src/core/desktop-api';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import type { DotKind } from '@components/status/dot.component';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
-import type { BackendState } from '@dreamer/shared/ipc/backend';
-import { AppInfoStore } from '../../src/core/app-info';
-import { BackendStatus } from '../../src/core/backend-status';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, provideRouter, withHashLocation } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { PageTitleDirective } from '../../src/shell/page-title.directive';
 import type { Routes } from '@angular/router';
+import { AboutSectionComponent } from '../../src/features/settings/components/about-section.component';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { MODULES } from '../../src/shell/registry/modules';
 import { ShellComponent } from '../../src/shell/shell.component';
 import { buildRoutes } from '../../src/shell/shell.routes';
-import { provideDesktopApi } from '../fixtures/desktop-api';
+import { APP_INFO, provideDesktopApi } from '../fixtures/desktop-api';
 
 type SettingsSection = 'general' | 'diagnostics';
 
@@ -977,168 +975,6 @@ class SettingsDiagnosticsPreview implements OnInit {
   }
 }
 
-interface DetailLine {
-  id: string;
-  label: string;
-  name: string;
-  value: string;
-}
-
-interface BackendView {
-  kind: PillKind;
-  icon: string;
-  label: string;
-  copyText: string;
-}
-
-const APP_NAME = 'Dreamer Studio';
-const AUTHOR = 'datntdev';
-const DEV_TAG = 'dev';
-const BUILD_DATE = '2026-10-19';
-const LICENSE = 'MIT';
-const REPOSITORY_URL = 'https://github.com/datntdev0/projects.dreamer-studio';
-const ISSUES_URL = `${REPOSITORY_URL}/issues`;
-const BACKEND_ADDRESS = '127.0.0.1:47123';
-
-const SYSTEM_LINES: DetailLine[] = [
-  { id: 'electron', label: 'about.electron', name: 'Electron', value: '44.9.0' },
-  { id: 'chromium', label: 'about.chromium', name: 'Chromium', value: '150.0.7800.45' },
-  { id: 'node', label: 'about.node', name: 'Node.js', value: '24.11.0' },
-  { id: 'windows', label: 'about.windows', name: 'Windows', value: '10.0.19045 (x64)' },
-  { id: 'database', label: 'about.databaseSchema', name: 'Database schema', value: '0.0.0_1' },
-];
-
-const BACKEND_VIEWS: Record<BackendState, BackendView> = {
-  running: { kind: 'success', icon: 'check', label: 'about.backendRunning', copyText: `Running · ${BACKEND_ADDRESS}` },
-  starting: { kind: 'warning', icon: 'clock', label: 'about.backendStarting', copyText: 'Starting' },
-  unavailable: { kind: 'danger', icon: 'alert-circle', label: 'about.backendUnavailable', copyText: 'Not running' },
-};
-
-@Component({
-  selector: 'ds-settings-about-preview',
-  imports: [ButtonDirective, IconComponent, PillComponent, TranslatePipe],
-  template: `
-    <section class="settings-section about" data-testid="about">
-      <header class="settings-section-head">
-        <h3>{{ 'about.title' | t }}</h3>
-      </header>
-
-      <div class="about-body">
-        <div class="about-head">
-          <p class="about-title" data-testid="about-title">
-            <b data-testid="about-name">{{ 'app.name' | t }}</b>
-            @if (loading()) {
-              <span class="skeleton about-skeleton"></span>
-            } @else {
-              <span class="num" data-testid="about-version">{{ versionLabel() }}</span>
-            }
-            <span class="about-sep">·</span>
-            <span class="muted">{{ 'about.by' | t: { author: author } }}</span>
-            @if (scenario.devBuild) {
-              <ds-pill kind="info" icon="terminal" data-testid="about-dev-build">{{ 'about.devBuild' | t }}</ds-pill>
-            }
-          </p>
-          <div class="about-links">
-            <a
-              class="about-link"
-              data-testid="about-repository"
-              target="_blank"
-              rel="noopener noreferrer"
-              [href]="repositoryUrl"
-              [attr.aria-label]="'about.opensInBrowser' | t: { label: ('about.repository' | t) }"
-            >
-              <ds-icon name="external" size="sm" />{{ 'about.repository' | t }}
-            </a>
-            <a
-              class="about-link"
-              data-testid="about-issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              [href]="issuesUrl"
-              [attr.aria-label]="'about.opensInBrowser' | t: { label: ('about.reportIssue' | t) }"
-            >
-              <ds-icon name="external" size="sm" />{{ 'about.reportIssue' | t }}
-            </a>
-          </div>
-        </div>
-
-        <dl class="settings-kv" data-testid="about-details">
-          <dt>{{ 'about.buildDate' | t }}</dt>
-          <dd data-testid="about-build-date">{{ buildDate() }}</dd>
-          <dt>{{ 'about.license' | t }}</dt>
-          <dd data-testid="about-license">{{ license }}</dd>
-          @for (line of systemLines; track line.id) {
-            <dt>{{ line.label | t }}</dt>
-            <dd class="num" [attr.data-testid]="'about-' + line.id">
-              @if (loading()) {
-                <span class="skeleton about-skeleton"></span>
-              } @else {
-                {{ line.value }}
-              }
-            </dd>
-          }
-          <dt>{{ 'about.aiBackend' | t }}</dt>
-          <dd data-testid="about-backend">
-            <ds-pill [kind]="backend().kind" [icon]="backend().icon">
-              {{ backend().label | t: { address: backendAddress } }}
-            </ds-pill>
-          </dd>
-        </dl>
-
-        <div class="about-actions">
-          <button dsBtn size="sm" type="button" data-testid="about-copy" [disabled]="loading()" (click)="copy()">
-            <ds-icon name="copy" size="sm" />{{ 'about.copy' | t }}
-          </button>
-        </div>
-      </div>
-    </section>
-  `,
-})
-class SettingsAboutPreview {
-  protected readonly scenario: SettingsScenario = inject(SETTINGS_SCENARIO);
-  private readonly appInfo: AppInfoStore = inject(AppInfoStore);
-  private readonly backendStatus: BackendStatus = inject(BackendStatus);
-  private readonly i18n: I18nService = inject(I18nService);
-  private readonly toast: ToastService = inject(ToastService);
-
-  protected readonly author: string = AUTHOR;
-  protected readonly license: string = LICENSE;
-  protected readonly repositoryUrl: string = REPOSITORY_URL;
-  protected readonly issuesUrl: string = ISSUES_URL;
-  protected readonly backendAddress: string = BACKEND_ADDRESS;
-  protected readonly systemLines: DetailLine[] = SYSTEM_LINES;
-
-  protected readonly loading = computed<boolean>(() => this.appInfo.state() === 'loading');
-  private readonly version = computed<string>(() => this.appInfo.info()?.version ?? '');
-  protected readonly versionLabel = computed<string>(() =>
-    this.scenario.devBuild ? `${this.version()} ${DEV_TAG}` : this.version(),
-  );
-  protected readonly buildDate = computed<string>(() => (this.scenario.devBuild ? DEV_TAG : BUILD_DATE));
-  protected readonly backend = computed<BackendView>(() => BACKEND_VIEWS[this.backendStatus.state()]);
-
-  protected async copy(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(this.versionText());
-      this.toast.show({ kind: 'success', title: this.i18n.t('about.copied') });
-    } catch {
-      this.toast.show({
-        kind: 'danger',
-        title: this.i18n.t('about.copyFailed'),
-        message: this.i18n.t('about.copyFailedHint'),
-      });
-    }
-  }
-
-  private versionText(): string {
-    return [
-      `${APP_NAME} ${this.versionLabel()}`,
-      `Build date: ${this.buildDate()}`,
-      ...SYSTEM_LINES.map((line) => `${line.name}: ${line.value}`),
-      `AI backend: ${this.backend().copyText}`,
-    ].join('\n');
-  }
-}
-
 interface NavItem {
   section: SettingsSection;
   icon: string;
@@ -1175,7 +1011,7 @@ const SECTION_ALIASES: Record<string, SettingsSection> = {
     SettingsStoragePreview,
     SettingsPipelinePreview,
     SettingsDiagnosticsPreview,
-    SettingsAboutPreview,
+    AboutSectionComponent,
   ],
   template: `
     <div class="ds-page-toolbar" data-testid="page-toolbar">
@@ -1235,7 +1071,7 @@ const SECTION_ALIASES: Record<string, SettingsSection> = {
               @case ('diagnostics') {
                 <div class="settings-cols" data-testid="settings-diagnostics-pane">
                   <div class="settings-col">
-                    <ds-settings-about-preview />
+                    <ds-settings-about />
                   </div>
                   <div class="settings-col">
                     <ds-settings-diagnostics-preview />
@@ -1322,7 +1158,10 @@ const meta: Meta<SettingsArgs> = {
       const result = story();
       const providers = [
         provideRouter(previewRoutes(), withHashLocation()),
-        provideDesktopApi({ backend: 'running' }),
+        provideDesktopApi({
+          backend: 'running',
+          info: context.args.scenario.devBuild ? { ...APP_INFO, buildDate: null } : APP_INFO,
+        }),
         { provide: SETTINGS_SCENARIO, useValue: context.args.scenario },
       ];
       return {

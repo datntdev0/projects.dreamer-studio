@@ -18,6 +18,7 @@ function run(command) {
 }
 
 async function build() {
+  process.env.DREAMER_BUILD_DATE = new Date().toISOString().slice(0, 10);
   run('pnpm --filter @dreamer/angular build');
   await buildOnce();
 }

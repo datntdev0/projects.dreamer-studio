@@ -5,11 +5,16 @@ import { build, context } from 'esbuild';
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const electronDir = fileURLToPath(new URL('.', import.meta.url));
 
+function readRootPackage() {
+  return JSON.parse(readFileSync(`${rootDir}package.json`, 'utf8'));
+}
+
 export function readAppVersion() {
-  return JSON.parse(readFileSync(`${rootDir}package.json`, 'utf8')).version;
+  return readRootPackage().version;
 }
 
 export function createBuildOptions(onRebuild) {
+  const { version, author } = readRootPackage();
   return {
     entryPoints: { 'main/index': `${electronDir}main/index.ts`, 'preload/index': `${electronDir}preload/index.ts` },
     outdir: `${electronDir}dist`,
@@ -19,7 +24,11 @@ export function createBuildOptions(onRebuild) {
     bundle: true,
     sourcemap: true,
     external: ['electron'],
-    define: { APP_VERSION: JSON.stringify(readAppVersion()) },
+    define: {
+      APP_VERSION: JSON.stringify(version),
+      APP_AUTHOR: JSON.stringify(author),
+      BUILD_DATE: JSON.stringify(process.env.DREAMER_BUILD_DATE || null),
+    },
     logLevel: 'info',
     plugins: onRebuild
       ? [{ name: 'rebuild', setup: (b) => b.onEnd((result) => result.errors.length || onRebuild()) }]

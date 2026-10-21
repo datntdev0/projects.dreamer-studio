@@ -2,7 +2,6 @@ import {
   afterNextRender,
   Component,
   computed,
-  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -13,7 +12,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { Signal } from '@angular/core';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 import { ButtonDirective } from '@components/button/button.directive';
@@ -36,19 +34,19 @@ import { ProgressComponent } from '@components/status/progress.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { DesktopApi } from '../../src/core/desktop-api';
 import { AreaStateComponent } from '@components/state/area-state.component';
-import type { DotKind } from '@components/status/dot.component';
-import type { TranslateParams } from '@dreamer/shared/i18n/translate';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, provideRouter, withHashLocation } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { PageTitleDirective } from '../../src/shell/page-title.directive';
 import type { Routes } from '@angular/router';
 import { AboutSectionComponent } from '../../src/features/settings/components/about-section.component';
+import { DiagnosticsSectionComponent } from '../../src/features/settings/components/diagnostics-section.component';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { MODULES } from '../../src/shell/registry/modules';
 import { ShellComponent } from '../../src/shell/shell.component';
 import { buildRoutes } from '../../src/shell/shell.routes';
 import { APP_INFO, provideDesktopApi } from '../fixtures/desktop-api';
+import type { DiagnosticsScenario } from '../fixtures/desktop-api';
 
 type SettingsSection = 'general' | 'diagnostics';
 
@@ -60,8 +58,6 @@ interface UpcomingSettingsSection {
 }
 
 const UPCOMING_SETTINGS_SECTIONS: UpcomingSettingsSection[] = [{ id: 'llm', release: '0.2.0' }];
-
-type DiagnosticsScenario = 'ok' | 'issues' | 'engineError';
 
 interface SettingsScenario {
   loading: boolean;
@@ -806,175 +802,6 @@ class SettingsStoragePreview {
   }
 }
 
-type CheckStatus = 'ok' | 'warning' | 'error';
-type CheckCategory = 'storage' | 'database' | 'backend' | 'settings';
-
-interface CheckResult {
-  id: string;
-  category: CheckCategory;
-  status: CheckStatus;
-  params?: TranslateParams;
-}
-
-interface CheckGroup {
-  category: CheckCategory;
-  checks: CheckResult[];
-}
-
-const CATEGORIES: CheckCategory[] = ['storage', 'database', 'backend', 'settings'];
-const RUN_MS = 900;
-const DOT: Record<CheckStatus, DotKind> = { ok: 'success', warning: 'warning', error: 'danger' };
-
-function results(scenario: SettingsScenario, kind: DiagnosticsScenario): CheckResult[] {
-  const issues = kind === 'issues';
-  return [
-    { id: 'storage.appData', category: 'storage', status: 'ok', params: { path: scenario.appDataDir } },
-    { id: 'storage.settingsDir', category: 'storage', status: 'ok', params: { path: scenario.defaultAppDataDir } },
-    {
-      id: 'storage.diskSpace',
-      category: 'storage',
-      status: issues ? 'warning' : 'ok',
-      params: { free: issues ? '0.8 GB' : '214 GB', drive: 'C:' },
-    },
-    { id: 'database.integrity', category: 'database', status: 'ok' },
-    { id: 'backend.reachable', category: 'backend', status: issues ? 'error' : 'ok' },
-    { id: 'settings.file', category: 'settings', status: 'ok' },
-  ];
-}
-
-@Component({
-  selector: 'ds-settings-diagnostics-preview',
-  imports: [AreaStateComponent, ButtonDirective, DotComponent, IconComponent, PillComponent, TranslatePipe],
-  template: `
-    <section class="settings-section diagnostics" data-testid="diagnostics" [attr.aria-busy]="running()">
-      <header class="settings-section-head">
-        <h3>{{ 'diagnostics.title' | t }}</h3>
-      </header>
-
-      <div class="diagnostics-body">
-        <div class="diagnostics-head">
-          <h4>{{ 'diagnostics.selfCheck' | t }}</h4>
-          <span class="meta" role="status" data-testid="diagnostics-last-run">{{ lastRunText() }}</span>
-          @if (!engineError()) {
-            <button dsBtn type="button" size="sm" data-testid="diagnostics-run" [loading]="running()" (click)="run()">
-              {{ 'diagnostics.run' | t }}
-            </button>
-          }
-        </div>
-
-        @if (engineError()) {
-          <ds-area-state
-            kind="error"
-            compact
-            data-testid="diagnostics-engine-error"
-            [heading]="'diagnostics.engineError.title' | t"
-            [description]="'diagnostics.engineError.message' | t"
-          >
-            <button dsBtn type="button" size="sm" data-testid="diagnostics-retry" (click)="run()">
-              {{ 'common.retry' | t }}
-            </button>
-          </ds-area-state>
-        } @else {
-          @for (group of groups(); track group.category) {
-            <div class="diagnostics-group" data-testid="diagnostics-group" [attr.data-category]="group.category">
-              <h5>{{ 'diagnostics.category.' + group.category | t }}</h5>
-              <ul class="diagnostics-list">
-                @for (item of group.checks; track item.id) {
-                  <li
-                    class="diagnostics-check"
-                    data-testid="diagnostics-check"
-                    [attr.data-check-id]="item.id"
-                    [attr.data-status]="running() ? 'running' : item.status"
-                  >
-                    @if (running()) {
-                      <ds-dot pulse />
-                      <span class="diagnostics-check-line">
-                        <b>{{ 'diagnostics.check.' + item.id + '.name' | t }}</b>
-                      </span>
-                      <ds-pill kind="info">{{ 'diagnostics.checking' | t }}</ds-pill>
-                    } @else {
-                      <ds-dot [kind]="dot[item.status]" />
-                      <div class="diagnostics-check-text">
-                        <p class="diagnostics-check-line">
-                          <b>{{ 'diagnostics.check.' + item.id + '.name' | t }}</b>
-                          · {{ 'diagnostics.check.' + item.id + '.' + item.status | t: item.params }}
-                        </p>
-                        @if (item.status !== 'ok') {
-                          <p class="diagnostics-check-fix" data-testid="diagnostics-check-fix">
-                            <b>{{ 'diagnostics.fixLabel' | t }}</b>
-                            {{ 'diagnostics.check.' + item.id + '.fix' | t: item.params }}
-                          </p>
-                        }
-                      </div>
-                      <span
-                        class="diagnostics-check-status"
-                        data-testid="diagnostics-check-status"
-                        [class.visually-hidden]="item.status === 'ok'"
-                      >
-                        {{ 'diagnostics.status.' + item.status | t }}
-                      </span>
-                    }
-                  </li>
-                }
-              </ul>
-            </div>
-          }
-        }
-      </div>
-    </section>
-  `,
-})
-class SettingsDiagnosticsPreview implements OnInit {
-  protected readonly scenario: SettingsScenario = inject(SETTINGS_SCENARIO);
-  private readonly i18n: I18nService = inject(I18nService);
-  private readonly timers: ReturnType<typeof setTimeout>[] = [];
-
-  protected readonly dot: Record<CheckStatus, DotKind> = DOT;
-  protected readonly running = signal<boolean>(false);
-  protected readonly engineError = signal<boolean>(false);
-  protected readonly checks = signal<CheckResult[]>(results(this.scenario, this.scenario.diagnostics));
-  protected readonly lastRun = signal<Date | null>(null);
-
-  protected readonly groups: Signal<CheckGroup[]> = computed(() =>
-    CATEGORIES.map((category) => ({
-      category,
-      checks: this.checks().filter((item) => item.category === category),
-    })).filter((group) => group.checks.length > 0),
-  );
-  protected readonly lastRunText: Signal<string> = computed(() => {
-    const date = this.lastRun();
-    if (!date) return this.i18n.t('diagnostics.neverRun');
-    const time = new Intl.DateTimeFormat(this.i18n.language(), { timeStyle: 'short' }).format(date);
-    return this.i18n.t('diagnostics.lastRun', { time });
-  });
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.timers.forEach((timer) => clearTimeout(timer)));
-  }
-
-  ngOnInit(): void {
-    this.run();
-  }
-
-  protected run(): void {
-    this.running.set(true);
-    this.engineError.set(false);
-    this.later(RUN_MS, () => {
-      this.running.set(false);
-      if (this.scenario.diagnostics === 'engineError') {
-        this.engineError.set(true);
-        return;
-      }
-      this.lastRun.set(new Date());
-      this.checks.set(results(this.scenario, this.scenario.diagnostics));
-    });
-  }
-
-  private later(ms: number, action: () => void): void {
-    this.timers.push(setTimeout(action, ms));
-  }
-}
-
 interface NavItem {
   section: SettingsSection;
   icon: string;
@@ -1010,8 +837,8 @@ const SECTION_ALIASES: Record<string, SettingsSection> = {
     SettingsGeneralPreview,
     SettingsStoragePreview,
     SettingsPipelinePreview,
-    SettingsDiagnosticsPreview,
     AboutSectionComponent,
+    DiagnosticsSectionComponent,
   ],
   template: `
     <div class="ds-page-toolbar" data-testid="page-toolbar">
@@ -1074,7 +901,7 @@ const SECTION_ALIASES: Record<string, SettingsSection> = {
                     <ds-settings-about />
                   </div>
                   <div class="settings-col">
-                    <ds-settings-diagnostics-preview />
+                    <ds-settings-diagnostics />
                   </div>
                 </div>
               }
@@ -1160,6 +987,7 @@ const meta: Meta<SettingsArgs> = {
         provideRouter(previewRoutes(), withHashLocation()),
         provideDesktopApi({
           backend: 'running',
+          diagnostics: context.args.scenario.diagnostics,
           info: context.args.scenario.devBuild ? { ...APP_INFO, buildDate: null } : APP_INFO,
         }),
         { provide: SETTINGS_SCENARIO, useValue: context.args.scenario },

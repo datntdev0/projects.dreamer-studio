@@ -3,6 +3,7 @@ import '@dreamer/shared/ipc/dreamer-api';
 import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { AboutLink } from '@dreamer/shared/models/about';
+import type { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
@@ -84,6 +85,10 @@ export class DesktopApi {
 
   onAppDataChanged(listener: (info: AppInfo) => void): () => void {
     return window.dreamer ? window.dreamer.appData.onChanged(listener) : () => undefined;
+  }
+
+  async runDiagnostics(): Promise<DiagnosticsRun | null> {
+    return window.dreamer ? window.dreamer.diagnostics.run() : null;
   }
 
   async pipelineTypes(): Promise<PipelineTypeInfo[]> {

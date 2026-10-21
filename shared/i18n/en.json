@@ -405,6 +405,5 @@
   "settings.invalid.theme": "Theme must be Light or Dark.",
   "settings.invalid.pipelines.maxConcurrent": "Parallel pipelines must be a whole number from 1 to 5.",
   "settings.invalid.patch": "This setting can't be changed here.",
-  "settings.page.diagnosticsPending": "Diagnostics and About are coming soon",
   "settings.storage.status.notWritable": "not writable"
 }

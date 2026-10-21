@@ -2,6 +2,7 @@ import type { Provider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppDataCandidate, AppDataStatus } from '@dreamer/shared/models/app-data';
+import type { CheckResult, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { defaultSettings } from '@dreamer/shared/models/settings';
 import type { AppSettings, SettingsPatch, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '../../src/core/desktop-api';
@@ -10,10 +11,15 @@ export interface DesktopApiFixture {
   info?: AppInfo | 'error' | 'loading';
   backend?: BackendState;
   openDataDirFails?: boolean;
+  diagnostics?: DiagnosticsScenario;
 }
+
+export type DiagnosticsScenario = 'ok' | 'issues' | 'engineError';
 
 const SCHEMA_VERSION = '0.0.0_1';
 const BACKEND_ADDRESS = '127.0.0.1:47123';
+const DIAGNOSTICS_RUN_MS = 900;
+const GB = 1024 ** 3;
 
 export const APP_INFO: AppInfo = {
   version: '0.0.0',
@@ -38,6 +44,47 @@ export const APP_DATA_STATUS: AppDataStatus = {
   schemaVersion: SCHEMA_VERSION,
   checkedAt: '2026-01-01T00:00:00.000Z',
 };
+
+function check(id: string, category: CheckResult['category'], status: CheckResult['status'], params = {}): CheckResult {
+  const prefix = `diagnostics.check.${id}`;
+  return {
+    id,
+    category,
+    status,
+    nameKey: `${prefix}.name`,
+    messageKey: `${prefix}.${status}`,
+    fixKey: status === 'ok' ? null : `${prefix}.fix`,
+    params,
+    durationMs: 12,
+  };
+}
+
+export function fakeDiagnosticsRun(scenario: DiagnosticsScenario = 'issues'): DiagnosticsRun {
+  const issues = scenario === 'issues';
+  return {
+    ranAt: new Date().toISOString(),
+    results: [
+      check('storage.appData', 'storage', 'ok', { path: APP_INFO.appDataDir }),
+      check('storage.settingsDir', 'storage', 'ok', { path: APP_INFO.appDataDir }),
+      check('storage.diskSpace', 'storage', issues ? 'warning' : 'ok', {
+        drive: 'C:',
+        free: issues ? 0.8 * GB : 214 * GB,
+      }),
+      check('database.integrity', 'database', 'ok'),
+      check('backend.reachable', 'backend', issues ? 'error' : 'ok'),
+      check('settings.file', 'settings', 'ok'),
+    ],
+  };
+}
+
+function fakeRunDiagnostics(scenario: DiagnosticsScenario): Promise<DiagnosticsRun | null> {
+  return new Promise<DiagnosticsRun | null>((resolve, reject) =>
+    setTimeout(() => {
+      if (scenario === 'engineError') reject(new Error('diagnostics:run failed: APP_DATA_SWITCHING'));
+      else resolve(fakeDiagnosticsRun(scenario));
+    }, DIAGNOSTICS_RUN_MS),
+  );
+}
 
 export type FakeSettingsApi = Pick<DesktopApi, 'settings' | 'updateSettings' | 'resetSettings' | 'onSettingsChanged'>;
 
@@ -85,6 +132,7 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     appDataStatus: (): Promise<AppDataStatus | null> => Promise.resolve(APP_DATA_STATUS),
     onAppDataProgress: (): (() => void) => () => undefined,
     onAppDataChanged: (): (() => void) => () => undefined,
+    runDiagnostics: (): Promise<DiagnosticsRun | null> => fakeRunDiagnostics(fixture.diagnostics ?? 'issues'),
     ...fakeSettingsApi(),
   };
   return { provide: DesktopApi, useValue: api };

@@ -405,6 +405,5 @@
   "settings.invalid.theme": "Giao diện phải là Sáng hoặc Tối.",
   "settings.invalid.pipelines.maxConcurrent": "Số tác vụ song song phải là số nguyên từ 1 đến 5.",
   "settings.invalid.patch": "Không thể thay đổi cài đặt này ở đây.",
-  "settings.page.diagnosticsPending": "Chẩn đoán và Giới thiệu sắp ra mắt",
   "settings.storage.status.notWritable": "không thể ghi"
 }

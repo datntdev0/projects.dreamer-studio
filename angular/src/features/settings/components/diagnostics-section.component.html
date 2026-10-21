@@ -1,0 +1,78 @@
+<section class="settings-section diagnostics" data-testid="diagnostics" [attr.aria-busy]="running()">
+  <header class="settings-section-head">
+    <h3>{{ 'diagnostics.title' | t }}</h3>
+  </header>
+
+  <div class="diagnostics-body">
+    <div class="diagnostics-head">
+      <h4>{{ 'diagnostics.selfCheck' | t }}</h4>
+      <span class="meta" role="status" data-testid="diagnostics-last-run">{{ lastRunText() }}</span>
+      @if (!engineError()) {
+        <button dsBtn type="button" size="sm" data-testid="diagnostics-run" [loading]="running()" (click)="run()">
+          {{ 'diagnostics.run' | t }}
+        </button>
+      }
+    </div>
+
+    @if (engineError()) {
+      <ds-area-state
+        kind="error"
+        compact
+        data-testid="diagnostics-engine-error"
+        [heading]="'diagnostics.engineError.title' | t"
+        [description]="'diagnostics.engineError.message' | t"
+      >
+        <button dsBtn type="button" size="sm" data-testid="diagnostics-retry" (click)="run()">
+          {{ 'common.retry' | t }}
+        </button>
+      </ds-area-state>
+    } @else if (running() && !lastRun()) {
+      <ds-area-state kind="loading" compact data-testid="diagnostics-loading" [heading]="'diagnostics.checking' | t" />
+    } @else {
+      @for (group of groups(); track group.category) {
+        <div class="diagnostics-group" data-testid="diagnostics-group" [attr.data-category]="group.category">
+          <h5>{{ group.label }}</h5>
+          <ul class="diagnostics-list">
+            @for (item of group.checks; track item.id) {
+              <li
+                class="diagnostics-check"
+                data-testid="diagnostics-check"
+                [attr.data-check-id]="item.id"
+                [attr.data-status]="running() ? 'running' : item.status"
+              >
+                @if (running()) {
+                  <ds-dot pulse />
+                  <span class="diagnostics-check-line">
+                    <b>{{ item.name }}</b>
+                  </span>
+                  <ds-pill kind="info">{{ 'diagnostics.checking' | t }}</ds-pill>
+                } @else {
+                  <ds-dot [kind]="dotKinds[item.status]" />
+                  <div class="diagnostics-check-text">
+                    <p class="diagnostics-check-line">
+                      <b>{{ item.name }}</b>
+                      · {{ item.message }}
+                    </p>
+                    @if (item.fix) {
+                      <p class="diagnostics-check-fix" data-testid="diagnostics-check-fix">
+                        <b>{{ 'diagnostics.fixLabel' | t }}</b>
+                        {{ item.fix }}
+                      </p>
+                    }
+                  </div>
+                  <span
+                    class="diagnostics-check-status"
+                    data-testid="diagnostics-check-status"
+                    [class.visually-hidden]="item.status === 'ok'"
+                  >
+                    {{ item.statusLabel }}
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </div>
+</section>

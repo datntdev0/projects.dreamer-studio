@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { AppDataCandidate, AppDataContent } from '@dreamer/shared/models/app-data';
-import { t } from '../i18n/main-i18n';
+import { t } from '../app/app-i18n';
 import { createLogger, Logger } from '../logging/logger';
 import { Database } from './database';
 

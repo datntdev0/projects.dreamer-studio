@@ -33,7 +33,7 @@ export default tseslint.config(
     files: ['electron/**'],
     ignores: [
       'electron/main/storage/**',
-      'electron/main/app-data/**',
+      'electron/main/app/app-data-*.ts',
       'electron/main/index.ts',
       'electron/**/*.test.ts',
     ],

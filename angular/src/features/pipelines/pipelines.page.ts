@@ -10,16 +10,16 @@ import type { PipelineRun, PipelineType } from '@dreamer/shared/models/pipeline'
 import { map } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import { PipelineStore } from '../../core/pipeline-store';
+import { PipelineStore } from '../../core/stores/pipeline-store';
 import { PageTitleDirective } from '../../shell/page-title.directive';
-import { HistoryTableComponent } from './history-table.component';
+import { HistoryTableComponent } from './components/history-table.component';
 import { PipelineActions } from './pipeline-actions';
 import { PipelinesViewStore, type HistoryStatusFilter, type PipelineView } from './pipelines-view.store';
-import { QueueTableComponent } from './queue-table.component';
-import { RunDetailsComponent } from './run-details.component';
-import { RunLogComponent } from './run-log.component';
+import { QueueTableComponent } from './components/queue-table.component';
+import { RunDetailsComponent } from './components/run-details.component';
+import { RunLogComponent } from './components/run-log.component';
 import { isActiveRun } from './run-status';
-import { StartPipelineDialogComponent } from './start-pipeline-dialog.component';
+import { StartPipelineDialogComponent } from './components/start-pipeline-dialog.component';
 
 interface OptionView {
   value: string;

@@ -9,11 +9,11 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { SettingsState } from '@dreamer/shared/models/settings';
 import { map } from 'rxjs';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import { SettingsStore } from '../../core/settings-store';
+import { SettingsStore } from '../../core/stores/settings-store';
 import { PageTitleDirective } from '../../shell/page-title.directive';
-import { GeneralSectionComponent } from './general-section.component';
-import { PipelineSectionComponent } from './pipeline-section.component';
-import { StorageSectionComponent } from './storage-section.component';
+import { GeneralSectionComponent } from './components/general-section.component';
+import { PipelineSectionComponent } from './components/pipeline-section.component';
+import { StorageSectionComponent } from './components/storage-section.component';
 
 type SettingsPane = 'general' | 'diagnostics';
 

@@ -8,7 +8,7 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { filter, map, startWith } from 'rxjs';
 import { AppInfoStore } from '../../core/app-info';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { SettingsStore } from '../../core/settings-store';
+import { SettingsStore } from '../../core/stores/settings-store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';

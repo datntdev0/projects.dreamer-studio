@@ -2,7 +2,7 @@ import { Component, inject, input, OnInit, provideAppInitializer } from '@angula
 import { provideRouter, Router, withHashLocation } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
-import { PipelineStore } from '../../src/core/pipeline-store';
+import { PipelineStore } from '../../src/core/stores/pipeline-store';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../src/core/slots';
 import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
 import { MODULES } from '../../src/shell/registry/modules';

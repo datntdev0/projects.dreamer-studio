@@ -2,7 +2,7 @@ import { PipelineChannel } from '@dreamer/shared/ipc/channels';
 import { pipelineRunStatuses, PipelineCursor, PipelineListQuery } from '@dreamer/shared/models/pipeline';
 import { PipelinePage, PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
 import { PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { PipelineExecutor } from '../pipelines/pipeline-executor';
+import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
 import { handle } from './handle';
 
 function isObject(value: unknown): value is Record<string, unknown> {

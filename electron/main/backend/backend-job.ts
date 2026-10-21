@@ -1,5 +1,5 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { StepContext } from '../pipelines/pipeline-definition';
+import { StepContext } from '../features/pipelines/pipeline-definition';
 import { backendUrl } from './backend-launch';
 import { BackendConnection, getBackendConnection } from './backend-process';
 

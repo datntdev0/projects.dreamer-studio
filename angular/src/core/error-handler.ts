@@ -2,7 +2,7 @@ import { ErrorHandler, Injectable, inject } from '@angular/core';
 import { AppError, ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
 import { errorStack } from '@dreamer/shared/errors/error-stack';
 import { DesktopApi } from './desktop-api';
-import { ErrorStore } from './error-store';
+import { ErrorStore } from './stores/error-store';
 
 @Injectable()
 export class AppErrorHandler implements ErrorHandler {

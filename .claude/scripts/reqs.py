@@ -7,8 +7,9 @@ Usage:
   python .claude/scripts/reqs.py next-id
   python .claude/scripts/reqs.py upsert patch.json
 
-Patch file (only the given fields are written; new IDs are inserted):
-  {"capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
+Patch file (only the given fields are written; new IDs are inserted; "delete" removes requirement rows):
+  {"delete":       ["REQ-012"],
+   "capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
    "requirements": [{"Req ID": "REQ-023", "Capacity Name": "...", "Status": "1. Draft"}],
    "decisions":    [{"Decision ID": "AD-14", "Title": "...", "Options": "A — pros\\nB — pros", "Status": "Open"}]}
 
@@ -216,6 +217,14 @@ def cmd_upsert(args):
         patch = json.load(file)
     wb = load_workbook()
     catalog = wb[CATALOG_SHEET]
+
+    for req_id in patch.get("delete", []):
+        sheet, row = next(((ws, r) for ws in theme_sheets(wb) for r in read_rows(ws) if r[REQ_ID] == req_id),
+                          (None, None))
+        if sheet is None:
+            fail(f"{req_id}: not found")
+        sheet.delete_rows(row["_row"])
+        print(f"deleted: {req_id} ({sheet.title})")
 
     for values in patch.get("capacities", []):
         result = upsert(catalog, read_rows(catalog), CATALOG_ID, values,

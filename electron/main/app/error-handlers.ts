@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, MessageBoxReturnValue, WebContents } from '
 import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorStack } from '@dreamer/shared/errors/error-stack';
 import { AppChannel } from '@dreamer/shared/ipc/channels';
-import { t } from '../i18n/main-i18n';
+import { t } from './app-i18n';
 import { openFolder } from '../ipc/app-ipc';
 import { createLogger, isLoggingReady, Logger } from '../logging/logger';
 import { AppPaths } from '../storage/paths';

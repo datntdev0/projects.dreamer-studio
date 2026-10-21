@@ -2,7 +2,7 @@ import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http
 import { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { StepContext } from '../pipelines/pipeline-definition';
+import { StepContext } from '../features/pipelines/pipeline-definition';
 import { runBackendJob } from './backend-job';
 import { getBackendConnection } from './backend-process';
 

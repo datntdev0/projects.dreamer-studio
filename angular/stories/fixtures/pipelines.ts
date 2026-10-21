@@ -209,7 +209,7 @@ export function runLog(run: PipelineRun): string[] {
     lines.push(
       logLine(startedAt, seconds, 'ERROR', `Step ${run.stepIndex}/${run.stepCount} failed: ${code}${run.error}`),
     );
-    lines.push('    at DemoPipeline.runStep (electron/main/pipelines/demo-pipeline.ts:42:11)');
+    lines.push('    at DemoPipeline.runStep (electron/main/features/pipelines/demo-pipeline.ts:42:11)');
   }
   if (run.status === 'cancelled' && run.cancelReason === 'appClosed') {
     lines.push(logLine(startedAt, seconds - 1, 'WARN', 'App closed while the run was active'));

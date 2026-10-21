@@ -1,7 +1,7 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { SettingsChannel } from '@dreamer/shared/ipc/channels';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
-import { SettingsStore } from '../settings/settings-store';
+import { SettingsStore } from '../features/settings/settings-store';
 import { broadcast } from './broadcast';
 import { handle } from './handle';
 

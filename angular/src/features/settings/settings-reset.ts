@@ -3,7 +3,7 @@ import { ConfirmService } from '@components/dialog/confirm.service';
 import { ToastService } from '@components/toast/toast.service';
 import type { SettingsSection } from '@dreamer/shared/models/settings';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { SettingsStore } from '../../core/settings-store';
+import { SettingsStore } from '../../core/stores/settings-store';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsReset {

@@ -1,4 +1,4 @@
-import { existsSync, statfsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statfsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -7,13 +7,15 @@ import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { HistoryRow } from './migrator';
 
 const probeFileName: string = '.dreamer-write-test';
+const probeContent: string = 'dreamer-write-test';
 
 export function probeWritable(dir: string): boolean {
   const file: string = join(dir, probeFileName);
   try {
-    writeFileSync(file, '');
+    writeFileSync(file, probeContent);
+    const matches: boolean = readFileSync(file, 'utf-8') === probeContent;
     unlinkSync(file);
-    return true;
+    return matches;
   } catch {
     return false;
   }

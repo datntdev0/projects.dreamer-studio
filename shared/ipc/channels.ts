@@ -35,6 +35,10 @@ export const AppDataChannel = {
   Changed: 'app-data:changed',
 } as const;
 
+export const DiagnosticsChannel = {
+  Run: 'diagnostics:run',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

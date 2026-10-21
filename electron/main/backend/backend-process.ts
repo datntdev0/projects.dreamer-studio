@@ -21,10 +21,11 @@ function delay(ms: number): Promise<void> {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-async function isHealthy(port: number, token: string): Promise<boolean> {
+async function isHealthy(port: number, token: string, signal?: AbortSignal): Promise<boolean> {
   try {
     const response: Response = await fetch(backendUrl(port, '/health'), {
       headers: { Authorization: `Bearer ${token}` },
+      signal,
     });
     return response.ok;
   } catch {
@@ -112,6 +113,11 @@ export function stopBackend(): void {
   execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], () => undefined);
   child = null;
   connection = null;
+}
+
+export async function pingBackend(timeoutMs: number): Promise<boolean> {
+  const current: BackendConnection | null = connection;
+  return current !== null && isHealthy(current.port, current.token, AbortSignal.timeout(timeoutMs));
 }
 
 export function getBackendConnection(): BackendConnection | null {

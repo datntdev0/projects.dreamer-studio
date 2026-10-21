@@ -4,6 +4,7 @@ import { BackendStatus } from './backend';
 import { DevCrashKind } from './dev';
 import { LogEntry } from './log';
 import { AboutLink } from '../models/about';
+import { DiagnosticsRun } from '../models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
@@ -37,6 +38,9 @@ export interface DreamerApi {
     status(): Promise<AppDataStatus>;
     onProgress(listener: (step: AppDataStep) => void): () => void;
     onChanged(listener: (info: AppInfo) => void): () => void;
+  };
+  diagnostics: {
+    run(): Promise<DiagnosticsRun>;
   };
   pipeline: {
     types(): Promise<PipelineTypeInfo[]>;

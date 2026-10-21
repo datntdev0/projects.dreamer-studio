@@ -7,6 +7,7 @@ import {
   AppDataChannel,
   BackendChannel,
   DevChannel,
+  DiagnosticsChannel,
   LogChannel,
   PipelineChannel,
 } from '@dreamer/shared/ipc/channels';
@@ -17,6 +18,7 @@ import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
+import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -78,6 +80,9 @@ const api: DreamerApi = {
     status: (): Promise<AppDataStatus> => call(AppDataChannel.Status),
     onProgress: (listener: (step: AppDataStep) => void): (() => void) => subscribe(AppDataChannel.Progress, listener),
     onChanged: (listener: (info: AppInfo) => void): (() => void) => subscribe(AppDataChannel.Changed, listener),
+  },
+  diagnostics: {
+    run: (): Promise<DiagnosticsRun> => call(DiagnosticsChannel.Run),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

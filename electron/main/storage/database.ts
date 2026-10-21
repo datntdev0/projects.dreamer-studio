@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { DatabaseSync, StatementSync } from 'node:sqlite';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { CheckOutcome } from '@dreamer/shared/models/diagnostics';
 import { createLogger, Logger } from '../logging/logger';
 
 export type SqlParam = null | number | bigint | string | Uint8Array;
@@ -9,12 +10,6 @@ export type SqlParam = null | number | bigint | string | Uint8Array;
 export interface RunResult {
   changes: number | bigint;
   lastInsertRowid: number | bigint;
-}
-
-export interface DatabaseCheck {
-  status: 'ok' | 'warning' | 'error';
-  message: string;
-  fix: string;
 }
 
 const logger: Logger = createLogger('storage');
@@ -119,22 +114,30 @@ export class Database {
   }
 }
 
-export function checkDatabase(db: Database): DatabaseCheck {
+const integrityError: CheckOutcome = {
+  status: 'error',
+  messageKey: 'diagnostics.check.database.integrity.error',
+  fixKey: 'diagnostics.check.database.integrity.fix',
+};
+
+export function checkDatabase(db: Database): CheckOutcome {
   try {
     db.get('SELECT 1');
     const row: { quick_check: string } | undefined = db.get<{ quick_check: string }>('PRAGMA quick_check');
     if (row?.quick_check !== 'ok') {
-      return {
-        status: 'error',
-        message: 'Database integrity check failed.',
-        fix: 'Restore a backup or contact support.',
-      };
+      return integrityError;
     }
-  } catch (error) {
-    return { status: 'error', message: errorMessage(error), fix: 'Restart the app. If it persists, check the logs.' };
+  } catch {
+    return integrityError;
   }
-  if (db.lastError()) {
-    return { status: 'warning', message: `A recent query failed: ${db.lastError()}`, fix: 'Check the logs.' };
+  const error: string | null = db.lastError();
+  if (error) {
+    return {
+      status: 'warning',
+      messageKey: 'diagnostics.check.database.integrity.warning',
+      fixKey: 'diagnostics.check.database.integrity.warningFix',
+      params: { error },
+    };
   }
-  return { status: 'ok', message: 'Database is healthy.', fix: '' };
+  return { status: 'ok', messageKey: 'diagnostics.check.database.integrity.ok', fixKey: null };
 }

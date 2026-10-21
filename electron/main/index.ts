@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppSettings } from '@dreamer/shared/models/settings';
+import { CheckOutcome } from '@dreamer/shared/models/diagnostics';
 import { AppDataManager } from './app/app-data-manager';
 import { AppDataSession } from './app/app-data-session';
 import { resolveAppDataRoot } from './app/dialogs/app-data-dialog';
@@ -8,18 +9,24 @@ import { installErrorHandlers, reportLogsNotWritable, reportStartupFailure } fro
 import { showFatalError } from './app/dialogs/fatal-dialog';
 import { handleAppProtocol, registerAppScheme } from './app/protocol';
 import { createWindow, focusWindow } from './app/window';
-import { startBackend, stopBackend } from './backend/backend-process';
+import { pingBackend, startBackend, stopBackend } from './backend/backend-process';
+import { getBackendStatus } from './backend/backend-status';
 import { setLanguage } from './app/app-i18n';
 import { registerAppIpc } from './ipc/app-ipc';
 import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
+import { registerDiagnosticsIpc } from './ipc/diagnostics-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
 import { registerPipelineIpc } from './ipc/pipeline-ipc';
 import { registerSettingsIpc } from './ipc/settings-ipc';
 import { createLogger, Logger } from './logging/logger';
+import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
+import { CheckContext } from './features/diagnostics/self-check';
+import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
 import { SettingsLoadResult, SettingsStore } from './features/settings/settings-store';
+import { checkDatabase } from './storage/database';
 import { devFailMigration, loadMigrations, Migration } from './storage/migrator';
 import { AppPaths, defaultAppDataRoot, migrationsDir, settingsFilePath } from './storage/paths';
 
@@ -30,6 +37,7 @@ setLanguage(settings.get().language);
 settings.onChange((value: AppSettings): void => setLanguage(value.language));
 let mainWindow: BrowserWindow | null = null;
 
+const backendPingTimeoutMs: number = 3000;
 const migrationCodes: ErrorCode[] = [ErrorCode.DbMigrationFailed, ErrorCode.DbNewerVersion];
 
 function startupFailure(error: unknown): { code: ErrorCode; note?: string } {
@@ -62,6 +70,17 @@ const manager: AppDataManager = new AppDataManager(settings, {
   onReopenFailed: showDataFailure,
 });
 settings.onChange((): void => manager.current()?.executor.limitChanged());
+
+const diagnostics: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
+  const session: AppDataSession = manager.session();
+  return {
+    paths: session.paths,
+    checkDatabase: (): CheckOutcome => checkDatabase(session.db),
+    settings: settingsLoad,
+    backend: getBackendStatus().state,
+    pingBackend: (): Promise<boolean> => pingBackend(backendPingTimeoutMs),
+  };
+});
 
 function onBeforeQuit(): void {
   manager.current()?.executor.cancelAll('appClosed');
@@ -117,6 +136,8 @@ async function onReady(): Promise<void> {
   registerPipelineIpc(() => manager.session().executor);
   registerSettingsIpc(settings);
   registerBackendIpc();
+  registerBuiltInChecks(diagnostics);
+  registerDiagnosticsIpc(diagnostics);
   registerLogIpc();
   registerDevIpc();
   handleAppProtocol();

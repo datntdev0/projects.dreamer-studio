@@ -4,6 +4,7 @@ import { join } from 'node:path';
 const KEY_PATTERN =
   /^(app|nav|rail|topbar|status|state|home|run|soon|module|pipelines|toast|errors|dialog|common|settings|diagnostics|about)\.[A-Za-z0-9_.-]+$/;
 const LITERAL_PATTERN = /'([^'\n]+)'/g;
+const ID_PATTERN = /\bid: '[^'\n]+'/g;
 const FILE_NAME_PATTERN = /\.(py|ts|js|json|html|scss)$/;
 const SCAN_DIRS = [join('angular', 'src'), join('electron', 'main')];
 const SCAN_EXTENSIONS = ['.ts', '.html'];
@@ -25,7 +26,7 @@ function findUsedKeys() {
     readFileSync(file, 'utf8')
       .split('\n')
       .forEach((line, index) => {
-        for (const match of line.matchAll(LITERAL_PATTERN)) {
+        for (const match of line.replace(ID_PATTERN, '').matchAll(LITERAL_PATTERN)) {
           if (KEY_PATTERN.test(match[1]) && !FILE_NAME_PATTERN.test(match[1]))
             used.push({ file, line: index + 1, key: match[1] });
         }

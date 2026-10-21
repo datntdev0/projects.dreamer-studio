@@ -9,7 +9,8 @@ const diskErrorBelowBytes: number = 100 * MB;
 const diskWarningBelowBytes: number = 1024 * MB;
 
 function driveOf(path: string): string {
-  return parse(path).root.replace(/[\\/]+$/, '');
+  const root: string = parse(path).root;
+  return root === '/' ? root : root.replace(/[\\/]+$/, '');
 }
 
 async function checkAppData(ctx: CheckContext): Promise<CheckOutcome> {

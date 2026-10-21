@@ -243,7 +243,7 @@
   "about.electron": "Electron",
   "about.chromium": "Chromium",
   "about.node": "Node.js",
-  "about.windows": "Windows",
+  "about.os": "Hệ điều hành",
   "about.by": "bởi {author}",
   "about.reportIssue": "Báo lỗi",
   "about.databaseSchema": "Lược đồ cơ sở dữ liệu",

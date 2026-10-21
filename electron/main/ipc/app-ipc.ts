@@ -1,5 +1,5 @@
 import { BrowserWindow, shell } from 'electron';
-import { arch, release } from 'node:os';
+import { arch, release, type } from 'node:os';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { AppChannel, AppDataChannel } from '@dreamer/shared/ipc/channels';
 import { ABOUT_LINKS, isAboutLink } from '@dreamer/shared/models/about';
@@ -10,10 +10,12 @@ import { AppDataSession } from '../app/app-data-session';
 import { pickFolder } from '../app/dialogs/app-data-dialog';
 import { createLogger, Logger } from '../logging/logger';
 import { readSchemaVersion } from '../storage/migrator';
+import { defaultAppDataRoot } from '../storage/paths';
 import { broadcast } from './broadcast';
 import { handle } from './handle';
 
 const logger: Logger = createLogger('app');
+const osName: string = process.platform === 'win32' ? 'Windows' : type();
 
 async function tryOpenFolder(folder: string): Promise<string> {
   const failure: string = await shell.openPath(folder);
@@ -48,10 +50,11 @@ function appInfo(manager: AppDataManager): AppInfo {
     buildDate: BUILD_DATE,
     author: APP_AUTHOR,
     appDataDir: manager.paths().root,
+    settingsDir: defaultAppDataRoot(),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     node: process.versions.node,
-    os: `${release()} (${arch()})`,
+    os: `${osName} ${release()} (${arch()})`,
     schemaVersion: session ? readSchemaVersion(session.db) : null,
   };
 }

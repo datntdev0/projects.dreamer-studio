@@ -80,7 +80,7 @@
         <span class="settings-row-label">{{ 'settings.storage.contents.label' | t }}</span>
         <span class="settings-row-hint">{{ 'settings.storage.contents.hint' | t }}</span>
         <span class="settings-row-hint">
-          {{ 'settings.storage.contents.settingsFile' | t: { path: settingsDir } }}
+          {{ 'settings.storage.contents.settingsFile' | t: { path: settingsDir() } }}
         </span>
       </div>
     </div>

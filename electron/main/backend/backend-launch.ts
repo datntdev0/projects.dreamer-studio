@@ -11,6 +11,7 @@ export interface BackendLaunch {
 }
 
 const host: string = '127.0.0.1';
+const isWindows: boolean = process.platform === 'win32';
 
 export function createToken(): string {
   return randomBytes(32).toString('hex');
@@ -46,11 +47,11 @@ export function buildLaunch(port: number, token: string, logsDir: string): Backe
   };
   if (app.isPackaged) {
     const dir: string = join(process.resourcesPath, 'backend');
-    return { command: join(dir, 'dreamer-backend.exe'), args: [], cwd: dir, env };
+    return { command: join(dir, isWindows ? 'dreamer-backend.exe' : 'dreamer-backend'), args: [], cwd: dir, env };
   }
   const dir: string = join(app.getAppPath(), '..', 'backend');
   return {
-    command: join(dir, '.venv', 'Scripts', 'python.exe'),
+    command: isWindows ? join(dir, '.venv', 'Scripts', 'python.exe') : join(dir, '.venv', 'bin', 'python'),
     args: [join(dir, 'run.py')],
     cwd: dir,
     env,

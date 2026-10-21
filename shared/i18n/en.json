@@ -243,7 +243,7 @@
   "about.electron": "Electron",
   "about.chromium": "Chromium",
   "about.node": "Node.js",
-  "about.windows": "Windows",
+  "about.os": "Operating system",
   "about.by": "by {author}",
   "about.reportIssue": "Report an issue",
   "about.databaseSchema": "Database schema",

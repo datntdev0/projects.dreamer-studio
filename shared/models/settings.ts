@@ -53,14 +53,14 @@ const THEMES: Theme[] = ['light', 'dark'];
 
 const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines'];
 
-const WINDOWS_ABSOLUTE_PATH: RegExp = /^([a-zA-Z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+)/;
+const ABSOLUTE_PATH: RegExp = /^([a-zA-Z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+|\/)/;
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function isAbsolutePath(value: unknown): value is string {
-  return typeof value === 'string' && WINDOWS_ABSOLUTE_PATH.test(value);
+  return typeof value === 'string' && ABSOLUTE_PATH.test(value);
 }
 
 function isTheme(value: unknown): value is Theme {

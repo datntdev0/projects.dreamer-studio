@@ -25,7 +25,9 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
+import { MISSING } from '@dreamer/shared/models/about';
 import type { AppDataCandidate, AppDataContent, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
+import { AppInfoStore } from '../../../core/app-info';
 import { DesktopApi } from '../../../core/desktop-api';
 import { formatTime } from '../../../core/format';
 import { I18nService } from '../../../core/i18n/i18n.service';
@@ -62,7 +64,6 @@ interface StatusPart {
   params?: TranslateParams;
 }
 
-const SETTINGS_DIR = '%LOCALAPPDATA%\\DreamerStudio';
 const STEP_LABELS: Record<string, string> = {
   close: 'settings.storage.switch.step.close',
   folders: 'settings.storage.switch.step.folders',
@@ -152,11 +153,12 @@ export class StorageSectionComponent {
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirm: ConfirmService = inject(ConfirmService);
   private readonly store: SettingsStore = inject(SettingsStore);
+  private readonly appInfo: AppInfoStore = inject(AppInfoStore);
   private readonly pipelines: PipelineStore = inject(PipelineStore);
   private readonly injector: Injector = inject(Injector);
   private stopProgress: (() => void) | null = null;
 
-  protected readonly settingsDir: string = SETTINGS_DIR;
+  protected readonly settingsDir: Signal<string> = computed(() => this.appInfo.info()?.settingsDir ?? MISSING);
   protected readonly stateLabels: Record<StepState, string> = STATE_LABELS;
   protected readonly stepIcons: Record<StepState, string> = STEP_ICONS;
 

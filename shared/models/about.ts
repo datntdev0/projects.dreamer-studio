@@ -42,7 +42,7 @@ export function formatVersionInfo(info: AppInfo | null, backend: BackendStatus):
     `Electron: ${info?.electron ?? MISSING}`,
     `Chromium: ${info?.chrome ?? MISSING}`,
     `Node.js: ${info?.node ?? MISSING}`,
-    `Windows: ${info?.os ?? MISSING}`,
+    `OS: ${info?.os ?? MISSING}`,
     `Database schema: ${info?.schemaVersion ?? MISSING}`,
     `AI backend: ${backendText(backend)}`,
   ].join('\n');

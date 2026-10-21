@@ -5,9 +5,10 @@ import { appOrigin } from './protocol';
 import { secureWindow } from './security';
 
 const BACKGROUND_COLORS: Record<Theme, string> = { light: '#ffffff', dark: '#101211' };
+const ICON_FILE: string = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
 
 function iconPath(): string {
-  return app.isPackaged ? join(process.resourcesPath, 'icon.ico') : join(app.getAppPath(), 'resources', 'icon.ico');
+  return app.isPackaged ? join(process.resourcesPath, ICON_FILE) : join(app.getAppPath(), 'resources', ICON_FILE);
 }
 
 export function createWindow(theme: Theme): BrowserWindow {

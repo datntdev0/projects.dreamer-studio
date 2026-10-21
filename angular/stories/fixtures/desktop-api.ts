@@ -26,10 +26,11 @@ export const APP_INFO: AppInfo = {
   buildDate: '2026-10-19',
   author: 'datntdev',
   appDataDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio',
+  settingsDir: 'C:\\Users\\me\\AppData\\Local\\DreamerStudio',
   electron: '44.9.0',
   chrome: '150.0.7800.45',
   node: '24.11.0',
-  os: '10.0.19045 (x64)',
+  os: 'Windows 10.0.19045 (x64)',
   schemaVersion: SCHEMA_VERSION,
 };
 

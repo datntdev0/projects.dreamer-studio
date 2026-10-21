@@ -3,6 +3,7 @@ export interface AppInfo {
   buildDate: string | null;
   author: string;
   appDataDir: string;
+  settingsDir: string;
   electron: string;
   chrome: string;
   node: string;

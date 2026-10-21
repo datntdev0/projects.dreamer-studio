@@ -35,7 +35,7 @@ const SYSTEM_LINES: DetailLine[] = [
   { id: 'electron', label: 'about.electron', value: (info) => info.electron },
   { id: 'chromium', label: 'about.chromium', value: (info) => info.chrome },
   { id: 'node', label: 'about.node', value: (info) => info.node },
-  { id: 'windows', label: 'about.windows', value: (info) => info.os },
+  { id: 'os', label: 'about.os', value: (info) => info.os },
   { id: 'database', label: 'about.databaseSchema', value: (info) => info.schemaVersion },
 ];
 

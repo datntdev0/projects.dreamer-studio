@@ -278,6 +278,7 @@
           </ol>
         </li>
         <li>Release check: extract the zip on a clean Windows 10/11 x64 machine (or Windows Sandbox), run <code>DreamerStudio.exe</code>, and confirm the window, the version and no backend banner. Logs are in <code>%LOCALAPPDATA%/DreamerStudio/logs</code>.</li>
+        <li>Linux (ad hoc): run the same steps on an Ubuntu x64 machine (PyInstaller does not cross-compile) → <code>dist/DreamerStudio-&lt;version&gt;-linux-&lt;arch&gt;.AppImage</code>. Data and logs are in <code>~/.config/DreamerStudio</code>. Ubuntu 22.04+ needs <code>libfuse2</code> to run an AppImage.</li>
       </ol>
       <pre class="tree">DreamerStudio-&lt;version&gt;-win-x64/
 ├── DreamerStudio.exe           <span class="note"># Electron app</span>

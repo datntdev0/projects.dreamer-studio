@@ -1,0 +1,44 @@
+.import-package {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-md);
+  padding: var(--sp-md);
+  font-size: var(--font-size-meta);
+
+  .import-package-file {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    min-width: 0;
+    padding: var(--sp-sm) var(--sp-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+
+    .name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      font-weight: 500;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .ds-meta-list {
+    gap: var(--sp-sm) var(--sp-md);
+    padding: 0 var(--sp-xs);
+
+    dt {
+      font-weight: 400;
+    }
+
+    dd {
+      display: grid;
+      gap: var(--sp-xxs);
+      justify-items: start;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+}

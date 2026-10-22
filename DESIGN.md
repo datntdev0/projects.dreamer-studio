@@ -252,7 +252,8 @@ Layout (`_layout.scss`, stories in `angular/stories/layout/`):
 - Rail: `.ds-rail-group` (`.ds-rail-title`, `.ds-rail-sep`, `.ds-rail-entry` with `.label`); expanded shows titles and 30px rows, collapsed shows 32px entries split by `.ds-rail-sep` with a tooltip. Active entry: `aria-current="page"`, muted background + 2px primary bar. System group (Pipelines, Settings) pinned to the bottom in `.ds-rail-bottom` (D-03).
 - Status bar: `.ds-app-status` with `.item` (`.path` truncates first; `button.item` has a hover background), `.ds-spacer`.
 - Page frame `.ds-page`: `.ds-page-toolbar` (`--top-h`, `h1` styled as h3, `.ds-page-actions` right) + `.ds-page-body` (scrolls, padding `--sp-lg`; `.narrow`, `.center`) + optional `.ds-page-footer`.
-- Patterns: list (toolbar + table), detail (`.ds-split`, `.ds-meta-list`), form (form grid + footer actions), empty state (centered area state).
+- Workbench `.ds-workbench`: optional `.ds-panel-left` + `ds-splitter`, `.ds-workbench-center` (main + `ds-splitter` + `.ds-panel-bottom`) + `ds-splitter` + `.ds-panel-right`; each panel starts with a fixed `.ds-panel-head` (36px row: `h2`, meta, `.ds-spacer`, actions); only `.ds-panel-body` scrolls. Used by Pipelines and Import.
+- Patterns: workbench (toolbar actions + panels), list (toolbar + table), detail (`.ds-split`, `.ds-meta-list`), form (form grid + footer actions), empty state (centered area state).
 - App shell (REQ-003, story `Shell/App shell`): `ShellComponent` = `header[dsTopbar]`, `nav[dsRail]`, `.ds-app-main` (error banners + router outlet), `footer[dsStatusBar]`, `ds-toast-outlet`. Rail entries are links (`routerLinkActive` → `aria-current="page"`).
 - Page: the page component host is the `.ds-page` (`host: { class: 'ds-page' }`), so `.ds-app-center > .ds-page` fills the center with `--color-background`.
 - Page title: `h1 dsPageTitle` gets `tabindex="-1"` and focus after navigation, without a focus ring.

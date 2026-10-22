@@ -7,8 +7,10 @@ Usage:
   python .claude/scripts/reqs.py next-id
   python .claude/scripts/reqs.py upsert patch.json
 
-Patch file (only the given fields are written; new IDs are inserted; "delete" removes requirement rows):
-  {"delete":       ["REQ-012"],
+Patch file (only the given fields are written; new IDs are inserted; "delete" removes requirement rows;
+"rename" changes capacity or requirement IDs, applied first and in order):
+  {"rename":       [["TH03-05", "TH03-04"]],
+   "delete":       ["REQ-012"],
    "capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
    "requirements": [{"Req ID": "REQ-023", "Capacity Name": "...", "Status": "1. Draft"}],
    "decisions":    [{"Decision ID": "AD-14", "Title": "...", "Options": "A — pros\\nB — pros", "Status": "Open"}]}
@@ -217,6 +219,15 @@ def cmd_upsert(args):
         patch = json.load(file)
     wb = load_workbook()
     catalog = wb[CATALOG_SHEET]
+
+    for old_id, new_id in patch.get("rename", []):
+        sheet, id_key, row = next(((ws, key, r) for ws, key in [(catalog, CATALOG_ID)]
+                                   + [(ws, REQ_ID) for ws in theme_sheets(wb)]
+                                   for r in read_rows(ws) if r[key] == old_id), (None, None, None))
+        if sheet is None:
+            fail(f"{old_id}: not found")
+        write_row(sheet, row["_row"], {id_key: new_id})
+        print(f"renamed: {old_id} -> {new_id} ({sheet.title})")
 
     for req_id in patch.get("delete", []):
         sheet, row = next(((ws, r) for ws in theme_sheets(wb) for r in read_rows(ws) if r[REQ_ID] == req_id),

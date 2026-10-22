@@ -399,6 +399,51 @@ html:not([data-theme='light']) .ds-only-light {
   }
 }
 
+.ds-workbench {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--color-border);
+}
+
+.ds-workbench-center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ds-panel-head {
+  display: flex;
+  flex: none;
+  gap: var(--sp-sm);
+  align-items: center;
+  min-height: var(--control-h-lg);
+  padding: 0 var(--sp-xs) 0 var(--sp-md);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+
+  h2 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: var(--font-size-meta);
+    font-weight: 600;
+    text-overflow: ellipsis;
+  }
+
+  .ds-spacer {
+    flex: 1;
+  }
+}
+
+.ds-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 .ds-page-footer {
   display: flex;
   flex: none;

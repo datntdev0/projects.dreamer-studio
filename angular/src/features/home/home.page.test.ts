@@ -37,6 +37,8 @@ function run(id: string, status: PipelineRun['status']): PipelineRun {
     createdAt: '2026-10-20T10:00:00.000Z',
     startedAt: '2026-10-20T10:01:00.000Z',
     finishedAt: status === 'running' ? null : '2026-10-20T10:03:00.000Z',
+    label: null,
+    novelId: null,
   };
 }
 

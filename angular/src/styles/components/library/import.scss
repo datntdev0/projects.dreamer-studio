@@ -55,8 +55,8 @@
   overflow: hidden;
 }
 
-ds-import-package-preview,
-ds-import-metadata-preview {
+ds-import-package,
+ds-import-metadata {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -74,12 +74,4 @@ ds-import-metadata-preview {
 .library-import-source {
   display: grid;
   padding: 0;
-}
-
-.library-import-samples {
-  display: grid;
-  gap: var(--sp-xxs);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }

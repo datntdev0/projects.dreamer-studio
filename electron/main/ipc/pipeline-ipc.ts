@@ -3,7 +3,7 @@ import { pipelineRunStatuses, PipelineCursor, PipelineListQuery } from '@dreamer
 import { PipelinePage, PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
 import { PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
-import { handle } from './handle';
+import { handle, handleValidated } from './handle';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -21,6 +21,7 @@ function isStartRequest(value: unknown): value is PipelineStartRequest {
   return (
     isObject(value) &&
     typeof value.type === 'string' &&
+    value.type !== 'novel-import' &&
     (value.failAtStep === null || (Number.isInteger(value.failAtStep) && (value.failAtStep as number) >= 1))
   );
 }
@@ -42,15 +43,6 @@ function isListQuery(value: unknown): value is PipelineListQuery {
     (value.limit as number) <= 200 &&
     (value.after === null || isCursor(value.after))
   );
-}
-
-function handleValidated<T, R>(channel: string, guard: (value: unknown) => value is T, run: (payload: T) => R): void {
-  handle(channel, (_event, payload: unknown): R => {
-    if (!guard(payload)) {
-      throw new Error(`Invalid ${channel} payload`);
-    }
-    return run(payload);
-  });
 }
 
 export function registerPipelineIpc(executor: () => PipelineExecutor): void {

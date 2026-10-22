@@ -80,6 +80,7 @@ export type PackageWarning = PackageIssue<PackageWarningCode>;
 export interface PackageFile {
   name: string;
   size: number;
+  modifiedMs: number;
 }
 
 export type CoverMime = 'image/jpeg' | 'image/png';
@@ -125,3 +126,36 @@ export interface PackageRead {
 }
 
 export type PackageReadResult = PackageRefused | PackageRead;
+
+export interface ImportMetadata {
+  originalTitle: string;
+  title: string;
+  author: string;
+  description: string;
+  tags: string[];
+  language: string;
+  publication: Publication;
+}
+
+export type ImportCoverChoice = { kind: 'package' } | { kind: 'file'; path: string } | { kind: 'none' };
+
+export interface ImportChapterChoice {
+  index: number;
+  title: string;
+  included: boolean;
+}
+
+export interface NovelImportRequest {
+  path: string;
+  size: number;
+  modifiedMs: number;
+  metadata: ImportMetadata;
+  cover: ImportCoverChoice;
+  chapters: ImportChapterChoice[];
+}
+
+export interface PickedImage {
+  path: string;
+  name: string;
+  size: number;
+}

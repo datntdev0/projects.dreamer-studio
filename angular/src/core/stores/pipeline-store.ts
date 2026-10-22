@@ -134,6 +134,10 @@ export class PipelineStore {
   }
 
   private notifyFinished(run: PipelineRun): void {
+    if (run.type === 'novel-import') {
+      this.notifyImportFinished(run);
+      return;
+    }
     if (run.status === 'succeeded') {
       this.toast.show({
         kind: 'success',
@@ -142,7 +146,7 @@ export class PipelineStore {
           name: runName(run, this.i18n),
           duration: formatDuration(runSeconds(run)),
         }),
-        action: { label: this.i18n.t('toast.pipeline.view'), run: () => this.open(run.id) },
+        action: { label: this.i18n.t('toast.pipeline.view'), run: () => this.openPipeline(run.id) },
       });
     } else if (run.status === 'failed') {
       this.toast.show({
@@ -153,12 +157,36 @@ export class PipelineStore {
           step: run.stepIndex,
           error: runError(run, this.i18n),
         }),
-        action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.open(run.id) },
+        action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
       });
     }
   }
 
-  private open(id: string): void {
+  private notifyImportFinished(run: PipelineRun): void {
+    const title: string = run.label ?? this.i18n.t('run.type.novel-import');
+    if (run.status === 'succeeded') {
+      const novelId: string | null = run.novelId;
+      this.toast.show({
+        kind: 'success',
+        title: this.i18n.t('toast.import.succeeded'),
+        message: this.i18n.t('toast.import.succeededMsg', { title }),
+        action: novelId ? { label: this.i18n.t('toast.import.open'), run: () => this.openNovel(novelId) } : undefined,
+      });
+    } else if (run.status === 'failed') {
+      this.toast.show({
+        kind: 'danger',
+        title: this.i18n.t('toast.import.failed'),
+        message: this.i18n.t('toast.import.failedMsg', { title }),
+        action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
+      });
+    }
+  }
+
+  private openPipeline(id: string): void {
     void this.router.navigate(['/pipelines', id]);
+  }
+
+  private openNovel(id: string): void {
+    void this.router.navigate(['/library', id]);
   }
 }

@@ -5,7 +5,13 @@ import { HOME_MODULE_ID, type AppModule } from './registry/modules';
 function moduleRoutes(module: AppModule, comingSoon: Type<unknown>): Route[] {
   const path: string = module.id === HOME_MODULE_ID ? '' : module.id;
   const route: Route = { path, component: module.page ?? comingSoon, data: { module: module.id } };
-  return module.detailRoute ? [route, { ...route, path: `${path}/:id` }] : [route];
+  const subRoutes: Route[] = (module.subRoutes ?? []).map((subRoute) => ({
+    path: `${path}/${subRoute.path}`,
+    component: subRoute.page,
+    data: { module: module.id, title: subRoute.title },
+  }));
+  const detailRoutes: Route[] = module.detailRoute ? [{ ...route, path: `${path}/:id` }] : [];
+  return [route, ...subRoutes, ...detailRoutes];
 }
 
 export function buildRoutes(modules: AppModule[], comingSoon: Type<unknown>): Routes {

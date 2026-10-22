@@ -16,6 +16,7 @@ import { registerAppIpc } from './ipc/app-ipc';
 import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerDiagnosticsIpc } from './ipc/diagnostics-ipc';
+import { registerLibraryIpc } from './ipc/library-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
 import { registerPipelineIpc } from './ipc/pipeline-ipc';
 import { registerSettingsIpc } from './ipc/settings-ipc';
@@ -24,6 +25,7 @@ import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
+import { novelImportPipeline } from './features/library/novel-import-pipeline';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
 import { SettingsLoadResult, SettingsStore } from './features/settings/settings-store';
@@ -64,7 +66,7 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
 
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
-  registry: new PipelineRegistry(app.isPackaged ? [] : [demoPipeline]),
+  registry: new PipelineRegistry(app.isPackaged ? [novelImportPipeline] : [demoPipeline, novelImportPipeline]),
   limit: (): number => settings.get().pipelines.maxConcurrent,
   startBackend,
   stopBackend,
@@ -135,6 +137,7 @@ async function onReady(): Promise<void> {
   logger.info(`app ${APP_VERSION}, electron ${process.versions.electron}`);
   registerAppIpc(manager);
   registerPipelineIpc(() => manager.session().executor);
+  registerLibraryIpc(() => manager.session().executor);
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);

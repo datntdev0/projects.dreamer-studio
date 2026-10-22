@@ -130,6 +130,8 @@ function activeRuns(count: number): PipelineRun[] {
     createdAt: '2026-10-20T00:00:00.000Z',
     startedAt: '2026-10-20T00:01:00.000Z',
     finishedAt: null,
+    label: null,
+    novelId: null,
   }));
 }
 

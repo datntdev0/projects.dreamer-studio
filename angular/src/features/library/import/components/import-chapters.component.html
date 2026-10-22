@@ -1,0 +1,124 @@
+<section class="import-chapters" data-testid="import-chapters">
+  <header class="ds-panel-head">
+    <h2>{{ 'library.import.chapters.heading' | t }}</h2>
+    <span class="meta num" data-testid="import-chapters-summary">{{
+      'library.import.chapters.summary'
+        | t: { included: formatCount(store.includedCount()), total: formatCount(store.chapters().length) }
+    }}</span>
+    <span class="ds-spacer"></span>
+    <ds-checkbox
+      data-testid="import-chapters-only-warnings"
+      [disabled]="!warningCount()"
+      [checked]="onlyWarnings()"
+      (checkedChange)="filter($event)"
+      >{{ 'library.import.chapters.onlyWarnings' | t: { count: warningCount() } }}</ds-checkbox
+    >
+  </header>
+  @if (store.chapters().length) {
+    <div
+      #viewport
+      class="ds-panel-body import-chapters-viewport"
+      data-testid="import-chapters-viewport"
+      (scroll)="scrollTop.set(viewport.scrollTop)"
+    >
+      <table
+        class="ds-table dense"
+        data-testid="import-chapters-table"
+        [attr.aria-label]="'library.import.chapters.tableLabel' | t"
+        [attr.aria-rowcount]="shown().length + 1"
+      >
+        <colgroup>
+          <col class="col-check" />
+          <col class="col-index" />
+          <col />
+          <col class="col-file" />
+          <col class="col-chars" />
+          <col class="col-check-result" />
+        </colgroup>
+        <thead>
+          <tr aria-rowindex="1">
+            <th>
+              <ds-checkbox
+                data-testid="import-chapters-tick-all"
+                [disabled]="!shown().length"
+                [checked]="allShownIncluded()"
+                (checkedChange)="includeShown($event)"
+                ><span class="visually-hidden">{{ 'library.import.chapters.tickShown' | t }}</span></ds-checkbox
+              >
+            </th>
+            <th class="num">{{ 'library.import.chapters.col.index' | t }}</th>
+            <th>{{ 'library.import.chapters.col.title' | t }}</th>
+            <th>{{ 'library.import.chapters.col.file' | t }}</th>
+            <th class="num">{{ 'library.import.chapters.col.chars' | t }}</th>
+            <th>{{ 'library.import.chapters.col.check' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (padTop()) {
+            <tr class="import-chapters-spacer" aria-hidden="true">
+              <td colspan="6" [style.height.px]="padTop()"></td>
+            </tr>
+          }
+          @for (chapter of visibleRows(); track chapter.index; let i = $index) {
+            <tr
+              data-testid="import-chapters-row"
+              [class.is-excluded]="!chapter.included"
+              [attr.aria-current]="chapter.index === revealed() || null"
+              [attr.aria-rowindex]="range().start + i + 2"
+              [attr.data-index]="chapter.index"
+              [attr.data-included]="chapter.included"
+              [attr.data-check]="chapter.warnings.length ? chapter.warnings[0].code : null"
+            >
+              <td>
+                <ds-checkbox
+                  data-testid="import-chapters-row-tick"
+                  [checked]="chapter.included"
+                  (checkedChange)="include(chapter.index, $event)"
+                  ><span class="visually-hidden">{{
+                    'library.import.chapters.tickRow' | t: { index: chapter.index }
+                  }}</span></ds-checkbox
+                >
+              </td>
+              <td class="num meta">{{ chapter.index }}</td>
+              <td>
+                <input
+                  class="ds-input import-chapters-title"
+                  type="text"
+                  data-testid="import-chapters-row-title"
+                  [value]="chapter.title"
+                  [placeholder]="'library.import.chapters.titlePlaceholder' | t: { index: chapter.index }"
+                  [attr.aria-label]="'library.import.chapters.titleLabel' | t: { index: chapter.index }"
+                  (input)="rename(chapter.index, $event)"
+                />
+              </td>
+              <td class="import-chapters-file" data-testid="import-chapters-row-file" [dsTooltip]="chapter.file">
+                {{ fileName(chapter.file) }}
+              </td>
+              <td class="num" data-testid="import-chapters-row-chars">{{ formatCount(chapter.chars) }}</td>
+              <td data-testid="import-chapters-row-check">
+                @for (warning of chapter.warnings; track warning.code) {
+                  <ds-pill kind="warning" icon="alert-triangle">{{
+                    checkKeys[warning.code] | t: warningParams(chapter, warning.code)
+                  }}</ds-pill>
+                }
+              </td>
+            </tr>
+          }
+          @if (padBottom()) {
+            <tr class="import-chapters-spacer" aria-hidden="true">
+              <td colspan="6" [style.height.px]="padBottom()"></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <ds-area-state
+      kind="empty"
+      icon="book"
+      data-testid="import-chapters-empty"
+      [heading]="'library.import.chapters.empty.heading' | t"
+      [description]="'library.import.chapters.empty.description' | t"
+    />
+  }
+</section>

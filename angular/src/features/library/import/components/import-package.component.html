@@ -1,0 +1,50 @@
+<div class="ds-panel-head">
+  <h2>{{ 'library.import.package.heading' | t }}</h2>
+  <span class="ds-spacer"></span>
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    type="button"
+    data-testid="import-change-file"
+    [iconOnly]="true"
+    [attr.aria-label]="'library.import.page.changeFile' | t"
+    [dsTooltip]="'library.import.page.changeFile' | t"
+    (click)="store.reset()"
+  >
+    <ds-icon name="folder" size="sm" />
+  </button>
+</div>
+@if (store.preview(); as preview) {
+  <section class="ds-panel-body import-package" data-testid="import-package">
+    <div class="import-package-file" data-testid="import-package-file">
+      <ds-icon name="file-zip" />
+      <span class="name" [dsTooltip]="preview.file.name" dsTooltipWhenTruncated>{{ preview.file.name }}</span>
+      <span class="meta num">{{ fileSize() }}</span>
+    </div>
+    <dl class="ds-meta-list">
+      <dt>{{ 'library.import.package.format' | t }}</dt>
+      <dd>{{ 'library.import.package.formatValue' | t: { version: preview.formatVersion } }}</dd>
+      <dt>{{ 'library.import.package.type' | t }}</dt>
+      <dd>{{ 'library.import.package.typeNovel' | t }}</dd>
+      <dt>{{ 'library.import.package.chapters' | t }}</dt>
+      <dd class="num">{{ chapterCount() }}</dd>
+      <dt>{{ 'library.import.package.cover' | t }}</dt>
+      <dd>
+        @if (preview.cover; as cover) {
+          <code>{{ cover.file }}</code>
+        } @else {
+          <span class="meta">{{ 'library.import.package.none' | t }}</span>
+        }
+      </dd>
+      <dt>{{ 'library.import.package.ignored' | t }}</dt>
+      <dd data-testid="import-package-ignored">
+        @for (file of preview.ignoredFiles; track file) {
+          <code>{{ file }}</code>
+        } @empty {
+          <span class="meta">{{ 'library.import.package.none' | t }}</span>
+        }
+      </dd>
+    </dl>
+  </section>
+}

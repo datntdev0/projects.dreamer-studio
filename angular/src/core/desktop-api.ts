@@ -7,6 +7,7 @@ import type { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
+import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -129,5 +130,25 @@ export class DesktopApi {
 
   onPipelineLog(listener: (chunk: PipelineLogChunk) => void): () => void {
     return window.dreamer ? window.dreamer.pipeline.onLog(listener) : () => undefined;
+  }
+
+  async pickPackage(): Promise<string | null> {
+    return window.dreamer ? window.dreamer.library.pickPackage() : null;
+  }
+
+  async readPackage(path: string): Promise<PackageReadResult | null> {
+    return window.dreamer ? window.dreamer.library.readPackage(path) : null;
+  }
+
+  async pickImage(): Promise<PickedImage | null> {
+    return window.dreamer ? window.dreamer.library.pickImage() : null;
+  }
+
+  async importNovel(request: NovelImportRequest): Promise<PipelineRun | null> {
+    return window.dreamer ? window.dreamer.library.import(request) : null;
+  }
+
+  pathForFile(file: File): string | null {
+    return window.dreamer ? window.dreamer.library.pathForFile(file) : null;
   }
 }

@@ -1,0 +1,170 @@
+<div class="ds-panel-head">
+  <h2>{{ 'library.import.metadata.heading' | t }}</h2>
+</div>
+<section class="ds-panel-body import-metadata" data-testid="import-metadata">
+  <p class="import-metadata-note" data-testid="import-metadata-note">
+    <ds-icon name="info" size="sm" />{{ 'library.import.metadata.note' | t }}
+  </p>
+  <div class="import-metadata-fields">
+    <ds-field
+      [label]="'library.import.metadata.originalTitle' | t"
+      controlId="import-metadata-original-title"
+      [hint]="'library.import.metadata.originalTitleHint' | t"
+      [error]="errors().originalTitle ? ('library.import.metadata.required' | t) : ''"
+      required
+    >
+      <input
+        id="import-metadata-original-title"
+        class="ds-input"
+        required
+        [value]="current().originalTitle"
+        [attr.aria-invalid]="errors().originalTitle || null"
+        data-testid="import-metadata-original-title"
+        (input)="setText('originalTitle', $event)"
+        (blur)="touch('originalTitle')"
+      />
+    </ds-field>
+    <ds-field
+      [label]="'library.import.metadata.title' | t"
+      controlId="import-metadata-title"
+      [hint]="'library.import.metadata.titleHint' | t"
+      [error]="errors().title ? ('library.import.metadata.required' | t) : ''"
+      required
+    >
+      <input
+        id="import-metadata-title"
+        class="ds-input"
+        required
+        [value]="current().title"
+        [attr.aria-invalid]="errors().title || null"
+        data-testid="import-metadata-title"
+        (input)="setText('title', $event)"
+        (blur)="touch('title')"
+      />
+    </ds-field>
+    <ds-field [label]="'library.import.metadata.author' | t" controlId="import-metadata-author">
+      <input
+        id="import-metadata-author"
+        class="ds-input"
+        [value]="current().author"
+        data-testid="import-metadata-author"
+        (input)="setText('author', $event)"
+      />
+    </ds-field>
+    <ds-field
+      [label]="'library.import.metadata.language' | t"
+      controlId="import-metadata-language"
+      [hint]="'library.import.metadata.languageHint' | t"
+      [error]="errors().language ? ('library.import.metadata.required' | t) : ''"
+      required
+    >
+      <span class="ds-select">
+        <select
+          id="import-metadata-language"
+          class="ds-input"
+          required
+          [attr.aria-invalid]="errors().language || null"
+          data-testid="import-metadata-language"
+          (change)="setText('language', $event)"
+          (blur)="touch('language')"
+        >
+          <option value="" [selected]="!current().language">
+            {{ 'library.import.metadata.languagePlaceholder' | t }}
+          </option>
+          @for (option of languageOptions(); track option.code) {
+            <option [value]="option.code" [selected]="option.code === current().language">{{ option.label }}</option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </ds-field>
+    <ds-field
+      [label]="'library.import.metadata.tags' | t"
+      controlId="import-metadata-tags-input"
+      [hint]="'library.import.metadata.tagsHint' | t"
+    >
+      <div class="import-metadata-tags" data-testid="import-metadata-tags" (click)="tagInput.focus()">
+        @for (tag of current().tags; track tag) {
+          <span class="import-metadata-tag" data-testid="import-metadata-tag">
+            {{ tag }}
+            <button
+              type="button"
+              [attr.aria-label]="'library.import.metadata.removeTag' | t: { tag }"
+              data-testid="import-metadata-tag-remove"
+              (click)="removeTag(tag); tagInput.focus()"
+            >
+              <ds-icon name="x" size="sm" />
+            </button>
+          </span>
+        }
+        <input
+          #tagInput
+          id="import-metadata-tags-input"
+          [value]="tagDraft()"
+          [placeholder]="'library.import.metadata.tagsPlaceholder' | t"
+          data-testid="import-metadata-tags-input"
+          (input)="tagDraft.set(tagInput.value)"
+          (keydown)="onTagKeydown($event)"
+          (paste)="onTagPaste($event)"
+          (blur)="commitTags()"
+        />
+      </div>
+    </ds-field>
+    <ds-field [label]="'library.import.metadata.description' | t" controlId="import-metadata-description">
+      <textarea
+        id="import-metadata-description"
+        class="ds-input"
+        rows="4"
+        [value]="current().description"
+        data-testid="import-metadata-description"
+        (input)="setText('description', $event)"
+      ></textarea>
+    </ds-field>
+    <ds-field [label]="'library.import.metadata.cover' | t">
+      <div class="import-metadata-cover" data-testid="import-metadata-cover">
+        @if (cover(); as currentCover) {
+          <span class="import-metadata-cover-tile" data-testid="import-metadata-cover-image">
+            <ds-icon name="image" size="lg" />
+          </span>
+          <div class="import-metadata-cover-body">
+            <span class="import-metadata-cover-name" data-testid="import-metadata-cover-name">{{
+              currentCover.name
+            }}</span>
+            <span class="meta">{{ coverMetaKey(currentCover) | t: { size: coverSize(currentCover) } }}</span>
+            <div class="import-metadata-cover-actions">
+              <button dsBtn size="sm" type="button" data-testid="import-metadata-cover-choose" (click)="chooseCover()">
+                <ds-icon name="image" size="sm" />{{ 'library.import.metadata.coverChoose' | t }}
+              </button>
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="import-metadata-cover-remove"
+                (click)="removeCover()"
+              >
+                <ds-icon name="trash" size="sm" />{{ 'library.import.metadata.coverRemove' | t }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <span
+            class="import-metadata-cover-tile generated"
+            [class.vertical]="verticalTitle()"
+            aria-hidden="true"
+            data-testid="import-metadata-cover-placeholder"
+            ><span>{{ current().originalTitle || current().title }}</span></span
+          >
+          <div class="import-metadata-cover-body">
+            <span class="meta">{{ 'library.import.metadata.coverNone' | t }}</span>
+            <div class="import-metadata-cover-actions">
+              <button dsBtn size="sm" type="button" data-testid="import-metadata-cover-choose" (click)="chooseCover()">
+                <ds-icon name="image" size="sm" />{{ 'library.import.metadata.coverChoose' | t }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </ds-field>
+  </div>
+</section>

@@ -1,0 +1,46 @@
+<div class="ds-panel-head">
+  <h2>{{ 'library.import.checks.heading' | t }}</h2>
+  @if (rows().length) {
+    <span class="meta num" data-testid="import-checks-count">{{
+      (rows().length === 1 ? 'library.import.checks.warningsOne' : 'library.import.checks.warnings')
+        | t: { count: rows().length }
+    }}</span>
+  }
+  <span class="ds-spacer"></span>
+  <span class="meta import-checks-note">{{ 'library.import.checks.note' | t }}</span>
+</div>
+@if (rows().length) {
+  <ul class="ds-panel-body import-checks" data-testid="import-checks">
+    @for (row of rows(); track row.key) {
+      <li [attr.data-included]="row.included" data-testid="import-checks-row">
+        <ds-icon name="alert-triangle" size="sm" />
+        <span class="subject" [class.mono]="row.index === null">{{ row.subject }}</span>
+        <span class="message">{{ row.messageKey | t: row.params }}</span>
+        @if (!row.included) {
+          <span class="meta">{{ 'library.import.checks.skipped' | t }}</span>
+        }
+        @if (row.index !== null) {
+          <button
+            dsBtn
+            variant="ghost"
+            size="sm"
+            type="button"
+            data-testid="import-checks-show"
+            (click)="reveal.emit(row.index)"
+          >
+            {{ 'library.import.checks.show' | t }}
+          </button>
+        }
+      </li>
+    }
+  </ul>
+} @else {
+  <ds-area-state
+    kind="empty"
+    icon="check"
+    compact
+    data-testid="import-checks-none"
+    [heading]="'library.import.checks.none' | t"
+    [description]="'library.import.checks.noneDescription' | t"
+  />
+}

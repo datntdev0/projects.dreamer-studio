@@ -67,7 +67,7 @@ interface CoverCheck {
   problem: PackageProblem | null;
 }
 
-class EntryTooLargeError extends Error {
+export class EntryTooLargeError extends Error {
   readonly limit: PackageLimit;
   readonly file: string;
   readonly size: number;
@@ -108,10 +108,11 @@ function metadataWhere(field: string): string {
 }
 
 async function packageFile(path: string): Promise<PackageFileInspection> {
-  const file: PackageFile = { name: basename(path), size: 0 };
+  const file: PackageFile = { name: basename(path), size: 0, modifiedMs: 0 };
   try {
     const details: Awaited<ReturnType<typeof stat>> = await stat(path);
     file.size = details.size;
+    file.modifiedMs = details.mtimeMs;
     return { file, regular: details.isFile() };
   } catch {
     return { file, regular: false };
@@ -464,7 +465,7 @@ async function checkChapterFiles(
   return { chapters, problems, warnings };
 }
 
-function coverMime(bytes: Uint8Array): PackageCover['mime'] | null {
+export function coverMime(bytes: Uint8Array): PackageCover['mime'] | null {
   const jpeg: boolean = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (jpeg) {
     return 'image/jpeg';
@@ -472,6 +473,31 @@ function coverMime(bytes: Uint8Array): PackageCover['mime'] | null {
   const pngSignature: number[] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
   const png: boolean = pngSignature.every((byte: number, index: number): boolean => bytes[index] === byte);
   return png ? 'image/png' : null;
+}
+
+export interface PackageArchive {
+  read(name: string, limit: PackageLimit, max: number): Promise<Uint8Array>;
+  close(): void;
+}
+
+export async function openPackageArchive(path: string): Promise<PackageArchive> {
+  const zip: yauzl.ZipFile = await openZip(path);
+  try {
+    const directory: CentralDirectory = await listEntries(zip);
+    return {
+      read: async (name: string, limit: PackageLimit, max: number): Promise<Uint8Array> => {
+        const indexed: IndexedEntry | null = availableEntry(directory, name);
+        if (indexed === null) {
+          throw new Error(`ZIP entry not found: ${name}`);
+        }
+        return readEntryBytes(zip, indexed, limit, max);
+      },
+      close: (): void => zip.close(),
+    };
+  } catch (error: unknown) {
+    zip.close();
+    throw error;
+  }
 }
 
 async function checkCoverFile(

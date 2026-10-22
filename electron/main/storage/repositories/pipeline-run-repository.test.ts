@@ -29,6 +29,8 @@ function makeRun(id: string, overrides: Partial<PipelineRun> = {}): PipelineRun 
     stepName: null,
     errorCode: null,
     error: null,
+    label: null,
+    novelId: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     startedAt: null,
     finishedAt: null,
@@ -72,6 +74,7 @@ describe('PipelineRunRepository', () => {
       stepName: 'prepare',
       errorCode: ErrorCode.PipelineUnknownType,
       error: 'boom',
+      label: 'Imported novel',
       startedAt: '2026-01-01T00:00:01.000Z',
       finishedAt: '2026-01-01T00:00:02.000Z',
     });
@@ -91,6 +94,7 @@ describe('PipelineRunRepository', () => {
       stepName: 'render',
       errorCode: ErrorCode.DbQueryFailed,
       error: 'failed',
+      novelId: 'novel-a',
       startedAt: '2026-01-01T00:00:01.000Z',
       finishedAt: '2026-01-01T00:00:03.000Z',
     };

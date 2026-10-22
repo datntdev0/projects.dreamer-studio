@@ -129,6 +129,8 @@ class FakePipelinesApi extends DesktopApi {
       createdAt: new Date().toISOString(),
       startedAt: null,
       finishedAt: null,
+      label: null,
+      novelId: null,
     };
     if (request.failAtStep) this.failAt.set(run.id, request.failAtStep);
     this.runs.push(run);

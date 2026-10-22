@@ -40,6 +40,8 @@ function makeRun(seed: RunSeed): PipelineRun {
     createdAt: minutesAgo(0),
     startedAt: null,
     finishedAt: null,
+    label: null,
+    novelId: null,
     ...seed,
   };
 }

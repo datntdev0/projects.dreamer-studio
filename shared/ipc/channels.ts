@@ -39,6 +39,13 @@ export const DiagnosticsChannel = {
   Run: 'diagnostics:run',
 } as const;
 
+export const LibraryChannel = {
+  PickPackage: 'library:pick-package',
+  ReadPackage: 'library:read-package',
+  PickImage: 'library:pick-image',
+  Import: 'library:import',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

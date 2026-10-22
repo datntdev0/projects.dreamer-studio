@@ -189,7 +189,11 @@ describe('package reader', () => {
     const path: string = await buildSampleZip();
     const preview: ImportPreview = await readOk(path);
 
-    expect(preview.file).toEqual({ name: basename(path), size: statSync(path).size });
+    expect(preview.file).toEqual({
+      name: basename(path),
+      size: statSync(path).size,
+      modifiedMs: statSync(path).mtimeMs,
+    });
     expect(preview.metadata.publication).toBe('ongoing');
     expect(preview.cover).toEqual({ file: 'cover.png', size: 101, mime: 'image/png' });
     expect(preview.chapters).toHaveLength(4);

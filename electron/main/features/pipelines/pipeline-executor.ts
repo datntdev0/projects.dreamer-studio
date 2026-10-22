@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { PipelineChannel } from '@dreamer/shared/ipc/channels';
-import { PipelineCancelReason, PipelineListQuery, PipelinePage, PipelineRun } from '@dreamer/shared/models/pipeline';
-import { PipelineRunStatus, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { PipelineCancelReason, PipelineListQuery, PipelinePage } from '@dreamer/shared/models/pipeline';
+import { PipelineRun, PipelineRunStatus, PipelineStartRequest } from '@dreamer/shared/models/pipeline';
+import { PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
 import { PipelineRunRepository } from '../../storage/repositories/pipeline-run-repository';
@@ -51,14 +52,18 @@ export class PipelineExecutor {
   }
 
   start(request: PipelineStartRequest): PipelineRun {
+    return this.startRun(request.type, { failAtStep: request.failAtStep }, null);
+  }
+
+  startRun(type: PipelineType, params: Record<string, unknown>, label: string | null): PipelineRun {
     if (this.closed) {
       throw new Error('Pipeline executor is closed');
     }
-    const definition: PipelineDefinition | undefined = this.registry.get(request.type);
+    const definition: PipelineDefinition | undefined = this.registry.get(type);
     if (!definition) {
-      throw new CodedError(ErrorCode.PipelineUnknownType, `Unknown pipeline type: ${request.type}`);
+      throw new CodedError(ErrorCode.PipelineUnknownType, `Unknown pipeline type: ${type}`);
     }
-    const state: RunState = this.createState(definition, request);
+    const state: RunState = this.createState(definition, type, params, label);
     this.repo.insert(state.run, state.params);
     this.publish(state.run);
     const created: PipelineRun = { ...state.run };
@@ -138,10 +143,15 @@ export class PipelineExecutor {
     }
   }
 
-  private createState(definition: PipelineDefinition, request: PipelineStartRequest): RunState {
+  private createState(
+    definition: PipelineDefinition,
+    type: PipelineType,
+    params: Record<string, unknown>,
+    label: string | null,
+  ): RunState {
     const run: PipelineRun = {
       id: randomUUID(),
-      type: request.type,
+      type,
       status: 'queued',
       cancelReason: null,
       progress: 0,
@@ -150,11 +160,12 @@ export class PipelineExecutor {
       stepName: null,
       errorCode: null,
       error: null,
+      label,
+      novelId: null,
       createdAt: nowIso(),
       startedAt: null,
       finishedAt: null,
     };
-    const params: Record<string, unknown> = { failAtStep: request.failAtStep };
     return { run, definition, params, controller: new AbortController(), progressTimer: null, lastWriteAt: 0 };
   }
 
@@ -191,6 +202,8 @@ export class PipelineExecutor {
 
   private createContext(state: RunState, runLog: RunLog): StepContext {
     return {
+      runId: state.run.id,
+      paths: this.paths,
       params: state.params,
       signal: state.controller.signal,
       progress: (percent: number): void => this.reportProgress(state, percent),
@@ -199,6 +212,10 @@ export class PipelineExecutor {
         if (state.controller.signal.aborted) {
           throw abortError();
         }
+      },
+      setNovelId: (id: string): void => {
+        state.run.novelId = id;
+        this.save(state);
       },
     };
   }
@@ -240,22 +257,27 @@ export class PipelineExecutor {
     }
     state.run.errorCode = error instanceof CodedError ? error.code : null;
     state.run.error = errorMessage(error);
+    await this.cleanup(state, ctx, runLog);
     this.finish(state, 'failed', null);
     runLog.logger.error('Run failed', error);
     this.logger.error(`pipeline run ${state.run.id} failed`, error);
   }
 
   private async settleCancelled(state: RunState, ctx: StepContext, runLog: RunLog): Promise<void> {
-    try {
-      await state.definition.cleanup?.(ctx);
-    } catch (error) {
-      runLog.logger.error('Cleanup failed', error);
-    }
+    await this.cleanup(state, ctx, runLog);
     if (this.closed) {
       return;
     }
     this.finish(state, 'cancelled', 'user');
     runLog.logger.info(`Cancelled by user at step ${state.run.stepIndex}`);
+  }
+
+  private async cleanup(state: RunState, ctx: StepContext, runLog: RunLog): Promise<void> {
+    try {
+      await state.definition.cleanup?.(ctx);
+    } catch (error) {
+      runLog.logger.error('Cleanup failed', error);
+    }
   }
 
   private finish(state: RunState, status: PipelineRunStatus, reason: PipelineCancelReason | null): void {

@@ -7,6 +7,7 @@ import { AboutLink } from '../models/about';
 import { DiagnosticsRun } from '../models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
+import { NovelImportRequest, PackageReadResult, PickedImage } from '../models/novel-package';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '../models/settings';
 
@@ -53,6 +54,13 @@ export interface DreamerApi {
     onUpdate(listener: (run: PipelineRun) => void): () => void;
     onDeleted(listener: (ids: string[]) => void): () => void;
     onLog(listener: (chunk: PipelineLogChunk) => void): () => void;
+  };
+  library: {
+    pickPackage(): Promise<string | null>;
+    readPackage(path: string): Promise<PackageReadResult>;
+    pickImage(): Promise<PickedImage | null>;
+    import(request: NovelImportRequest): Promise<PipelineRun>;
+    pathForFile(file: File): string;
   };
   dev: {
     crash(kind: DevCrashKind): Promise<void>;

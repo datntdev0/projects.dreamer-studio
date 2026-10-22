@@ -1,0 +1,86 @@
+@switch (store.stage()) {
+  @case ('reading') {
+    <div class="import-source-reading" role="status" data-testid="import-source-reading">
+      <ds-icon class="import-source-icon" name="file-zip" size="xl" />
+      <h2 class="import-source-title">{{ 'library.import.source.reading' | t: { file: store.file()?.name ?? '' } }}</h2>
+      <ds-progress [value]="null" />
+      <p class="import-source-note">{{ 'library.import.source.readingNote' | t }}</p>
+    </div>
+  }
+  @case ('refused') {
+    <ds-area-state
+      kind="error"
+      [heading]="refusalTitleKey() | t: params()"
+      [description]="refusalMessageKey() | t: params()"
+      [attr.data-refusal]="refusal()"
+      data-testid="import-source-refused"
+    >
+      @if (store.file(); as current) {
+        <span class="import-source-file" data-testid="import-source-file">
+          <ds-icon [name]="refusal() === 'notZip' ? 'file' : 'file-zip'" size="sm" />
+          <span class="name">{{ current.name }}</span>
+          <span class="num">{{ fileSize() }}</span>
+        </span>
+      }
+      @if (refusal() === 'unsafePath') {
+        <code class="import-source-entry" data-testid="import-source-entry">{{ unsafeEntry() }}</code>
+      }
+      @if (refusal() === 'problems') {
+        <ol class="import-source-problems" data-testid="import-source-problems">
+          @for (problem of problems(); track $index) {
+            <li [attr.data-testid]="'import-source-problem-' + problem.code">
+              <ds-icon class="import-source-problem-icon" name="alert-circle" size="sm" />
+              <span class="message">{{ problem.key | t: problem.params }}</span>
+              <span class="where">{{ problem.where }}</span>
+            </li>
+          }
+        </ol>
+      }
+      <div class="import-source-actions">
+        @if (refusal() === 'problems') {
+          <button dsBtn variant="ghost" type="button" data-testid="import-source-copy" (click)="copyProblems()">
+            <ds-icon name="copy" size="sm" />{{ 'library.import.source.copy' | t }}
+          </button>
+        }
+        <button dsBtn variant="primary" type="button" data-testid="import-source-pick" (click)="pick()">
+          <ds-icon name="folder" size="sm" />{{ 'library.import.page.changeFile' | t }}
+        </button>
+      </div>
+    </ds-area-state>
+  }
+  @default {
+    <div class="import-source-idle" data-testid="import-source-idle">
+      <span class="import-source-mark"><ds-icon [name]="store.dragOver() ? 'download' : 'upload'" size="lg" /></span>
+      <h2 class="import-source-title" data-testid="import-source-drop-title">
+        {{
+          (store.dropMany()
+            ? 'library.import.source.dropOne'
+            : store.dragOver()
+              ? 'library.import.source.release'
+              : 'library.import.source.drop'
+          ) | t
+        }}
+      </h2>
+      <span class="import-source-or">{{ 'library.import.source.or' | t }}</span>
+      <button dsBtn variant="primary" type="button" data-testid="import-source-pick" (click)="pick()">
+        <ds-icon name="folder" size="sm" />{{ 'library.import.source.choose' | t }}
+      </button>
+      <ul
+        class="import-source-format"
+        [attr.aria-label]="'library.import.source.formatLabel' | t"
+        data-testid="import-source-format"
+      >
+        <li>
+          <code>metadata.json</code><span>{{ 'library.import.source.formatMetadata' | t }}</span>
+        </li>
+        <li>
+          <code>chapters/*.txt</code><span>{{ 'library.import.source.formatChapters' | t }}</span>
+        </li>
+        <li>
+          <code>cover.jpg</code><span>{{ 'library.import.source.formatCover' | t }}</span>
+        </li>
+      </ul>
+      <p class="import-source-note">{{ 'library.import.source.safeNote' | t }}</p>
+    </div>
+  }
+}

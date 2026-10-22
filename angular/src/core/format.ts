@@ -36,15 +36,23 @@ export function formatTime(iso: string, language: Language): string {
   return new Intl.DateTimeFormat(language, TIME_OPTIONS).format(new Date(iso));
 }
 
-const MEGABYTE = 1024 ** 2;
+const KILOBYTE = 1024;
+const MEGABYTE = KILOBYTE ** 2;
 const GIGABYTE = 1024 ** 3;
 
 export function formatBytes(bytes: number, language: Language): string {
   const isGigabyte: boolean = bytes >= GIGABYTE;
+  const isMegabyte: boolean = bytes >= MEGABYTE;
+  const unit: Intl.NumberFormatOptions['unit'] = isGigabyte ? 'gigabyte' : isMegabyte ? 'megabyte' : 'kilobyte';
+  const divisor: number = isGigabyte ? GIGABYTE : isMegabyte ? MEGABYTE : KILOBYTE;
   const format = new Intl.NumberFormat(language, {
     style: 'unit',
-    unit: isGigabyte ? 'gigabyte' : 'megabyte',
+    unit,
     maximumFractionDigits: 1,
   });
-  return format.format(bytes / (isGigabyte ? GIGABYTE : MEGABYTE));
+  return format.format(bytes / divisor);
+}
+
+export function formatCount(count: number, language: Language): string {
+  return new Intl.NumberFormat(language).format(count);
 }

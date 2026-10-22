@@ -1,12 +1,16 @@
 import { PipelineType } from '@dreamer/shared/models/pipeline';
 import { Logger } from '../../logging/logger';
+import { AppPaths } from '../../storage/paths';
 
 export interface StepContext {
+  runId: string;
+  paths: AppPaths;
   params: Record<string, unknown>;
   signal: AbortSignal;
   progress(percent: number): void;
   log: Logger;
   checkpoint(): void;
+  setNovelId(id: string): void;
 }
 
 export interface PipelineStep {

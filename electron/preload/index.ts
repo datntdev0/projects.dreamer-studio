@@ -1,17 +1,15 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron';
 import { AppError } from '@dreamer/shared/errors/app-error';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
+import { AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer/shared/ipc/channels';
 import {
-  AppChannel,
-  AppDataChannel,
-  BackendChannel,
-  DevChannel,
   DiagnosticsChannel,
+  LibraryChannel,
   LogChannel,
   PipelineChannel,
+  SettingsChannel,
 } from '@dreamer/shared/ipc/channels';
-import { SettingsChannel } from '@dreamer/shared/ipc/channels';
 import { DevCrashKind } from '@dreamer/shared/ipc/dev';
 import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
@@ -21,6 +19,7 @@ import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/mo
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
@@ -83,6 +82,13 @@ const api: DreamerApi = {
   },
   diagnostics: {
     run: (): Promise<DiagnosticsRun> => call(DiagnosticsChannel.Run),
+  },
+  library: {
+    pickPackage: (): Promise<string | null> => call(LibraryChannel.PickPackage),
+    readPackage: (path: string): Promise<PackageReadResult> => call(LibraryChannel.ReadPackage, path),
+    pickImage: (): Promise<PickedImage | null> => call(LibraryChannel.PickImage),
+    import: (request: NovelImportRequest): Promise<PipelineRun> => call(LibraryChannel.Import, request),
+    pathForFile: (file: File): string => webUtils.getPathForFile(file),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

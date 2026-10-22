@@ -62,6 +62,8 @@ function makeRun(id: string, status: PipelineRunStatus): PipelineRun {
     stepName: null,
     errorCode: null,
     error: null,
+    label: null,
+    novelId: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     startedAt: null,
     finishedAt: null,
@@ -98,6 +100,46 @@ afterEach(() => {
 });
 
 describe('PipelineExecutor', () => {
+  it('starts a labeled run through startRun', async () => {
+    const run: PipelineRun = executor.startRun('demo', { source: 'package.zip' }, 'Imported novel');
+    expect(run).toMatchObject({ label: 'Imported novel', novelId: null });
+    await waitForStatus(run.id, 'succeeded');
+    expect(executor.get(run.id)).toMatchObject({ label: 'Imported novel', novelId: null });
+    expect(readLogText(run.id)).toContain('"source":"package.zip"');
+  });
+
+  it('exposes the run context and saves the novel id', async () => {
+    let contextRunId: string | null = null;
+    let contextPaths: AppPaths | null = null;
+    let release: () => void = (): void => undefined;
+    setup(
+      makeDefinition([
+        {
+          key: 'save',
+          backend: false,
+          run: async (ctx: StepContext): Promise<void> => {
+            contextRunId = ctx.runId;
+            contextPaths = ctx.paths;
+            ctx.setNovelId('novel-a');
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+          },
+        },
+      ]),
+    );
+    const run: PipelineRun = executor.start(startRequest);
+    await vi.waitFor((): void => expect(executor.get(run.id).novelId).toBe('novel-a'), {
+      timeout: 3000,
+      interval: 5,
+    });
+    expect(contextRunId).toBe(run.id);
+    expect(contextPaths).toBe(paths);
+    expect(executor.get(run.id).status).toBe('running');
+    release();
+    await waitForStatus(run.id, 'succeeded');
+  });
+
   it('AC-1: start returns a queued run at once and does not block the event loop', async () => {
     setup(makeDefinition([sleepStep('long', 100)]));
     let timerFired: boolean = false;
@@ -245,6 +287,7 @@ describe('PipelineExecutor', () => {
     const run: PipelineRun = executor.start(startRequest);
     await waitForStatus(run.id, 'failed');
     expect(executor.get(run.id)).toMatchObject({ errorCode: ErrorCode.DbQueryFailed, error: 'step exploded' });
+    expect(cleanup).toHaveBeenCalledTimes(1);
     await vi.waitFor((): void => expect(readLogText(run.id)).toContain('CodedError'), { timeout: 3000 });
     expect(() => executor.start({ type: 'other' as 'demo', failAtStep: null })).toThrow(CodedError);
     try {
@@ -252,6 +295,23 @@ describe('PipelineExecutor', () => {
     } catch (error) {
       expect((error as CodedError).code).toBe(ErrorCode.PipelineUnknownType);
     }
+  });
+
+  it('keeps a run failed when failure cleanup also throws', async () => {
+    cleanup.mockRejectedValueOnce(new Error('cleanup exploded'));
+    setup(
+      makeDefinition([
+        {
+          key: 'broken',
+          backend: false,
+          run: (): Promise<void> => Promise.reject(new Error('step exploded')),
+        },
+      ]),
+    );
+    const run: PipelineRun = executor.start(startRequest);
+    await waitForStatus(run.id, 'failed');
+    expect(executor.get(run.id)).toMatchObject({ status: 'failed', error: 'step exploded' });
+    await vi.waitFor((): void => expect(readLogText(run.id)).toContain('Cleanup failed'), { timeout: 3000 });
   });
 
   it('AC-6: recover cancels queued and running rows with reason appClosed', () => {

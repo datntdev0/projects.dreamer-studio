@@ -14,6 +14,8 @@ interface PipelineRunRow {
   step_name: string | null;
   error_code: string | null;
   error: string | null;
+  label: string | null;
+  novel_id: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -37,6 +39,8 @@ function toRun(row: PipelineRunRow): PipelineRun {
     stepName: row.step_name,
     errorCode: row.error_code as ErrorCode | null,
     error: row.error,
+    label: row.label,
+    novelId: row.novel_id,
     createdAt: row.created_at,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
@@ -49,8 +53,8 @@ export class PipelineRunRepository {
   insert(run: PipelineRun, params: Record<string, unknown>): void {
     this.db.run(
       `INSERT INTO pipeline_run (id, type, status, cancel_reason, params, progress, step_index, step_count, step_name,
-        error_code, error, created_at, started_at, finished_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        error_code, error, label, created_at, started_at, finished_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         run.id,
         run.type,
@@ -63,6 +67,7 @@ export class PipelineRunRepository {
         run.stepName,
         run.errorCode,
         run.error,
+        run.label,
         run.createdAt,
         run.startedAt,
         run.finishedAt,
@@ -73,7 +78,7 @@ export class PipelineRunRepository {
   update(run: PipelineRun): void {
     this.db.run(
       `UPDATE pipeline_run SET status = ?, cancel_reason = ?, progress = ?, step_index = ?, step_name = ?,
-        error_code = ?, error = ?, started_at = ?, finished_at = ?
+        error_code = ?, error = ?, novel_id = ?, started_at = ?, finished_at = ?
       WHERE id = ?`,
       [
         run.status,
@@ -83,6 +88,7 @@ export class PipelineRunRepository {
         run.stepName,
         run.errorCode,
         run.error,
+        run.novelId,
         run.startedAt,
         run.finishedAt,
         run.id,

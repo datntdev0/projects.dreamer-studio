@@ -14,6 +14,9 @@ export const ErrorCode = {
   PipelineUnknownType: 'PIPELINE_UNKNOWN_TYPE',
   SettingsInvalid: 'SETTINGS_INVALID',
   SettingsWriteFailed: 'SETTINGS_WRITE_FAILED',
+  PackageUnreadable: 'PACKAGE_UNREADABLE',
+  PackageChanged: 'PACKAGE_CHANGED',
+  LibraryWriteFailed: 'LIBRARY_WRITE_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

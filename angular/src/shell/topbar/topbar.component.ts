@@ -17,6 +17,11 @@ import { PageCrumbService } from '../page-crumb.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';
 import type { AppModule } from '../registry/modules';
 
+interface ShellRouteData {
+  moduleId: string | null;
+  title: string | null;
+}
+
 @Component({
   selector: 'header[dsTopbar]',
   imports: [ButtonDirective, IconComponent, TooltipDirective, RouterLink, TranslatePipe],
@@ -38,21 +43,23 @@ export class TopbarComponent {
   protected readonly groupTitles = GROUP_TITLES;
 
   private readonly title: Title = inject(Title);
-  private readonly moduleId = toSignal(
+  private readonly routeData = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.currentModuleId()),
+      map(() => this.currentRouteData()),
     ),
-    { initialValue: null },
+    { initialValue: { moduleId: null, title: null } },
   );
 
   protected readonly currentModule = computed<AppModule | undefined>(() =>
-    MODULES.find((module) => module.id === this.moduleId()),
+    MODULES.find((module) => module.id === this.routeData().moduleId),
   );
-  protected readonly currentPageKey = computed(() =>
-    this.currentModule()?.id === 'library' ? 'library.browse.novels' : this.currentModule()?.label,
-  );
+  protected readonly currentPageKey = computed<string | undefined>(() => {
+    const title: string | null = this.routeData().title;
+    if (title) return title;
+    return this.currentModule()?.id === 'library' ? 'library.browse.novels' : this.currentModule()?.label;
+  });
 
   constructor() {
     effect(() => {
@@ -73,9 +80,12 @@ export class TopbarComponent {
     void this.settings.update({ theme: this.theme.theme() === 'light' ? 'dark' : 'light' });
   }
 
-  private currentModuleId(): string | null {
+  private currentRouteData(): ShellRouteData {
     let route = this.router.routerState.snapshot.root;
     while (route.firstChild) route = route.firstChild;
-    return (route.data['module'] as string | undefined) ?? null;
+    return {
+      moduleId: (route.data['module'] as string | undefined) ?? null,
+      title: (route.data['title'] as string | undefined) ?? null,
+    };
   }
 }

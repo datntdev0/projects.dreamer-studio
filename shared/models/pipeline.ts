@@ -2,7 +2,7 @@ import { ErrorCode } from '../errors/app-error';
 
 export type PipelineRunStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
-export type PipelineType = 'demo';
+export type PipelineType = 'demo' | 'novel-import';
 
 export type PipelineCancelReason = 'user' | 'appClosed';
 
@@ -24,6 +24,8 @@ export interface PipelineRun {
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  label: string | null;
+  novelId: string | null;
 }
 
 export interface PipelineStepInfo {

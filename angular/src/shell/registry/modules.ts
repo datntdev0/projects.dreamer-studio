@@ -1,9 +1,16 @@
 import type { Type } from '@angular/core';
 import { HomePage } from '../../features/home/home.page';
+import { ImportPage } from '../../features/library/import/import.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 import { SettingsPage } from '../../features/settings/settings.page';
 
 export type ModuleGroup = 'library' | 'analysis' | 'production' | 'system';
+
+export interface AppSubRoute {
+  path: string;
+  page: Type<unknown>;
+  title: string;
+}
 
 export interface AppModule {
   id: string;
@@ -14,6 +21,7 @@ export interface AppModule {
   release: string | null;
   page: Type<unknown> | null;
   detailRoute?: boolean;
+  subRoutes?: AppSubRoute[];
 }
 
 export const HOME_MODULE_ID = 'home';
@@ -43,6 +51,8 @@ export const MODULES: AppModule[] = [
     description: 'module.library.desc',
     release: '0.1.0',
     page: null,
+    detailRoute: true,
+    subRoutes: [{ path: 'import', page: ImportPage, title: 'library.import.page.title' }],
   },
   {
     id: 'analysis',

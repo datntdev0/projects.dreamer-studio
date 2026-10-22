@@ -1,0 +1,89 @@
+<div class="ds-page-toolbar">
+  <h1 dsPageTitle>{{ 'library.import.page.title' | t }}</h1>
+  <ol class="library-import-steps" data-testid="import-steps" [attr.aria-label]="'library.import.page.steps' | t">
+    <li
+      [attr.data-state]="store.previewing() ? 'done' : 'current'"
+      [attr.aria-current]="store.previewing() ? null : 'step'"
+    >
+      <span class="mark">
+        @if (store.previewing()) {
+          <ds-icon name="check" size="sm" />
+        } @else {
+          1
+        }
+      </span>
+      {{ 'library.import.page.stepSource' | t }}
+    </li>
+    <li
+      [attr.data-state]="store.previewing() ? 'current' : 'todo'"
+      [attr.aria-current]="store.previewing() ? 'step' : null"
+    >
+      <span class="mark">2</span>{{ 'library.import.page.stepPreview' | t }}
+    </li>
+  </ol>
+  @if (store.previewing()) {
+    <div class="ds-page-actions">
+      @if (store.warningCount()) {
+        <ds-pill kind="warning" icon="alert-triangle" data-testid="import-warnings">{{
+          (store.warningCount() === 1 ? 'library.import.checks.warningsOne' : 'library.import.checks.warnings')
+            | t: { count: store.warningCount() }
+        }}</ds-pill>
+      }
+      <button dsBtn variant="ghost" size="sm" type="button" data-testid="import-cancel" (click)="store.reset()">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="button"
+        data-testid="import-start"
+        [disabled]="!store.canImport() || store.starting()"
+        [loading]="store.starting()"
+        (click)="startImport()"
+      >
+        <ds-icon name="download" size="sm" />{{ 'library.import.page.start' | t: { count: includedLabel() } }}
+      </button>
+    </div>
+  }
+</div>
+@if (store.previewing()) {
+  <div class="ds-workbench" data-testid="import-preview">
+    <aside
+      #left
+      class="ds-panel-left library-import-panel"
+      data-testid="import-package-panel"
+      [attr.aria-label]="'library.import.package.heading' | t"
+    >
+      <ds-import-package />
+    </aside>
+    <ds-splitter edge="left" [target]="left" [label]="'library.import.page.resizePackage' | t" />
+    <div class="ds-workbench-center">
+      <main class="library-import-main">
+        <ds-import-chapters #chapterList />
+      </main>
+      <ds-splitter edge="bottom" [target]="bottom" [label]="'library.import.page.resizeChecks' | t" />
+      <aside
+        #bottom
+        class="ds-panel-bottom library-import-panel"
+        data-testid="import-checks-panel"
+        [attr.aria-label]="'library.import.checks.heading' | t"
+      >
+        <ds-import-checks (reveal)="chapterList.reveal($event)" />
+      </aside>
+    </div>
+    <ds-splitter edge="right" [target]="right" [label]="'library.import.page.resizeNovel' | t" />
+    <aside
+      #right
+      class="ds-panel-right library-import-panel"
+      data-testid="import-novel-panel"
+      [attr.aria-label]="'library.import.metadata.heading' | t"
+    >
+      <ds-import-metadata />
+    </aside>
+  </div>
+} @else {
+  <div class="ds-page-body library-import-source">
+    <ds-import-source />
+  </div>
+}

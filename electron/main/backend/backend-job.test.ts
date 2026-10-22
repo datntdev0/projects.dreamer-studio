@@ -3,6 +3,7 @@ import { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { StepContext } from '../features/pipelines/pipeline-definition';
+import { resolveAppPaths } from '../storage/paths';
 import { runBackendJob } from './backend-job';
 import { getBackendConnection } from './backend-process';
 
@@ -26,11 +27,14 @@ let log: { debug: Mock; info: Mock; warn: Mock; error: Mock };
 
 function makeContext(): StepContext {
   return {
+    runId: 'run-1',
+    paths: resolveAppPaths('app-data'),
     params: {},
     signal: controller.signal,
     progress: progress as unknown as StepContext['progress'],
     log: log as unknown as StepContext['log'],
     checkpoint: vi.fn(),
+    setNovelId: vi.fn(),
   };
 }
 

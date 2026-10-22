@@ -31,7 +31,7 @@
       <h1>Architecture Overview</h1>
       <div class="doc-meta"><span>Updated 2026-10-19</span><span>Owner: architect</span><span>Source: codebase + _docs/0.requirements-analysis.xlsx › Open Decisions</span></div>
 
-      <div class="callout">Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005; app data folders and single instance since TSK-007. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
+      <div class="callout">Library storage moved to files on 2026-10-21 (AD-38). Skeleton in code since TSK-002 (Electron 44, Angular 22, FastAPI); SQLite data access layer since TSK-005; app data folders and single instance since TSK-007. AD-01..AD-13, AD-18, AD-19 and AD-22 decided on 2026-10-17 (sheet <code>Open Decisions</code>, viewer <code>0.architecture-decision.html</code>). Items marked <span class="pill warning">[unverified]</span> are proposals not yet proven in code.</div>
 
       <h2>Overview</h2>
       <p>Dreamer Studio is a local Windows desktop studio for one user to manage a creative library (novels first, music and video later) and run AI analysis on it. It ships as a portable package: an Electron app that starts a bundled Python FastAPI backend on 127.0.0.1. All data stays on the machine.</p>
@@ -40,7 +40,7 @@
           <li>Shell: Electron main + preload + renderer (AD-01)</li>
           <li>UI: Angular + Bootstrap reboot and utilities only (AD-26) + SCSS, Storybook 10 (AD-07, AD-28); fonts from npm (AD-27); i18n with own JSON files, no library (AD-07)</li>
           <li>Backend: Python FastAPI, pip + venv (AD-02, AD-09)</li>
-          <li>Storage: SQLite via <code>node:sqlite</code> in main + files in app data (AD-03, AD-04)</li>
+          <li>Storage: SQLite via <code>node:sqlite</code> in main for operations and history (pipeline runs, logs); library data (metadata, chapters, covers) as files in app data, one <code>metadata.json</code> per novel (AD-03, AD-04, AD-38)</li>
           <li>Tooling: pnpm workspaces; ESLint, Prettier, Vitest; Ruff, pytest (AD-09); esbuild for main + preload (AD-19)</li>
           <li>Logging: electron-log in main (renderer via IPC), stdlib <code>logging</code> in Python; daily files, kept 7 days (AD-12, AD-20)</li>
           <li>Build: PyInstaller one-folder + electron-builder <code>zip</code>, Windows x64 only (AD-10, AD-11, AD-21)</li>
@@ -73,7 +73,7 @@
           <tr><td>UI</td><td>Renderer</td><td>Screens, shell, design system, i18n, theme. No Node or Electron APIs; data via a typed client so Storybook can mock it (REQ-001 AC-5).</td><td>Preload API (IPC)</td></tr>
           <tr><td>Bridge</td><td>Preload</td><td>Exposes a typed, minimal API with <code>contextBridge</code>; events main → renderer.</td><td>Main (IPC)</td></tr>
           <tr><td>Core services</td><td>Main</td><td>Settings, path resolver, data access + migrations, pipeline executor, self-checks, logging, OS dialogs, backend lifecycle.</td><td>SQLite, files, backend (HTTP)</td></tr>
-          <tr><td>Storage</td><td>Main</td><td>SQLite file <code>&lt;app data&gt;/database.sqlite</code> behind the <code>Database</code> wrapper and one repository per table (TSK-005, AD-22); library files in <code>&lt;app data&gt;/library/&lt;novel-id&gt;</code>.</td><td>—</td></tr>
+          <tr><td>Storage</td><td>Main</td><td>SQLite file <code>&lt;app data&gt;/database.sqlite</code> behind the <code>Database</code> wrapper and one repository per table (TSK-005, AD-22); library data as files in <code>&lt;app data&gt;/library/&lt;novel-id&gt;</code> (<code>metadata.json</code>, chapters, cover; AD-38), never in SQLite.</td><td>—</td></tr>
           <tr><td>AI backend</td><td>Python</td><td>Heavy/AI steps (LLM analysis, translation) as cancellable jobs; no DB access.</td><td>LLM CLIs and cloud APIs</td></tr>
         </tbody>
       </table>
@@ -186,10 +186,10 @@
       <pre class="tree">%LOCALAPPDATA%/DreamerStudio/   <span class="note"># fixed folder, never moved</span>
 └── settings.json               <span class="note"># language, theme, app data path, pipelines (TSK-010)</span></pre>
       <pre class="tree">&lt;app data&gt;/           <span class="note"># default %LOCALAPPDATA%/DreamerStudio/; user can open another folder (REQ-008)</span>
-├── database.sqlite   <span class="note"># SQLite database (TSK-005)</span>
+├── database.sqlite   <span class="note"># SQLite database: operations and history, no library data (TSK-005, AD-38)</span>
 ├── database.backup.sqlite <span class="note"># copy made before pending migrations, overwritten each time (TSK-006, AD-25)</span>
 ├── library/          <span class="note"># library, logs, cache recreated on every start (TSK-007)</span>
-│   └── &lt;novel-id&gt;/   <span class="note"># chapters and cover (TSK-013)</span>
+│   └── &lt;novel-id&gt;/   <span class="note"># metadata.json (metadata + ordered chapter list), chapters/&lt;content-hash&gt;.txt, cover (TSK-013, AD-38)</span>
 ├── logs/             <span class="note"># main-YYYY-MM-DD.log, backend-YYYY-MM-DD.log, kept 7 days (TSK-003, AD-12)</span>
 │   └── pipelines/    <span class="note"># &lt;run-id&gt;.log, one per pipeline run (TSK-008)</span>
 └── cache/            <span class="note"># import staging and temp files</span></pre>

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, input, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ConfirmHostComponent } from '@components/dialog/confirm-host.component';
 import { ToastOutletComponent } from '@components/toast/toast-outlet.component';
@@ -24,6 +24,11 @@ import { TopbarComponent } from './topbar/topbar.component';
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
+  readonly initialRailExpanded = input<boolean>(true);
   protected readonly theme: ThemeService = inject(ThemeService);
   protected readonly railExpanded = signal<boolean>(true);
+
+  constructor() {
+    effect(() => this.railExpanded.set(this.initialRailExpanded()));
+  }
 }

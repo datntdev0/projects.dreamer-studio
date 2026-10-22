@@ -1,0 +1,87 @@
+.library-cover {
+  --library-cover-w: calc(var(--sp-huge) * 2);
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--library-cover-w);
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+
+  &[data-size='sm'] {
+    --library-cover-w: var(--sp-xxl);
+  }
+  &[data-size='lg'] {
+    --library-cover-w: calc(var(--sp-huge) * 2.4);
+  }
+  > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  &.generated {
+    place-items: start end;
+    padding: var(--sp-md);
+    font: 600 var(--font-size-h1) / 1.15 var(--font-serif);
+    background: linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--color-primary) 34%, var(--color-surface-muted)),
+      var(--color-surface-muted)
+    );
+  }
+  &.generated[data-palette='gold'] {
+    background: linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--color-warning) 44%, var(--color-surface-muted)),
+      var(--color-surface-muted)
+    );
+  }
+  &.generated[data-palette='jade'] {
+    background: linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--color-primary) 28%, var(--color-surface-muted)),
+      var(--color-background)
+    );
+  }
+  &.generated[data-palette='slate'] {
+    background: linear-gradient(150deg, var(--color-border-strong), var(--color-surface-muted));
+  }
+  &.generated[data-palette='rose'] {
+    background: linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--color-danger) 40%, var(--color-surface-muted)),
+      var(--color-surface-muted)
+    );
+  }
+  &.generated[data-palette='charcoal'] {
+    background: linear-gradient(150deg, var(--color-border), var(--color-surface-muted));
+  }
+  &.generated > span:first-child {
+    display: block;
+    max-height: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  &.generated.vertical > span:first-child {
+    writing-mode: vertical-rl;
+  }
+  &.generated[data-size='sm'] {
+    padding: var(--sp-xxs);
+    font-size: var(--font-size-badge);
+  }
+  .library-cover-lang {
+    position: absolute;
+    top: var(--sp-xs);
+    left: var(--sp-xs);
+    padding: 0 var(--sp-xs);
+    color: var(--color-text-secondary);
+    font: 700 var(--font-size-badge) / 1.6 var(--font-sans);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-xs);
+    writing-mode: horizontal-tb;
+  }
+}

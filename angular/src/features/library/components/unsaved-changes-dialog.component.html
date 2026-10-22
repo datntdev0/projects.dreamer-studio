@@ -1,0 +1,19 @@
+<ds-dialog
+  [open]="open()"
+  [heading]="'library.novelDialog.unsaved.heading' | t"
+  icon="alert-triangle"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="dismiss()"
+>
+  <p class="library-novel-dialogs" data-testid="novel-dlg-unsaved">
+    {{ 'library.novelDialog.unsaved.message' | t }}
+  </p>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" autofocus data-testid="novel-dlg-unsaved-keep" (click)="keep.emit()">
+      {{ 'library.novelDialog.unsaved.keep' | t }}
+    </button>
+    <button dsBtn type="button" variant="danger" data-testid="novel-dlg-unsaved-discard" (click)="discard.emit()">
+      {{ 'library.novelDialog.unsaved.discard' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

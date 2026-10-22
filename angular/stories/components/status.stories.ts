@@ -42,6 +42,10 @@ export const Pills: StoryObj = {
             }
           </div>
         </section>
+        <section>
+          <h3>With status dot</h3>
+          <div class="sb-row"><ds-pill kind="info" dot>Translating</ds-pill></div>
+        </section>
       </div>
     `,
   }),

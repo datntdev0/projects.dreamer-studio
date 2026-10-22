@@ -1,0 +1,65 @@
+<form class="library-chapter-editor-form" novalidate data-testid="chapter-editor-form" (submit)="save($event)">
+  @if (error() === 'locked') {
+    <ds-banner
+      variant="danger"
+      data-testid="chapter-editor-refused"
+      [heading]="'library.novel.form.refusedHeading' | t"
+      [message]="'library.novel.form.refusedMessage' | t: { run: novel().lock?.runLabel ?? novel().originalTitle }"
+      [dismissLabel]="'common.dismiss' | t"
+      (dismiss)="error.set(null)"
+    />
+  }
+  <ds-field
+    required
+    controlId="chapter-editor-title"
+    [label]="'library.chapterEditor.title' | t"
+    [error]="error() === 'titleRequired' ? ('library.novel.form.required' | t) : ''"
+  >
+    <input
+      id="chapter-editor-title"
+      class="ds-input"
+      data-testid="chapter-editor-title"
+      [attr.lang]="novel().language"
+      [value]="title()"
+      (input)="setTitle($event)"
+    />
+  </ds-field>
+  <ds-field
+    required
+    class="library-chapter-editor-content"
+    controlId="chapter-editor-content"
+    [label]="'library.chapterEditor.content' | t"
+    [hint]="'library.chapterEditor.contentHint' | t: { count: count(paragraphCount()) }"
+    [error]="error() === 'contentRequired' ? ('library.novel.form.required' | t) : ''"
+  >
+    <textarea
+      id="chapter-editor-content"
+      class="ds-input"
+      data-testid="chapter-editor-content"
+      [attr.lang]="novel().language"
+      [value]="content()"
+      (input)="setContent($event)"
+    ></textarea>
+  </ds-field>
+  <div class="library-chapter-editor-actions">
+    @if (dirty()) {
+      <ds-pill kind="warning" icon="pencil" data-testid="chapter-editor-unsaved">{{
+        'library.novel.form.unsaved' | t
+      }}</ds-pill>
+    }
+    <span class="ds-spacer"></span>
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      data-testid="chapter-editor-cancel"
+      (click)="cancelled.emit()"
+    >
+      {{ 'common.cancel' | t }}
+    </button>
+    <button dsBtn variant="primary" size="sm" type="submit" data-testid="chapter-editor-save" [disabled]="!dirty()">
+      <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
+    </button>
+  </div>
+</form>

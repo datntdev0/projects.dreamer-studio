@@ -90,6 +90,16 @@ html:not([data-theme='light']) .ds-only-light {
     color: var(--color-text-tertiary);
   }
 
+  .link {
+    flex: none;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-text);
+    }
+  }
+
   .page {
     min-width: 0;
     overflow: hidden;

@@ -1,0 +1,68 @@
+<ds-dialog
+  [open]="open()"
+  [heading]="heading()"
+  [icon]="mode() === 'blocked' ? 'lock' : 'alert-triangle'"
+  [danger]="mode() !== 'blocked'"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="dismiss()"
+>
+  <div class="library-novel-dialogs" data-testid="novel-dlg-delete" [attr.data-mode]="mode()">
+    @switch (mode()) {
+      @case ('one') {
+        <ds-novel-dialog-summary [novel]="deletable()[0]" />
+        <p class="novel-dlg-warning">{{ 'library.novelDialog.delete.warningOne' | t }}</p>
+      }
+      @case ('many') {
+        <p>{{ 'library.novelDialog.delete.intro' | t }}</p>
+        <ul class="novel-dlg-list" data-testid="novel-dlg-delete-list">
+          @for (novel of shown(); track novel.id) {
+            <li>
+              <span class="name" [dsTooltip]="novel.title" dsTooltipWhenTruncated>{{ novel.title }}</span>
+              <span class="meta num">{{ chapterLabel(novel) }}</span>
+            </li>
+          }
+          @if (hiddenCount() > 0) {
+            <li class="more meta">{{ 'library.novelDialog.delete.more' | t: { count: hiddenCount() } }}</li>
+          }
+        </ul>
+      }
+      @case ('blocked') {
+        <p>{{ blockedMessage() }}</p>
+      }
+    }
+    @if (busy().length > 0) {
+      <section class="novel-dlg-skipped" data-testid="novel-dlg-delete-skipped">
+        @if (mode() !== 'blocked') {
+          <h3 class="novel-dlg-skipped-heading">
+            <ds-icon name="lock" size="sm" />{{ 'library.novelDialog.delete.skipped' | t: { count: busy().length } }}
+          </h3>
+        }
+        <ul class="novel-dlg-list">
+          @for (novel of busy(); track novel.id) {
+            <li>
+              <span class="name" [dsTooltip]="novel.title" dsTooltipWhenTruncated>{{ novel.title }}</span>
+              <ds-pill kind="info" icon="lock">{{ lockLabel(novel) }}</ds-pill>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+    @if (mode() === 'many') {
+      <p class="novel-dlg-warning">{{ 'library.novelDialog.delete.undo' | t }}</p>
+    }
+  </div>
+  <ng-container dialogFooter>
+    @if (mode() === 'blocked') {
+      <button dsBtn type="button" autofocus data-testid="novel-dlg-delete-close" (click)="closed.emit()">
+        {{ 'library.novelDialog.close' | t }}
+      </button>
+    } @else {
+      <button dsBtn type="button" autofocus data-testid="novel-dlg-delete-cancel" (click)="closed.emit()">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button dsBtn type="button" variant="danger-solid" data-testid="novel-dlg-delete-confirm" (click)="confirm()">
+        <ds-icon name="trash" size="sm" />{{ confirmLabel() }}
+      </button>
+    }
+  </ng-container>
+</ds-dialog>

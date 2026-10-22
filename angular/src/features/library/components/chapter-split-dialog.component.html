@@ -1,0 +1,111 @@
+<ds-dialog
+  [class.chapter-dlg-wide]="splittable()"
+  [open]="open()"
+  [heading]="'library.chapterDialog.split.heading' | t"
+  icon="scissors"
+  [dismissible]="!busy()"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="closed.emit()"
+>
+  <div class="chapter-dlg" data-testid="chapter-dlg-split">
+    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.split.failed" />
+    @if (chapter(); as current) {
+      <p class="chapter-dlg-title" data-testid="chapter-dlg-split-source">
+        <span class="num muted">{{ 'library.chapterDialog.number' | t: { position: current.position } }}</span>
+        <strong>{{ current.title }}</strong>
+        <span class="meta num">{{ paragraphsLabel() }}</span>
+      </p>
+      @if (splittable()) {
+        <p class="meta">{{ 'library.chapterDialog.split.instruction' | t }}</p>
+        <div
+          class="chapter-dlg-paragraphs"
+          role="radiogroup"
+          [attr.aria-label]="'library.chapterDialog.split.points' | t"
+          data-testid="chapter-dlg-split-points"
+        >
+          @for (text of paragraphs(); track $index; let index = $index) {
+            <p
+              class="chapter-dlg-paragraph"
+              [class.pickable]="index > 0"
+              [class.second]="isSecondPart(index)"
+              [attr.data-testid]="'chapter-dlg-split-paragraph-' + (index + 1)"
+              (click)="index > 0 && pick(index)"
+            >
+              <span class="index num">{{ 'library.chapterDialog.split.paragraph' | t: { index: index + 1 } }}</span>
+              <span class="text serif">{{ text }}</span>
+            </p>
+            @if (index < paragraphs().length - 1) {
+              <button
+                type="button"
+                role="radio"
+                class="chapter-dlg-gap"
+                [class.selected]="point() === index + 1"
+                [attr.aria-checked]="point() === index + 1"
+                [attr.aria-label]="'library.chapterDialog.split.gap' | t: { index: index + 2 }"
+                [attr.tabindex]="isTabbable(index + 1) ? 0 : -1"
+                [attr.data-testid]="'chapter-dlg-split-gap-' + (index + 1)"
+                (click)="pick(index + 1)"
+                (keydown)="onGapKeydown($event, index + 1)"
+              >
+                <ds-icon name="scissors" size="sm" />
+                @if (point() === index + 1) {
+                  <span class="label">{{ 'library.chapterDialog.split.marker' | t }}</span>
+                }
+              </button>
+            }
+          }
+        </div>
+        <p class="chapter-dlg-parts num" aria-live="polite" data-testid="chapter-dlg-split-parts">
+          @if (point(); as at) {
+            {{ 'library.chapterDialog.split.parts' | t: { end: at, start: at + 1, total: paragraphs().length } }}
+          } @else {
+            <span class="meta">{{ 'library.chapterDialog.split.noPoint' | t }}</span>
+          }
+        </p>
+        <ds-field
+          [label]="'library.chapterDialog.split.titleLabel' | t"
+          controlId="chapter-dlg-split-title"
+          [hint]="'library.chapterDialog.split.titleHint' | t: { title: current.title }"
+          [error]="titleValid() ? '' : ('library.chapterDialog.error.titleRequired' | t)"
+          required
+        >
+          <input
+            id="chapter-dlg-split-title"
+            class="ds-input"
+            required
+            [value]="title()"
+            [attr.aria-invalid]="!titleValid() || null"
+            data-testid="chapter-dlg-split-title"
+            (input)="setTitle($event)"
+            (keydown.enter)="split()"
+          />
+        </ds-field>
+      } @else {
+        <ds-banner
+          variant="info"
+          [heading]="'library.chapterDialog.split.tooShort' | t"
+          [message]="'library.chapterDialog.error.tooFewParagraphs' | t"
+          [dismissible]="false"
+          [dismissLabel]="'common.dismiss' | t"
+          data-testid="chapter-dlg-split-too-short"
+        />
+      }
+    }
+  </div>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" [disabled]="busy()" data-testid="chapter-dlg-cancel" (click)="closed.emit()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      [loading]="busy()"
+      [disabled]="!canApply()"
+      data-testid="chapter-dlg-split-confirm"
+      (click)="split()"
+    >
+      <ds-icon name="scissors" size="sm" />{{ 'library.chapterDialog.split.confirm' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

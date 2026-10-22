@@ -1,0 +1,16 @@
+<ul class="chapter-dlg-list" [attr.aria-label]="label()" data-testid="chapter-dlg-list">
+  @for (chapter of shown(); track chapter.id) {
+    <li data-testid="chapter-dlg-list-item">
+      <span class="number num">{{ 'library.chapterDialog.number' | t: { position: chapter.position } }}</span>
+      <span class="title">{{ chapter.title }}</span>
+      @if (showChars()) {
+        <span class="chars num">{{ 'library.chapterDialog.chars' | t: { count: format(chapter.chars) } }}</span>
+      }
+    </li>
+  }
+</ul>
+@if (hiddenCount() > 0) {
+  <p class="chapter-dlg-more meta" data-testid="chapter-dlg-list-more">
+    {{ 'library.chapterDialog.more' | t: { count: hiddenCount() } }}
+  </p>
+}

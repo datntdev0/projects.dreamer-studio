@@ -1,0 +1,8 @@
+@if (src(); as url) {
+  <img [src]="url" alt="" (error)="failed.set(true)" />
+} @else {
+  <span [attr.lang]="language()">{{ originalTitle() }}</span>
+}
+@if (badge()) {
+  <span class="library-cover-lang">{{ language().toUpperCase() }}</span>
+}

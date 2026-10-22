@@ -237,7 +237,7 @@ Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in
 | Segmented, checkbox | `<ds-segmented [options] [(value)]>`, `<ds-checkbox [(checked)]>` | radio-group with arrow keys |
 | Form grid | 2 columns when the grid is 760px or wider, 1 below; long fields `span="full"` | `.ds-form-grid > .ds-form-grid-fields` (container query) |
 | Card | `<ds-card icon heading interactive>`, right slot `[dsCardEnd]` | `.ds-card`, `.interactive` = button role, hover border, focus ring |
-| Status | `<ds-pill kind>`, `<ds-badge>`, `<ds-dot kind pulse>`, `<ds-progress [value]>` (null = indeterminate) | `.ds-pill`, `.ds-badge`, `.ds-dot`, `.ds-progress` |
+| Status | `<ds-pill kind dot>`, `<ds-badge>`, `<ds-dot kind pulse>`, `<ds-progress [value]>` (null = indeterminate) | `.ds-pill`, `.ds-badge`, `.ds-dot`, `.ds-progress` |
 | Dialog | `<ds-dialog [open] heading closeLabel (closed)>`; `ConfirmService.confirm()` + `<ds-confirm-host />` once | native `<dialog>`: scrim, focus trap, Esc |
 | Toast | `ToastService.show({ kind, title, message, action })` + `<ds-toast-outlet closeLabel>` once | bottom-right, max 3, success hides after 5 s, danger stays |
 | Table | native `<table>` | `.ds-table-wrap > .ds-table`, `.num`, `td.ds-table-empty`, `.skeleton` rows |

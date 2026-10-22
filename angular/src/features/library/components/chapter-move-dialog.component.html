@@ -1,0 +1,98 @@
+<ds-dialog
+  [open]="open()"
+  [heading]="heading()"
+  icon="move"
+  [dismissible]="!busy()"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="closed.emit()"
+>
+  <div class="chapter-dlg" data-testid="chapter-dlg-move">
+    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.move.failed" />
+    <p>
+      {{ (items().length === 1 ? 'library.chapterDialog.move.introOne' : 'library.chapterDialog.move.intro') | t }}
+    </p>
+    <ds-chapter-dialog-list [chapters]="items()" [label]="'library.chapterDialog.move.list' | t" [limit]="listLimit" />
+    @if (items().length > 1) {
+      <p class="meta">{{ 'library.chapterDialog.move.together' | t }}</p>
+    }
+    <div class="chapter-dlg-target">
+      <span class="ds-field-label" aria-hidden="true">{{ 'library.chapterDialog.move.target' | t }}</span>
+      <ds-segmented
+        [options]="modeOptions()"
+        [value]="mode()"
+        [label]="'library.chapterDialog.move.target' | t"
+        data-testid="chapter-dlg-move-mode"
+        (valueChange)="setMode($event)"
+      />
+    </div>
+    @if (mode() === 'position') {
+      <ds-field
+        [label]="'library.chapterDialog.move.positionLabel' | t"
+        controlId="chapter-dlg-move-position"
+        [hint]="'library.chapterDialog.move.positionHint' | t: { max: maxPosition() }"
+        [error]="positionInvalid() ? ('library.chapterDialog.move.positionError' | t: { max: maxPosition() }) : ''"
+        required
+      >
+        <input
+          id="chapter-dlg-move-position"
+          class="ds-input num chapter-dlg-position"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          [attr.max]="maxPosition()"
+          required
+          autofocus
+          [value]="positionText()"
+          [attr.aria-invalid]="positionInvalid() || null"
+          data-testid="chapter-dlg-move-position"
+          (input)="setPosition($event)"
+          (keydown.enter)="move()"
+        />
+      </ds-field>
+    } @else {
+      <ds-field [label]="'library.chapterDialog.move.beforeLabel' | t" controlId="chapter-dlg-move-before">
+        <span class="ds-select">
+          <select
+            id="chapter-dlg-move-before"
+            class="ds-input"
+            data-testid="chapter-dlg-move-before"
+            (change)="setBefore($event)"
+          >
+            @for (chapter of rest(); track chapter.id) {
+              <option [value]="chapter.id" [selected]="chapter.id === beforeId()">
+                {{ 'library.chapterDialog.number' | t: { position: chapter.position } }} · {{ chapter.title }}
+              </option>
+            }
+            <option [value]="endOfList" [selected]="beforeId() === endOfList">
+              {{ 'library.chapterDialog.move.end' | t }}
+            </option>
+          </select>
+          <ds-icon name="chevron-down" size="sm" />
+        </span>
+      </ds-field>
+    }
+    <p class="chapter-dlg-parts num" aria-live="polite" data-testid="chapter-dlg-move-result">
+      @if (unchanged()) {
+        <span class="meta">{{ 'library.chapterDialog.move.already' | t }}</span>
+      } @else if (target(); as range) {
+        {{ resultText(range) }}
+      }
+    </p>
+  </div>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" [disabled]="busy()" data-testid="chapter-dlg-cancel" (click)="closed.emit()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      [loading]="busy()"
+      [disabled]="!canApply()"
+      data-testid="chapter-dlg-move-confirm"
+      (click)="move()"
+    >
+      <ds-icon name="move" size="sm" />{{ 'library.chapterDialog.move.confirm' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

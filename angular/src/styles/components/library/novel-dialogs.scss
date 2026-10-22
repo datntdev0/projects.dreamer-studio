@@ -1,0 +1,121 @@
+.library-novel-dialogs {
+  display: grid;
+  gap: var(--sp-md);
+  min-width: 0;
+
+  p {
+    margin: 0;
+  }
+
+  .novel-dlg-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-sm);
+    min-width: 0;
+    padding: var(--sp-sm) var(--sp-md);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    > ds-icon {
+      flex: none;
+      color: var(--color-text-tertiary);
+    }
+
+    .text {
+      display: grid;
+      min-width: 0;
+    }
+
+    .name,
+    .meta {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .name {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+  }
+
+  .novel-dlg-warning {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  .novel-dlg-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      min-height: var(--control-h);
+      padding: var(--sp-xs) var(--sp-md);
+
+      + li {
+        border-top: 1px solid var(--color-border);
+      }
+    }
+
+    .name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      color: var(--color-text);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .meta,
+    .ds-pill {
+      flex: none;
+    }
+  }
+
+  .novel-dlg-skipped {
+    display: grid;
+    gap: var(--sp-xs);
+
+    .novel-dlg-list {
+      max-height: calc(var(--control-h) * 4);
+      overflow-y: auto;
+    }
+  }
+
+  .novel-dlg-skipped-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-xs);
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-h4);
+    font-weight: 500;
+
+    ds-icon {
+      color: var(--color-warning);
+    }
+  }
+
+  .novel-dlg-proto {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-xs);
+    padding: var(--sp-sm) var(--sp-md);
+    color: var(--color-text);
+    font-size: var(--font-size-meta);
+    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+    border-radius: var(--radius-md);
+
+    ds-icon {
+      flex: none;
+      color: var(--color-warning);
+    }
+  }
+}

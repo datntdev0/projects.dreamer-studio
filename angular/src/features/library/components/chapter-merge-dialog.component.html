@@ -1,0 +1,52 @@
+<ds-dialog
+  [open]="open()"
+  [heading]="'library.chapterDialog.merge.heading' | t: { count: items().length }"
+  icon="merge"
+  [dismissible]="!busy()"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="closed.emit()"
+>
+  <div class="chapter-dlg" data-testid="chapter-dlg-merge">
+    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.merge.failed" />
+    @if (!mergeable()) {
+      <p class="chapter-dlg-note warning" role="alert" data-testid="chapter-dlg-merge-invalid">
+        <ds-icon name="alert-triangle" size="sm" />{{ 'library.chapterDialog.error.notConsecutive' | t }}
+      </p>
+    }
+    <p>{{ 'library.chapterDialog.merge.intro' | t }}</p>
+    <ds-chapter-dialog-list [chapters]="items()" [label]="'library.chapterDialog.merge.list' | t" [showChars]="true" />
+    @if (mergeable() && first(); as head) {
+      <div class="chapter-dlg-result" data-testid="chapter-dlg-merge-result">
+        <ds-icon name="merge" />
+        <div class="chapter-dlg-result-text">
+          <span class="meta">{{ 'library.chapterDialog.merge.result' | t }}</span>
+          <span class="chapter-dlg-title">
+            <span class="num muted">{{ 'library.chapterDialog.number' | t: { position: head.position } }}</span>
+            <strong>{{ head.title }}</strong>
+          </span>
+          <span class="meta num">{{ 'library.chapterDialog.chars' | t: { count: format(chars()) } }}</span>
+        </div>
+      </div>
+    }
+    @if (mergeable()) {
+      <p class="meta">{{ 'library.chapterDialog.merge.keepsTitle' | t }} {{ 'library.chapterDialog.renumber' | t }}</p>
+    }
+  </div>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" [disabled]="busy()" data-testid="chapter-dlg-cancel" (click)="closed.emit()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      autofocus
+      [loading]="busy()"
+      [disabled]="!canApply()"
+      data-testid="chapter-dlg-merge-confirm"
+      (click)="merge()"
+    >
+      <ds-icon name="merge" size="sm" />{{ 'library.chapterDialog.merge.confirm' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

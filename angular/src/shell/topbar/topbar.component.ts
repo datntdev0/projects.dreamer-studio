@@ -13,6 +13,7 @@ import { SettingsStore } from '../../core/stores/settings-store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
 import { LayoutService } from '../layout/layout.service';
+import { PageCrumbService } from '../page-crumb.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';
 import type { AppModule } from '../registry/modules';
 
@@ -32,6 +33,7 @@ export class TopbarComponent {
   protected readonly i18n: I18nService = inject(I18nService);
   protected readonly appInfo: AppInfoStore = inject(AppInfoStore);
   protected readonly layout: LayoutService = inject(LayoutService);
+  protected readonly crumb: PageCrumbService = inject(PageCrumbService);
   protected readonly panelEdges: SplitterEdge[] = ['left', 'right', 'bottom'];
   protected readonly groupTitles = GROUP_TITLES;
 
@@ -48,12 +50,17 @@ export class TopbarComponent {
   protected readonly currentModule = computed<AppModule | undefined>(() =>
     MODULES.find((module) => module.id === this.moduleId()),
   );
+  protected readonly currentPageKey = computed(() =>
+    this.currentModule()?.id === 'library' ? 'library.browse.novels' : this.currentModule()?.label,
+  );
 
   constructor() {
     effect(() => {
       const module = this.currentModule();
       if (module) {
-        this.title.setTitle(this.i18n.t('app.windowTitle', { page: this.i18n.t(module.label) }));
+        this.title.setTitle(
+          this.i18n.t('app.windowTitle', { page: this.i18n.t(this.currentPageKey() ?? module.label) }),
+        );
       }
     });
   }

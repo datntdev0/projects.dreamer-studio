@@ -1,0 +1,10 @@
+<ds-icon name="book" />
+<span class="text">
+  <strong class="name" [dsTooltip]="novel().title" dsTooltipWhenTruncated>{{ novel().title }}</strong>
+  <span class="meta">
+    @if (novel().originalTitle !== novel().title) {
+      {{ novel().originalTitle }} ·
+    }
+    <span class="num">{{ chapters() }}</span>
+  </span>
+</span>

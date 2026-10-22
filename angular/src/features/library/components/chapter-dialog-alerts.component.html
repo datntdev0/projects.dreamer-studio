@@ -1,0 +1,21 @@
+@if (lock(); as current) {
+  <ds-banner
+    variant="warning"
+    [heading]="'library.chapterDialog.locked.title' | t"
+    [message]="'library.chapterDialog.locked.message' | t: { run: current.runLabel }"
+    [dismissible]="false"
+    [dismissLabel]="'common.dismiss' | t"
+    data-testid="chapter-dlg-locked"
+  />
+}
+@if (shownError(); as current) {
+  <ds-banner
+    variant="danger"
+    [heading]="failedKey() | t"
+    [message]="errorKey(current) | t"
+    [meta]="'library.chapterDialog.unchanged' | t"
+    [dismissible]="false"
+    [dismissLabel]="'common.dismiss' | t"
+    data-testid="chapter-dlg-error"
+  />
+}

@@ -17,6 +17,20 @@ ds-progress {
   border-radius: var(--radius-full);
   background: var(--color-surface-muted);
 
+  &.has-dot {
+    gap: var(--sp-xs);
+    font-weight: 500;
+  }
+
+  &.has-dot::before {
+    content: '';
+    flex: none;
+    width: calc(var(--sp-sm) - var(--sp-xxs));
+    height: calc(var(--sp-sm) - var(--sp-xxs));
+    border-radius: var(--radius-full);
+    background: currentColor;
+  }
+
   &.success {
     color: var(--color-success);
     background: color-mix(in srgb, var(--color-success) 14%, transparent);

@@ -1,0 +1,187 @@
+@if (view() === 'grid') {
+  <div class="library-items-grid" data-testid="lib-grid" [class.has-selection]="selected().length">
+    @for (novel of novels(); track novel.id) {
+      <div class="library-items-card" [class.is-checked]="isSelected(novel)">
+        <button
+          type="button"
+          class="library-items-open"
+          [class.is-selected]="active() === novel.id"
+          [class.import-busy]="novel.id === 'n-0006' && importBusy()"
+          [attr.data-testid]="'lib-card-' + novel.id"
+          [attr.aria-label]="novel.title"
+          (click)="activate.emit(novel.id)"
+          (dblclick)="openNovel(novel)"
+          (keydown.enter)="openNovel(novel)"
+        >
+          <ds-library-cover
+            badge
+            size="lg"
+            [cover]="novel.cover"
+            [palette]="novel.coverPalette"
+            [originalTitle]="novel.originalTitle"
+            [language]="novel.language"
+          />
+          <span class="library-items-title">{{ novel.title }}</span>
+          <span class="library-items-byline meta">{{ novel.author }} &middot; {{ chapters(novel) }}</span>
+          <span class="library-items-bars">
+            <ds-progress [value]="percent(novel.analysedCount, novel.chapterCount)" />
+            <ds-progress [value]="percent(novel.translatedCount, novel.chapterCount)" />
+            @if (novel.id === 'n-0006' && importBusy()) {
+              <ds-progress [value]="importState() === 'queued' ? 0 : 42" kind="neutral" />
+            }
+          </span>
+          @if (cardTask(novel); as task) {
+            <span class="library-items-task" [class.warning]="task.warning" [class.running]="!task.warning">
+              <ds-icon [name]="task.icon" size="sm" />{{ task.key | t: task.params }}
+            </span>
+          }
+        </button>
+        <ds-checkbox
+          class="library-items-check"
+          [attr.data-testid]="'lib-check-' + novel.id"
+          [checked]="isSelected(novel)"
+          (checkedChange)="toggle(novel)"
+          ><span class="visually-hidden">{{ 'library.browse.select' | t: { title: novel.title } }}</span></ds-checkbox
+        >
+      </div>
+    }
+  </div>
+} @else {
+  <table class="ds-table dense library-items-table" data-testid="lib-list">
+    <thead>
+      <tr>
+        <th class="library-items-check-col">
+          <ds-checkbox data-testid="lib-check-all" [checked]="allSelected()" (checkedChange)="toggleAll()"
+            ><span class="visually-hidden">{{ 'library.browse.selectAll' | t }}</span></ds-checkbox
+          >
+        </th>
+        <th>
+          <span class="visually-hidden">{{ 'library.items.col.cover' | t }}</span>
+        </th>
+        <th>{{ 'library.items.col.title' | t }}</th>
+        <th>{{ 'library.items.col.author' | t }}</th>
+        <th class="num">{{ 'library.items.col.chapters' | t }}</th>
+        <th>{{ 'library.mock.status' | t }}</th>
+        <th>{{ 'library.mock.progress' | t }}</th>
+        <th>{{ 'library.mock.updated' | t }}</th>
+        <th>
+          <span class="visually-hidden">{{ 'library.mock.actions' | t }}</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (novel of novels(); track novel.id) {
+        <tr
+          tabindex="0"
+          [class.is-selected]="active() === novel.id"
+          [class.is-checked]="isSelected(novel)"
+          [attr.data-testid]="'lib-row-' + novel.id"
+          (click)="activate.emit(novel.id)"
+          (dblclick)="openNovel(novel)"
+          (keydown.enter)="openNovel(novel)"
+          (keydown.space)="$event.preventDefault(); toggle(novel)"
+        >
+          <td class="library-items-check-col" (click)="$event.stopPropagation()">
+            <ds-checkbox
+              [attr.data-testid]="'lib-check-' + novel.id"
+              [checked]="isSelected(novel)"
+              (checkedChange)="toggle(novel)"
+              ><span class="visually-hidden">{{
+                'library.browse.select' | t: { title: novel.title }
+              }}</span></ds-checkbox
+            >
+          </td>
+          <td>
+            <ds-library-cover
+              size="sm"
+              [cover]="novel.cover"
+              [palette]="novel.coverPalette"
+              [originalTitle]="''"
+              [language]="novel.language"
+            />
+          </td>
+          <td>
+            <strong [attr.lang]="novel.language">{{ novel.originalTitle }}</strong>
+            <div class="meta">
+              <span class="library-items-lang">{{ novel.language.toUpperCase() }}</span> {{ novel.title }}
+            </div>
+          </td>
+          <td>{{ novel.author }}</td>
+          <td class="num">
+            {{
+              count(
+                novel.id === 'n-0006' && (importBusy() || importState() === 'incomplete') ? 312 : novel.chapterCount
+              )
+            }}{{ novel.id === 'n-0006' && importBusy() ? ' / ' + count(novel.chapterCount) : '' }}
+          </td>
+          <td>
+            <span>{{ publicationKey(novel) | t }}</span>
+            @if (listTaskKey(novel) || novel.appTags.length) {
+              <div class="library-items-status-chips">
+                @if (listTaskKey(novel); as key) {
+                  <ds-pill [kind]="taskKind(novel)" dot>{{ key | t }}</ds-pill>
+                }
+                @for (tag of novel.appTags; track tag) {
+                  <span class="library-items-chip">{{ tagKey(tag) | t }}</span>
+                }
+              </div>
+            }
+          </td>
+          <td>
+            @if (novel.analysedCount || novel.translatedCount) {
+              <div class="library-items-progress">
+                @if (novel.analysedCount) {
+                  <span [dsTooltip]="'library.mock.analysedChapters' | t: { count: count(novel.analysedCount) }"
+                    ><ds-icon name="sparkles" size="sm" /><span class="num">{{
+                      count(novel.analysedCount)
+                    }}</span></span
+                  >
+                }
+                @if (novel.analysedCount && novel.translatedCount) {
+                  <span class="meta">&middot;</span>
+                }
+                @if (novel.translatedCount) {
+                  <span [dsTooltip]="'library.mock.translatedChapters' | t: { count: count(novel.translatedCount) }"
+                    ><ds-icon name="languages" size="sm" /><span class="num">{{
+                      count(novel.translatedCount)
+                    }}</span></span
+                  >
+                }
+              </div>
+            } @else {
+              <span class="meta">&mdash;</span>
+            }
+          </td>
+          <td class="meta num" [dsTooltip]="fullDate(novel.updatedAt)">{{ shortDate(novel.updatedAt) }}</td>
+          <td class="library-items-actions">
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              iconOnly
+              type="button"
+              data-testid="lib-row-open"
+              [disabled]="!canOpen(novel)"
+              [dsTooltip]="'library.mock.open' | t"
+              (click)="$event.stopPropagation(); openNovel(novel)"
+            >
+              <ds-icon name="book" size="sm" />
+            </button>
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              iconOnly
+              type="button"
+              data-testid="lib-row-delete"
+              [dsTooltip]="'library.mock.delete' | t"
+              (click)="$event.stopPropagation(); delete.emit(novel)"
+            >
+              <ds-icon class="library-items-delete-icon" name="trash" size="sm" />
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

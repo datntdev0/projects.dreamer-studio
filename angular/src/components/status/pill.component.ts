@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, booleanAttribute, computed, input } from '@angular/core';
 import { IconComponent } from '@components/icon/icon.component';
 
 export type PillKind = 'neutral' | 'success' | 'info' | 'warning' | 'danger';
@@ -12,8 +12,9 @@ export type PillKind = 'neutral' | 'success' | 'info' | 'warning' | 'danger';
 export class PillComponent {
   readonly kind = input<PillKind>('neutral');
   readonly icon = input<string | null>(null);
+  readonly dot = input(false, { transform: booleanAttribute });
 
-  protected readonly classes = computed<string>(() =>
-    this.kind() === 'neutral' ? 'ds-pill' : `ds-pill ${this.kind()}`,
+  protected readonly classes = computed<string>(
+    () => `ds-pill${this.kind() === 'neutral' ? '' : ` ${this.kind()}`}${this.dot() ? ' has-dot' : ''}`,
   );
 }

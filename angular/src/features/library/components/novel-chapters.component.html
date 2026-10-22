@@ -1,0 +1,400 @@
+<header class="ds-panel-head">
+  <h2>
+    {{ 'library.chapters.heading' | t }}
+    <span class="meta num" data-testid="novel-chapters-count">{{
+      'library.chapters.count' | t: { count: formatCount(chapters().length) }
+    }}</span>
+  </h2>
+  @if (saved()) {
+    <span class="library-chapters-saved" aria-hidden="true" data-testid="novel-chapters-saved"
+      ><ds-icon name="check" size="sm" />{{ 'library.chapters.saved' | t }}</span
+    >
+  }
+  <span class="ds-spacer"></span>
+  <span class="library-chapters-reason" [attr.tabindex]="canOrganize() ? null : 0" [dsTooltip]="organizeTooltip()">
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      class="library-chapters-organize"
+      data-testid="novel-chapters-organize"
+      [attr.aria-pressed]="organizing()"
+      [attr.aria-description]="organizeTooltip() || null"
+      [disabled]="!canOrganize()"
+      (click)="toggleOrganize()"
+    >
+      <ds-icon [name]="locked() ? 'lock' : 'sliders'" size="sm" />{{ 'library.chapters.organize' | t }}
+    </button>
+  </span>
+</header>
+
+@if (chapters().length) {
+  <div class="library-chapters-search" role="search">
+    <div class="library-chapters-search-field">
+      <ds-icon name="search" size="sm" />
+      <input
+        #searchInput
+        class="ds-input"
+        type="text"
+        autocomplete="off"
+        data-testid="novel-chapters-search"
+        [value]="query()"
+        [placeholder]="'library.chapters.search.placeholder' | t"
+        [attr.aria-label]="'library.chapters.search.label' | t"
+        [attr.aria-describedby]="hint() ? 'novel-chapters-hint' : null"
+        (input)="setQuery($event)"
+        (keydown)="onSearchKey($event)"
+      />
+      @if (query()) {
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          class="library-chapters-clear"
+          data-testid="novel-chapters-search-clear"
+          [iconOnly]="true"
+          [attr.aria-label]="'library.chapters.search.clear' | t"
+          [dsTooltip]="'library.chapters.search.clear' | t"
+          (click)="clearSearch()"
+        >
+          <ds-icon name="x" size="sm" />
+        </button>
+      }
+    </div>
+    @if (hint()) {
+      <p id="novel-chapters-hint" class="library-chapters-hint num" data-testid="novel-chapters-search-hint">
+        {{ hint() }}
+      </p>
+    }
+  </div>
+
+  @if (organizing()) {
+    <div class="library-chapters-bar" data-testid="novel-chapters-bar">
+      <div class="library-chapters-bar-row">
+        <ds-checkbox
+          data-testid="novel-chapters-select-all"
+          [disabled]="!shown().length"
+          [checked]="allShownSelected()"
+          (checkedChange)="selectShown($event)"
+          ><span class="visually-hidden">{{ 'library.chapters.selectAll' | t }}</span></ds-checkbox
+        >
+        <span class="meta num" data-testid="novel-chapters-selected">{{
+          'library.chapters.selected' | t: { count: formatCount(selectedChapters().length) }
+        }}</span>
+        <span class="ds-spacer"></span>
+        <button
+          dsBtn
+          variant="primary"
+          size="sm"
+          type="button"
+          data-testid="novel-chapters-done"
+          (click)="exitOrganize()"
+        >
+          <ds-icon name="check" size="sm" />{{ 'library.chapters.done' | t }}
+        </button>
+      </div>
+      <div class="library-chapters-bar-row">
+        <span class="library-chapters-reason" [attr.tabindex]="mergeReason() ? 0 : null" [dsTooltip]="mergeReason()">
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="novel-chapters-merge"
+            [disabled]="!!mergeReason()"
+            (click)="openDialog('merge', selectedChapters())"
+          >
+            <ds-icon name="merge" size="sm" />{{ 'library.chapters.merge' | t }}
+          </button>
+        </span>
+        <span
+          class="library-chapters-reason"
+          [attr.tabindex]="selectionReason() ? 0 : null"
+          [dsTooltip]="selectionReason()"
+        >
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="novel-chapters-move"
+            [disabled]="!!selectionReason()"
+            (click)="openDialog('move', selectedChapters())"
+          >
+            <ds-icon name="arrow-right" size="sm" />{{ 'library.chapters.moveTo' | t }}
+          </button>
+        </span>
+        <span
+          class="library-chapters-reason"
+          [attr.tabindex]="selectionReason() ? 0 : null"
+          [dsTooltip]="selectionReason()"
+        >
+          <button
+            dsBtn
+            variant="danger"
+            size="sm"
+            type="button"
+            data-testid="novel-chapters-delete"
+            [disabled]="!!selectionReason()"
+            (click)="openDialog('delete', selectedChapters())"
+          >
+            <ds-icon name="trash" size="sm" />{{ 'library.chapters.delete' | t }}
+          </button>
+        </span>
+      </div>
+    </div>
+  }
+
+  @if (shown().length) {
+    <ol
+      #list
+      class="ds-panel-body library-chapters-list"
+      data-testid="novel-chapters-list"
+      [class.drop-end]="drag()?.target === shown().length"
+      [class.is-dragging]="!!drag()"
+      [attr.aria-label]="'library.chapters.listLabel' | t: { title: novel().title }"
+      (scroll)="closeMenu(false)"
+    >
+      @for (chapter of shown(); track chapter.id; let i = $index) {
+        <li
+          class="library-chapters-item"
+          data-testid="novel-chapters-row"
+          [attr.data-chapter-id]="chapter.id"
+          [attr.data-position]="chapter.position"
+          [class.is-current]="chapter.id === current()"
+          [class.is-selected]="organizing() && selected().has(chapter.id)"
+          [class.is-moving]="!!drag() && drag()!.ids.includes(chapter.id)"
+          [class.drop-before]="drag()?.target === i"
+          (keydown)="onRowKey($event, chapter)"
+        >
+          @if (organizing()) {
+            <span class="library-chapters-reason" [dsTooltip]="handleTooltip()">
+              <button
+                type="button"
+                class="library-chapters-handle"
+                data-testid="novel-chapters-handle"
+                [disabled]="!!query() || !!renaming()"
+                [attr.aria-label]="'library.chapters.drag.handle' | t: { number: chapter.position }"
+                [attr.aria-pressed]="!!drag() && drag()!.ids[0] === chapter.id"
+                (pointerdown)="startPointerDrag($event, chapter)"
+                (pointermove)="movePointer($event)"
+                (pointerup)="drop()"
+                (pointercancel)="cancelDrag()"
+                (keydown)="onHandleKey($event, chapter)"
+                (blur)="onHandleBlur()"
+              >
+                <ds-icon name="move" size="sm" />
+              </button>
+            </span>
+            <ds-checkbox
+              class="library-chapters-check"
+              data-testid="novel-chapters-row-check"
+              [checked]="selected().has(chapter.id)"
+              (checkedChange)="toggleSelected(chapter.id, $event)"
+            >
+              @if (renaming()?.id === chapter.id) {
+                <span class="library-chapters-num num">{{ numberLabel(chapter) }}</span>
+              } @else {
+                <ng-container *ngTemplateOutlet="label; context: { $implicit: chapter }" />
+              }
+            </ds-checkbox>
+            @if (renaming(); as edit) {
+              @if (edit.id === chapter.id) {
+                <span class="library-chapters-rename">
+                  <input
+                    #renameInput
+                    class="ds-input"
+                    type="text"
+                    maxlength="200"
+                    data-testid="novel-chapters-rename-input"
+                    [value]="edit.value"
+                    [attr.aria-label]="'library.chapters.rename.label' | t: { number: chapter.position }"
+                    [attr.aria-invalid]="edit.error"
+                    [attr.aria-describedby]="'novel-chapters-rename-note'"
+                    (input)="editRename($event)"
+                    (keydown)="onRenameKey($event, chapter)"
+                    (blur)="onRenameBlur(chapter)"
+                  />
+                  <small
+                    id="novel-chapters-rename-note"
+                    class="library-chapters-rename-note"
+                    data-testid="novel-chapters-rename-note"
+                    [class.is-error]="edit.error"
+                  >
+                    @if (edit.error) {
+                      <ds-icon name="alert-circle" size="sm" />{{ 'library.chapters.rename.required' | t }}
+                    } @else {
+                      {{ 'library.chapters.rename.hint' | t }}
+                    }
+                  </small>
+                </span>
+              }
+            }
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              class="library-chapters-more"
+              data-testid="novel-chapters-row-more"
+              aria-haspopup="menu"
+              [iconOnly]="true"
+              [attr.aria-expanded]="menu()?.id === chapter.id"
+              [attr.aria-label]="'library.chapters.more' | t: { number: chapter.position }"
+              (click)="toggleMenu($event, chapter)"
+            >
+              <ds-icon name="more" size="sm" />
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="library-chapters-open"
+              data-testid="novel-chapters-row-open"
+              [attr.aria-current]="chapter.id === current() || null"
+              [tabIndex]="chapter.id === focusId() ? 0 : -1"
+              (click)="openChapter(chapter)"
+            >
+              <ng-container *ngTemplateOutlet="label; context: { $implicit: chapter }" />
+            </button>
+          }
+        </li>
+      }
+    </ol>
+  } @else {
+    <ds-area-state
+      kind="empty"
+      icon="search"
+      data-testid="novel-chapters-no-match"
+      [compact]="true"
+      [heading]="'library.chapters.noMatch.heading' | t: { query: query() }"
+      [description]="'library.chapters.noMatch.description' | t"
+    >
+      <button dsBtn size="sm" type="button" data-testid="novel-chapters-no-match-clear" (click)="clearSearch()">
+        {{ 'library.chapters.search.clear' | t }}
+      </button>
+    </ds-area-state>
+  }
+} @else {
+  <ds-area-state
+    kind="empty"
+    icon="book"
+    data-testid="novel-chapters-empty"
+    [compact]="true"
+    [heading]="'library.chapters.empty.heading' | t"
+    [description]="'library.chapters.empty.description' | t"
+  />
+}
+
+@if (menu(); as open) {
+  @if (menuChapter(); as chapter) {
+    <div
+      #menuPanel
+      class="library-chapters-menu"
+      role="menu"
+      data-testid="novel-chapters-menu"
+      [attr.aria-label]="'library.chapters.more' | t: { number: chapter.position }"
+      [style.top.px]="open.top"
+      [style.bottom.px]="open.bottom"
+      [style.right.px]="open.right"
+      (keydown)="onMenuKey($event)"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        class="library-chapters-menu-item"
+        data-testid="novel-chapters-menu-rename"
+        (click)="startRename(chapter)"
+      >
+        <ds-icon name="pencil" size="sm" /><span>{{ 'library.chapters.rename' | t }}</span>
+        <kbd class="library-chapters-menu-key">F2</kbd>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        class="library-chapters-menu-item"
+        data-testid="novel-chapters-menu-split"
+        [attr.aria-disabled]="chapter.paragraphCount < 2 || null"
+        (click)="openSplit(chapter)"
+      >
+        <ds-icon name="scissors" size="sm" /><span>{{ 'library.chapters.split' | t }}</span>
+        @if (chapter.paragraphCount < 2) {
+          <span class="library-chapters-menu-note" data-testid="novel-chapters-menu-split-reason">{{
+            'library.chapters.split.needParagraphs' | t
+          }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        class="library-chapters-menu-item"
+        data-testid="novel-chapters-menu-move"
+        (click)="openDialog('move', [chapter])"
+      >
+        <ds-icon name="arrow-right" size="sm" /><span>{{ 'library.chapters.moveTo' | t }}</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        class="library-chapters-menu-item danger"
+        data-testid="novel-chapters-menu-delete"
+        (click)="openDialog('delete', [chapter])"
+      >
+        <ds-icon name="trash" size="sm" /><span>{{ 'library.chapters.delete' | t }}</span>
+      </button>
+    </div>
+  }
+}
+
+<p class="visually-hidden" aria-live="polite" data-testid="novel-chapters-live">{{ announcement() }}</p>
+
+<ng-template #label let-chapter>
+  @let num = mark(numberLabel(chapter), 'number');
+  @let title = mark(chapter.title, 'title');
+  <span class="library-chapters-num num"
+    >{{ num.pre }}
+    @if (num.hit) {
+      <mark>{{ num.hit }}</mark>
+    }
+    {{ num.post }}</span
+  >
+  <span class="library-chapters-title" [dsTooltip]="chapter.title" dsTooltipWhenTruncated
+    >{{ title.pre }}
+    @if (title.hit) {
+      <mark>{{ title.hit }}</mark>
+    }
+    {{ title.post }}</span
+  >
+</ng-template>
+
+<ds-chapter-merge-dialog
+  [open]="dialog()?.kind === 'merge'"
+  [novelId]="novel().id"
+  [chapters]="dialogChapters('merge')"
+  (done)="onDialogDone()"
+  (closed)="dialog.set(null)"
+/>
+<ds-chapter-split-dialog
+  [open]="dialog()?.kind === 'split'"
+  [novelId]="novel().id"
+  [chapter]="dialogChapters('split')[0] ?? null"
+  (done)="onDialogDone()"
+  (closed)="dialog.set(null)"
+/>
+<ds-chapter-delete-dialog
+  [open]="dialog()?.kind === 'delete'"
+  [novelId]="novel().id"
+  [chapters]="dialogChapters('delete')"
+  (done)="onDialogDone()"
+  (closed)="dialog.set(null)"
+/>
+<ds-chapter-move-dialog
+  [open]="dialog()?.kind === 'move'"
+  [novelId]="novel().id"
+  [chapters]="dialogChapters('move')"
+  (done)="onDialogDone()"
+  (closed)="dialog.set(null)"
+/>

@@ -1,0 +1,194 @@
+@switch (state()) {
+  @case ('notFound') {
+    <div class="ds-page-toolbar">
+      <ng-container [ngTemplateOutlet]="back" />
+      <h1 dsPageTitle>{{ 'library.novel.notFound.heading' | t }}</h1>
+    </div>
+    <div class="ds-page-body center">
+      <ds-area-state
+        kind="empty"
+        icon="book"
+        data-testid="novel-page-not-found"
+        [description]="'library.novel.notFound.description' | t"
+      >
+        <a dsBtn variant="primary" routerLink="/library" data-testid="novel-page-not-found-back">
+          <ds-icon name="arrow-left" size="sm" />{{ 'library.novel.page.back' | t }}
+        </a>
+      </ds-area-state>
+    </div>
+  }
+  @case ('error') {
+    <div class="ds-page-toolbar">
+      <ng-container [ngTemplateOutlet]="back" />
+      <h1 dsPageTitle>{{ 'library.novel.error.heading' | t }}</h1>
+    </div>
+    <div class="ds-page-body center">
+      <ds-area-state
+        kind="error"
+        data-testid="novel-page-error"
+        [description]="'library.novel.error.description' | t"
+        [details]="errorDetails()"
+        [detailsLabel]="'common.details' | t"
+      >
+        <button dsBtn variant="primary" type="button" data-testid="novel-page-retry" (click)="store.simulateLoading()">
+          <ds-icon name="retry" size="sm" />{{ 'common.retry' | t }}
+        </button>
+      </ds-area-state>
+    </div>
+  }
+  @default {
+    <div class="ds-page-toolbar">
+      <ng-container [ngTemplateOutlet]="back" />
+      @if (novel(); as item) {
+        <h1 dsPageTitle data-testid="novel-page-title" [attr.lang]="chapter() ? item.language : null">
+          {{ heading() }}
+        </h1>
+        <div class="ds-page-actions" role="group" [attr.aria-label]="'library.novel.page.actions' | t">
+          <span class="library-novel-action" [dsTooltip]="editReason()" [attr.tabindex]="editReason() ? 0 : null">
+            <button
+              dsBtn
+              size="sm"
+              type="button"
+              data-testid="novel-page-edit"
+              [attr.aria-pressed]="editing()"
+              [disabled]="!!editReason() || editing()"
+              (click)="editing.set(true)"
+            >
+              <ds-icon name="pencil" size="sm" />{{ 'library.novel.page.edit' | t }}
+            </button>
+          </span>
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="novel-page-focus"
+            [attr.aria-pressed]="focusMode()"
+            [dsTooltip]="'library.reader.focus.tooltip' | t"
+            (click)="toggleFocusMode()"
+          >
+            <ds-icon name="maximize" size="sm" />{{ 'library.novel.page.focus' | t }}
+          </button>
+        </div>
+      } @else {
+        <h1 dsPageTitle>
+          <span class="skeleton library-novel-skeleton-title" aria-hidden="true"></span>
+          <span class="visually-hidden">{{ 'library.novel.page.loading' | t }}</span>
+        </h1>
+      }
+    </div>
+    @if (novel()?.lock; as lock) {
+      <div class="library-novel-lock" data-testid="novel-page-lock">
+        <ds-banner
+          class="library-novel-banner"
+          variant="warning"
+          [dismissible]="false"
+          [heading]="lockHeadingKeys[lock.kind] | t: { run: lock.runLabel }"
+          [message]="'library.novel.lock.message' | t"
+          [meta]="lock.runId"
+          [dismissLabel]="'common.dismiss' | t"
+        >
+          <a dsBtn variant="ghost" size="sm" routerLink="/pipelines" data-testid="novel-page-lock-pipelines">
+            {{ 'library.novel.lock.viewPipelines' | t }}<ds-icon name="arrow-right" size="sm" />
+          </a>
+        </ds-banner>
+      </div>
+    }
+    <ng-template
+      dsPanel="left"
+      panelClass="library-novel-panel"
+      testId="novel-page-chapters-panel"
+      [label]="'library.chapters.heading' | t"
+      [resizeLabel]="'library.novel.page.resizeChapters' | t"
+    >
+      @if (novel(); as item) {
+        <ds-novel-chapters [novel]="item" [(current)]="current" [attr.inert]="editing() || null" />
+      } @else {
+        <ng-container [ngTemplateOutlet]="skeletonRows" />
+      }
+    </ng-template>
+    <main
+      class="library-novel-reader"
+      tabindex="-1"
+      data-testid="novel-page-reader"
+      [attr.aria-label]="'library.reader.label' | t"
+    >
+      @if (novel(); as item) {
+        @if (editing() && chapter(); as selected) {
+          <ds-chapter-editor
+            [novel]="item"
+            [chapter]="selected"
+            (done)="editing.set(false)"
+            (cancelled)="cancelEdit()"
+          />
+        } @else {
+          <ds-novel-reader [novel]="item" [chapters]="chapters()" [(current)]="current" [highlight]="highlight()" />
+        }
+      }
+    </main>
+    <ng-template
+      dsPanel="right"
+      panelClass="library-novel-panel"
+      testId="novel-page-novel-panel"
+      [label]="'library.novel.tabs.label' | t"
+      [resizeLabel]="'library.novel.page.resizeNovel' | t"
+    >
+      <div class="ds-panel-head">
+        <ds-tabs
+          idPrefix="novel-page-tab"
+          controls="novel-page-tabpanel"
+          [tabs]="tabs()"
+          [label]="'library.novel.tabs.label' | t"
+          [value]="tab()"
+          (valueChange)="tab.set($any($event))"
+        />
+      </div>
+      <div
+        id="novel-page-tabpanel"
+        class="ds-panel-body library-novel-body"
+        role="tabpanel"
+        [attr.aria-labelledby]="'novel-page-tab-' + tab()"
+      >
+        @if (novel(); as item) {
+          @if (tab() === 'reading') {
+            <ds-reading-settings />
+          } @else {
+            <ds-novel-search
+              [novel]="item"
+              [chapters]="chapters()"
+              [attr.inert]="editing() || null"
+              (selected)="onSearchSelected($event)"
+            />
+          }
+        } @else {
+          <span class="skeleton library-novel-skeleton-cover" aria-hidden="true"></span>
+          <ng-container [ngTemplateOutlet]="skeletonRows" />
+        }
+      </div>
+    </ng-template>
+  }
+}
+
+<ng-template #back>
+  <a
+    dsBtn
+    variant="ghost"
+    size="sm"
+    routerLink="/library"
+    data-testid="novel-page-back"
+    [iconOnly]="true"
+    [attr.aria-label]="'library.novel.page.back' | t"
+    [dsTooltip]="'library.novel.page.back' | t"
+  >
+    <ds-icon name="arrow-left" size="sm" />
+  </a>
+</ng-template>
+
+<ng-template #skeletonRows>
+  <div class="library-novel-skeleton-rows" aria-hidden="true">
+    @for (row of skeletonCount; track $index) {
+      <span class="skeleton"></span>
+    }
+  </div>
+</ng-template>
+
+<ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />

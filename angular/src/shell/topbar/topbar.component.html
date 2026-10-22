@@ -17,7 +17,17 @@
   @if (currentModule(); as module) {
     <span>{{ groupTitles[module.group] | t }}</span>
     <span class="sep">·</span>
-    <span class="page">{{ module.label | t }}</span>
+    @if (crumb.detail(); as detail) {
+      <a class="link" [routerLink]="'/' + module.id" data-testid="topbar-crumbs-module">{{
+        currentPageKey() ?? module.label | t
+      }}</a>
+      <span class="sep">·</span>
+      <span class="page" [dsTooltip]="detail" dsTooltipWhenTruncated data-testid="topbar-crumbs-detail">{{
+        detail
+      }}</span>
+    } @else {
+      <span class="page">{{ currentPageKey() ?? module.label | t }}</span>
+    }
   }
 </nav>
 <span class="ds-spacer"></span>

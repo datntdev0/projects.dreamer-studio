@@ -1,0 +1,67 @@
+<ds-dialog
+  [open]="open()"
+  [heading]="'library.novelDialog.export.heading' | t"
+  icon="download"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="dismiss()"
+>
+  @if (novel(); as current) {
+    <form
+      id="novel-dlg-export-form"
+      class="library-novel-dialogs"
+      data-testid="novel-dlg-export"
+      novalidate
+      (submit)="save($event)"
+    >
+      <p class="novel-dlg-proto" data-testid="novel-dlg-export-note">
+        <ds-icon name="info" size="sm" />{{ 'library.novelDialog.export.prototypeNote' | t }}
+      </p>
+      <ds-novel-dialog-summary [novel]="current" />
+      <ds-field
+        [label]="'library.novelDialog.export.folder' | t"
+        controlId="novel-dlg-export-folder"
+        [error]="touched() && !folder().trim() ? ('library.novelDialog.export.required' | t) : ''"
+        required
+      >
+        <input
+          #folderInput
+          id="novel-dlg-export-folder"
+          class="ds-input"
+          data-testid="novel-dlg-export-folder"
+          [value]="folder()"
+          [attr.aria-invalid]="touched() && !folder().trim()"
+          (input)="folder.set(folderInput.value)"
+        />
+      </ds-field>
+      <ds-field
+        [label]="'library.novelDialog.export.fileName' | t"
+        controlId="novel-dlg-export-file"
+        [hint]="'library.novelDialog.export.fileNameHint' | t"
+        [error]="touched() && !fileName().trim() ? ('library.novelDialog.export.required' | t) : ''"
+        required
+      >
+        <input
+          #fileInput
+          id="novel-dlg-export-file"
+          class="ds-input"
+          autofocus
+          data-testid="novel-dlg-export-file"
+          [value]="fileName()"
+          [attr.aria-invalid]="touched() && !fileName().trim()"
+          (input)="fileName.set(fileInput.value)"
+        />
+      </ds-field>
+      <ds-checkbox data-testid="novel-dlg-export-fail" [(checked)]="simulateFailure">
+        {{ 'library.novelDialog.export.simulateFailure' | t }}
+      </ds-checkbox>
+    </form>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="novel-dlg-export-cancel" (click)="closed.emit()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button dsBtn type="submit" form="novel-dlg-export-form" variant="primary" data-testid="novel-dlg-export-save">
+      <ds-icon name="save" size="sm" />{{ 'library.novelDialog.export.save' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

@@ -85,6 +85,15 @@ const meta: Meta<MainLayoutArgs> = {
             </nav>
             <span class="ds-spacer"></span>
             <span class="ds-app-tools">
+              <button dsBtn class="panel-toggle" variant="ghost" [iconOnly]="true" type="button" data-testid="topbar-panel-left" aria-label="Show or hide the left panel" [attr.aria-pressed]="leftPanel" dsTooltip="Show or hide the left panel" (click)="leftPanel = !leftPanel">
+                <ds-icon name="panel-left" />
+              </button>
+              <button dsBtn class="panel-toggle" variant="ghost" [iconOnly]="true" type="button" data-testid="topbar-panel-right" aria-label="Show or hide the right panel" [attr.aria-pressed]="rightPanel" dsTooltip="Show or hide the right panel" (click)="rightPanel = !rightPanel">
+                <ds-icon name="panel-right" />
+              </button>
+              <button dsBtn class="panel-toggle" variant="ghost" [iconOnly]="true" type="button" data-testid="topbar-panel-bottom" aria-label="Show or hide the bottom panel" [attr.aria-pressed]="bottomPanel" dsTooltip="Show or hide the bottom panel" (click)="bottomPanel = !bottomPanel">
+                <ds-icon name="panel-bottom" />
+              </button>
               <button dsBtn class="lang" variant="ghost" size="sm" type="button" aria-label="Language" dsTooltip="Language">
                 <ds-icon name="languages" size="sm" />EN
               </button>

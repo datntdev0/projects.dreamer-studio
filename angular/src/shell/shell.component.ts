@@ -4,6 +4,7 @@ import { ConfirmHostComponent } from '@components/dialog/confirm-host.component'
 import { ToastOutletComponent } from '@components/toast/toast-outlet.component';
 import { TranslatePipe } from '../core/i18n/translate.pipe';
 import { ThemeService } from '../core/theme/theme.service';
+import { PanelOutletComponent } from './layout/panel-outlet.component';
 import { RailComponent } from './rail/rail.component';
 import { StatusBarComponent } from './status-bar/status-bar.component';
 import { TopbarComponent } from './topbar/topbar.component';
@@ -15,6 +16,7 @@ import { TopbarComponent } from './topbar/topbar.component';
     TranslatePipe,
     ConfirmHostComponent,
     ToastOutletComponent,
+    PanelOutletComponent,
     TopbarComponent,
     RailComponent,
     StatusBarComponent,

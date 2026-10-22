@@ -94,41 +94,37 @@
   </div>
 </div>
 
-<div class="ds-workbench">
-  <div class="ds-workbench-center">
-    <main
-      id="pipelines-main"
-      class="pipeline-main"
-      role="tabpanel"
-      data-testid="pipelines-main"
-      [attr.aria-labelledby]="'pipelines-tab-' + viewStore.view()"
-    >
-      @if (viewStore.view() === 'queue') {
-        <ds-queue-table [slot]="store.active()" [selectedId]="selectedId()" />
-      } @else {
-        <ds-history-table [selectedId]="selectedId()" />
-      }
-    </main>
-    <ds-splitter edge="bottom" [target]="bottom" [label]="'pipelines.resize.log' | t" />
-    <aside
-      #bottom
-      class="ds-panel-bottom pipeline-log-panel"
-      data-testid="pipeline-log-panel"
-      [attr.aria-label]="'run.log.title' | t"
-    >
-      <ds-run-log [runId]="selectedId()" />
-    </aside>
-  </div>
+<main
+  id="pipelines-main"
+  class="pipeline-main"
+  role="tabpanel"
+  data-testid="pipelines-main"
+  [attr.aria-labelledby]="'pipelines-tab-' + viewStore.view()"
+>
+  @if (viewStore.view() === 'queue') {
+    <ds-queue-table [slot]="store.active()" [selectedId]="selectedId()" />
+  } @else {
+    <ds-history-table [selectedId]="selectedId()" />
+  }
+</main>
 
-  <ds-splitter edge="right" [target]="right" [label]="'pipelines.resize.details' | t" />
-  <aside
-    #right
-    class="ds-panel-right pipeline-details-panel"
-    data-testid="pipelines-details-panel"
-    [attr.aria-label]="'pipelines.detail.label' | t"
-  >
-    <ds-run-details [runId]="selectedId()" />
-  </aside>
-</div>
+<ng-template
+  dsPanel="bottom"
+  panelClass="pipeline-log-panel"
+  testId="pipeline-log-panel"
+  [label]="'run.log.title' | t"
+  [resizeLabel]="'pipelines.resize.log' | t"
+>
+  <ds-run-log [runId]="selectedId()" />
+</ng-template>
+<ng-template
+  dsPanel="right"
+  panelClass="pipeline-details-panel"
+  testId="pipelines-details-panel"
+  [label]="'pipelines.detail.label' | t"
+  [resizeLabel]="'pipelines.resize.details' | t"
+>
+  <ds-run-details [runId]="selectedId()" />
+</ng-template>
 
 <ds-start-pipeline-dialog [open]="startOpen()" (closed)="startOpen.set(false)" (started)="onStarted($event)" />

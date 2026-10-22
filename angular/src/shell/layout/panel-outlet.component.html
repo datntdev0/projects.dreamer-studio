@@ -1,0 +1,16 @@
+@if (panel(); as panel) {
+  @if (edge() !== 'left') {
+    <ds-splitter [edge]="edge()" [target]="aside" [label]="panel.resizeLabel()" />
+  }
+  <aside
+    #aside
+    [class]="'ds-panel-' + edge() + ' ' + panel.panelClass()"
+    [attr.aria-label]="panel.label()"
+    [attr.data-testid]="panel.testId()"
+  >
+    <ng-container [ngTemplateOutlet]="panel.template" />
+  </aside>
+  @if (edge() === 'left') {
+    <ds-splitter [edge]="edge()" [target]="aside" [label]="panel.resizeLabel()" />
+  }
+}

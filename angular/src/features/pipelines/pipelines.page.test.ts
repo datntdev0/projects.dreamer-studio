@@ -1,4 +1,4 @@
-import { computed, signal, type Signal } from '@angular/core';
+import { Component, computed, signal, type Signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
@@ -9,14 +9,11 @@ import { ACTIVE_RUNS, RECENT_RUNS, RUNNING_RUN, runLog } from '../../../stories/
 import { DesktopApi } from '../../core/desktop-api';
 import { PipelineStore } from '../../core/stores/pipeline-store';
 import { SettingsStore } from '../../core/stores/settings-store';
+import { PanelOutletComponent } from '../../shell/layout/panel-outlet.component';
 import { PipelineActions } from './pipeline-actions';
 import { PipelinesPage } from './pipelines.page';
-import {
-  PipelinesViewStore,
-  type HistorySlot,
-  type HistoryStatusFilter,
-  type PipelineView,
-} from './pipelines-view.store';
+import { PipelinesViewStore } from './pipelines-view.store';
+import type { HistorySlot, HistoryStatusFilter, PipelineView } from './pipelines-view.store';
 
 const APP_DATA_DIR: string = 'C:\\Users\\me\\AppData\\Local\\DreamerStudio';
 const TYPE_INFO: PipelineTypeInfo = {
@@ -35,6 +32,12 @@ interface CreatePageOptions {
   history?: PipelineRun[];
   id?: string | null;
 }
+
+@Component({
+  imports: [PipelinesPage, PanelOutletComponent],
+  template: '<ds-pipelines-page /><ds-panel-outlet edge="bottom" /><ds-panel-outlet edge="right" />',
+})
+class PipelinesTestHost {}
 
 class PipelineStoreStub {
   readonly active: Signal<{ state: 'ready'; runs: PipelineRun[] }>;
@@ -98,24 +101,24 @@ let store: PipelineStoreStub;
 let viewStore: PipelinesViewStoreStub;
 let showModal: (() => void) | undefined;
 
-function query(fixture: ComponentFixture<PipelinesPage>, testId: string): HTMLElement {
+function query(fixture: ComponentFixture<PipelinesTestHost>, testId: string): HTMLElement {
   const element: HTMLElement | null = fixture.nativeElement.querySelector(`[data-testid="${testId}"]`);
   if (!element) throw new Error(`Missing [data-testid="${testId}"]`);
   return element;
 }
 
-async function settle(fixture: ComponentFixture<PipelinesPage>): Promise<void> {
+async function settle(fixture: ComponentFixture<PipelinesTestHost>): Promise<void> {
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
 }
 
-async function click(fixture: ComponentFixture<PipelinesPage>, testId: string): Promise<void> {
+async function click(fixture: ComponentFixture<PipelinesTestHost>, testId: string): Promise<void> {
   query(fixture, testId).click();
   await settle(fixture);
 }
 
-async function createPage(options: CreatePageOptions = {}): Promise<ComponentFixture<PipelinesPage>> {
+async function createPage(options: CreatePageOptions = {}): Promise<ComponentFixture<PipelinesTestHost>> {
   const active: PipelineRun[] = options.active ?? ACTIVE_RUNS;
   const history: PipelineRun[] = options.history ?? RECENT_RUNS.filter((run) => run.finishedAt !== null);
   const route = new BehaviorSubject(convertToParamMap(options.id ? { id: options.id } : {}));
@@ -129,7 +132,7 @@ async function createPage(options: CreatePageOptions = {}): Promise<ComponentFix
   };
 
   await TestBed.configureTestingModule({
-    imports: [PipelinesPage],
+    imports: [PipelinesTestHost],
     providers: [
       provideRouter([]),
       {
@@ -150,7 +153,7 @@ async function createPage(options: CreatePageOptions = {}): Promise<ComponentFix
       { provide: SettingsStore, useValue: { settings: signal(defaultSettings(APP_DATA_DIR)), state: signal(null) } },
     ],
   }).compileComponents();
-  const fixture: ComponentFixture<PipelinesPage> = TestBed.createComponent(PipelinesPage);
+  const fixture: ComponentFixture<PipelinesTestHost> = TestBed.createComponent(PipelinesTestHost);
   await settle(fixture);
   return fixture;
 }
@@ -169,7 +172,7 @@ afterEach(() => {
 
 describe('PipelinesPage', () => {
   it('AC-2: lists active runs with status, progress and current step', async () => {
-    const fixture: ComponentFixture<PipelinesPage> = await createPage();
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage();
     const rows: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('[data-testid="pipelines-queue-row"]'),
     );
@@ -184,7 +187,7 @@ describe('PipelinesPage', () => {
   });
 
   it('AC-3: starts and cancels a pipeline from the UI', async () => {
-    const fixture: ComponentFixture<PipelinesPage> = await createPage({ active: [RUNNING_RUN] });
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage({ active: [RUNNING_RUN] });
 
     await click(fixture, 'pipelines-start');
     expect(query(fixture, 'pipeline-start-dialog').querySelector('[data-testid="dialog"]')).not.toBeNull();
@@ -197,7 +200,7 @@ describe('PipelinesPage', () => {
   });
 
   it('AC-4: opens an active pipeline and loads its live log', async () => {
-    const fixture: ComponentFixture<PipelinesPage> = await createPage({ active: [RUNNING_RUN] });
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage({ active: [RUNNING_RUN] });
 
     await click(fixture, 'pipelines-queue-row');
     expect(actions.open).toHaveBeenCalledWith(RUNNING_RUN.id);
@@ -207,7 +210,7 @@ describe('PipelinesPage', () => {
 
   it('REQ-005 AC-1: lists finished runs with their status and result', async () => {
     const history: PipelineRun[] = RECENT_RUNS.filter((run) => run.finishedAt !== null);
-    const fixture: ComponentFixture<PipelinesPage> = await createPage({ history });
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage({ history });
 
     await click(fixture, 'pipelines-tab-history');
     const rows: HTMLElement[] = Array.from(
@@ -223,7 +226,7 @@ describe('PipelinesPage', () => {
   });
 
   it('REQ-005 AC-2: filters finished runs by status and pipeline type', async () => {
-    const fixture: ComponentFixture<PipelinesPage> = await createPage();
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage();
 
     await click(fixture, 'pipelines-tab-history');
     const status: HTMLSelectElement = query(fixture, 'pipelines-filter-status') as HTMLSelectElement;
@@ -243,9 +246,9 @@ describe('PipelinesPage', () => {
   it('REQ-005 AC-3: opens a finished run with its details and log', async () => {
     const history: PipelineRun[] = RECENT_RUNS.filter((run) => run.finishedAt !== null);
     const run: PipelineRun = history[0];
-    const fixture: ComponentFixture<PipelinesPage> = await createPage({ history, id: run.id });
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage({ history, id: run.id });
 
-    expect(fixture.nativeElement.dataset.view).toBe('history');
+    expect(query(fixture, 'pipelines-page').dataset.view).toBe('history');
     expect(query(fixture, 'pipeline-details-name').textContent).toContain('Demo pipeline');
     expect(api.pipelineLog).toHaveBeenCalledWith(run.id);
     expect(query(fixture, 'pipeline-log').textContent).toContain('Run succeeded');
@@ -253,7 +256,7 @@ describe('PipelinesPage', () => {
 
   it('REQ-005 AC-4: deletes selected finished runs', async () => {
     const history: PipelineRun[] = RECENT_RUNS.filter((run) => run.finishedAt !== null);
-    const fixture: ComponentFixture<PipelinesPage> = await createPage({ history });
+    const fixture: ComponentFixture<PipelinesTestHost> = await createPage({ history });
 
     await click(fixture, 'pipelines-tab-history');
     const select: HTMLInputElement = query(fixture, 'pipelines-row-select').querySelector(

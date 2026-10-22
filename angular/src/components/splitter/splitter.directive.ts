@@ -11,6 +11,10 @@ const MIN_TOKEN: Record<SplitterEdge, string> = {
   bottom: '--panel-min-h',
 };
 
+function isBoxless(element: HTMLElement): boolean {
+  return getComputedStyle(element).display === 'contents';
+}
+
 @Directive({
   selector: 'ds-splitter',
   host: {
@@ -59,7 +63,9 @@ export class SplitterDirective {
 
   protected measure(): void {
     const rect: DOMRect = this.target().getBoundingClientRect();
-    const parent: DOMRect | undefined = this.target().parentElement?.getBoundingClientRect();
+    let parentElement: HTMLElement | null = this.target().parentElement;
+    while (parentElement && isBoxless(parentElement)) parentElement = parentElement.parentElement;
+    const parent: DOMRect | undefined = parentElement?.getBoundingClientRect();
     const horizontal: boolean = this.edge() !== 'bottom';
     const parentSize: number = (horizontal ? parent?.width : parent?.height) ?? 0;
     const tokenMin: number = parseFloat(
@@ -136,8 +142,9 @@ export class SplitterDirective {
   }
 
   private centerSize(horizontal: boolean): number {
-    const center: Element | null =
-      this.edge() === 'left' ? this.host.nextElementSibling : this.host.previousElementSibling;
+    const parent: HTMLElement | null = this.host.parentElement;
+    const anchor: Element = parent && isBoxless(parent) ? parent : this.host;
+    const center: Element | null = this.edge() === 'left' ? anchor.nextElementSibling : anchor.previousElementSibling;
     const rect: DOMRect | undefined = center?.getBoundingClientRect();
     return (horizontal ? rect?.width : rect?.height) ?? Infinity;
   }

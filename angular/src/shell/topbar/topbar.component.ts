@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
+import type { SplitterEdge } from '@components/splitter/splitter.directive';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { filter, map, startWith } from 'rxjs';
 import { AppInfoStore } from '../../core/app-info';
@@ -11,6 +12,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { SettingsStore } from '../../core/stores/settings-store';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { ThemeService } from '../../core/theme/theme.service';
+import { LayoutService } from '../layout/layout.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';
 import type { AppModule } from '../registry/modules';
 
@@ -29,6 +31,8 @@ export class TopbarComponent {
   private readonly theme: ThemeService = inject(ThemeService);
   protected readonly i18n: I18nService = inject(I18nService);
   protected readonly appInfo: AppInfoStore = inject(AppInfoStore);
+  protected readonly layout: LayoutService = inject(LayoutService);
+  protected readonly panelEdges: SplitterEdge[] = ['left', 'right', 'bottom'];
   protected readonly groupTitles = GROUP_TITLES;
 
   private readonly title: Title = inject(Title);

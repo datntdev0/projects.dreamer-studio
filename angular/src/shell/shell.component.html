@@ -8,10 +8,13 @@
   <header dsTopbar [railExpanded]="railExpanded()" (toggleRail)="railExpanded.set(!railExpanded())"></header>
   <nav dsRail [collapsed]="!railExpanded()"></nav>
   <main class="ds-app-main">
+    <ds-panel-outlet edge="left" />
     <div class="ds-app-center">
       <ng-content select="[banners]" />
       <router-outlet />
+      <ds-panel-outlet edge="bottom" />
     </div>
+    <ds-panel-outlet edge="right" />
   </main>
   <footer dsStatusBar></footer>
   <ds-confirm-host />

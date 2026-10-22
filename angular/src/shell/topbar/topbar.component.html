@@ -22,6 +22,23 @@
 </nav>
 <span class="ds-spacer"></span>
 <span class="ds-app-tools">
+  @for (edge of panelEdges; track edge) {
+    <button
+      dsBtn
+      class="panel-toggle"
+      variant="ghost"
+      [iconOnly]="true"
+      type="button"
+      [attr.data-testid]="'topbar-panel-' + edge"
+      [attr.aria-label]="`topbar.panel.${edge}` | t"
+      [attr.aria-pressed]="layout.has(edge) && layout.isOpen(edge)"
+      [dsTooltip]="`topbar.panel.${edge}` | t"
+      [disabled]="!layout.has(edge)"
+      (click)="layout.toggle(edge)"
+    >
+      <ds-icon [name]="'panel-' + edge" />
+    </button>
+  }
   <button
     dsBtn
     class="lang"

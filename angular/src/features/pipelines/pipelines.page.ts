@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
-import { SplitterDirective } from '@components/splitter/splitter.directive';
 import { TabsComponent, type TabItem } from '@components/tabs/tabs.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { PipelineRun, PipelineType } from '@dreamer/shared/models/pipeline';
@@ -11,6 +10,7 @@ import { map } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { PipelineStore } from '../../core/stores/pipeline-store';
+import { PanelDirective } from '../../shell/layout/panel.directive';
 import { PageTitleDirective } from '../../shell/page-title.directive';
 import { HistoryTableComponent } from './components/history-table.component';
 import { PipelineActions } from './pipeline-actions';
@@ -34,11 +34,11 @@ const ALL = 'all';
     ButtonDirective,
     HistoryTableComponent,
     IconComponent,
+    PanelDirective,
     PageTitleDirective,
     QueueTableComponent,
     RunDetailsComponent,
     RunLogComponent,
-    SplitterDirective,
     StartPipelineDialogComponent,
     TabsComponent,
     TooltipDirective,

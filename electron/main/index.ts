@@ -23,6 +23,7 @@ import { createLogger, Logger } from './logging/logger';
 import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
+import { registerLibraryChecks } from './features/library/library-checks';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
 import { SettingsLoadResult, SettingsStore } from './features/settings/settings-store';
@@ -137,6 +138,7 @@ async function onReady(): Promise<void> {
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);
+  registerLibraryChecks(diagnostics);
   registerDiagnosticsIpc(diagnostics);
   registerLogIpc();
   registerDevIpc();

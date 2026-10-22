@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 import yauzl from 'yauzl';
-import { contentHash, decodeUtf8, normalizeChapterText } from '@dreamer/shared/core/novel-text';
+import { chapterStats, contentHash, decodeUtf8, normalizeChapterText } from '@dreamer/shared/core/novel-text';
 import { DEFAULT_PUBLICATION, PACKAGE_CHAPTERS_DIR } from '@dreamer/shared/models/novel-package';
 import { PACKAGE_FORMAT_VERSION, PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
 import { PACKAGE_METADATA_FILE, PACKAGE_TYPE_NOVEL } from '@dreamer/shared/models/novel-package';
@@ -11,6 +11,7 @@ import { PackageLimit, PackageLimits, PackageMetadata, PackageParams } from '@dr
 import { PackageProblem, PackageReadResult, PackageRefusal } from '@dreamer/shared/models/novel-package';
 import { PackageRefused } from '@dreamer/shared/models/novel-package';
 import { PackageWarning, PreviewChapter, Publication } from '@dreamer/shared/models/novel-package';
+import { normalizeTags } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 
 const logger: Logger = createLogger('library');
@@ -298,17 +299,7 @@ function checkTags(value: unknown, problems: PackageProblem[]): string[] {
     problems.push(problem('fieldInvalid', { field: 'tags' }, metadataWhere('tags')));
     return [];
   }
-  const tags: string[] = [];
-  const seen: Set<string> = new Set();
-  value.forEach((tag: string): void => {
-    const trimmed: string = tag.trim();
-    const folded: string = trimmed.toLocaleLowerCase('en-US');
-    if (trimmed && !seen.has(folded)) {
-      seen.add(folded);
-      tags.push(trimmed);
-    }
-  });
-  return tags;
+  return normalizeTags(value);
 }
 
 function checkPublication(value: unknown, problems: PackageProblem[]): Publication {
@@ -412,10 +403,6 @@ function checkListedTwice(chapters: PackageChapter[], chapterIndexes: number[]):
   return problems;
 }
 
-function characterCount(text: string): number {
-  return Array.from(text).filter((character: string): boolean => character !== '\n').length;
-}
-
 async function checkChapterFiles(
   zip: yauzl.ZipFile,
   directory: CentralDirectory,
@@ -449,10 +436,10 @@ async function checkChapterFiles(
       continue;
     }
     const text: string = normalizeChapterText(decoded);
-    const paragraphs: number = text ? text.split('\n').length : 0;
+    const stats: { paragraphs: number; chars: number } = chapterStats(text);
     const hash: string = await contentHash(text);
     const chapterWarnings: PackageWarning[] = [];
-    if (paragraphs === 0) {
+    if (stats.paragraphs === 0) {
       chapterWarnings.push(warning('chapterEmpty', { index }, chapter.file));
     } else {
       const sameAs: number | undefined = firstByHash.get(hash);
@@ -468,8 +455,8 @@ async function checkChapterFiles(
       file: chapter.file,
       title: chapter.title,
       bytes: bytes.byteLength,
-      chars: characterCount(text),
-      paragraphs,
+      chars: stats.chars,
+      paragraphs: stats.paragraphs,
       hash,
       warnings: chapterWarnings,
     });

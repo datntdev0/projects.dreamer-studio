@@ -21,6 +21,17 @@ export function normalizeChapterText(text: string): string {
   return splitParagraphs(text).join('\n');
 }
 
+export interface ChapterStats {
+  paragraphs: number;
+  chars: number;
+}
+
+export function chapterStats(text: string): ChapterStats {
+  const paragraphs: number = text ? text.split('\n').length : 0;
+  const chars: number = Array.from(text).filter((character: string): boolean => character !== '\n').length;
+  return { paragraphs, chars };
+}
+
 export async function contentHash(text: string): Promise<string> {
   const bytes: Uint8Array<ArrayBuffer> = new TextEncoder().encode(text);
   const digest: ArrayBuffer = await globalThis.crypto.subtle.digest('SHA-256', bytes);

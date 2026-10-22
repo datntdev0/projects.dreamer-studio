@@ -1,5 +1,6 @@
 import { AppDataStep } from '@dreamer/shared/models/app-data';
 import { initLogging } from '../logging/logger';
+import { cleanLibrary } from '../features/library/library-cleanup';
 import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
 import { PipelineRegistry } from '../features/pipelines/pipeline-registry';
 import { Database } from '../storage/database';
@@ -30,6 +31,7 @@ export class AppDataSession {
     const db: Database = Database.open(paths.database);
     try {
       runMigrations(db, deps.migrations(), paths.databaseBackup);
+      cleanLibrary(paths);
       const executor: PipelineExecutor = new PipelineExecutor(
         new PipelineRunRepository(db),
         paths,

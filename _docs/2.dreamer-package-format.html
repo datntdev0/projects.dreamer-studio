@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dreamer Package Format</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Dreamer Package Format</span>
+    <span class="spacer"></span>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>Dreamer Package Format</h1>
+      <div class="doc-meta"><span>Updated 2026-10-21</span><span>Owner: architect</span><span>Req: TSK-012</span><span>Format version 1</span></div>
+
+      <h2>Overview</h2>
+      <p>A Dreamer package is a ZIP file that moves a novel and its metadata between Dreamer Studio and other tools. Import uses it in REQ-013. Export writes it in REQ-018.</p>
+      <ul>
+        <li>The format is read-only during preview. Reading never writes, creates, or deletes files.</li>
+        <li>Version 1 supports novels.</li>
+        <li>All chapter text is normalized before preview, import, search, or export.</li>
+      </ul>
+
+      <h2>Layout</h2>
+      <pre class="tree">dreamer-package.zip
+├── metadata.json              <span class="note"># required; exact name at the root</span>
+├── cover.jpg                  <span class="note"># optional; JPG or PNG content</span>
+├── chapters/                  <span class="note"># chapter files listed by metadata.json</span>
+│   ├── 0001.txt
+│   └── 0002.txt
+└── notes.txt                  <span class="note"># ignored; shown in the import preview</span></pre>
+      <ul>
+        <li><code>metadata.json</code> is required at the package root.</li>
+        <li>A cover is optional. Its content must be JPEG or PNG.</li>
+        <li>Chapter files are UTF-8 text files under <code>chapters/</code>.</li>
+        <li>Other entries are ignored and shown in the import preview.</li>
+      </ul>
+
+      <h2>metadata.json</h2>
+      <p>The file is a UTF-8 JSON object. Unknown fields do not change the normalized metadata.</p>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>formatVersion</code></td><td>number</td><td><span class="pill danger">Yes</span></td><td>—</td><td>Must be <code>1</code>.</td></tr>
+          <tr><td><code>type</code></td><td>string</td><td><span class="pill danger">Yes</span></td><td>—</td><td>Must be <code>novel</code>.</td></tr>
+          <tr><td><code>originalTitle</code></td><td>string</td><td><span class="pill danger">Yes</span></td><td>—</td><td>Trimmed. Must not be empty.</td></tr>
+          <tr><td><code>title</code></td><td>string</td><td>No</td><td><code>""</code></td><td>Trimmed.</td></tr>
+          <tr><td><code>author</code></td><td>string</td><td>No</td><td><code>""</code></td><td>Trimmed.</td></tr>
+          <tr><td><code>description</code></td><td>string</td><td>No</td><td><code>""</code></td><td>Trimmed.</td></tr>
+          <tr><td><code>tags</code></td><td>string[]</td><td>No</td><td><code>[]</code></td><td>Each tag is trimmed. Empty tags are dropped. Case-insensitive duplicates are dropped after the first value.</td></tr>
+          <tr><td><code>language</code></td><td>string</td><td><span class="pill danger">Yes</span></td><td>—</td><td>Trimmed BCP-47 language tag. Stored in canonical form.</td></tr>
+          <tr><td><code>publication</code></td><td>string</td><td>No</td><td><code>ongoing</code></td><td><code>ongoing</code> or <code>completed</code>.</td></tr>
+          <tr><td><code>cover</code></td><td>string or null</td><td>No</td><td><code>null</code></td><td>Names an entry whose magic bytes identify JPEG or PNG content.</td></tr>
+          <tr><td><code>chapters</code></td><td>array</td><td><span class="pill danger">Yes</span></td><td>—</td><td>Ordered <code>[{ file, title }]</code>. It may be empty. <code>file</code> is a string under <code>chapters/</code>. Optional <code>title</code> is trimmed and defaults to <code>""</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Versioning and type</h2>
+      <ul>
+        <li>Version 1 is the only supported package version.</li>
+        <li>A different <code>formatVersion</code> is rejected with <code>versionUnsupported</code>.</li>
+        <li>A <code>type</code> other than <code>novel</code> is rejected with <code>unsupportedType</code>. Other content types are not supported yet.</li>
+      </ul>
+
+      <h2>Limits</h2>
+      <p>The reader uses <code>PACKAGE_LIMITS</code>. A limit is inclusive. A package is refused when a value is greater than its limit.</p>
+      <table>
+        <thead><tr><th>Limit</th><th>Maximum</th><th>Bytes</th><th>Applies to</th></tr></thead>
+        <tbody>
+          <tr><td><code>zipBytes</code></td><td>200 MB</td><td>209,715,200</td><td>The ZIP file.</td></tr>
+          <tr><td><code>unpackedBytes</code></td><td>500 MB</td><td>524,288,000</td><td>The sum of uncompressed entry sizes.</td></tr>
+          <tr><td><code>entries</code></td><td>20,000</td><td>—</td><td>All entries in the central directory.</td></tr>
+          <tr><td><code>chapterBytes</code></td><td>5 MB</td><td>5,242,880</td><td>Each chapter and <code>metadata.json</code>.</td></tr>
+          <tr><td><code>coverBytes</code></td><td>10 MB</td><td>10,485,760</td><td>The listed cover.</td></tr>
+        </tbody>
+      </table>
+      <p>Entry count and declared uncompressed sizes are checked from the ZIP central directory. Bytes are then counted again while each entry is inflated. Reading stops at the first size overflow.</p>
+
+      <h2>Paths</h2>
+      <p>The package is refused when an entry name is unsafe.</p>
+      <ul>
+        <li>Absolute names that start with <code>/</code> are unsafe.</li>
+        <li>Drive-letter names such as <code>C:/file.txt</code> are unsafe.</li>
+        <li>Any path segment equal to <code>..</code> is unsafe.</li>
+        <li>Backslashes and NUL characters are unsafe.</li>
+        <li>Duplicate entry names are unsafe. Comparison is case-insensitive.</li>
+        <li>Symlink entries are ignored. They count as absent when referenced.</li>
+        <li>Every listed chapter file must start with <code>chapters/</code>.</li>
+        <li>Names inside the package are never used as names in the library.</li>
+      </ul>
+
+      <h2>Text and paragraphs</h2>
+      <ul>
+        <li>Metadata and chapters use strict UTF-8. Invalid bytes reject the package. The reason names the file.</li>
+        <li>A leading UTF-8 byte order mark is removed.</li>
+        <li>CRLF and lone CR line endings become LF.</li>
+        <li>Every non-empty line is one paragraph.</li>
+        <li>Each line is trimmed. Blank and whitespace-only lines are dropped.</li>
+        <li>Export writes one paragraph per line with a blank line between paragraphs. Reading it produces the same paragraph list.</li>
+      </ul>
+      <p>Import, export, chapter split, reader, and search use this one rule from <code>shared/core/novel-text.ts</code>. An empty chapter file and a package with zero chapters are valid.</p>
+      <table>
+        <thead><tr><th>Preview value</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td><code>paragraphs</code></td><td>The number of normalized non-empty lines.</td></tr>
+          <tr><td><code>chars</code></td><td>The number of Unicode code points in normalized text, excluding line breaks.</td></tr>
+          <tr><td><code>hash</code></td><td>Lowercase hexadecimal SHA-256 of the UTF-8 bytes of normalized text.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Checks</h2>
+      <p>Refusals stop package reading at the first refusal. A <code>problems</code> refusal returns all problems that can be found safely. Warnings never block import.</p>
+
+      <h3>Refusals</h3>
+      <table>
+        <thead><tr><th>Code</th><th>When</th><th>Params</th></tr></thead>
+        <tbody>
+          <tr><td><code>notZip</code></td><td>The path is not an existing regular <code>.zip</code> file; the ZIP cannot be opened; or an entry is encrypted.</td><td><code>{}</code></td></tr>
+          <tr><td><code>unsafePath</code></td><td>An entry name is unsafe or duplicates an earlier name case-insensitively.</td><td><code>{ entry }</code></td></tr>
+          <tr><td><code>unsupportedType</code></td><td><code>metadata.json</code> has a type other than <code>novel</code>.</td><td><code>{ type }</code></td></tr>
+          <tr><td><code>tooLarge</code></td><td>The ZIP, unpacked data, entry count, metadata, a chapter, or the cover exceeds its limit.</td><td><code>{ limit, size, max }</code>; chapter, metadata, and cover cases also have <code>file</code>.</td></tr>
+          <tr><td><code>problems</code></td><td>One or more package problems were found.</td><td><code>{ count }</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Problems</h3>
+      <table>
+        <thead><tr><th>Code</th><th>When</th><th>Params</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadataMissing</code></td><td>The root <code>metadata.json</code> entry is absent or is a symlink.</td><td><code>{}</code></td></tr>
+          <tr><td><code>metadataInvalid</code></td><td>Metadata is invalid JSON or is not a JSON object.</td><td><code>{ line }</code></td></tr>
+          <tr><td><code>versionUnsupported</code></td><td><code>formatVersion</code> is not <code>1</code>.</td><td><code>{ version }</code></td></tr>
+          <tr><td><code>fieldMissing</code></td><td>A required field is absent, has no usable string value, or <code>chapters</code> is absent.</td><td><code>{ field }</code></td></tr>
+          <tr><td><code>fieldInvalid</code></td><td>An optional field, publication value, chapter list, or chapter item has the wrong shape or value.</td><td><code>{ field }</code></td></tr>
+          <tr><td><code>languageInvalid</code></td><td><code>language</code> is not a valid BCP-47 language tag.</td><td><code>{ value }</code></td></tr>
+          <tr><td><code>chapterListedTwice</code></td><td>The same chapter file is listed more than once, compared case-insensitively.</td><td><code>{ file }</code></td></tr>
+          <tr><td><code>chapterFileMissing</code></td><td>A listed chapter entry is absent or is a symlink.</td><td><code>{ index, file }</code></td></tr>
+          <tr><td><code>notUtf8</code></td><td><code>metadata.json</code> or a chapter is not valid UTF-8.</td><td><code>{ file }</code></td></tr>
+          <tr><td><code>coverInvalid</code></td><td>The listed cover is absent, is a symlink, or lacks JPEG or PNG magic bytes.</td><td><code>{ file }</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Warnings</h3>
+      <table>
+        <thead><tr><th>Code</th><th>When</th><th>Params</th></tr></thead>
+        <tbody>
+          <tr><td><code>chapterEmpty</code></td><td>A chapter has zero paragraphs after normalization.</td><td><code>{ index }</code></td></tr>
+          <tr><td><code>sameText</code></td><td>A non-empty chapter has the same normalized-text hash as an earlier non-empty chapter. Empty chapters are excluded.</td><td><code>{ index, sameAs }</code></td></tr>
+          <tr><td><code>ignoredFile</code></td><td>A file entry is not metadata, a listed chapter, or the listed cover; symlinks are also ignored.</td><td><code>{ file }</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Sample package</h2>
+      <p>The fixture is at <code>electron/main/features/library/fixtures/sample-novel/</code>. Tests in <code>package-reader.test.ts</code> package and read this directory.</p>
+      <pre class="tree">sample-novel/
+├── metadata.json
+├── cover.png
+├── chapters/
+│   ├── 0001.txt              <span class="note"># UTF-8 BOM, CRLF, blank and padded lines</span>
+│   ├── 0002.txt              <span class="note"># two paragraphs</span>
+│   ├── 0003.txt              <span class="note"># empty</span>
+│   └── 0004.txt              <span class="note"># same text as 0002.txt</span>
+└── notes.txt                 <span class="note"># not listed; ignored</span></pre>
+      <h3>metadata.json</h3>
+      <pre><code>{
+  "formatVersion": 1,
+  "type": "novel",
+  "originalTitle": "山海旅人",
+  "title": "The Mountain Traveller",
+  "author": "Dreamer Studio",
+  "description": "Sample package for the Dreamer package format spec and tests.",
+  "tags": ["sample", "fantasy"],
+  "language": "zh",
+  "cover": "cover.png",
+  "chapters": [
+    {
+      "file": "chapters/0001.txt",
+      "title": "第一章 出山"
+    },
+    {
+      "file": "chapters/0002.txt",
+      "title": "第二章 夜雨"
+    },
+    {
+      "file": "chapters/0003.txt",
+      "title": "第三章 空白"
+    },
+    {
+      "file": "chapters/0004.txt",
+      "title": "第四章 重逢"
+    }
+  ]
+}</code></pre>
+      <table>
+        <thead><tr><th>File</th><th>What it shows</th></tr></thead>
+        <tbody>
+          <tr><td><code>metadata.json</code></td><td><code>publication</code> is absent, so normalized metadata uses <code>ongoing</code>.</td></tr>
+          <tr><td><code>cover.png</code></td><td>A listed PNG cover identified by its magic bytes.</td></tr>
+          <tr><td><code>chapters/0001.txt</code></td><td>A UTF-8 BOM and CRLF line endings are accepted. Outer whitespace is trimmed. Blank lines are dropped.</td></tr>
+          <tr><td><code>chapters/0002.txt</code></td><td>Two ordinary paragraphs.</td></tr>
+          <tr><td><code>chapters/0003.txt</code></td><td>An empty chapter is valid and gets <code>chapterEmpty</code>.</td></tr>
+          <tr><td><code>chapters/0004.txt</code></td><td>The same normalized text as chapter 2 gets <code>sameText</code>.</td></tr>
+          <tr><td><code>notes.txt</code></td><td>An unlisted file is shown in <code>ignoredFiles</code> and gets <code>ignoredFile</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Traceability</h2>
+      <table>
+        <thead><tr><th>Acceptance criterion</th><th>Section</th></tr></thead>
+        <tbody>
+          <tr><td>AC-1 · ZIP layout</td><td>Layout</td></tr>
+          <tr><td>AC-2 · Metadata fields</td><td>metadata.json</td></tr>
+          <tr><td>AC-3 · Unsupported type</td><td>Versioning and type; Checks</td></tr>
+          <tr><td>AC-4 · Format version</td><td>Versioning and type; Checks</td></tr>
+          <tr><td>AC-5 · UTF-8, BOM, and line endings</td><td>Text and paragraphs; Checks</td></tr>
+          <tr><td>AC-6 · Zero and empty chapters</td><td>metadata.json; Text and paragraphs; Sample package</td></tr>
+          <tr><td>AC-7 · Size limits</td><td>Limits; Checks</td></tr>
+          <tr><td>AC-8 · Paths, duplicates, missing files, and ignored entries</td><td>Paths; Checks</td></tr>
+          <tr><td>AC-9 · Paragraph rule</td><td>Text and paragraphs</td></tr>
+          <tr><td>AC-10 · Test sample</td><td>Sample package</td></tr>
+          <tr><td>AC-11 · Publication default</td><td>metadata.json; Sample package</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>

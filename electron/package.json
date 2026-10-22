@@ -11,9 +11,13 @@
   "main": "dist/main/index.cjs",
   "devDependencies": {
     "@dreamer/shared": "workspace:*",
+    "@types/yauzl": "3.4.0",
+    "@types/yazl": "3.3.1",
     "electron": "44.9.0",
     "electron-builder": "26.15.3",
     "electron-log": "5.4.4",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "yauzl": "3.4.0",
+    "yazl": "3.3.1"
   }
 }

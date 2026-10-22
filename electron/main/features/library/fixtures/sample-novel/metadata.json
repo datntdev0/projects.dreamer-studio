@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "type": "novel",
+  "originalTitle": "山海旅人",
+  "title": "The Mountain Traveller",
+  "author": "Dreamer Studio",
+  "description": "Sample package for the Dreamer package format spec and tests.",
+  "tags": ["sample", "fantasy"],
+  "language": "zh",
+  "cover": "cover.png",
+  "chapters": [
+    {
+      "file": "chapters/0001.txt",
+      "title": "第一章 出山"
+    },
+    {
+      "file": "chapters/0002.txt",
+      "title": "第二章 夜雨"
+    },
+    {
+      "file": "chapters/0003.txt",
+      "title": "第三章 空白"
+    },
+    {
+      "file": "chapters/0004.txt",
+      "title": "第四章 重逢"
+    }
+  ]
+}

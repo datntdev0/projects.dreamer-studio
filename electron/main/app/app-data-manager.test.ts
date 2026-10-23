@@ -8,9 +8,9 @@ import { PipelineListQuery } from '@dreamer/shared/models/pipeline';
 import { PipelineDefinition } from '../features/pipelines/pipeline-definition';
 import { PipelineRegistry } from '../features/pipelines/pipeline-registry';
 import { SettingsStore } from '../features/settings/settings-store';
-import { Database } from '../storage/database';
-import { loadMigrations, Migration, runMigrations } from '../storage/migrator';
-import { AppPaths } from '../storage/paths';
+import { Database } from '@storage/database';
+import { loadMigrations, Migration, runMigrations } from '@storage/migrator';
+import { AppPaths } from '@storage/paths';
 import { AppDataManager, AppDataManagerDeps } from './app-data-manager';
 
 vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));

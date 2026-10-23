@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NOVEL_STORE_VERSION, NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { AppPaths, resolveAppPaths } from '../../storage/paths';
+import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { cleanLibrary, LibraryCleanup } from './library-cleanup';
 import { chapterPath, importStagingRoot, novelFolder, NovelFolder, trashDir } from './library-files';
 

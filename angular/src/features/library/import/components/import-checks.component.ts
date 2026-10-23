@@ -4,8 +4,8 @@ import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
 import type { PackageWarning, PackageWarningCode } from '@dreamer/shared/models/novel-package';
-import { I18nService } from '../../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ImportStore, type ImportChapter } from '../import.store';
 
 interface CheckRow {

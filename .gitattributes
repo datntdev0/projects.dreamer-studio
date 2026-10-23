@@ -1,4 +1,4 @@
 * text=auto eol=lf
 *.xlsx binary
 *.png binary
-electron/main/features/library/fixtures/** -text
+electron/fixtures/** -text

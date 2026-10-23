@@ -13,7 +13,7 @@ import type {
   PipelineTypeInfo,
 } from '@dreamer/shared/models/pipeline';
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
-import { DesktopApi } from '../../src/core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 import { isActiveRun } from '../../src/features/pipelines/run-status';
 import { APP_INFO, fakeBackendStatus, fakeSettingsApi } from './desktop-api';
 import type { FakeSettingsApi } from './desktop-api';

@@ -1,6 +1,6 @@
 import { PipelineType } from '@dreamer/shared/models/pipeline';
 import { Logger } from '../../logging/logger';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 
 export interface StepContext {
   runId: string;

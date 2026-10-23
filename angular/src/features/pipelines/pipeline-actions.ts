@@ -3,8 +3,8 @@ import { Router } from '@angular/router';
 import { ConfirmService } from '@components/dialog/confirm.service';
 import { ToastService } from '@components/toast/toast.service';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { I18nService } from '../../core/i18n/i18n.service';
-import { PipelineStore } from '../../core/stores/pipeline-store';
+import { I18nService } from '@core/i18n/i18n.service';
+import { PipelineStore } from '@core/stores/pipeline-store';
 import { runName } from './run-status';
 
 @Injectable({ providedIn: 'root' })

@@ -2,9 +2,9 @@ import { Component, computed, inject, linkedSignal, type Signal, type WritableSi
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { MAX_CONCURRENT_MAX, MAX_CONCURRENT_MIN } from '@dreamer/shared/models/settings';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { PipelineStore } from '../../../core/stores/pipeline-store';
-import { SettingsStore } from '../../../core/stores/settings-store';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { PipelineStore } from '@core/stores/pipeline-store';
+import { SettingsStore } from '@core/stores/settings-store';
 import { SettingsReset } from '../settings-reset';
 
 @Component({

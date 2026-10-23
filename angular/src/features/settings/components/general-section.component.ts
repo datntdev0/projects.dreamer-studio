@@ -2,10 +2,10 @@ import { Component, computed, inject } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { SegmentedComponent, type SegmentedOption } from '@components/form/segmented.component';
 import { IconComponent } from '@components/icon/icon.component';
-import { I18nService, type Language } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { SettingsStore } from '../../../core/stores/settings-store';
-import { ThemeService, type Theme } from '../../../core/theme/theme.service';
+import { I18nService, type Language } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { SettingsStore } from '@core/stores/settings-store';
+import { ThemeService, type Theme } from '@core/theme/theme.service';
 import { SettingsReset } from '../settings-reset';
 
 @Component({

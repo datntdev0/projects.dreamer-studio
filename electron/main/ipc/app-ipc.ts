@@ -9,8 +9,8 @@ import { AppDataManager } from '../app/app-data-manager';
 import { AppDataSession } from '../app/app-data-session';
 import { pickFolder } from '../app/dialogs/app-data-dialog';
 import { createLogger, Logger } from '../logging/logger';
-import { readSchemaVersion } from '../storage/migrator';
-import { defaultAppDataRoot } from '../storage/paths';
+import { readSchemaVersion } from '@storage/migrator';
+import { defaultAppDataRoot } from '@storage/paths';
 import { broadcast } from './broadcast';
 import { handle } from './handle';
 

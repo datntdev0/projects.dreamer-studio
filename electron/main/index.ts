@@ -26,13 +26,13 @@ import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
 import { handleLibraryProtocol } from './features/library/library-protocol';
-import { novelImportPipeline } from './features/library/novel-import-pipeline';
+import { novelImportPipeline } from './features/library/novel/novel-import-pipeline';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
 import { SettingsLoadResult, SettingsStore } from './features/settings/settings-store';
-import { checkDatabase } from './storage/database';
-import { devFailMigration, loadMigrations, Migration } from './storage/migrator';
-import { AppPaths, defaultAppDataRoot, migrationsDir, settingsFilePath } from './storage/paths';
+import { checkDatabase } from '@storage/database';
+import { devFailMigration, loadMigrations, Migration } from '@storage/migrator';
+import { AppPaths, defaultAppDataRoot, migrationsDir, settingsFilePath } from '@storage/paths';
 
 const logger: Logger = createLogger('startup');
 const settings: SettingsStore = new SettingsStore(settingsFilePath(), defaultAppDataRoot());

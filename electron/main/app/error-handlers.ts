@@ -5,7 +5,7 @@ import { AppChannel } from '@dreamer/shared/ipc/channels';
 import { t } from './app-i18n';
 import { openFolder } from '../ipc/app-ipc';
 import { createLogger, isLoggingReady, Logger } from '../logging/logger';
-import { AppPaths } from '../storage/paths';
+import { AppPaths } from '@storage/paths';
 
 const logger: Logger = createLogger('error');
 

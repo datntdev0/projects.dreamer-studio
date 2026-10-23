@@ -9,7 +9,7 @@ import {
   type PipelineRunStatus,
   type PipelineType,
 } from '@dreamer/shared/models/pipeline';
-import { DesktopApi } from '../../core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 
 export type PipelineView = 'queue' | 'history';
 

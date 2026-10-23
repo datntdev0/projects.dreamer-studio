@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NovelCoverFile } from '@dreamer/shared/models/novel-store';
-import { AppPaths, resolveAppPaths } from '../../storage/paths';
+import { AppPaths, resolveAppPaths } from '@storage/paths';
 import * as libraryFiles from './library-files';
 
 vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));

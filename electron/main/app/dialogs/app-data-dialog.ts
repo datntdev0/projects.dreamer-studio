@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, MessageBoxReturnValue, OpenDialogReturnValue, Op
 import { existsSync, mkdirSync } from 'node:fs';
 import { t } from '../app-i18n';
 import { SettingsStore } from '../../features/settings/settings-store';
-import { probeWritable } from '../../storage/folder-probe';
+import { probeWritable } from '@storage/folder-probe';
 
 type AppDataAction = 'choose' | 'useDefault' | 'quit';
 

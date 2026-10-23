@@ -47,7 +47,7 @@ export default tseslint.config(
           })),
           patterns: [
             {
-              regex: '(^|/)storage/database(\\.ts)?$',
+              regex: '(^|/|@)storage/database(\\.ts)?$',
               message:
                 'Only electron/main/storage, app-data and the composition root (index.ts) may import the Database.',
             },

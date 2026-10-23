@@ -1,7 +1,7 @@
 import { Dirent, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as NovelStore from '@dreamer/shared/models/novel-store';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 
 export interface NovelFolder {
   dir: string;

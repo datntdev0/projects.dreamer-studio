@@ -1,6 +1,6 @@
 import { ChildProcess, execFile, spawn } from 'node:child_process';
 import { createLogger, Logger } from '../logging/logger';
-import { AppPaths } from '../storage/paths';
+import { AppPaths } from '@storage/paths';
 import { backendAddress, backendUrl, BackendLaunch, buildLaunch, createToken, findFreePort } from './backend-launch';
 import { getBackendStatus, setBackendState } from './backend-status';
 

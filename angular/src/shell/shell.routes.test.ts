@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LibraryPage } from '../features/library/library.page';
-import { NovelPlaceholderPage } from '../features/library/novel-placeholder.page';
+import { LibraryPlaceholderPage } from '../features/library/library-placeholder.page';
 import { ImportPage } from '../features/library/import/import.page';
 import { MODULES } from './registry/modules';
 import { buildRoutes } from './shell.routes';
@@ -42,7 +42,7 @@ describe('buildRoutes', () => {
     const importRoute = routes.find((entry) => entry.path === 'library/import');
     const detailRoute = routes.find((entry) => entry.path === 'library/:id');
     expect(importRoute?.component).toBe(ImportPage);
-    expect(detailRoute?.component).toBe(NovelPlaceholderPage);
+    expect(detailRoute?.component).toBe(LibraryPlaceholderPage);
     expect(routes.indexOf(importRoute!)).toBeLessThan(routes.indexOf(detailRoute!));
   });
 

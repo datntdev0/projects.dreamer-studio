@@ -2,9 +2,9 @@ import { Component, computed, inject, type Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { formatBytes, formatCount } from '../../../../core/format';
-import { I18nService } from '../../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { formatBytes, formatCount } from '@core/format';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ImportStore } from '../import.store';
 
 @Component({

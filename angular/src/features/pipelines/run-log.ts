@@ -1,4 +1,4 @@
-import type { Language } from '../../core/i18n/i18n.service';
+import type { Language } from '@core/i18n/i18n.service';
 
 export interface LogLineView {
   raw: string;

@@ -7,11 +7,11 @@ import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
 import { APP_LICENSE, buildDateLabel, formatVersionInfo } from '@dreamer/shared/models/about';
 import { MISSING, versionLabel, type AboutLink } from '@dreamer/shared/models/about';
-import { AppInfoStore } from '../../../core/app-info';
-import { BackendStatus } from '../../../core/backend-status';
-import { DesktopApi } from '../../../core/desktop-api';
-import { I18nService } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { AppInfoStore } from '@core/app-info';
+import { BackendStatus } from '@core/backend-status';
+import { DesktopApi } from '@core/desktop-api';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 
 interface DetailLine {
   id: string;

@@ -24,6 +24,7 @@ const filePrefix: string = 'main';
 const keepDays: number = 7;
 const mainProcess: string = 'main';
 const rendererProcess: string = 'renderer';
+const testLogDir: string | undefined = process.env.DREAMER_TEST_LOG_DIR;
 
 let logDir: string | null = null;
 let lastCleanupDay: string = '';
@@ -59,9 +60,24 @@ function canWrite(dir: string): boolean {
   }
 }
 
+function writeBeforeInit(level: LogLevel, payload: LogPayload): void {
+  const now: Date = new Date();
+  const line: string = formatLogLine({ time: now, level, ...payload });
+  if (!testLogDir) {
+    console[level === 'debug' ? 'log' : level](line);
+    return;
+  }
+  mkdirSync(testLogDir, { recursive: true });
+  appendFileSync(
+    datedLogFile(testLogDir, filePrefix, now),
+    `${line}
+`,
+  );
+}
+
 function write(level: LogLevel, payload: LogPayload): void {
   if (!logDir) {
-    console[level === 'debug' ? 'log' : level](formatLogLine({ time: new Date(), level, ...payload }));
+    writeBeforeInit(level, payload);
     return;
   }
   cleanupOnNewDay(new Date());

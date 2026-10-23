@@ -4,9 +4,9 @@ import { CheckboxComponent } from '@components/form/checkbox.component';
 import { PillComponent } from '@components/status/pill.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { PackageWarningCode } from '@dreamer/shared/models/novel-package';
-import { formatCount } from '../../../../core/format';
-import { I18nService } from '../../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { formatCount } from '@core/format';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ImportStore, type ImportChapter } from '../import.store';
 
 interface RowRange {

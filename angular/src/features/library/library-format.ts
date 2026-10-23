@@ -1,5 +1,5 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
-import type { I18nService, Language } from '../../core/i18n/i18n.service';
+import type { I18nService, Language } from '@core/i18n/i18n.service';
 import type { LibraryChapter, LibraryNovel, ReadingSettings } from './library.models';
 
 export interface LanguageOption {

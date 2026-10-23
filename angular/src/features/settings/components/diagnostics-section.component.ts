@@ -7,10 +7,10 @@ import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
 import { CHECK_CATEGORIES } from '@dreamer/shared/models/diagnostics';
 import type { CheckCategory, CheckResult, CheckStatus, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
-import { DesktopApi } from '../../../core/desktop-api';
-import { formatBytes, formatShortDateTime, formatTime } from '../../../core/format';
-import { I18nService } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { DesktopApi } from '@core/desktop-api';
+import { formatBytes, formatShortDateTime, formatTime } from '@core/format';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 
 interface CheckView {
   id: string;

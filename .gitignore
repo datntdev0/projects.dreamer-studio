@@ -24,6 +24,7 @@ backend/build/
 .ruff_cache/
 .pytest_cache/
 coverage/
+.logs/
 .coverage
 worktree/
 storybook-static/

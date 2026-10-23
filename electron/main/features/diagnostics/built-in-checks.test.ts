@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackendState } from '@dreamer/shared/ipc/backend';
 import { CheckOutcome, CheckResult, CheckStatus, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
-import { checkDatabase, Database } from '../../storage/database';
-import { AppPaths, resolveAppPaths } from '../../storage/paths';
+import { checkDatabase, Database } from '@storage/database';
+import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { SettingsLoadResult } from '../settings/settings-store';
 import { registerBuiltInChecks } from './built-in-checks';
 import { CheckContext } from './self-check';
@@ -17,8 +17,8 @@ vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged
 vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
-vi.mock('../../storage/folder-probe', async (importActual) => ({
-  ...(await importActual<typeof import('../../storage/folder-probe')>()),
+vi.mock('@storage/folder-probe', async (importActual) => ({
+  ...(await importActual<typeof import('@storage/folder-probe')>()),
   freeBytes: (): number | null => folderProbe.free,
 }));
 

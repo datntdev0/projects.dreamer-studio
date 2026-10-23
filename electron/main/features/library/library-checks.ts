@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import { CheckOutcome } from '@dreamer/shared/models/diagnostics';
 import { isNovelId, NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 import { CheckContext } from '../diagnostics/self-check';
 import { SelfCheckEngine } from '../diagnostics/self-check-engine';
 import { chapterPath, coverPath, listLibraryFolders, novelFolder, NovelFolder } from './library-files';
-import { readMetadata } from './novel-files';
+import { readMetadata } from './novel/novel-files';
 
 interface LibraryProblems {
   invalid: number;

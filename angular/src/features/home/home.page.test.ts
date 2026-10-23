@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { DesktopApi } from '../../core/desktop-api';
-import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../core/slots';
+import { DesktopApi } from '@core/desktop-api';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '@core/slots';
 import { HomePage } from './home.page';
 
 const APP_INFO: AppInfo = {

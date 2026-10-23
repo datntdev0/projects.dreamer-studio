@@ -2,7 +2,11 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@dreamer/shared/*": ["../shared/*"],
+      "@storage/*": ["./main/storage/*"]
+    }
   },
   "include": ["main", "preload", "../shared", "esbuild.mjs"]
 }

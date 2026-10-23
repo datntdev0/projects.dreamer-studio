@@ -4,7 +4,7 @@ import type { ImportChapterChoice, ImportCoverChoice, ImportMetadata } from '@dr
 import type { ImportPreview, NovelImportRequest, PackageFile } from '@dreamer/shared/models/novel-package';
 import type { PackageReadResult, PickedImage, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { DesktopApi } from '../../../core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 
 export type ImportStage = 'source' | 'reading' | 'refused' | 'preview';
 

@@ -8,9 +8,9 @@ import type { TranslateParams } from '@dreamer/shared/i18n/translate';
 import { PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
 import type { PackageLimit, PackageProblem, PackageProblemCode } from '@dreamer/shared/models/novel-package';
 import type { PackageReadResult, PackageRefusal } from '@dreamer/shared/models/novel-package';
-import { formatBytes, formatCount } from '../../../../core/format';
-import { I18nService } from '../../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { formatBytes, formatCount } from '@core/format';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ImportStore } from '../import.store';
 
 interface ProblemRow extends PackageProblem {

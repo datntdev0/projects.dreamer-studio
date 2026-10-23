@@ -3,7 +3,7 @@ import { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { StepContext } from '../features/pipelines/pipeline-definition';
-import { resolveAppPaths } from '../storage/paths';
+import { resolveAppPaths } from '@storage/paths';
 import { runBackendJob } from './backend-job';
 import { getBackendConnection } from './backend-process';
 

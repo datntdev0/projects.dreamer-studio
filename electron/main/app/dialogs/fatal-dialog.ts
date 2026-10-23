@@ -3,7 +3,7 @@ import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { t } from '../app-i18n';
 import { openFolder } from '../../ipc/app-ipc';
 import { isLoggingReady } from '../../logging/logger';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 
 type FatalAction = 'openData' | 'openLogs' | 'quit';
 

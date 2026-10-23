@@ -8,6 +8,8 @@
     "lib": ["ES2022", "DOM"],
     "paths": {
       "@components/*": ["./src/components/*"],
+      "@core/*": ["./src/core/*"],
+      "@shell/*": ["./src/shell/*"],
       "@dreamer/shared/*": ["../shared/*"]
     }
   },

@@ -2,9 +2,9 @@ import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
 import * as NovelStore from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 import { listLibraryFolders, novelFolder } from './library-files';
-import { readMetadata } from './novel-files';
+import { readMetadata } from './novel/novel-files';
 
 const logger: Logger = createLogger('library');
 

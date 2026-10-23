@@ -8,10 +8,10 @@ import { LibraryIndex } from '../features/library/library-index';
 import { LibraryService } from '../features/library/library-service';
 import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
 import { PipelineRegistry } from '../features/pipelines/pipeline-registry';
-import { Database } from '../storage/database';
-import { Migration, runMigrations } from '../storage/migrator';
-import { AppPaths, ensureFolders, resolveAppPaths } from '../storage/paths';
-import { PipelineRunRepository } from '../storage/repositories/pipeline-run-repository';
+import { Database } from '@storage/database';
+import { Migration, runMigrations } from '@storage/migrator';
+import { AppPaths, ensureFolders, resolveAppPaths } from '@storage/paths';
+import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 
 export interface AppDataSessionDeps {
   migrations: () => Migration[];

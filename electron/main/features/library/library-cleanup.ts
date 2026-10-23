@@ -2,9 +2,9 @@ import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { COVER_FILES, isNovelId, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 import { coverPath, importStagingRoot, listLibraryFolders, novelFolder, NovelFolder, trashDir } from './library-files';
-import { readMetadata, unreferencedChapterFiles } from './novel-files';
+import { readMetadata, unreferencedChapterFiles } from './novel/novel-files';
 
 const logger: Logger = createLogger('library');
 

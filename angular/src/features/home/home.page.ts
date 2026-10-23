@@ -11,14 +11,14 @@ import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
 import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
-import { AppInfoStore } from '../../core/app-info';
-import { BackendStatus } from '../../core/backend-status';
-import { DesktopApi } from '../../core/desktop-api';
-import { I18nService } from '../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import { ACTIVE_PIPELINES, RECENT_PIPELINES, formatRunStep, type PipelineSlot } from '../../core/slots';
-import { PageTitleDirective } from '../../shell/page-title.directive';
-import { formatDateTime, formatDuration, formatRelative } from '../../core/format';
+import { AppInfoStore } from '@core/app-info';
+import { BackendStatus } from '@core/backend-status';
+import { DesktopApi } from '@core/desktop-api';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES, formatRunStep, type PipelineSlot } from '@core/slots';
+import { PageTitleDirective } from '@shell/page-title.directive';
+import { formatDateTime, formatDuration, formatRelative } from '@core/format';
 import { isActiveRun, runName, runSeconds } from '../pipelines/run-status';
 
 interface BackendView {

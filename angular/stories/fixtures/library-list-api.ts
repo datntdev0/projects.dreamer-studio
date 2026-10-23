@@ -5,7 +5,7 @@ import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import type { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { DesktopApi } from '../../src/core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 import type { LibraryNovel } from '../../src/features/library/library.models';
 import { NOVELS } from './library';
 import { FakePipelinesApi } from './pipelines-api';

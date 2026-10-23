@@ -2,9 +2,9 @@ import { existsSync } from 'node:fs';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { SettingsStore } from '../features/settings/settings-store';
-import { freeBytes, isSameFolder, probeWritable, readHistoryRows } from '../storage/folder-probe';
-import { AppDataSchemaInfo, classifyHistory, readSchemaVersion } from '../storage/migrator';
-import { AppPaths, resolveAppPaths } from '../storage/paths';
+import { freeBytes, isSameFolder, probeWritable, readHistoryRows } from '@storage/folder-probe';
+import { AppDataSchemaInfo, classifyHistory, readSchemaVersion } from '@storage/migrator';
+import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { createLogger, Logger } from '../logging/logger';
 import { AppDataSession, AppDataSessionDeps } from './app-data-session';
 

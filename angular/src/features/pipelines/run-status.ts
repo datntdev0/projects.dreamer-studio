@@ -1,7 +1,7 @@
 import { isAppError, type ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
-import type { I18nService } from '../../core/i18n/i18n.service';
+import type { I18nService } from '@core/i18n/i18n.service';
 
 export interface RunStatusView {
   label: string;

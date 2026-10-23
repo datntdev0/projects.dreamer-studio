@@ -8,8 +8,8 @@ import { PipelineRun, PipelineRunStatus, PipelineStartRequest } from '@dreamer/s
 import { PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
-import { PipelineRunRepository } from '../../storage/repositories/pipeline-run-repository';
-import { AppPaths } from '../../storage/paths';
+import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
+import { AppPaths } from '@storage/paths';
 import { abortError, PipelineDefinition, PipelineStep, StepContext } from './pipeline-definition';
 import { PipelineRegistry } from './pipeline-registry';
 import { appendRunLogSync, deleteRunLog, readRunLog, RunLog, runLogFile } from './run-log';

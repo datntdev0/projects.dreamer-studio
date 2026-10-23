@@ -4,12 +4,12 @@ import type { BackendState } from '@dreamer/shared/ipc/backend';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { IconComponent } from '@components/icon/icon.component';
 import { DotComponent } from '@components/status/dot.component';
-import { AppInfoStore } from '../../core/app-info';
-import { BackendStatus } from '../../core/backend-status';
-import { I18nService } from '../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../core/i18n/translate.pipe';
-import { ACTIVE_PIPELINES, type PipelineSlot, formatRunStep } from '../../core/slots';
-import { ThemeService, type Theme } from '../../core/theme/theme.service';
+import { AppInfoStore } from '@core/app-info';
+import { BackendStatus } from '@core/backend-status';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ACTIVE_PIPELINES, type PipelineSlot, formatRunStep } from '@core/slots';
+import { ThemeService, type Theme } from '@core/theme/theme.service';
 import { runName } from '../../features/pipelines/run-status';
 
 const THEME_KEYS: Record<Theme, string> = { light: 'status.theme.light', dark: 'status.theme.dark' };

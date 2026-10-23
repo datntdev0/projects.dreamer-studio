@@ -10,7 +10,7 @@ import * as NovelPackage from '@dreamer/shared/models/novel-package';
 import { t } from '../app/app-i18n';
 import { AppDataSession } from '../app/app-data-session';
 import { readCoverImage } from '../features/library/cover-image';
-import { importLabel, importParams } from '../features/library/novel-import-pipeline';
+import { importLabel, importParams } from '../features/library/novel/novel-import-pipeline';
 import { readPackage } from '../features/library/package-reader';
 import { handle, handleValidated } from './handle';
 

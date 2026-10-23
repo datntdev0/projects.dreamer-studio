@@ -22,7 +22,7 @@ interface SampleOverrides {
   replace?: ZipEntry[];
 }
 
-const fixtureFolder: string = join(__dirname, 'fixtures', 'sample-novel');
+const fixtureFolder: string = join(__dirname, '../../../fixtures/sample-novel');
 const utf8: BufferEncoding = 'utf8';
 let tempFolder: string;
 let zipNumber: number;

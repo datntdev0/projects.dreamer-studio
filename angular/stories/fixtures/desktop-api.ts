@@ -7,7 +7,7 @@ import type { AppDataCandidate, AppDataStatus } from '@dreamer/shared/models/app
 import type { CheckResult, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { defaultSettings } from '@dreamer/shared/models/settings';
 import type { AppSettings, SettingsPatch, SettingsState } from '@dreamer/shared/models/settings';
-import { DesktopApi } from '../../src/core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 
 export interface DesktopApiFixture {
   info?: AppInfo | 'error' | 'loading';

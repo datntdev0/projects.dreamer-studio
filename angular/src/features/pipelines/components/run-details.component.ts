@@ -6,10 +6,10 @@ import { ProgressComponent } from '@components/status/progress.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { isAppError } from '@dreamer/shared/errors/app-error';
 import type { PipelineRun, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { formatDateTime, formatDuration } from '../../../core/format';
-import { I18nService } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { PipelineStore } from '../../../core/stores/pipeline-store';
+import { formatDateTime, formatDuration } from '@core/format';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { PipelineStore } from '@core/stores/pipeline-store';
 import { PipelineActions } from '../pipeline-actions';
 import { RunStatusComponent } from './run-status.component';
 import {

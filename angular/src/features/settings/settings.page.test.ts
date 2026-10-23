@@ -8,9 +8,9 @@ import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppDataStatus } from '@dreamer/shared/models/app-data';
 import { defaultSettings } from '@dreamer/shared/models/settings';
 import type { AppSettings, SettingsPatch, SettingsState } from '@dreamer/shared/models/settings';
-import { DesktopApi } from '../../core/desktop-api';
-import { PipelineStore } from '../../core/stores/pipeline-store';
-import { SettingsStore } from '../../core/stores/settings-store';
+import { DesktopApi } from '@core/desktop-api';
+import { PipelineStore } from '@core/stores/pipeline-store';
+import { SettingsStore } from '@core/stores/settings-store';
 import { SettingsPage } from './settings.page';
 
 const APP_DATA_DIR = 'C:\\Users\\me\\AppData\\Local\\DreamerStudio';

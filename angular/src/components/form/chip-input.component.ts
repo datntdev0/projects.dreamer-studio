@@ -1,7 +1,7 @@
 import { Component, ElementRef, inject, input, model, signal, viewChild } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { IconComponent } from '@components/icon/icon.component';
-import { I18nService } from '../../core/i18n/i18n.service';
+import { I18nService } from '@core/i18n/i18n.service';
 
 @Component({
   selector: 'ds-chip-input',

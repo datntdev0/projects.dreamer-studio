@@ -1,6 +1,6 @@
 import { dirname, parse } from 'node:path';
 import { CheckOutcome } from '@dreamer/shared/models/diagnostics';
-import { freeBytes, probeWritable } from '../../storage/folder-probe';
+import { freeBytes, probeWritable } from '@storage/folder-probe';
 import { CheckContext } from './self-check';
 import { SelfCheckEngine } from './self-check-engine';
 

@@ -6,8 +6,8 @@ import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { PillComponent } from '@components/status/pill.component';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
-import { AppInfoStore } from '../../core/app-info';
-import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { AppInfoStore } from '@core/app-info';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { PageTitleDirective } from '../page-title.directive';
 import { AppModule, MODULES } from '../registry/modules';
 

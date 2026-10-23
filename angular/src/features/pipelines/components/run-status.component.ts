@@ -2,7 +2,7 @@ import { Component, computed, input } from '@angular/core';
 import { IconComponent } from '@components/icon/icon.component';
 import { DotComponent } from '@components/status/dot.component';
 import type { PipelineRunStatus } from '@dreamer/shared/models/pipeline';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { RUN_STATUS_VIEWS, type RunStatusView } from '../run-status';
 
 @Component({

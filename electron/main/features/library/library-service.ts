@@ -4,13 +4,13 @@ import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelLock, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { normalizeTags, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { AppPaths } from '../../storage/paths';
-import { PipelineRunRepository } from '../../storage/repositories/pipeline-run-repository';
+import { AppPaths } from '@storage/paths';
+import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { readCoverImage } from './cover-image';
 import { LibraryIndex } from './library-index';
 import { novelFolder, NovelFolder } from './library-files';
-import { assertUnlocked, novelLocks } from './novel-lock';
-import { deleteNovel, readMetadata, saveMetadata, withNovelLock, writeCover } from './novel-files';
+import { assertUnlocked, novelLocks } from './novel/novel-lock';
+import { deleteNovel, readMetadata, saveMetadata, withNovelLock, writeCover } from './novel/novel-files';
 
 function metadataInvalid(id: string): CodedError {
   return new CodedError(ErrorCode.NovelMetadataInvalid, `Novel metadata is invalid: ${id}`);

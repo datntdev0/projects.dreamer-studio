@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CheckOutcome, CheckResult, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { NOVEL_STORE_VERSION, NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { AppPaths, resolveAppPaths } from '../../storage/paths';
+import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { SelfCheckEngine } from '../diagnostics/self-check-engine';
 import { checkLibraryFiles, registerLibraryChecks } from './library-checks';
 import { chapterPath, novelFolder, NovelFolder } from './library-files';

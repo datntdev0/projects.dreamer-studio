@@ -3,8 +3,8 @@ import { Component, booleanAttribute, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { IconComponent } from '@components/icon/icon.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { I18nService } from '../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { AppModule, GROUP_TITLES, HOME_MODULE_ID, MODULES, ModuleGroup } from '../registry/modules';
 
 interface RailGroup {

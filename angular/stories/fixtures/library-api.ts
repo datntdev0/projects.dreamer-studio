@@ -3,7 +3,7 @@ import type { NovelDetail, NovelPatch } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult } from '@dreamer/shared/models/novel-package';
 import type { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { DesktopApi } from '../../src/core/desktop-api';
+import { DesktopApi } from '@core/desktop-api';
 
 export type LibrarySampleId =
   'ok' | 'minimal' | 'noChapters' | 'notZip' | 'unsafePath' | 'unsupportedType' | 'tooLarge' | 'problems';

@@ -7,7 +7,7 @@ import { PipelineLogChunk, PipelineType } from '@dreamer/shared/models/pipeline'
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
 import { formatLogLine } from '../../logging/log-format';
-import { AppPaths } from '../../storage/paths';
+import { AppPaths } from '@storage/paths';
 
 const pushIntervalMs: number = 250;
 const baseModule: string = 'pipeline';

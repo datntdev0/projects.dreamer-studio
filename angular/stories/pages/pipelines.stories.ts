@@ -2,12 +2,12 @@ import { Component, inject, input, OnInit, provideAppInitializer } from '@angula
 import { provideRouter, Router, withHashLocation } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
-import { PipelineStore } from '../../src/core/stores/pipeline-store';
-import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../src/core/slots';
-import { ComingSoonPage } from '../../src/shell/coming-soon/coming-soon.page';
-import { MODULES } from '../../src/shell/registry/modules';
-import { ShellComponent } from '../../src/shell/shell.component';
-import { buildRoutes } from '../../src/shell/shell.routes';
+import { PipelineStore } from '@core/stores/pipeline-store';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '@core/slots';
+import { ComingSoonPage } from '@shell/coming-soon/coming-soon.page';
+import { MODULES } from '@shell/registry/modules';
+import { ShellComponent } from '@shell/shell.component';
+import { buildRoutes } from '@shell/shell.routes';
 import { ALL_RUNS, RUNNING_RUN } from '../fixtures/pipelines';
 import { provideFakePipelinesApi, type FakePipelinesOptions } from '../fixtures/pipelines-api';
 

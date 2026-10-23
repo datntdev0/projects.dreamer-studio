@@ -2,8 +2,8 @@ import { signal } from '@angular/core';
 import type { Provider } from '@angular/core';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '../../src/core/slots';
-import type { PipelineSlot } from '../../src/core/slots';
+import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '@core/slots';
+import type { PipelineSlot } from '@core/slots';
 
 type RunSeed = Partial<PipelineRun> & Pick<PipelineRun, 'id' | 'status'>;
 

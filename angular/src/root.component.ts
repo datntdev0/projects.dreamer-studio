@@ -2,12 +2,12 @@ import { Component, computed, inject } from '@angular/core';
 import { BannerComponent } from '@components/banner/banner.component';
 import type { BannerVariant } from '@components/banner/banner.component';
 import { ButtonDirective } from '@components/button/button.directive';
-import { DesktopApi } from './core/desktop-api';
-import { I18nService } from './core/i18n/i18n.service';
-import { TranslatePipe } from './core/i18n/translate.pipe';
-import { ErrorStore } from './core/stores/error-store';
-import type { ErrorEntry } from './core/stores/error-store';
-import { ShellComponent } from './shell/shell.component';
+import { DesktopApi } from '@core/desktop-api';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ErrorStore } from '@core/stores/error-store';
+import type { ErrorEntry } from '@core/stores/error-store';
+import { ShellComponent } from '@shell/shell.component';
 
 interface ErrorBanner extends ErrorEntry {
   variant: BannerVariant;

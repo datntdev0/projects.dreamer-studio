@@ -6,9 +6,9 @@ import { FieldComponent } from '@components/form/field.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { PillComponent } from '@components/status/pill.component';
 import type { PipelineRun, PipelineStepInfo, PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { I18nService } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { PipelineStore } from '../../../core/stores/pipeline-store';
+import { I18nService } from '@core/i18n/i18n.service';
+import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { PipelineStore } from '@core/stores/pipeline-store';
 import { errorText, runName } from '../run-status';
 
 @Component({

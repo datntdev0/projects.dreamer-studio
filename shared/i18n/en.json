@@ -557,8 +557,6 @@
   "library.browse.noResultsMessage": "Try another search, or clear the filters to see all novels.",
   "library.novelDialog.chapterCount.one": "1 chapter",
   "library.novelDialog.chapterCount.many": "{count} chapters",
-  "library.novelDialog.lock.export": "Exporting…",
-  "library.novelDialog.lock.import": "Importing…",
   "library.novelDialog.close": "Close",
   "library.novelDialog.viewPipelines": "View in Pipelines",
   "library.novelDialog.delete.heading.one": "Delete “{title}”?",

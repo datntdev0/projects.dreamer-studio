@@ -22,6 +22,7 @@ import { formatCount } from '../../core/format';
 import { fold, isTypingTarget, languageName, matches, toggled } from './library-format';
 import { LibraryInspectorComponent } from './components/library-inspector.component';
 import { LibraryItemsComponent } from './components/library-items.component';
+import { NovelDeleteDialogComponent } from './components/novel-delete-dialog.component';
 import { UnsavedChangesDialogComponent } from './components/unsaved-changes-dialog.component';
 
 interface FilterRow {
@@ -39,6 +40,7 @@ interface FilterRow {
     IconComponent,
     LibraryInspectorComponent,
     LibraryItemsComponent,
+    NovelDeleteDialogComponent,
     PanelDirective,
     PillComponent,
     SegmentedComponent,
@@ -71,6 +73,7 @@ export class LibraryPage implements OnInit {
   protected readonly publicationFilters = signal<string[]>([]);
   protected readonly selected = signal<string[]>([]);
   protected readonly leaveOpen = signal<boolean>(false);
+  protected readonly deleteTargets = signal<NovelSummary[]>([]);
   protected readonly publications: ('ongoing' | 'completed')[] = ['ongoing', 'completed'];
   protected readonly sortKeys: LibrarySortKey[] = ['updatedAt', 'importedAt', 'title', 'author', 'chapterCount'];
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
@@ -219,6 +222,21 @@ export class LibraryPage implements OnInit {
     this.pendingActive = null;
     this.leaveResolve?.(leave);
     this.leaveResolve = null;
+  }
+
+  protected deleteSelected(): void {
+    const ids: string[] = this.selected();
+    this.requestDelete(this.store.novels().filter((novel: NovelSummary) => ids.includes(novel.id)));
+  }
+
+  protected requestDelete(novels: NovelSummary[]): void {
+    this.deleteTargets.set(novels);
+  }
+
+  protected onDeleted(ids: string[]): void {
+    this.selected.update((current: string[]) => current.filter((id: string) => !ids.includes(id)));
+    const active: string | null = this.active();
+    if (active && ids.includes(active)) this.inspector()?.discard();
   }
 
   protected goImport(): void {

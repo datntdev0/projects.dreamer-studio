@@ -59,6 +59,10 @@ export class LibraryIndex {
     return this.novels.get(id)?.cover ?? null;
   }
 
+  remove(id: string): void {
+    this.novels.delete(id);
+  }
+
   refresh(id: string): void {
     this.novels.delete(id);
     if (!NovelStore.isNovelId(id)) {

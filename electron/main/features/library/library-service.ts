@@ -1,6 +1,7 @@
 import { shell } from 'electron';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelLock, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { normalizeTags, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { AppPaths } from '../../storage/paths';
@@ -9,7 +10,7 @@ import { readCoverImage } from './cover-image';
 import { LibraryIndex } from './library-index';
 import { novelFolder, NovelFolder } from './library-files';
 import { assertUnlocked, novelLocks } from './novel-lock';
-import { readMetadata, saveMetadata, withNovelLock, writeCover } from './novel-files';
+import { deleteNovel, readMetadata, saveMetadata, withNovelLock, writeCover } from './novel-files';
 
 function metadataInvalid(id: string): CodedError {
   return new CodedError(ErrorCode.NovelMetadataInvalid, `Novel metadata is invalid: ${id}`);
@@ -88,6 +89,41 @@ export class LibraryService {
         throw new CodedError(ErrorCode.LibraryWriteFailed, `Novel could not be updated: ${errorMessage(error)}`);
       }
     });
+  }
+
+  async deleteNovels(ids: string[]): Promise<DeleteNovelsResult> {
+    const result: DeleteNovelsResult = { deleted: [], skipped: [] };
+    const uniqueIds: string[] = [...new Set(ids)];
+    for (const id of uniqueIds) {
+      await withNovelLock(id, async (): Promise<void> => {
+        try {
+          this.index.get(id);
+        } catch (error: unknown) {
+          if (error instanceof CodedError && error.code === ErrorCode.NovelNotFound) {
+            return;
+          }
+          throw error;
+        }
+        if (novelLocks(this.runs).has(id)) {
+          result.skipped.push(id);
+          return;
+        }
+        try {
+          await deleteNovel(this.paths, id);
+        } catch (error: unknown) {
+          if (result.deleted.length > 0) {
+            this.notify(result.deleted);
+          }
+          throw new CodedError(ErrorCode.LibraryWriteFailed, `Novel could not be deleted: ${errorMessage(error)}`);
+        }
+        this.index.remove(id);
+        result.deleted.push(id);
+      });
+    }
+    if (result.deleted.length > 0) {
+      this.notify(result.deleted);
+    }
+    return result;
   }
 
   async openFolder(id: string): Promise<void> {

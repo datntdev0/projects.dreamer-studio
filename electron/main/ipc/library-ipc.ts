@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialo
 import { Buffer } from 'node:buffer';
 import { basename, dirname, isAbsolute } from 'node:path';
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
+import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -124,6 +125,10 @@ function isNovelIdValue(value: unknown): value is string {
   return typeof value === 'string' && isNovelId(value);
 }
 
+export function isNovelIdList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length > 0 && value.length <= 1000 && value.every(isNovelIdValue);
+}
+
 function hasOnlyKeys(value: Record<string, unknown>, keys: string[]): boolean {
   const allowed: Set<string> = new Set(keys);
   return Object.keys(value).every((key: string): boolean => allowed.has(key));
@@ -174,6 +179,9 @@ export function registerLibraryIpc(session: () => AppDataSession): void {
     LibraryChannel.UpdateNovel,
     isNovelUpdateRequest,
     (request: NovelUpdateRequest): Promise<NovelDetail> => session().library.updateNovel(request),
+  );
+  handleValidated(LibraryChannel.DeleteNovels, isNovelIdList, (ids: string[]): Promise<DeleteNovelsResult> =>
+    session().library.deleteNovels(ids),
   );
   handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> =>
     session().library.openFolder(id),

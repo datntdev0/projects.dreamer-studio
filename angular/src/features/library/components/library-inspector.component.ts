@@ -33,6 +33,7 @@ import { NovelMetadataFormComponent } from './novel-metadata-form.component';
 export class LibraryInspectorComponent {
   readonly novel = input.required<NovelSummary>();
   readonly open = output<string>();
+  readonly delete = output<string>();
   private readonly form = viewChild(NovelMetadataFormComponent);
   private readonly store: LibraryStore = inject(LibraryStore);
   private readonly i18n: I18nService = inject(I18nService);

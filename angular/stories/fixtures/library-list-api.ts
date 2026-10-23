@@ -1,6 +1,7 @@
 import { DestroyRef, inject } from '@angular/core';
 import type { Provider } from '@angular/core';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import type { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -90,6 +91,26 @@ class FakeLibraryListApi extends FakePipelinesApi {
     if (patch.description !== undefined) this.descriptions.set(id, patch.description);
     this.changedListeners.forEach((listener) => listener({ novelIds: [id] }));
     return this.getNovel(id);
+  }
+
+  override async deleteNovels(ids: string[]): Promise<DeleteNovelsResult | null> {
+    const deleted: string[] = [];
+    const skipped: string[] = [];
+    const uniqueIds: string[] = [...new Set(ids)];
+    uniqueIds.forEach((id: string): void => {
+      const novel: NovelSummary | undefined = this.novels.find((item: NovelSummary): boolean => item.id === id);
+      if (novel?.lock) {
+        skipped.push(id);
+      } else if (novel) {
+        deleted.push(id);
+      }
+    });
+    if (deleted.length > 0) {
+      this.novels = this.novels.filter((novel: NovelSummary): boolean => !deleted.includes(novel.id));
+      deleted.forEach((id: string): boolean => this.descriptions.delete(id));
+      this.changedListeners.forEach((listener) => listener({ novelIds: deleted }));
+    }
+    return { deleted, skipped };
   }
 
   override async pickImage(): Promise<PickedImage | null> {

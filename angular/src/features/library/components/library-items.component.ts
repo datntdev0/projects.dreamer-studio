@@ -39,6 +39,7 @@ export class LibraryItemsComponent {
   readonly selected = model<string[]>([]);
   readonly activate = output<string>();
   readonly open = output<string>();
+  readonly delete = output<NovelSummary>();
   protected readonly coverUrl = coverUrl;
   protected readonly coverPalette = coverPalette;
   private readonly i18n: I18nService = inject(I18nService);

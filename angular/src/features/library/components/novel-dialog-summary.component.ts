@@ -3,7 +3,12 @@ import { IconComponent } from '@components/icon/icon.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { chapterLabel } from '../library-format';
-import type { LibraryNovel } from '../library.models';
+
+export interface NovelSummaryLike {
+  title: string;
+  originalTitle: string;
+  chapterCount: number;
+}
 
 @Component({
   selector: 'ds-novel-dialog-summary',
@@ -12,7 +17,7 @@ import type { LibraryNovel } from '../library.models';
   templateUrl: './novel-dialog-summary.component.html',
 })
 export class NovelDialogSummaryComponent {
-  readonly novel = input.required<LibraryNovel>();
+  readonly novel = input.required<NovelSummaryLike>();
 
   private readonly i18n: I18nService = inject(I18nService);
 

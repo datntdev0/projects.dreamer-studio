@@ -158,20 +158,19 @@
             >
               <ds-icon name="book" size="sm" />
             </button>
-            <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
-              <button
-                dsBtn
-                variant="ghost"
-                size="sm"
-                iconOnly
-                type="button"
-                disabled
-                data-testid="lib-row-delete"
-                [attr.aria-label]="'library.items.delete' | t"
-              >
-                <ds-icon class="library-items-delete-icon" name="trash" size="sm" />
-              </button>
-            </span>
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              iconOnly
+              type="button"
+              data-testid="lib-row-delete"
+              [attr.aria-label]="'library.items.delete' | t"
+              [dsTooltip]="'library.items.delete' | t"
+              (click)="$event.stopPropagation(); delete.emit(novel)"
+            >
+              <ds-icon class="library-items-delete-icon" name="trash" size="sm" />
+            </button>
           </td>
         </tr>
       }

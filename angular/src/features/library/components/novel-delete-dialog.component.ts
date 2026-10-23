@@ -1,18 +1,21 @@
-import { booleanAttribute, Component, computed, inject, input, output, type Signal } from '@angular/core';
+import { booleanAttribute, Component, computed, inject, input, output, signal, type Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { PillComponent } from '@components/status/pill.component';
 import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
+import { isAppError } from '@dreamer/shared/errors/app-error';
+import type { DeleteNovelsResult, NovelSummary } from '@dreamer/shared/models/novel';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { LibraryStore } from '../../../core/stores/library-store';
 import { chapterLabel } from '../library-format';
-import type { DeleteMode, DeleteNovelsResult, LibraryNovel } from '../library.models';
-import { LibraryMockStore } from '../library.store';
 import { NovelDialogSummaryComponent } from './novel-dialog-summary.component';
 
 const DELETE_LIST_LIMIT = 5;
+
+type DeleteMode = 'one' | 'many' | 'blocked';
 
 @Component({
   selector: 'ds-novel-delete-dialog',
@@ -29,17 +32,19 @@ const DELETE_LIST_LIMIT = 5;
 })
 export class NovelDeleteDialogComponent {
   readonly open = input<boolean, unknown>(false, { transform: booleanAttribute });
-  readonly novels = input.required<LibraryNovel[]>();
+  readonly novels = input.required<NovelSummary[]>();
   readonly deleted = output<string[]>();
   readonly closed = output<void>();
 
-  private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly store: LibraryStore = inject(LibraryStore);
   private readonly toast: ToastService = inject(ToastService);
   private readonly i18n: I18nService = inject(I18nService);
 
-  protected readonly deletable: Signal<LibraryNovel[]> = computed(() => this.novels().filter((novel) => !novel.lock));
-  protected readonly busy: Signal<LibraryNovel[]> = computed(() => this.novels().filter((novel) => !!novel.lock));
-  protected readonly shown: Signal<LibraryNovel[]> = computed(() => this.deletable().slice(0, DELETE_LIST_LIMIT));
+  protected readonly deleting = signal<boolean>(false);
+
+  protected readonly deletable: Signal<NovelSummary[]> = computed(() => this.novels().filter((novel) => !novel.lock));
+  protected readonly busy: Signal<NovelSummary[]> = computed(() => this.novels().filter((novel) => !!novel.lock));
+  protected readonly shown: Signal<NovelSummary[]> = computed(() => this.deletable().slice(0, DELETE_LIST_LIMIT));
   protected readonly hiddenCount: Signal<number> = computed(() => this.deletable().length - this.shown().length);
   protected readonly mode: Signal<DeleteMode> = computed(() => {
     if (this.deletable().length === 0) return 'blocked';
@@ -59,7 +64,7 @@ export class NovelDeleteDialogComponent {
     }
   });
   protected readonly blockedMessage: Signal<string> = computed(() => {
-    const busy: LibraryNovel[] = this.busy();
+    const busy: NovelSummary[] = this.busy();
     return busy.length === 1
       ? this.i18n.t('library.novelDialog.delete.blocked.one', { title: busy[0].title })
       : this.i18n.t('library.novelDialog.delete.blocked.many', { count: busy.length });
@@ -71,27 +76,43 @@ export class NovelDeleteDialogComponent {
       : this.i18n.t('library.novelDialog.delete.confirm.many', { count });
   });
 
-  protected chapterLabel(novel: LibraryNovel): string {
+  protected chapterLabel(novel: NovelSummary): string {
     return chapterLabel(this.i18n, novel.chapterCount);
   }
 
-  protected lockLabel(novel: LibraryNovel): string {
-    return this.i18n.t(`library.novelDialog.lock.${novel.lock?.kind ?? 'export'}`);
+  protected lockLabel(novel: NovelSummary): string {
+    const lock: NovelSummary['lock'] = novel.lock;
+    return lock ? (lock.label ?? this.i18n.t(`run.type.${lock.type}`)) : '';
   }
 
   protected dismiss(): void {
     if (this.open()) this.closed.emit();
   }
 
-  protected confirm(): void {
-    const targets: LibraryNovel[] = this.deletable();
-    const result: DeleteNovelsResult = this.store.deleteNovels(targets.map((novel) => novel.id));
-    this.notify(targets, result);
-    if (result.deleted.length > 0) this.deleted.emit(result.deleted);
+  protected async confirm(): Promise<void> {
+    if (this.deleting()) return;
+    const targets: NovelSummary[] = this.deletable();
+    this.deleting.set(true);
+    let result: DeleteNovelsResult | null = null;
+    let failure: unknown = null;
+    try {
+      result = await this.store.deleteNovels(targets.map((novel) => novel.id));
+    } catch (error: unknown) {
+      failure = error;
+    }
+    this.deleting.set(false);
+    if (result) {
+      this.notify(targets, result);
+      if (result.deleted.length > 0) this.deleted.emit(result.deleted);
+    }
     this.closed.emit();
+    if (failure) {
+      if (isAppError(failure)) await this.store.reload();
+      throw failure;
+    }
   }
 
-  private notify(targets: LibraryNovel[], result: DeleteNovelsResult): void {
+  private notify(targets: NovelSummary[], result: DeleteNovelsResult): void {
     const count: number = result.deleted.length;
     if (count === 0) {
       this.toast.show({

@@ -19,6 +19,7 @@ import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/mo
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -94,6 +95,7 @@ const api: DreamerApi = {
     get: (id: string): Promise<NovelDetail> => call(LibraryChannel.Get, id),
     updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail> =>
       call(LibraryChannel.UpdateNovel, { id, patch }),
+    deleteNovels: (ids: string[]): Promise<DeleteNovelsResult> => call(LibraryChannel.DeleteNovels, ids),
     openFolder: (id: string): Promise<void> => call(LibraryChannel.OpenFolder, id),
     onChanged: (listener: (event: LibraryChangedEvent) => void): (() => void) =>
       subscribe(LibraryChannel.Changed, listener),

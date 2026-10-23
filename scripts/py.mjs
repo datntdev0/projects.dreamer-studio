@@ -5,7 +5,8 @@ import { writeCoverageReport } from './py-coverage.mjs';
 
 const backendDir = fileURLToPath(new URL('../backend/', import.meta.url));
 const coverageDir = fileURLToPath(new URL('../coverage/python/', import.meta.url));
-const venvPython = process.platform === 'win32' ? `${backendDir}.venv/Scripts/python.exe` : `${backendDir}.venv/bin/python`;
+const venvPython =
+  process.platform === 'win32' ? `${backendDir}.venv/Scripts/python.exe` : `${backendDir}.venv/bin/python`;
 const PYTEST_NO_TESTS = 5;
 
 function run(command, args) {

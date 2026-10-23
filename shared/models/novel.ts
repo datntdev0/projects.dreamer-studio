@@ -46,6 +46,11 @@ export interface NovelUpdateRequest {
   patch: NovelPatch;
 }
 
+export interface DeleteNovelsResult {
+  deleted: string[];
+  skipped: string[];
+}
+
 export interface LibraryChangedEvent {
   novelIds: string[];
 }

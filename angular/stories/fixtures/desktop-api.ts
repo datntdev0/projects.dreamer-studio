@@ -1,4 +1,4 @@
-import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
+import type { DeleteNovelsResult, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { Provider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
@@ -143,6 +143,7 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       void patch;
       return Promise.resolve(null);
     },
+    deleteNovels: (): Promise<DeleteNovelsResult | null> => Promise.resolve({ deleted: [], skipped: [] }),
     pickImage: (): Promise<PickedImage | null> => Promise.resolve(null),
     openNovelFolder: (): Promise<void> => Promise.resolve(),
     onLibraryChanged: (): (() => void) => () => undefined,

@@ -60,8 +60,6 @@ export type ChapterChangeError = 'locked' | 'notConsecutive' | 'tooFewParagraphs
 
 export type MoveMode = 'position' | 'before';
 
-export type DeleteMode = 'one' | 'many' | 'blocked';
-
 export type ChapterDialogKind = 'merge' | 'split' | 'delete' | 'move';
 
 export interface ChapterDialogState {

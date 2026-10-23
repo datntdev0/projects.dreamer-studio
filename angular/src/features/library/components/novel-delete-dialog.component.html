@@ -57,10 +57,24 @@
         {{ 'library.novelDialog.close' | t }}
       </button>
     } @else {
-      <button dsBtn type="button" autofocus data-testid="novel-dlg-delete-cancel" (click)="closed.emit()">
+      <button
+        dsBtn
+        type="button"
+        autofocus
+        data-testid="novel-dlg-delete-cancel"
+        [disabled]="deleting()"
+        (click)="closed.emit()"
+      >
         {{ 'common.cancel' | t }}
       </button>
-      <button dsBtn type="button" variant="danger-solid" data-testid="novel-dlg-delete-confirm" (click)="confirm()">
+      <button
+        dsBtn
+        type="button"
+        variant="danger-solid"
+        data-testid="novel-dlg-delete-confirm"
+        [disabled]="deleting()"
+        (click)="confirm()"
+      >
         <ds-icon name="trash" size="sm" />{{ confirmLabel() }}
       </button>
     }

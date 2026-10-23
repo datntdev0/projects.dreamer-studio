@@ -135,11 +135,16 @@
   @if (media() === 'novels' && selected().length) {
     <div class="library-browse-selection" role="status" data-testid="lib-selection">
       <span>{{ 'library.browse.selected' | t: { count: count(selected().length) } }}</span>
-      <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
-        <button dsBtn variant="danger" size="sm" type="button" disabled data-testid="lib-selection-delete">
-          <ds-icon name="trash" size="sm" />{{ 'library.browse.deleteSelected' | t }}
-        </button>
-      </span>
+      <button
+        dsBtn
+        variant="danger"
+        size="sm"
+        type="button"
+        data-testid="lib-selection-delete"
+        (click)="deleteSelected()"
+      >
+        <ds-icon name="trash" size="sm" />{{ 'library.browse.deleteSelected' | t }}
+      </button>
       <button
         dsBtn
         variant="ghost"
@@ -233,6 +238,7 @@
       [(selected)]="selected"
       (activate)="activate($event)"
       (open)="open($event)"
+      (delete)="requestDelete([$event])"
     />
   }
 </main>
@@ -262,10 +268,17 @@
   </div>
   <div class="ds-panel-body">
     @if (activeNovel(); as novel) {
-      <ds-library-inspector [novel]="novel" (open)="open($event)" />
+      <ds-library-inspector [novel]="novel" (open)="open($event)" (delete)="requestDelete([novel])" />
     } @else {
       <ds-area-state kind="empty" icon="book" compact [heading]="'library.browse.inspector.none' | t" />
     }
   </div>
 </ng-template>
 <ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />
+
+<ds-novel-delete-dialog
+  [open]="!!deleteTargets().length"
+  [novels]="deleteTargets()"
+  (deleted)="onDeleted($event)"
+  (closed)="deleteTargets.set([])"
+/>

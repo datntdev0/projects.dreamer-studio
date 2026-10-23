@@ -69,16 +69,17 @@
   >
     <ds-icon name="folder" size="sm" />
   </button>
-  <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
+  <span class="library-disabled-action" [dsTooltip]="lockReason()">
     <button
       dsBtn
       variant="danger"
       size="sm"
       iconOnly
       type="button"
-      disabled
       data-testid="insp-delete"
+      [disabled]="editing() || !!novel().lock"
       [attr.aria-label]="'library.inspector.delete' | t"
+      (click)="delete.emit(novel().id)"
     >
       <ds-icon name="trash" size="sm" />
     </button>

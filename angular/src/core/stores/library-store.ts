@@ -1,6 +1,7 @@
 import { computed, effect, inject, Injectable, type Signal, signal, type WritableSignal } from '@angular/core';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import type { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
+import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { DesktopApi } from '../desktop-api';
 import { PipelineStore } from './pipeline-store';
@@ -73,6 +74,13 @@ export class LibraryStore {
     effect(() => writePreference({ view: this.view(), sortKey: this.sortKey(), sortDirection: this.sortDirection() }));
     this.desktopApi.onLibraryChanged(() => void this.reload());
     this.desktopApi.onAppDataChanged(() => void this.reload());
+    this.desktopApi.onPipelineUpdate((run: PipelineRun) => {
+      if (!run.novelId) return;
+      const novel: NovelSummary | undefined = this.novelList().find((item: NovelSummary) => item.id === run.novelId);
+      if (!novel) return;
+      const active: boolean = run.status === 'queued' || run.status === 'running';
+      if (active !== (novel.lock?.runId === run.id)) void this.reload();
+    });
   }
 
   async load(): Promise<void> {
@@ -99,6 +107,14 @@ export class LibraryStore {
     } catch {
       return null;
     }
+  }
+
+  async updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {
+    return this.desktopApi.updateNovel(id, patch);
+  }
+
+  async pickImage(): Promise<PickedImage | null> {
+    return this.desktopApi.pickImage();
   }
 
   async openFolder(id: string): Promise<void> {

@@ -1,14 +1,17 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { I18nService, Language } from '../../core/i18n/i18n.service';
-import type { LanguageOption, LibraryChapter, LibraryNovel, NovelDraft, ReadingSettings } from './library.models';
+import type { LibraryChapter, LibraryNovel, ReadingSettings } from './library.models';
 
-export const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { code: 'zh', label: '中文 · zh' },
-  { code: 'ja', label: '日本語 · ja' },
-  { code: 'ko', label: '한국어 · ko' },
-  { code: 'en', label: 'English · en' },
-  { code: 'vi', label: 'Tiếng Việt · vi' },
-];
+export interface LanguageOption {
+  code: string;
+  label: string;
+}
+
+export type RequiredField = 'originalTitle' | 'title' | 'language';
+
+export type TextField = RequiredField | 'author' | 'description';
+
+const LANGUAGE_CODES: string[] = ['zh', 'ja', 'ko', 'en', 'vi'];
 
 export const EXPORT_MS = 6000;
 
@@ -84,26 +87,11 @@ export function withExtension(name: string): string {
   return name.toLowerCase().endsWith(PACKAGE_EXTENSION) ? name : `${name}${PACKAGE_EXTENSION}`;
 }
 
-export function toDraft(novel: LibraryNovel, language: string): NovelDraft {
-  return {
-    originalTitle: novel.originalTitle,
-    title: novel.title,
-    author: novel.author,
-    description: language === 'vi' ? novel.descriptionVi : novel.description,
-    language: novel.language,
-    tags: [...novel.tags],
-    cover: novel.cover,
-    publication: novel.publication,
-  };
-}
-
-export function sameDraft(a: NovelDraft, b: NovelDraft): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-export function languageOptions(current: string): LanguageOption[] {
-  const known: boolean = LANGUAGE_OPTIONS.some((option: LanguageOption): boolean => option.code === current);
-  return current && !known ? [...LANGUAGE_OPTIONS, { code: current, label: current }] : LANGUAGE_OPTIONS;
+export function languageOptions(current: string, language: Language): LanguageOption[] {
+  const names: Intl.DisplayNames = new Intl.DisplayNames([language], { type: 'language' });
+  const codes: string[] = [...LANGUAGE_CODES];
+  if (current && !codes.includes(current)) codes.push(current);
+  return codes.map((code: string): LanguageOption => ({ code, label: `${names.of(code) ?? code} · ${code}` }));
 }
 
 export function fold(value: string): string {

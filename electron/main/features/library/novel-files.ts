@@ -51,7 +51,6 @@ export async function writeCover(
 ): Promise<NovelStore.NovelCoverFile> {
   const cover: NovelStore.NovelCoverFile = NovelStore.COVER_FILES[mime];
   await writeFileAtomic(coverPath(folder, cover), bytes);
-  await removeOtherCovers(folder, cover);
   return cover;
 }
 

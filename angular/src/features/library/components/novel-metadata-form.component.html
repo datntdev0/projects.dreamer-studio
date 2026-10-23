@@ -1,61 +1,42 @@
-<form class="library-novel-form" novalidate data-testid="novel-page-form" (submit)="onSubmit($event)">
-  @if (!compact()) {
-    <div class="library-novel-form-head">
-      <h3>{{ 'library.novel.form.heading' | t }}</h3>
-      @if (dirty()) {
-        <ds-pill kind="warning" icon="pencil" data-testid="novel-page-form-unsaved">{{
-          'library.novel.form.unsaved' | t
-        }}</ds-pill>
-      }
-    </div>
-  }
+<form class="library-novel-form" novalidate (submit)="onSubmit($event)">
   @if (refusedRun(); as run) {
     <ds-banner
-      class="library-novel-banner"
       variant="danger"
-      data-testid="novel-page-form-refused"
+      data-testid="insp-edit-refused"
       [heading]="'library.novel.form.refusedHeading' | t"
       [message]="'library.novel.form.refusedMessage' | t: { run }"
       [dismissLabel]="'common.dismiss' | t"
       (dismiss)="refusedRun.set(null)"
     />
   }
-  @if (!compact()) {
-    <ds-field [label]="'library.novel.info.cover' | t" [error]="coverErrorText()">
-      <div class="library-novel-form-cover" data-testid="novel-page-form-cover">
-        <ds-library-cover
-          [cover]="draft().cover"
-          [originalTitle]="draft().originalTitle || draft().title"
-          [language]="draft().language"
-          size="md"
-        />
-        <div class="library-novel-form-cover-body">
-          <span class="meta" data-testid="novel-page-form-cover-note">{{ coverNoteKey() | t: coverNoteParams() }}</span>
-          <button
-            dsBtn
-            size="sm"
-            type="button"
-            data-testid="novel-page-form-cover-change"
-            (click)="pickerOpen.set(true)"
-          >
-            <ds-icon name="image" size="sm" />{{ 'library.novel.form.coverChange' | t }}
-          </button>
-          @if (draft().cover) {
-            <button
-              dsBtn
-              variant="ghost"
-              size="sm"
-              type="button"
-              data-testid="novel-page-form-cover-remove"
-              (click)="removeCover()"
-            >
-              <ds-icon name="image-off" size="sm" />{{ 'library.novel.form.coverRemove' | t }}
-            </button>
-          }
-        </div>
+  <ds-field [label]="'library.novel.info.cover' | t" [error]="coverErrorText()">
+    <div class="library-novel-form-cover" data-testid="insp-edit-cover">
+      <ds-library-cover
+        size="sm"
+        [cover]="cover()"
+        [palette]="coverPalette(novel().id)"
+        [originalTitle]="draft().originalTitle || draft().title"
+        [language]="draft().language"
+      />
+      <div class="library-novel-form-cover-body">
+        <span class="meta">{{ coverNoteKey() | t: coverNoteParams() }}</span>
+        <button dsBtn size="sm" type="button" data-testid="insp-edit-cover-change" (click)="changeCover()">
+          <ds-icon name="image" size="sm" />{{ 'library.novel.form.coverChange' | t }}
+        </button>
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="insp-edit-cover-remove"
+          [disabled]="!canRemoveCover()"
+          (click)="removeCover()"
+        >
+          <ds-icon name="image-off" size="sm" />{{ 'library.novel.form.coverRemove' | t }}
+        </button>
       </div>
-    </ds-field>
-  }
+    </div>
+  </ds-field>
   <ds-field
     required
     [label]="'library.novel.info.originalTitle' | t"
@@ -66,11 +47,11 @@
     <input
       class="ds-input"
       required
+      data-testid="insp-edit-original"
       [id]="fieldIds.originalTitle"
       [attr.lang]="draft().language || null"
       [value]="draft().originalTitle"
       [attr.aria-invalid]="errors().originalTitle || null"
-      [attr.data-testid]="compact() ? 'insp-edit-original' : 'novel-page-form-original-title'"
       (input)="setText('originalTitle', $event)"
       (blur)="touch('originalTitle')"
     />
@@ -85,20 +66,20 @@
     <input
       class="ds-input"
       required
+      data-testid="insp-edit-display"
       [id]="fieldIds.title"
       [value]="draft().title"
       [attr.aria-invalid]="errors().title || null"
-      [attr.data-testid]="compact() ? 'insp-edit-display' : 'novel-page-form-title'"
       (input)="setText('title', $event)"
       (blur)="touch('title')"
     />
   </ds-field>
-  <ds-field [label]="'library.novel.info.author' | t" controlId="novel-page-form-author">
+  <ds-field [label]="'library.novel.info.author' | t" controlId="insp-edit-author">
     <input
-      id="novel-page-form-author"
+      id="insp-edit-author"
       class="ds-input"
+      data-testid="insp-edit-author"
       [value]="draft().author"
-      [attr.data-testid]="compact() ? 'insp-edit-author' : 'novel-page-form-author'"
       (input)="setText('author', $event)"
     />
   </ds-field>
@@ -112,9 +93,9 @@
       <select
         class="ds-input"
         required
+        data-testid="insp-edit-language"
         [id]="fieldIds.language"
         [attr.aria-invalid]="errors().language || null"
-        [attr.data-testid]="compact() ? 'insp-edit-language' : 'novel-page-form-language'"
         (change)="setText('language', $event); touch('language')"
         (blur)="touch('language')"
       >
@@ -126,79 +107,47 @@
       <ds-icon name="chevron-down" size="sm" />
     </span>
   </ds-field>
-  @if (compact()) {
-    <ds-field [label]="'library.mock.novelStatus' | t" controlId="insp-edit-status">
-      <span class="ds-select"
-        ><select
-          class="ds-input"
-          id="insp-edit-status"
-          data-testid="insp-edit-status"
-          (change)="setPublication($event)"
-        >
-          <option value="completed" [selected]="draft().publication === 'completed'">
-            {{ 'library.mock.publication.completed' | t }}
-          </option>
-          <option value="ongoing" [selected]="draft().publication === 'ongoing'">
-            {{ 'library.mock.publication.ongoing' | t }}
-          </option></select
-        ><ds-icon name="chevron-down" size="sm"
-      /></span>
-    </ds-field>
-  }
+  <ds-field [label]="'library.novel.form.publication' | t" controlId="insp-edit-status">
+    <span class="ds-select">
+      <select class="ds-input" id="insp-edit-status" data-testid="insp-edit-status" (change)="setPublication($event)">
+        <option value="ongoing" [selected]="draft().publication === 'ongoing'">
+          {{ 'library.browse.publication.ongoing' | t }}
+        </option>
+        <option value="completed" [selected]="draft().publication === 'completed'">
+          {{ 'library.browse.publication.completed' | t }}
+        </option>
+      </select>
+      <ds-icon name="chevron-down" size="sm" />
+    </span>
+  </ds-field>
   <ds-field
-    [label]="compact() ? ('library.mock.genres' | t) : ('library.novel.info.tags' | t)"
-    controlId="novel-page-form-tags-input"
+    [label]="'library.inspector.genres' | t"
+    controlId="insp-edit-genres-input"
     [hint]="'library.novel.form.tagsHint' | t"
   >
-    <div class="library-novel-chips" data-testid="novel-page-form-tags" (click)="tagInput.focus()">
-      @for (tag of draft().tags; track tag) {
-        <span class="library-novel-chip" data-testid="novel-page-form-tag">
-          {{ tag }}
-          <button
-            type="button"
-            [attr.aria-label]="'library.novel.form.removeTag' | t: { tag }"
-            data-testid="novel-page-form-tag-remove"
-            (click)="removeTag(tag); tagInput.focus()"
-          >
-            <ds-icon name="x" size="sm" />
-          </button>
-        </span>
-      }
-      <input
-        #tagInput
-        id="novel-page-form-tags-input"
-        [value]="tagDraft()"
-        [placeholder]="'library.novel.form.tagsPlaceholder' | t"
-        [attr.data-testid]="compact() ? 'insp-edit-genres' : 'novel-page-form-tags-input'"
-        (input)="tagDraft.set(tagInput.value)"
-        (keydown)="onTagKeydown($event)"
-        (blur)="commitTags()"
-      />
-    </div>
+    <ds-chip-input
+      inputId="insp-edit-genres-input"
+      testId="insp-edit-genres"
+      removeLabel="library.novel.form.removeTag"
+      [values]="draft().tags"
+      [placeholder]="'library.novel.form.tagsPlaceholder' | t"
+      (valuesChange)="setTags($event)"
+    />
   </ds-field>
-  <ds-field [label]="'library.novel.info.description' | t" controlId="novel-page-form-description">
+  <ds-field [label]="'library.novel.info.description' | t" controlId="insp-edit-synopsis">
     <textarea
-      id="novel-page-form-description"
+      id="insp-edit-synopsis"
       class="ds-input"
       rows="5"
+      data-testid="insp-edit-synopsis"
       [attr.lang]="draft().language || null"
       [value]="draft().description"
-      [attr.data-testid]="compact() ? 'insp-edit-synopsis' : 'novel-page-form-description'"
       (input)="setText('description', $event)"
     ></textarea>
   </ds-field>
-  @if (compact()) {
-    <p class="meta">{{ 'library.mock.readOnlyNote' | t }}</p>
-  }
+  <p class="meta">{{ 'library.novel.form.readOnlyNote' | t }}</p>
   <div class="library-novel-form-actions">
-    <button
-      dsBtn
-      variant="ghost"
-      size="sm"
-      type="button"
-      [attr.data-testid]="compact() ? 'insp-edit-cancel' : 'novel-page-form-cancel'"
-      (click)="cancel()"
-    >
+    <button dsBtn variant="ghost" size="sm" type="button" data-testid="insp-edit-cancel" (click)="cancel()">
       {{ 'common.cancel' | t }}
     </button>
     <button
@@ -206,32 +155,11 @@
       variant="primary"
       size="sm"
       type="submit"
-      [attr.data-testid]="compact() ? 'insp-edit-save' : 'novel-page-form-save'"
-      [disabled]="!dirty()"
+      data-testid="insp-edit-save"
+      [loading]="saving()"
+      [disabled]="!dirty() || saving()"
     >
       <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
     </button>
   </div>
 </form>
-<ds-dialog
-  [open]="pickerOpen()"
-  heading="Prototype · choose a sample image"
-  [closeLabel]="'common.dismiss' | t"
-  (closed)="pickerOpen.set(false)"
->
-  <ul class="library-novel-samples" data-testid="novel-page-cover-samples">
-    @for (sample of samples(); track sample.name) {
-      <li>
-        <button
-          dsBtn
-          variant="ghost"
-          type="button"
-          [attr.data-testid]="'novel-page-cover-sample-' + $index"
-          (click)="chooseCover(sample)"
-        >
-          {{ sample.name }} · {{ size(sample.size) }}
-        </button>
-      </li>
-    }
-  </ul>
-</ds-dialog>

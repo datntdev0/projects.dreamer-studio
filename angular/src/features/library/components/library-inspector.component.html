@@ -16,7 +16,7 @@
   <button dsBtn variant="primary" size="sm" type="button" data-testid="insp-open" (click)="open.emit(novel().id)">
     <ds-icon name="book" size="sm" />{{ 'library.inspector.open' | t }}
   </button>
-  <span class="library-soon" [dsTooltip]="'common.soon' | t">
+  <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
     <button
       dsBtn
       size="sm"
@@ -29,28 +29,30 @@
       <ds-icon name="upload" size="sm" />
     </button>
   </span>
-  <span class="library-soon" [dsTooltip]="'common.soon' | t">
+  <span class="library-disabled-action" [dsTooltip]="lockReason()">
     <button
       dsBtn
       size="sm"
       iconOnly
       type="button"
-      disabled
       data-testid="insp-cover-change"
+      [disabled]="editing() || !!novel().lock || coverBusy()"
       [attr.aria-label]="'library.inspector.changeCover' | t"
+      (click)="changeCover()"
     >
       <ds-icon name="image" size="sm" />
     </button>
   </span>
-  <span class="library-soon" [dsTooltip]="'common.soon' | t">
+  <span class="library-disabled-action" [dsTooltip]="lockReason()">
     <button
       dsBtn
       size="sm"
       iconOnly
       type="button"
-      disabled
       data-testid="insp-cover-remove"
+      [disabled]="editing() || !!novel().lock || !novel().hasCover || coverBusy()"
       [attr.aria-label]="'library.inspector.removeCover' | t"
+      (click)="removeCover()"
     >
       <ds-icon name="image-off" size="sm" />
     </button>
@@ -67,7 +69,7 @@
   >
     <ds-icon name="folder" size="sm" />
   </button>
-  <span class="library-soon" [dsTooltip]="'common.soon' | t">
+  <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
     <button
       dsBtn
       variant="danger"
@@ -101,38 +103,56 @@
 <section class="library-inspector-section library-inspector-metadata">
   <div class="library-inspector-section-heading">
     <h3>{{ 'library.inspector.metadata' | t }}</h3>
-    <span class="library-soon" [dsTooltip]="'common.soon' | t">
-      <button dsBtn variant="ghost" size="sm" type="button" disabled data-testid="insp-edit">
-        <ds-icon name="pencil" size="sm" />{{ 'library.inspector.edit' | t }}
-      </button>
-    </span>
+    @if (dirty()) {
+      <ds-pill kind="warning" icon="pencil" data-testid="insp-edit-unsaved">{{
+        'library.novel.form.unsaved' | t
+      }}</ds-pill>
+    } @else if (!editing()) {
+      <span class="library-disabled-action" [dsTooltip]="lockReason()">
+        <button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="insp-edit"
+          [disabled]="!!novel().lock || !detail()"
+          (click)="startEditing()"
+        >
+          <ds-icon name="pencil" size="sm" />{{ 'library.inspector.edit' | t }}
+        </button>
+      </span>
+    }
   </div>
-  <div class="library-novel-info">
-    <dl class="ds-meta-list library-novel-meta">
-      <dt>{{ 'library.inspector.displayTitle' | t }}</dt>
-      <dd>{{ novel().title }}</dd>
-      <dt>{{ 'library.novel.info.originalTitle' | t }}</dt>
-      <dd class="library-novel-serif" [attr.lang]="novel().language">{{ novel().originalTitle }}</dd>
-      <dt>{{ 'library.novel.info.author' | t }}</dt>
-      <dd>{{ novel().author }}</dd>
-      <dt>{{ 'library.browse.sourceLanguage' | t }}</dt>
-      <dd>{{ language(novel().language) }}</dd>
-      <dt>{{ 'library.inspector.genres' | t }}</dt>
-      <dd>
-        @for (genre of novel().tags; track genre) {
-          <span class="library-novel-chip">{{ genre }}</span>
-        } @empty {
-          <span class="meta">&mdash;</span>
-        }
-      </dd>
-      <dt>{{ 'library.inspector.status' | t }}</dt>
-      <dd>{{ publicationKey() | t }}</dd>
-      <dt>{{ 'library.inspector.synopsis' | t }}</dt>
-      <dd data-testid="insp-synopsis">{{ synopsis() }}</dd>
-      <dt>{{ 'library.novel.info.imported' | t }}</dt>
-      <dd class="num">{{ date(novel().importedAt) }}</dd>
-      <dt>{{ 'library.inspector.lastUpdated' | t }}</dt>
-      <dd class="num">{{ date(novel().updatedAt) }}</dd>
-    </dl>
-  </div>
+  @if (editing() && detail(); as current) {
+    <ds-novel-metadata-form [novel]="current" (saved)="finishEditing()" (cancelled)="finishEditing()" />
+  } @else {
+    <div class="library-novel-info">
+      <dl class="ds-meta-list library-novel-meta">
+        <dt>{{ 'library.inspector.displayTitle' | t }}</dt>
+        <dd>{{ novel().title }}</dd>
+        <dt>{{ 'library.novel.info.originalTitle' | t }}</dt>
+        <dd class="library-novel-serif" [attr.lang]="novel().language">{{ novel().originalTitle }}</dd>
+        <dt>{{ 'library.novel.info.author' | t }}</dt>
+        <dd>{{ novel().author }}</dd>
+        <dt>{{ 'library.browse.sourceLanguage' | t }}</dt>
+        <dd>{{ language(novel().language) }}</dd>
+        <dt>{{ 'library.inspector.genres' | t }}</dt>
+        <dd>
+          @for (genre of novel().tags; track genre) {
+            <span class="library-novel-chip">{{ genre }}</span>
+          } @empty {
+            <span class="meta">&mdash;</span>
+          }
+        </dd>
+        <dt>{{ 'library.inspector.status' | t }}</dt>
+        <dd>{{ publicationKey() | t }}</dd>
+        <dt>{{ 'library.inspector.synopsis' | t }}</dt>
+        <dd data-testid="insp-synopsis">{{ synopsis() }}</dd>
+        <dt>{{ 'library.novel.info.imported' | t }}</dt>
+        <dd class="num">{{ date(novel().importedAt) }}</dd>
+        <dt>{{ 'library.inspector.lastUpdated' | t }}</dt>
+        <dd class="num">{{ date(novel().updatedAt) }}</dd>
+      </dl>
+    </div>
+  }
 </section>

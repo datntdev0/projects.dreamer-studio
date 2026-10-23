@@ -318,7 +318,7 @@ describe('novel import pipeline', () => {
       await extract.run(run.ctx);
       throw new Error('Expected cover extraction to fail');
     } catch (error) {
-      expectCode(error, ErrorCode.PackageUnreadable);
+      expectCode(error, ErrorCode.CoverInvalid);
     }
     await cleanup(run);
     expect(existsSync(importStagingDir(paths, run.ctx.runId))).toBe(false);

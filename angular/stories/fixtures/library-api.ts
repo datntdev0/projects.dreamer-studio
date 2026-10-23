@@ -1,4 +1,5 @@
 import type { Provider } from '@angular/core';
+import type { NovelDetail, NovelPatch } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult } from '@dreamer/shared/models/novel-package';
 import type { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -205,8 +206,13 @@ class FakeLibraryApi extends DesktopApi {
     return Promise.resolve(LIBRARY_READ_RESULTS[sample ?? this.sample]);
   }
 
-  override pickImage(): Promise<{ path: string; name: string; size: number } | null> {
-    return Promise.resolve({ path: 'C:\\Samples\\new-cover.png', name: 'new-cover.png', size: 640 * 1024 });
+  override pickImage(): Promise<{ path: string; name: string; size: number; previewUrl: string } | null> {
+    return Promise.resolve({
+      path: 'C:\\Samples\\new-cover.png',
+      name: 'new-cover.png',
+      size: 640 * 1024,
+      previewUrl: 'data:image/png;base64,iVBORw0KGgo=',
+    });
   }
 
   override importNovel(request: NovelImportRequest): Promise<PipelineRun | null> {
@@ -238,6 +244,12 @@ class FakeLibraryApi extends DesktopApi {
       },
     );
     return SAMPLE_PATHS[sample ?? this.sample];
+  }
+
+  override updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {
+    void id;
+    void patch;
+    return Promise.resolve(null);
   }
 }
 

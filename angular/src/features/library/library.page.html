@@ -135,7 +135,7 @@
   @if (media() === 'novels' && selected().length) {
     <div class="library-browse-selection" role="status" data-testid="lib-selection">
       <span>{{ 'library.browse.selected' | t: { count: count(selected().length) } }}</span>
-      <span class="library-soon" [dsTooltip]="'common.soon' | t">
+      <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
         <button dsBtn variant="danger" size="sm" type="button" disabled data-testid="lib-selection-delete">
           <ds-icon name="trash" size="sm" />{{ 'library.browse.deleteSelected' | t }}
         </button>
@@ -231,7 +231,7 @@
       [view]="store.view()"
       [active]="active()"
       [(selected)]="selected"
-      (activate)="active.set($event)"
+      (activate)="activate($event)"
       (open)="open($event)"
     />
   }
@@ -268,3 +268,4 @@
     }
   </div>
 </ng-template>
+<ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />

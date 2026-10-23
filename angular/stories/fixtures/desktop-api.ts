@@ -1,4 +1,5 @@
-import type { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
+import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { Provider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
@@ -137,6 +138,12 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     runDiagnostics: (): Promise<DiagnosticsRun | null> => fakeRunDiagnostics(fixture.diagnostics ?? 'issues'),
     listNovels: (): Promise<NovelSummary[]> => Promise.resolve([]),
     getNovel: (): Promise<NovelDetail | null> => Promise.resolve(null),
+    updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail | null> => {
+      void id;
+      void patch;
+      return Promise.resolve(null);
+    },
+    pickImage: (): Promise<PickedImage | null> => Promise.resolve(null),
     openNovelFolder: (): Promise<void> => Promise.resolve(),
     onLibraryChanged: (): (() => void) => () => undefined,
     ...fakeSettingsApi(),

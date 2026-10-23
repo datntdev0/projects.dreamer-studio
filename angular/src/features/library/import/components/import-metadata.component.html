@@ -71,7 +71,7 @@
           <option value="" [selected]="!current().language">
             {{ 'library.import.metadata.languagePlaceholder' | t }}
           </option>
-          @for (option of languageOptions(); track option.code) {
+          @for (option of languages(); track option.code) {
             <option [value]="option.code" [selected]="option.code === current().language">{{ option.label }}</option>
           }
         </select>
@@ -83,32 +83,14 @@
       controlId="import-metadata-tags-input"
       [hint]="'library.import.metadata.tagsHint' | t"
     >
-      <div class="import-metadata-tags" data-testid="import-metadata-tags" (click)="tagInput.focus()">
-        @for (tag of current().tags; track tag) {
-          <span class="import-metadata-tag" data-testid="import-metadata-tag">
-            {{ tag }}
-            <button
-              type="button"
-              [attr.aria-label]="'library.import.metadata.removeTag' | t: { tag }"
-              data-testid="import-metadata-tag-remove"
-              (click)="removeTag(tag); tagInput.focus()"
-            >
-              <ds-icon name="x" size="sm" />
-            </button>
-          </span>
-        }
-        <input
-          #tagInput
-          id="import-metadata-tags-input"
-          [value]="tagDraft()"
-          [placeholder]="'library.import.metadata.tagsPlaceholder' | t"
-          data-testid="import-metadata-tags-input"
-          (input)="tagDraft.set(tagInput.value)"
-          (keydown)="onTagKeydown($event)"
-          (paste)="onTagPaste($event)"
-          (blur)="commitTags()"
-        />
-      </div>
+      <ds-chip-input
+        inputId="import-metadata-tags-input"
+        testId="import-metadata-tags"
+        removeLabel="library.import.metadata.removeTag"
+        [values]="current().tags"
+        [placeholder]="'library.import.metadata.tagsPlaceholder' | t"
+        (valuesChange)="store.updateMetadata({ tags: $event })"
+      />
     </ds-field>
     <ds-field [label]="'library.import.metadata.description' | t" controlId="import-metadata-description">
       <textarea
@@ -120,7 +102,10 @@
         (input)="setText('description', $event)"
       ></textarea>
     </ds-field>
-    <ds-field [label]="'library.import.metadata.cover' | t">
+    <ds-field
+      [label]="'library.import.metadata.cover' | t"
+      [error]="store.coverError() ? ('errors.COVER_INVALID.message' | t) : ''"
+    >
       <div class="import-metadata-cover" data-testid="import-metadata-cover">
         @if (cover(); as currentCover) {
           <span class="import-metadata-cover-tile" data-testid="import-metadata-cover-image">

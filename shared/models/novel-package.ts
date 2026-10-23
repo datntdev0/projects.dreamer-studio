@@ -159,4 +159,5 @@ export interface PickedImage {
   path: string;
   name: string;
   size: number;
+  previewUrl: string;
 }

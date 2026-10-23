@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal, type Signal, type WritableSignal } from '@angular/core';
+import { ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
 import type { ImportChapterChoice, ImportCoverChoice, ImportMetadata } from '@dreamer/shared/models/novel-package';
 import type { ImportPreview, NovelImportRequest, PackageFile } from '@dreamer/shared/models/novel-package';
 import type { PackageReadResult, PickedImage, PreviewChapter } from '@dreamer/shared/models/novel-package';
@@ -32,6 +33,7 @@ export class ImportStore {
   readonly chapters: WritableSignal<ImportChapter[]> = signal<ImportChapter[]>([]);
   readonly cover: WritableSignal<ImportCoverChoice> = signal<ImportCoverChoice>({ kind: 'none' });
   readonly coverFile: WritableSignal<PickedImage | null> = signal<PickedImage | null>(null);
+  readonly coverError: WritableSignal<boolean> = signal<boolean>(false);
   readonly dragOver: WritableSignal<boolean> = signal<boolean>(false);
   readonly dropMany: WritableSignal<boolean> = signal<boolean>(false);
   readonly readingFile: WritableSignal<PackageFile | null> = signal<PackageFile | null>(null);
@@ -109,15 +111,25 @@ export class ImportStore {
   }
 
   async chooseCover(): Promise<void> {
-    const image: PickedImage | null = await this.desktopApi.pickImage();
-    if (!image) return;
-    this.coverFile.set(image);
-    this.cover.set({ kind: 'file', path: image.path });
+    this.coverError.set(false);
+    try {
+      const image: PickedImage | null = await this.desktopApi.pickImage();
+      if (!image) return;
+      this.coverFile.set(image);
+      this.cover.set({ kind: 'file', path: image.path });
+    } catch (error: unknown) {
+      if (isAppError(error) && error.code === ErrorCode.CoverInvalid) {
+        this.coverError.set(true);
+        return;
+      }
+      throw error;
+    }
   }
 
   removeCover(): void {
     this.coverFile.set(null);
     this.cover.set({ kind: 'none' });
+    this.coverError.set(false);
   }
 
   async startImport(): Promise<string | null> {
@@ -145,6 +157,7 @@ export class ImportStore {
     this.chapters.set([]);
     this.cover.set({ kind: 'none' });
     this.coverFile.set(null);
+    this.coverError.set(false);
     this.dragOver.set(false);
     this.dropMany.set(false);
     this.readingFile.set(null);
@@ -196,6 +209,7 @@ export class ImportStore {
     );
     this.cover.set(preview.cover ? { kind: 'package' } : { kind: 'none' });
     this.coverFile.set(null);
+    this.coverError.set(false);
     this.stage.set('preview');
   }
 

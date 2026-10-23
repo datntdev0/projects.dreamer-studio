@@ -46,6 +46,7 @@ export const LibraryChannel = {
   Import: 'library:import',
   List: 'library:list',
   Get: 'library:get',
+  UpdateNovel: 'library:update-novel',
   OpenFolder: 'library:open-folder',
   Changed: 'library:changed',
 } as const;

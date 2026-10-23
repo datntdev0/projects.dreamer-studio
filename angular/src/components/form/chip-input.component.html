@@ -1,0 +1,26 @@
+<div class="ds-chip-input" (click)="focus()">
+  @for (value of values(); track value) {
+    <span class="ds-chip-input-chip" [attr.data-testid]="chipTestId()">
+      <span [attr.data-testid]="legacyChipTestId()">{{ value }}</span>
+      <button
+        type="button"
+        [attr.aria-label]="removeText(value)"
+        [attr.data-testid]="legacyRemoveTestId()"
+        (click)="remove(value); $event.stopPropagation()"
+      >
+        <ds-icon name="x" size="sm" [attr.data-testid]="removeTestId()" />
+      </button>
+    </span>
+  }
+  <input
+    #inputElement
+    [id]="inputId()"
+    [value]="text()"
+    [placeholder]="placeholder()"
+    [attr.data-testid]="inputTestId()"
+    (input)="onInput(inputElement.value)"
+    (keydown)="onKeydown($event)"
+    (paste)="onPaste($event)"
+    (blur)="commit()"
+  />
+</div>

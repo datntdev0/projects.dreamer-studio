@@ -103,6 +103,16 @@ export class PipelineRunRepository {
     return row ? toRun(row) : null;
   }
 
+  activeNovelRuns(): PipelineRun[] {
+    const rows: PipelineRunRow[] = this.db.all<PipelineRunRow>(
+      `SELECT * FROM pipeline_run
+      WHERE novel_id IS NOT NULL AND status IN (SELECT value FROM json_each(?))
+      ORDER BY created_at, id`,
+      [JSON.stringify(activeStatuses)],
+    );
+    return rows.map(toRun);
+  }
+
   list(query: PipelineListQuery): PipelinePage {
     const conditions: string[] = [];
     const params: SqlParam[] = [];

@@ -158,6 +158,83 @@
   gap: var(--sp-lg);
 }
 
+.ds-chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  align-items: center;
+  min-height: var(--control-h);
+  padding: var(--sp-xxs) var(--sp-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  cursor: text;
+  transition: border-color var(--motion-fast);
+
+  &:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  &:focus-within {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset-inset);
+  }
+
+  > input {
+    flex: 1;
+    min-width: var(--sp-huge);
+    height: var(--pill-h);
+    padding: 0 var(--sp-xs);
+    color: var(--color-text);
+    font: var(--font-size-meta) var(--font-sans);
+    border: 0;
+    background: transparent;
+    outline: none;
+
+    &::placeholder {
+      color: var(--color-text-tertiary);
+    }
+  }
+}
+
+.ds-chip-input-chip {
+  display: inline-flex;
+  gap: var(--sp-xxs);
+  align-items: center;
+  max-width: 100%;
+  height: var(--pill-h);
+  padding-left: var(--sp-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-muted);
+
+  > button {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: var(--pill-h);
+    height: var(--pill-h);
+    padding: 0;
+    color: var(--color-text-secondary);
+    border: 0;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    cursor: pointer;
+    transition: color var(--motion-fast);
+
+    &:hover {
+      color: var(--color-danger);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-width) solid var(--color-focus);
+      outline-offset: var(--focus-offset-inset);
+    }
+  }
+}
+
 @container (min-width: 760px) {
   .ds-form-grid-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));

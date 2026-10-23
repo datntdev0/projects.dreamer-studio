@@ -1,14 +1,14 @@
-import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue, shell } from 'electron';
-import { stat } from 'node:fs/promises';
+import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue } from 'electron';
+import { Buffer } from 'node:buffer';
 import { basename, dirname, isAbsolute } from 'node:path';
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
-import { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import { NovelDetail, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import * as NovelPackage from '@dreamer/shared/models/novel-package';
 import { t } from '../app/app-i18n';
 import { AppDataSession } from '../app/app-data-session';
-import { novelFolder } from '../features/library/library-files';
+import { readCoverImage } from '../features/library/cover-image';
 import { importLabel, importParams } from '../features/library/novel-import-pipeline';
 import { readPackage } from '../features/library/package-reader';
 import { handle, handleValidated } from './handle';
@@ -115,20 +115,50 @@ async function pickImage(event: IpcMainInvokeEvent): Promise<NovelPackage.Picked
   if (result.canceled || path === undefined) {
     return null;
   }
-  const details: Awaited<ReturnType<typeof stat>> = await stat(path);
-  return { path, name: basename(path), size: details.size };
+  const image: Awaited<ReturnType<typeof readCoverImage>> = await readCoverImage(path);
+  const previewUrl: string = `data:${image.mime};base64,${Buffer.from(image.bytes).toString('base64')}`;
+  return { path, name: basename(path), size: image.bytes.byteLength, previewUrl };
 }
 
 function isNovelIdValue(value: unknown): value is string {
   return typeof value === 'string' && isNovelId(value);
 }
 
-async function openFolder(session: AppDataSession, id: string): Promise<void> {
-  session.index.get(id);
-  const failure: string = await shell.openPath(novelFolder(session.paths, id).dir);
-  if (failure) {
-    throw new Error(failure);
+function hasOnlyKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const allowed: Set<string> = new Set(keys);
+  return Object.keys(value).every((key: string): boolean => allowed.has(key));
+}
+
+function isPatchCover(value: unknown): boolean {
+  if (value === 'keep' || value === 'remove') {
+    return true;
   }
+  return isRecord(value) && hasOnlyKeys(value, ['path']) && typeof value.path === 'string' && isAbsolute(value.path);
+}
+
+function isNovelPatch(value: unknown): value is NovelPatch {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['originalTitle', 'title', 'author', 'language', 'publication', 'tags', 'description', 'cover'])
+  ) {
+    return false;
+  }
+  return (
+    (value.originalTitle === undefined || typeof value.originalTitle === 'string') &&
+    (value.title === undefined || typeof value.title === 'string') &&
+    (value.author === undefined || typeof value.author === 'string') &&
+    (value.language === undefined || typeof value.language === 'string') &&
+    (value.publication === undefined || typeof value.publication === 'string') &&
+    (value.tags === undefined || isStringArray(value.tags)) &&
+    (value.description === undefined || typeof value.description === 'string') &&
+    (value.cover === undefined || isPatchCover(value.cover))
+  );
+}
+
+export function isNovelUpdateRequest(value: unknown): value is NovelUpdateRequest {
+  return (
+    isRecord(value) && hasOnlyKeys(value, ['id', 'patch']) && isNovelIdValue(value.id) && isNovelPatch(value.patch)
+  );
 }
 
 export function registerLibraryIpc(session: () => AppDataSession): void {
@@ -138,7 +168,14 @@ export function registerLibraryIpc(session: () => AppDataSession): void {
   handleValidated(LibraryChannel.Import, isImportRequest, (request: NovelPackage.NovelImportRequest): PipelineRun =>
     session().executor.startRun('novel-import', importParams(request), importLabel(request)),
   );
-  handle(LibraryChannel.List, (): NovelSummary[] => session().index.list());
-  handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => session().index.get(id));
-  handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> => openFolder(session(), id));
+  handle(LibraryChannel.List, (): NovelSummary[] => session().library.list());
+  handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => session().library.get(id));
+  handleValidated(
+    LibraryChannel.UpdateNovel,
+    isNovelUpdateRequest,
+    (request: NovelUpdateRequest): Promise<NovelDetail> => session().library.updateNovel(request),
+  );
+  handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> =>
+    session().library.openFolder(id),
+  );
 }

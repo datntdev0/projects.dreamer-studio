@@ -123,10 +123,10 @@
     flex: 1;
   }
 }
-.library-soon {
+.library-disabled-action {
   display: inline-flex;
 
-  > .ds-btn {
+  > .ds-btn:disabled {
     pointer-events: none;
   }
 }

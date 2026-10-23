@@ -1,17 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, rename, rm, stat } from 'node:fs/promises';
 import { decodeUtf8 } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { PACKAGE_LIMITS, type CoverMime, type ImportChapterChoice } from '@dreamer/shared/models/novel-package';
+import { PACKAGE_LIMITS, type ImportChapterChoice } from '@dreamer/shared/models/novel-package';
 import type { ImportPreview, NovelImportRequest, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import { NOVEL_STORE_VERSION, normalizeTags, type NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import type { NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { t } from '../../app/app-i18n';
 import { PipelineDefinition, sleep, StepContext } from '../pipelines/pipeline-definition';
+import { readCoverImage } from './cover-image';
 import { importStagingDir, NovelFolder, novelFolder, novelFolderAt } from './library-files';
 import { writeChapter, writeCover, writeMetadata, WrittenChapter } from './novel-files';
-import { coverMime, openPackageArchive, PackageArchive, readPackage } from './package-reader';
+import { openPackageArchive, PackageArchive, readPackage } from './package-reader';
 
 interface ImportState {
   request: NovelImportRequest;
@@ -137,12 +138,8 @@ async function extractPackageCover(archive: PackageArchive, state: ImportState):
 }
 
 async function extractFileCover(state: ImportState, path: string): Promise<void> {
-  const bytes: Uint8Array = await readFile(path);
-  const mime: CoverMime | null = coverMime(bytes);
-  if (bytes.byteLength > PACKAGE_LIMITS.coverBytes || mime === null) {
-    throw new CodedError(ErrorCode.PackageUnreadable, `Invalid cover image: ${path}`);
-  }
-  state.cover = await writeCover(state.staging, bytes, mime);
+  const image: Awaited<ReturnType<typeof readCoverImage>> = await readCoverImage(path);
+  state.cover = await writeCover(state.staging, image.bytes, image.mime);
 }
 
 async function extractCover(archive: PackageArchive, state: ImportState): Promise<void> {

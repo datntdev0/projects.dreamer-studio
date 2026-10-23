@@ -88,13 +88,13 @@ describe('novel content writes', () => {
     expect(fs.readdirSync(folder.chapters)).toEqual([`${first.file}.txt`]);
   });
 
-  it('replaces the other cover format', async () => {
+  it('keeps the other cover format until metadata is saved', async () => {
     const folder: NovelFolder = novelFolder(paths, novelId);
 
     await expect(novelFiles.writeCover(folder, new Uint8Array([1, 2]), 'image/jpeg')).resolves.toBe('cover.jpg');
     await expect(novelFiles.writeCover(folder, new Uint8Array([3, 4]), 'image/png')).resolves.toBe('cover.png');
 
-    expect(fs.existsSync(join(folder.dir, 'cover.jpg'))).toBe(false);
+    expect(fs.readFileSync(join(folder.dir, 'cover.jpg'))).toEqual(Buffer.from([1, 2]));
     expect(fs.readFileSync(join(folder.dir, 'cover.png'))).toEqual(Buffer.from([3, 4]));
   });
 });

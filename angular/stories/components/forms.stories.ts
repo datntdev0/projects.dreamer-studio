@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
+import { ChipInputComponent } from '@components/form/chip-input.component';
 import { FieldComponent } from '@components/form/field.component';
 
 function formTemplate(suffix: string): string {
@@ -33,7 +34,7 @@ function formTemplate(suffix: string): string {
 
 const meta: Meta = {
   title: 'Components/Forms',
-  decorators: [moduleMetadata({ imports: [FieldComponent] })],
+  decorators: [moduleMetadata({ imports: [ChipInputComponent, FieldComponent] })],
   render: () => ({
     template: `
       <div class="sb-doc">
@@ -53,3 +54,22 @@ const meta: Meta = {
 export default meta;
 
 export const FormGrid: StoryObj = {};
+
+export const ChipInput: StoryObj = {
+  render: () => ({
+    props: { values: ['Fantasy', 'Adventure'] },
+    template: `
+      <div class="sb-doc">
+        <ds-field label="Genres" controlId="story-chip-input" hint="Press Enter or a comma to add a genre.">
+          <ds-chip-input
+            inputId="story-chip-input"
+            testId="story-chip-values"
+            removeLabel="library.novel.form.removeTag"
+            placeholder="Add a genre…"
+            [(values)]="values"
+          />
+        </ds-field>
+      </div>
+    `,
+  }),
+};

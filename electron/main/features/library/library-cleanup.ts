@@ -1,9 +1,9 @@
-import { readdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { isNovelId, NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { COVER_FILES, isNovelId, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 import { AppPaths } from '../../storage/paths';
-import { importStagingRoot, listLibraryFolders, novelFolder, NovelFolder, trashDir } from './library-files';
+import { coverPath, importStagingRoot, listLibraryFolders, novelFolder, NovelFolder, trashDir } from './library-files';
 import { readMetadata, unreferencedChapterFiles } from './novel-files';
 
 const logger: Logger = createLogger('library');
@@ -72,6 +72,15 @@ export function cleanLibrary(paths: AppPaths): LibraryCleanup {
     }
     const isTemp: (name: string) => boolean = (name: string): boolean => name.endsWith('.tmp');
     result.temp += removeEntries(folder.dir, isTemp) + removeEntries(folder.chapters, isTemp);
+    const covers: NovelCoverFile[] = Object.values(COVER_FILES).filter(
+      (cover: NovelCoverFile): boolean => cover !== metadata.cover,
+    );
+    covers.forEach((cover: NovelCoverFile): void => {
+      const path: string = coverPath(folder, cover);
+      if (existsSync(path) && remove(path)) {
+        result.temp += 1;
+      }
+    });
     try {
       for (const file of unreferencedChapterFiles(folder, metadata)) {
         if (remove(file)) {

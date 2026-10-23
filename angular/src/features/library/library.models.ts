@@ -1,5 +1,3 @@
-import type { TranslateParams } from '@dreamer/shared/i18n/translate';
-
 export type LibraryScenario = 'filled' | 'empty' | 'error';
 
 export type LibraryView = 'grid' | 'list';
@@ -121,10 +119,6 @@ export interface SearchChapterResult {
   hits: SearchHit[];
 }
 
-export type RequiredField = 'originalTitle' | 'title' | 'language';
-
-export type TextField = RequiredField | 'author' | 'description';
-
 export type NovelTab = 'reading' | 'search';
 
 export type NovelSearchState = 'idle' | 'running' | 'results' | 'none';
@@ -139,34 +133,6 @@ export interface NovelDetailInitialState {
 }
 
 export type PageState = 'loading' | 'error' | 'notFound' | 'ready';
-
-export interface NovelDraft {
-  originalTitle: string;
-  title: string;
-  author: string;
-  description: string;
-  language: string;
-  tags: string[];
-  cover: string | null;
-  publication: 'ongoing' | 'completed';
-}
-
-export interface CoverSample {
-  name: string;
-  size: number;
-  type: string;
-  url: string | null;
-}
-
-export interface CoverError {
-  key: string;
-  params: TranslateParams;
-}
-
-export interface LanguageOption {
-  code: string;
-  label: string;
-}
 
 export interface LibraryStoreData {
   novels: LibraryNovel[];

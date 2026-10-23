@@ -5,6 +5,7 @@ import { broadcast } from '../ipc/broadcast';
 import { initLogging } from '../logging/logger';
 import { cleanLibrary } from '../features/library/library-cleanup';
 import { LibraryIndex } from '../features/library/library-index';
+import { LibraryService } from '../features/library/library-service';
 import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
 import { PipelineRegistry } from '../features/pipelines/pipeline-registry';
 import { Database } from '../storage/database';
@@ -18,10 +19,10 @@ export interface AppDataSessionDeps {
   limit: () => number;
 }
 
-function refreshImported(index: LibraryIndex, run: PipelineRun): void {
+function refreshImported(index: LibraryIndex, notify: (novelIds: string[]) => void, run: PipelineRun): void {
   if (run.type === 'novel-import' && run.status === 'succeeded' && run.novelId !== null) {
     index.refresh(run.novelId);
-    broadcast(LibraryChannel.Changed, { novelIds: [run.novelId] });
+    notify([run.novelId]);
   }
 }
 
@@ -31,6 +32,7 @@ export class AppDataSession {
     readonly db: Database,
     readonly executor: PipelineExecutor,
     readonly index: LibraryIndex,
+    readonly library: LibraryService,
     readonly logsWritable: boolean,
   ) {}
 
@@ -44,17 +46,16 @@ export class AppDataSession {
     try {
       runMigrations(db, deps.migrations(), paths.databaseBackup);
       cleanLibrary(paths);
-      const executor: PipelineExecutor = new PipelineExecutor(
-        new PipelineRunRepository(db),
-        paths,
-        deps.registry,
-        deps.limit,
-      );
+      const runs: PipelineRunRepository = new PipelineRunRepository(db);
+      const executor: PipelineExecutor = new PipelineExecutor(runs, paths, deps.registry, deps.limit);
       executor.recover();
       const index: LibraryIndex = new LibraryIndex(paths);
       index.scan();
-      executor.onRunFinished((run: PipelineRun): void => refreshImported(index, run));
-      return new AppDataSession(paths, db, executor, index, logsWritable);
+      const notify: (novelIds: string[]) => void = (novelIds: string[]): void =>
+        broadcast(LibraryChannel.Changed, { novelIds });
+      const library: LibraryService = new LibraryService(paths, index, runs, notify);
+      executor.onRunFinished((run: PipelineRun): void => refreshImported(index, notify, run));
+      return new AppDataSession(paths, db, executor, index, library, logsWritable);
     } catch (error) {
       db.close();
       throw error;

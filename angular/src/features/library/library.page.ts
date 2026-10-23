@@ -22,6 +22,7 @@ import { formatCount } from '../../core/format';
 import { fold, isTypingTarget, languageName, matches, toggled } from './library-format';
 import { LibraryInspectorComponent } from './components/library-inspector.component';
 import { LibraryItemsComponent } from './components/library-items.component';
+import { UnsavedChangesDialogComponent } from './components/unsaved-changes-dialog.component';
 
 interface FilterRow {
   value: string;
@@ -44,6 +45,7 @@ interface FilterRow {
     TabsComponent,
     TooltipDirective,
     TranslatePipe,
+    UnsavedChangesDialogComponent,
   ],
   host: {
     class: 'ds-page',
@@ -58,6 +60,9 @@ export class LibraryPage implements OnInit {
   private readonly i18n: I18nService = inject(I18nService);
   private readonly router: Router = inject(Router);
   private readonly search = viewChild<ElementRef<HTMLInputElement>>('search');
+  private readonly inspector = viewChild(LibraryInspectorComponent);
+  private leaveResolve: ((leave: boolean) => void) | null = null;
+  private pendingActive: string | null = null;
   protected readonly query = signal<string>('');
   protected readonly active = signal<string | null>(null);
   protected readonly media = signal<string>('novels');
@@ -65,6 +70,7 @@ export class LibraryPage implements OnInit {
   protected readonly genreFilters = signal<string[]>([]);
   protected readonly publicationFilters = signal<string[]>([]);
   protected readonly selected = signal<string[]>([]);
+  protected readonly leaveOpen = signal<boolean>(false);
   protected readonly publications: ('ongoing' | 'completed')[] = ['ongoing', 'completed'];
   protected readonly sortKeys: LibrarySortKey[] = ['updatedAt', 'importedAt', 'title', 'author', 'chapterCount'];
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
@@ -114,13 +120,14 @@ export class LibraryPage implements OnInit {
       );
   });
   protected readonly activeNovel: Signal<NovelSummary | null> = computed(
-    () => this.results().find((novel: NovelSummary) => novel.id === this.active()) ?? null,
+    () => this.store.novels().find((novel: NovelSummary) => novel.id === this.active()) ?? null,
   );
 
   constructor() {
     effect(() => {
       const results: NovelSummary[] = this.results();
-      if (!results.some((novel: NovelSummary) => novel.id === untracked(this.active))) {
+      const dirty: boolean = this.inspector()?.dirty() ?? false;
+      if (!dirty && !results.some((novel: NovelSummary) => novel.id === untracked(this.active))) {
         this.active.set(results[0]?.id ?? null);
       }
       const shown: string[] = untracked(this.selected).filter((id: string) =>
@@ -132,6 +139,13 @@ export class LibraryPage implements OnInit {
 
   ngOnInit(): void {
     void this.store.load();
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    if (!this.inspector()?.dirty()) return true;
+    this.pendingActive = null;
+    this.leaveOpen.set(true);
+    return new Promise<boolean>((resolve: (leave: boolean) => void) => (this.leaveResolve = resolve));
   }
 
   protected count(value: number): string {
@@ -184,6 +198,27 @@ export class LibraryPage implements OnInit {
 
   protected open(id: string): void {
     void this.router.navigateByUrl(`/library/${id}`);
+  }
+
+  protected activate(id: string): void {
+    if (id === this.active()) return;
+    if (!this.inspector()?.dirty()) {
+      this.active.set(id);
+      return;
+    }
+    this.pendingActive = id;
+    this.leaveOpen.set(true);
+  }
+
+  protected settleLeave(leave: boolean): void {
+    this.leaveOpen.set(false);
+    if (leave) {
+      this.inspector()?.discard();
+      if (this.pendingActive) this.active.set(this.pendingActive);
+    }
+    this.pendingActive = null;
+    this.leaveResolve?.(leave);
+    this.leaveResolve = null;
   }
 
   protected goImport(): void {

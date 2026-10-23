@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { stat } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
@@ -518,7 +519,8 @@ async function checkCoverFile(
   if (mime === null) {
     return { cover: null, problem: problem('coverInvalid', { file }, file) };
   }
-  return { cover: { file, size: bytes.byteLength, mime }, problem: null };
+  const url: string = `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+  return { cover: { file, size: bytes.byteLength, mime, url }, problem: null };
 }
 
 function ignoredFiles(directory: CentralDirectory, metadata: PackageMetadata): string[] {

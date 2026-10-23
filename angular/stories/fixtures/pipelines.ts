@@ -67,6 +67,26 @@ export const QUEUED_RUN: PipelineRun = makeRun({
   createdAt: minutesAgo(0.5),
 });
 
+export const IMPORT_RUNNING_RUN: PipelineRun = makeRun({
+  id: 'e1a2b3c4-d5e6-4f70-8a9b-0c1d2e3f4a5b',
+  type: 'novel-import',
+  status: 'running',
+  progress: 40,
+  stepIndex: 2,
+  stepName: stepKey(2),
+  createdAt: minutesAgo(2),
+  startedAt: minutesAgo(2),
+  label: '庆余年',
+});
+
+export const IMPORT_QUEUED_RUN: PipelineRun = makeRun({
+  id: 'f2b3c4d5-e6f7-4081-9bac-1d2e3f4a5b6c',
+  type: 'novel-import',
+  status: 'queued',
+  createdAt: minutesAgo(1),
+  label: '凡人修仙传',
+});
+
 const SUCCEEDED_RUN: PipelineRun = finishedRun(
   {
     id: 'c3d9e8f1-2a4b-4c6d-8e0f-1a2b3c4d5e6f',

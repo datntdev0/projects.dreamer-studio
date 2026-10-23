@@ -21,7 +21,7 @@ const DEFAULT_DETAIL_INITIAL_STATE: NovelDetailInitialState = {
 };
 
 @Injectable({ providedIn: 'root' })
-export class LibraryStore {
+export class LibraryMockStore {
   readonly scenario = signal<LibraryScenario>('filled');
   readonly loading = signal<boolean>(false);
   readonly novels = signal<LibraryNovel[]>([]);

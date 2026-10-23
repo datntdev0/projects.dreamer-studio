@@ -28,7 +28,7 @@ import type { LibraryNovel } from '../library.models';
 import type { NovelDraft } from '../library.models';
 import type { RequiredField } from '../library.models';
 import type { TextField } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 import { LibraryCoverComponent } from './library-cover.component';
 
 const MB: number = 1024 * 1024;
@@ -81,7 +81,7 @@ export class NovelMetadataFormComponent implements OnInit {
   private readonly saved = signal<NovelDraft | null>(null);
   private readonly touched = signal<RequiredField[]>([]);
 
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

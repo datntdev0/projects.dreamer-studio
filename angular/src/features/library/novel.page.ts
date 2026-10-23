@@ -37,7 +37,7 @@ import type { NovelSearchState } from './library.models';
 import type { NovelTab } from './library.models';
 import type { PageState } from './library.models';
 import type { ReaderHighlight } from './library.models';
-import { LibraryStore } from './library.store';
+import { LibraryMockStore } from './library.store';
 import { ChapterEditorComponent } from './components/chapter-editor.component';
 import { NovelChaptersComponent } from './components/novel-chapters.component';
 import { NovelReaderComponent } from './components/novel-reader.component';
@@ -89,7 +89,7 @@ const LOCK_REASON_KEYS: Record<NovelLock['kind'], string> = {
   templateUrl: './novel.page.html',
 })
 export class NovelPage {
-  protected readonly store: LibraryStore = inject(LibraryStore);
+  protected readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly injector: Injector = inject(Injector);
   private readonly layout: LayoutService = inject(LayoutService);

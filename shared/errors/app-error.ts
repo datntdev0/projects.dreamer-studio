@@ -17,6 +17,7 @@ export const ErrorCode = {
   PackageUnreadable: 'PACKAGE_UNREADABLE',
   PackageChanged: 'PACKAGE_CHANGED',
   LibraryWriteFailed: 'LIBRARY_WRITE_FAILED',
+  NovelNotFound: 'NOVEL_NOT_FOUND',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

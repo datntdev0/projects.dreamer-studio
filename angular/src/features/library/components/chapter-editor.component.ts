@@ -20,7 +20,7 @@ import { toParagraphs } from '../library-format';
 import type { ChapterChangeError } from '../library.models';
 import type { LibraryChapter } from '../library.models';
 import type { LibraryNovel } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 
 @Component({
   selector: 'ds-chapter-editor',
@@ -34,7 +34,7 @@ export class ChapterEditorComponent implements OnInit {
   readonly done = output<void>();
   readonly cancelled = output<void>();
 
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

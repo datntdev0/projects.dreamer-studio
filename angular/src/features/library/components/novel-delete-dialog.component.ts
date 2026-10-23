@@ -9,7 +9,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { chapterLabel } from '../library-format';
 import type { DeleteMode, DeleteNovelsResult, LibraryNovel } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 import { NovelDialogSummaryComponent } from './novel-dialog-summary.component';
 
 const DELETE_LIST_LIMIT = 5;
@@ -33,7 +33,7 @@ export class NovelDeleteDialogComponent {
   readonly deleted = output<string[]>();
   readonly closed = output<void>();
 
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly toast: ToastService = inject(ToastService);
   private readonly i18n: I18nService = inject(I18nService);
 

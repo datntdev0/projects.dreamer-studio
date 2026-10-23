@@ -1,7 +1,8 @@
-import { join } from 'node:path';
+import { dialog, IpcMainInvokeEvent } from 'electron';
+import { dirname, join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { NovelImportRequest } from '@dreamer/shared/models/novel-package';
-import { isImportRequest } from './library-ipc';
+import { createPackagePicker, isImportRequest } from './library-ipc';
 
 vi.mock('electron', () => ({
   BrowserWindow: { fromWebContents: vi.fn() },
@@ -121,5 +122,23 @@ describe('isImportRequest', () => {
     ],
   ])('rejects %s', (_case: string, value: unknown) => {
     expect(isImportRequest(value)).toBe(false);
+  });
+});
+
+describe('package picker', () => {
+  it('opens subsequent dialogs in the last selected package directory', async () => {
+    const selected: string = join(process.cwd(), 'samples', 'novel.zip');
+    const showOpenDialog = vi.mocked(dialog.showOpenDialog);
+    showOpenDialog
+      .mockResolvedValueOnce({ canceled: false, filePaths: [selected] })
+      .mockResolvedValueOnce({ canceled: true, filePaths: [] });
+    const pickPackage = createPackagePicker();
+    const event: IpcMainInvokeEvent = { sender: {} } as IpcMainInvokeEvent;
+
+    await expect(pickPackage(event)).resolves.toBe(selected);
+    await expect(pickPackage(event)).resolves.toBeNull();
+
+    expect(showOpenDialog).toHaveBeenNthCalledWith(1, expect.not.objectContaining({ defaultPath: expect.anything() }));
+    expect(showOpenDialog).toHaveBeenNthCalledWith(2, expect.objectContaining({ defaultPath: dirname(selected) }));
   });
 });

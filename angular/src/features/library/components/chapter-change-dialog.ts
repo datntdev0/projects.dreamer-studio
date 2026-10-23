@@ -4,7 +4,7 @@ import type { ToastOptions } from '@components/toast/toast.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { CHANGE_MS } from '../library-format';
 import type { ChapterChangeError, NovelLock } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 
 @Directive()
 export abstract class ChapterChangeDialog {
@@ -13,7 +13,7 @@ export abstract class ChapterChangeDialog {
   readonly done = output<void>();
   readonly closed = output<void>();
 
-  protected readonly store: LibraryStore = inject(LibraryStore);
+  protected readonly store: LibraryMockStore = inject(LibraryMockStore);
   protected readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   protected readonly busy = signal<boolean>(false);

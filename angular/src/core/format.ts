@@ -56,3 +56,11 @@ export function formatBytes(bytes: number, language: Language): string {
 export function formatCount(count: number, language: Language): string {
   return new Intl.NumberFormat(language).format(count);
 }
+
+export function formatCompact(value: number, language: Language): string {
+  return new Intl.NumberFormat(language, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
+export function formatShortDate(iso: string, language: Language): string {
+  return new Intl.DateTimeFormat(language, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+}

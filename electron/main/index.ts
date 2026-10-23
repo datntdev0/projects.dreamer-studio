@@ -25,6 +25,7 @@ import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
+import { handleLibraryProtocol } from './features/library/library-protocol';
 import { novelImportPipeline } from './features/library/novel-import-pipeline';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
@@ -137,7 +138,7 @@ async function onReady(): Promise<void> {
   logger.info(`app ${APP_VERSION}, electron ${process.versions.electron}`);
   registerAppIpc(manager);
   registerPipelineIpc(() => manager.session().executor);
-  registerLibraryIpc(() => manager.session().executor);
+  registerLibraryIpc(() => manager.session());
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);
@@ -146,6 +147,7 @@ async function onReady(): Promise<void> {
   registerLogIpc();
   registerDevIpc();
   handleAppProtocol();
+  handleLibraryProtocol(() => manager.session());
   mainWindow = createWindow(settings.get().theme);
   void startBackend(manager.paths());
 }

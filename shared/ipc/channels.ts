@@ -44,6 +44,10 @@ export const LibraryChannel = {
   ReadPackage: 'library:read-package',
   PickImage: 'library:pick-image',
   Import: 'library:import',
+  List: 'library:list',
+  Get: 'library:get',
+  OpenFolder: 'library:open-folder',
+  Changed: 'library:changed',
 } as const;
 
 export const PipelineChannel = {

@@ -13,80 +13,37 @@
     </div>
   }
   <dl class="ds-meta-list library-novel-meta">
-    @if (inspector()) {
-      <dt>{{ 'library.mock.displayTitle' | t }}</dt>
-      <dd>{{ novel().title }}</dd>
-      <dt>{{ 'library.novel.info.originalTitle' | t }}</dt>
-      <dd class="library-novel-serif">{{ novel().originalTitle }}</dd>
-      <dt>{{ 'library.novel.info.author' | t }}</dt>
-      <dd>{{ novel().author }}</dd>
-      <dt>{{ 'library.mock.sourceLanguage' | t }}</dt>
-      <dd>{{ novel().language.toUpperCase() }}</dd>
-      <dt>{{ 'library.mock.genres' | t }}</dt>
-      <dd>
-        @for (genre of novel().tags; track genre) {
-          <span class="library-novel-chip">{{ genreLabel(genre) }}</span>
-        }
-      </dd>
-      <dt>{{ 'library.mock.status' | t }}</dt>
-      <dd>{{ publicationKey() | t }}</dd>
-      <dt>{{ 'library.mock.tags' | t }}</dt>
-      <dd>
-        @for (tag of novel().appTags; track tag) {
-          <span class="library-novel-chip">{{ tagKey(tag) | t }}</span>
-        } @empty {
-          <span class="meta">{{ 'library.mock.noneYet' | t }}</span>
-        }
-      </dd>
-      <dt>{{ 'library.mock.synopsis' | t }}</dt>
-      <dd>{{ synopsis() }}</dd>
-      <dt>{{ 'library.mock.source' | t }}</dt>
-      <dd>
-        <code>{{ novel().source }}</code>
-      </dd>
-      <dt>{{ 'library.novel.info.imported' | t }}</dt>
-      <dd class="num">{{ dateMock(novel().importedAt) }}</dd>
-      <dt>{{ 'library.mock.lastUpdated' | t }}</dt>
-      <dd class="num">{{ dateMock(novel().updatedAt) }}</dd>
-      <dt>{{ 'library.mock.folder' | t }}</dt>
-      <dd>
-        <code>{{ novel().folder }}</code>
-      </dd>
-    } @else {
-      <dt>{{ 'library.novel.info.originalTitle' | t }}</dt>
-      <dd class="library-novel-serif" [attr.lang]="novel().language" data-testid="novel-page-info-original">
-        {{ novel().originalTitle }}
-      </dd>
-      <dt>{{ 'library.novel.info.title' | t }}</dt>
-      <dd data-testid="novel-page-info-title">{{ novel().title }}</dd>
-      <dt>{{ 'library.novel.info.author' | t }}</dt>
-      <dd data-testid="novel-page-info-author">{{ novel().author }}</dd>
-      <dt>{{ 'library.novel.info.language' | t }}</dt>
-      <dd data-testid="novel-page-info-language">{{ novel().language.toUpperCase() }}</dd>
-      <dt>{{ 'library.novel.info.tags' | t }}</dt>
-      <dd data-testid="novel-page-info-tags">
-        @for (tag of novel().tags; track tag) {
-          <span class="library-novel-chip">{{ tag }}</span>
-        } @empty {
-          <span class="meta">{{ 'library.novel.info.noTags' | t }}</span>
-        }
-      </dd>
-      <dt>{{ 'library.novel.info.chapters' | t }}</dt>
-      <dd class="num" data-testid="novel-page-info-chapters">{{ count(novel().chapterCount) }}</dd>
-      <dt>{{ 'library.novel.info.imported' | t }}</dt>
-      <dd class="num" data-testid="novel-page-info-imported">{{ date(novel().importedAt) }}</dd>
-      <dt>{{ 'library.novel.info.updated' | t }}</dt>
-      <dd class="num" data-testid="novel-page-info-updated">{{ date(novel().updatedAt) }}</dd>
-    }
-  </dl>
-  @if (!inspector()) {
-    <section class="library-novel-description" data-testid="novel-page-info-description">
-      <h3>{{ 'library.novel.info.description' | t }}</h3>
-      @if (novel().description) {
-        <p>{{ synopsis() }}</p>
-      } @else {
-        <p class="meta">{{ 'library.novel.info.noDescription' | t }}</p>
+    <dt>{{ 'library.novel.info.originalTitle' | t }}</dt>
+    <dd class="library-novel-serif" [attr.lang]="novel().language" data-testid="novel-page-info-original">
+      {{ novel().originalTitle }}
+    </dd>
+    <dt>{{ 'library.novel.info.title' | t }}</dt>
+    <dd data-testid="novel-page-info-title">{{ novel().title }}</dd>
+    <dt>{{ 'library.novel.info.author' | t }}</dt>
+    <dd data-testid="novel-page-info-author">{{ novel().author }}</dd>
+    <dt>{{ 'library.novel.info.language' | t }}</dt>
+    <dd data-testid="novel-page-info-language">{{ novel().language.toUpperCase() }}</dd>
+    <dt>{{ 'library.novel.info.tags' | t }}</dt>
+    <dd data-testid="novel-page-info-tags">
+      @for (tag of novel().tags; track tag) {
+        <span class="library-novel-chip">{{ tag }}</span>
+      } @empty {
+        <span class="meta">{{ 'library.novel.info.noTags' | t }}</span>
       }
-    </section>
-  }
+    </dd>
+    <dt>{{ 'library.novel.info.chapters' | t }}</dt>
+    <dd class="num" data-testid="novel-page-info-chapters">{{ count(novel().chapterCount) }}</dd>
+    <dt>{{ 'library.novel.info.imported' | t }}</dt>
+    <dd class="num" data-testid="novel-page-info-imported">{{ date(novel().importedAt) }}</dd>
+    <dt>{{ 'library.novel.info.updated' | t }}</dt>
+    <dd class="num" data-testid="novel-page-info-updated">{{ date(novel().updatedAt) }}</dd>
+  </dl>
+  <section class="library-novel-description" data-testid="novel-page-info-description">
+    <h3>{{ 'library.novel.info.description' | t }}</h3>
+    @if (novel().description) {
+      <p>{{ synopsis() }}</p>
+    } @else {
+      <p class="meta">{{ 'library.novel.info.noDescription' | t }}</p>
+    }
+  </section>
 </div>

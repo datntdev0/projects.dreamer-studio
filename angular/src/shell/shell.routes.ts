@@ -10,7 +10,9 @@ function moduleRoutes(module: AppModule, comingSoon: Type<unknown>): Route[] {
     component: subRoute.page,
     data: { module: module.id, title: subRoute.title },
   }));
-  const detailRoutes: Route[] = module.detailRoute ? [{ ...route, path: `${path}/:id` }] : [];
+  const detailRoutes: Route[] = module.detailRoute
+    ? [{ ...route, path: `${path}/:id`, component: module.detailPage ?? route.component }]
+    : [];
   return [route, ...subRoutes, ...detailRoutes];
 }
 

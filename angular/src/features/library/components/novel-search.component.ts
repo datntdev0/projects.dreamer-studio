@@ -16,7 +16,7 @@ import { BadgeComponent } from '@components/status/badge.component';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import type { LibraryChapter, LibraryNovel, NovelSearchState, SearchChapterResult, SearchHit } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 import { NovelSearchStore } from '../novel-search.store';
 
 export interface NovelSearchSelection {
@@ -36,7 +36,7 @@ export class NovelSearchComponent {
   readonly chapters = input.required<LibraryChapter[]>();
   readonly selected = output<NovelSearchSelection>();
 
-  private readonly libraryStore: LibraryStore = inject(LibraryStore);
+  private readonly libraryStore: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   protected readonly search: NovelSearchStore = inject(NovelSearchStore);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');

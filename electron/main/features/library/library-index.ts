@@ -1,0 +1,77 @@
+import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import * as NovelStore from '@dreamer/shared/models/novel-store';
+import { createLogger, Logger } from '../../logging/logger';
+import { AppPaths } from '../../storage/paths';
+import { listLibraryFolders, novelFolder } from './library-files';
+import { readMetadata } from './novel-files';
+
+const logger: Logger = createLogger('library');
+
+function toSummary(metadata: NovelStore.NovelMetadata): NovelSummary {
+  return {
+    id: metadata.id,
+    originalTitle: metadata.originalTitle,
+    title: metadata.title,
+    author: metadata.author,
+    language: metadata.language,
+    publication: metadata.publication,
+    tags: metadata.tags,
+    chapterCount: metadata.chapters.length,
+    charCount: metadata.chapters.reduce(
+      (sum: number, chapter: NovelStore.NovelChapterEntry): number => sum + chapter.chars,
+      0,
+    ),
+    importedAt: metadata.importedAt,
+    updatedAt: metadata.updatedAt,
+    hasCover: metadata.cover !== null,
+    lock: null,
+  };
+}
+
+function toDetail(metadata: NovelStore.NovelMetadata): NovelDetail {
+  return { ...toSummary(metadata), description: metadata.description };
+}
+
+export class LibraryIndex {
+  private readonly novels: Map<string, NovelStore.NovelMetadata> = new Map();
+
+  constructor(private readonly paths: AppPaths) {}
+
+  scan(): void {
+    this.novels.clear();
+    listLibraryFolders(this.paths).forEach((name: string): void => this.refresh(name));
+  }
+
+  list(): NovelSummary[] {
+    return Array.from(this.novels.values()).map(toSummary);
+  }
+
+  get(id: string): NovelDetail {
+    const metadata: NovelStore.NovelMetadata | undefined = this.novels.get(id);
+    if (!metadata) {
+      throw new CodedError(ErrorCode.NovelNotFound, `Novel not found: ${id}`);
+    }
+    return toDetail(metadata);
+  }
+
+  coverFile(id: string): NovelStore.NovelCoverFile | null {
+    return this.novels.get(id)?.cover ?? null;
+  }
+
+  refresh(id: string): void {
+    this.novels.delete(id);
+    if (!NovelStore.isNovelId(id)) {
+      logger.warn(`library folder skipped, not a novel id: ${id}`);
+      return;
+    }
+    const metadata: NovelStore.NovelMetadata | null = readMetadata(novelFolder(this.paths, id));
+    if (metadata === null) {
+      logger.warn(`library folder skipped, metadata missing or invalid: ${id}`);
+    } else if (metadata.id !== id) {
+      logger.warn(`library folder skipped, metadata id ${metadata.id} differs from folder ${id}`);
+    } else {
+      this.novels.set(id, metadata);
+    }
+  }
+}

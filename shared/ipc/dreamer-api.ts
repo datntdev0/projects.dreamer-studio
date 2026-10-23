@@ -8,6 +8,7 @@ import { DiagnosticsRun } from '../models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '../models/novel-package';
+import { LibraryChangedEvent, NovelDetail, NovelSummary } from '../models/novel';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '../models/settings';
 
@@ -61,6 +62,10 @@ export interface DreamerApi {
     pickImage(): Promise<PickedImage | null>;
     import(request: NovelImportRequest): Promise<PipelineRun>;
     pathForFile(file: File): string;
+    list(): Promise<NovelSummary[]>;
+    get(id: string): Promise<NovelDetail>;
+    openFolder(id: string): Promise<void>;
+    onChanged(listener: (event: LibraryChangedEvent) => void): () => void;
   };
   dev: {
     crash(kind: DevCrashKind): Promise<void>;

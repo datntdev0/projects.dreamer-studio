@@ -15,6 +15,7 @@ _docs/*.solution.html
 
 # Build output
 node_modules/
+.data/
 dist/
 out/
 .angular/

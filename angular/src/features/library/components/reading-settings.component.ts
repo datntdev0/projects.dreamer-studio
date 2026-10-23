@@ -8,7 +8,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { DEFAULT_READING_SETTINGS } from '../library-format';
 import type { ReadingSettings } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 
 @Component({
   selector: 'ds-reading-settings',
@@ -17,7 +17,7 @@ import { LibraryStore } from '../library.store';
   templateUrl: './reading-settings.component.html',
 })
 export class ReadingSettingsComponent {
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
 
   protected readonly settings: Signal<ReadingSettings> = this.store.readingSettings;

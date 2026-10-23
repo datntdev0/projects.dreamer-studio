@@ -30,7 +30,7 @@ import type { MenuState } from '../library.models';
 import type { NovelLock } from '../library.models';
 import type { RenameState } from '../library.models';
 import type { TextParts } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 import { ChapterDeleteDialogComponent } from './chapter-delete-dialog.component';
 import { ChapterMergeDialogComponent } from './chapter-merge-dialog.component';
 import { ChapterMoveDialogComponent } from './chapter-move-dialog.component';
@@ -65,7 +65,7 @@ const SAVED_MS = 2000;
 export class NovelChaptersComponent {
   readonly novel = input.required<LibraryNovel>();
   readonly current = model<string | null>(null);
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

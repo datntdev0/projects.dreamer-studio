@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { LibraryPage } from '../features/library/library.page';
+import { NovelPlaceholderPage } from '../features/library/novel-placeholder.page';
 import { ImportPage } from '../features/library/import/import.page';
 import { MODULES } from './registry/modules';
 import { buildRoutes } from './shell.routes';
@@ -25,7 +27,7 @@ describe('buildRoutes', () => {
   });
 
   it('uses the coming soon component only for entries without a page', () => {
-    expect(routes.find((route) => route.path === 'library')?.component).toBe(ComingSoonStub);
+    expect(routes.find((route) => route.path === 'library')?.component).toBe(LibraryPage);
     expect(routes.find((route) => route.path === 'analysis')?.component).toBe(ComingSoonStub);
     expect(routes.find((route) => route.path === 'pipelines')?.component).not.toBe(ComingSoonStub);
   });
@@ -36,11 +38,11 @@ describe('buildRoutes', () => {
     expect(route?.data).toEqual({ module: 'library', title: 'library.import.page.title' });
   });
 
-  it('resolves library imports before novel details and shows novel details as coming soon', () => {
+  it('resolves library imports before novel details and shows novel details with the placeholder page', () => {
     const importRoute = routes.find((entry) => entry.path === 'library/import');
     const detailRoute = routes.find((entry) => entry.path === 'library/:id');
     expect(importRoute?.component).toBe(ImportPage);
-    expect(detailRoute?.component).toBe(ComingSoonStub);
+    expect(detailRoute?.component).toBe(NovelPlaceholderPage);
     expect(routes.indexOf(importRoute!)).toBeLessThan(routes.indexOf(detailRoute!));
   });
 

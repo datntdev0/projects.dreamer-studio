@@ -195,7 +195,12 @@ describe('package reader', () => {
       modifiedMs: statSync(path).mtimeMs,
     });
     expect(preview.metadata.publication).toBe('ongoing');
-    expect(preview.cover).toEqual({ file: 'cover.png', size: 101, mime: 'image/png' });
+    expect(preview.cover).toEqual({
+      file: 'cover.png',
+      size: 101,
+      mime: 'image/png',
+      url: `data:image/png;base64,${readFileSync(join(fixtureFolder, 'cover.png')).toString('base64')}`,
+    });
     expect(preview.chapters).toHaveLength(4);
     expect(preview.chapters.map((chapter: PreviewChapter): string => chapter.title)).toEqual([
       '第一章 出山',

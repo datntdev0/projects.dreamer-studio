@@ -51,10 +51,15 @@ const OK: PackageReadResult = {
       tags: ['历史', '权谋'],
       language: 'zh',
       publication: 'completed',
-      cover: 'cover.jpg',
+      cover: 'cover.png',
       chapters: OK_CHAPTERS.map((chapter: PreviewChapter) => ({ file: chapter.file, title: chapter.title })),
     },
-    cover: { file: 'cover.jpg', size: 1.2 * MB, mime: 'image/jpeg' },
+    cover: {
+      file: 'cover.png',
+      size: 1.2 * MB,
+      mime: 'image/png',
+      url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    },
     chapters: OK_CHAPTERS,
     ignoredFiles: ['notes/readme.md'],
     warnings: [

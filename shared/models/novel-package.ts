@@ -89,6 +89,7 @@ export interface PackageCover {
   file: string;
   size: number;
   mime: CoverMime;
+  url: string;
 }
 
 export interface PreviewChapter {

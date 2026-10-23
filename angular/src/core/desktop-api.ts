@@ -7,6 +7,7 @@ import type { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
+import type { LibraryChangedEvent, NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
@@ -150,5 +151,21 @@ export class DesktopApi {
 
   pathForFile(file: File): string | null {
     return window.dreamer ? window.dreamer.library.pathForFile(file) : null;
+  }
+
+  async listNovels(): Promise<NovelSummary[]> {
+    return window.dreamer ? window.dreamer.library.list() : [];
+  }
+
+  async getNovel(id: string): Promise<NovelDetail | null> {
+    return window.dreamer ? window.dreamer.library.get(id) : null;
+  }
+
+  async openNovelFolder(id: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.library.openFolder(id);
+  }
+
+  onLibraryChanged(listener: (event: LibraryChangedEvent) => void): () => void {
+    return window.dreamer ? window.dreamer.library.onChanged(listener) : () => undefined;
   }
 }

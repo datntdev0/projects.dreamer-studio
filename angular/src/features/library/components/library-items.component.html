@@ -1,38 +1,51 @@
 @if (view() === 'grid') {
   <div class="library-items-grid" data-testid="lib-grid" [class.has-selection]="selected().length">
+    @for (run of pending(); track run.id) {
+      <div class="library-items-card">
+        <div class="library-items-open is-pending" [attr.data-testid]="'lib-pending-' + run.id">
+          <ds-library-cover size="lg" [palette]="coverPalette(run.id)" [originalTitle]="run.label ?? ''" />
+          <span class="library-items-title">{{ run.label }}</span>
+          <span class="library-items-pending">
+            <ds-pill [kind]="run.status === 'queued' ? 'neutral' : 'info'" dot>{{ pendingKey(run) | t }}</ds-pill>
+          </span>
+          <ds-progress
+            class="library-items-bar"
+            [value]="run.status === 'queued' ? 0 : run.progress"
+            [kind]="run.status === 'queued' ? 'neutral' : 'default'"
+          />
+        </div>
+      </div>
+    }
     @for (novel of novels(); track novel.id) {
       <div class="library-items-card" [class.is-checked]="isSelected(novel)">
         <button
           type="button"
           class="library-items-open"
           [class.is-selected]="active() === novel.id"
-          [class.import-busy]="novel.id === 'n-0006' && importBusy()"
           [attr.data-testid]="'lib-card-' + novel.id"
           [attr.aria-label]="novel.title"
           (click)="activate.emit(novel.id)"
-          (dblclick)="openNovel(novel)"
-          (keydown.enter)="openNovel(novel)"
+          (dblclick)="open.emit(novel.id)"
+          (keydown.enter)="open.emit(novel.id)"
         >
           <ds-library-cover
             badge
             size="lg"
-            [cover]="novel.cover"
-            [palette]="novel.coverPalette"
+            [cover]="coverUrl(novel)"
+            [palette]="coverPalette(novel.id)"
             [originalTitle]="novel.originalTitle"
             [language]="novel.language"
           />
           <span class="library-items-title">{{ novel.title }}</span>
-          <span class="library-items-byline meta">{{ novel.author }} &middot; {{ chapters(novel) }}</span>
-          <span class="library-items-bars">
-            <ds-progress [value]="percent(novel.analysedCount, novel.chapterCount)" />
-            <ds-progress [value]="percent(novel.translatedCount, novel.chapterCount)" />
-            @if (novel.id === 'n-0006' && importBusy()) {
-              <ds-progress [value]="importState() === 'queued' ? 0 : 42" kind="neutral" />
-            }
-          </span>
-          @if (cardTask(novel); as task) {
-            <span class="library-items-task" [class.warning]="task.warning" [class.running]="!task.warning">
-              <ds-icon [name]="task.icon" size="sm" />{{ task.key | t: task.params }}
+          <span class="library-items-byline meta"
+            >{{ novel.author }} &middot;
+            {{ 'library.items.chaptersShort' | t: { count: count(novel.chapterCount) } }}</span
+          >
+          @if (genres(novel).length) {
+            <span class="library-items-genres">
+              @for (genre of genres(novel); track genre) {
+                <ds-pill>{{ genre }}</ds-pill>
+              }
             </span>
           }
         </button>
@@ -61,15 +74,36 @@
         <th>{{ 'library.items.col.title' | t }}</th>
         <th>{{ 'library.items.col.author' | t }}</th>
         <th class="num">{{ 'library.items.col.chapters' | t }}</th>
-        <th>{{ 'library.mock.status' | t }}</th>
-        <th>{{ 'library.mock.progress' | t }}</th>
-        <th>{{ 'library.mock.updated' | t }}</th>
+        <th>{{ 'library.items.col.status' | t }}</th>
+        <th>{{ 'library.items.col.updated' | t }}</th>
         <th>
-          <span class="visually-hidden">{{ 'library.mock.actions' | t }}</span>
+          <span class="visually-hidden">{{ 'library.items.col.actions' | t }}</span>
         </th>
       </tr>
     </thead>
     <tbody>
+      @for (run of pending(); track run.id) {
+        <tr class="is-pending" [attr.data-testid]="'lib-pending-' + run.id">
+          <td class="library-items-check-col"></td>
+          <td>
+            <ds-library-cover size="sm" [palette]="coverPalette(run.id)" />
+          </td>
+          <td colspan="2">
+            <strong>{{ run.label }}</strong>
+          </td>
+          <td colspan="3">
+            <div class="library-items-pending">
+              <ds-pill [kind]="run.status === 'queued' ? 'neutral' : 'info'" dot>{{ pendingKey(run) | t }}</ds-pill>
+              <ds-progress
+                class="library-items-bar"
+                [value]="run.status === 'queued' ? 0 : run.progress"
+                [kind]="run.status === 'queued' ? 'neutral' : 'default'"
+              />
+            </div>
+          </td>
+          <td></td>
+        </tr>
+      }
       @for (novel of novels(); track novel.id) {
         <tr
           tabindex="0"
@@ -77,8 +111,8 @@
           [class.is-checked]="isSelected(novel)"
           [attr.data-testid]="'lib-row-' + novel.id"
           (click)="activate.emit(novel.id)"
-          (dblclick)="openNovel(novel)"
-          (keydown.enter)="openNovel(novel)"
+          (dblclick)="open.emit(novel.id)"
+          (keydown.enter)="open.emit(novel.id)"
           (keydown.space)="$event.preventDefault(); toggle(novel)"
         >
           <td class="library-items-check-col" (click)="$event.stopPropagation()">
@@ -94,8 +128,8 @@
           <td>
             <ds-library-cover
               size="sm"
-              [cover]="novel.cover"
-              [palette]="novel.coverPalette"
+              [cover]="coverUrl(novel)"
+              [palette]="coverPalette(novel.id)"
               [originalTitle]="''"
               [language]="novel.language"
             />
@@ -107,51 +141,8 @@
             </div>
           </td>
           <td>{{ novel.author }}</td>
-          <td class="num">
-            {{
-              count(
-                novel.id === 'n-0006' && (importBusy() || importState() === 'incomplete') ? 312 : novel.chapterCount
-              )
-            }}{{ novel.id === 'n-0006' && importBusy() ? ' / ' + count(novel.chapterCount) : '' }}
-          </td>
-          <td>
-            <span>{{ publicationKey(novel) | t }}</span>
-            @if (listTaskKey(novel) || novel.appTags.length) {
-              <div class="library-items-status-chips">
-                @if (listTaskKey(novel); as key) {
-                  <ds-pill [kind]="taskKind(novel)" dot>{{ key | t }}</ds-pill>
-                }
-                @for (tag of novel.appTags; track tag) {
-                  <span class="library-items-chip">{{ tagKey(tag) | t }}</span>
-                }
-              </div>
-            }
-          </td>
-          <td>
-            @if (novel.analysedCount || novel.translatedCount) {
-              <div class="library-items-progress">
-                @if (novel.analysedCount) {
-                  <span [dsTooltip]="'library.mock.analysedChapters' | t: { count: count(novel.analysedCount) }"
-                    ><ds-icon name="sparkles" size="sm" /><span class="num">{{
-                      count(novel.analysedCount)
-                    }}</span></span
-                  >
-                }
-                @if (novel.analysedCount && novel.translatedCount) {
-                  <span class="meta">&middot;</span>
-                }
-                @if (novel.translatedCount) {
-                  <span [dsTooltip]="'library.mock.translatedChapters' | t: { count: count(novel.translatedCount) }"
-                    ><ds-icon name="languages" size="sm" /><span class="num">{{
-                      count(novel.translatedCount)
-                    }}</span></span
-                  >
-                }
-              </div>
-            } @else {
-              <span class="meta">&mdash;</span>
-            }
-          </td>
+          <td class="num">{{ count(novel.chapterCount) }}</td>
+          <td>{{ publicationKey(novel) | t }}</td>
           <td class="meta num" [dsTooltip]="fullDate(novel.updatedAt)">{{ shortDate(novel.updatedAt) }}</td>
           <td class="library-items-actions">
             <button
@@ -161,24 +152,26 @@
               iconOnly
               type="button"
               data-testid="lib-row-open"
-              [disabled]="!canOpen(novel)"
-              [dsTooltip]="'library.mock.open' | t"
-              (click)="$event.stopPropagation(); openNovel(novel)"
+              [attr.aria-label]="'library.items.open' | t"
+              [dsTooltip]="'library.items.open' | t"
+              (click)="$event.stopPropagation(); open.emit(novel.id)"
             >
               <ds-icon name="book" size="sm" />
             </button>
-            <button
-              dsBtn
-              variant="ghost"
-              size="sm"
-              iconOnly
-              type="button"
-              data-testid="lib-row-delete"
-              [dsTooltip]="'library.mock.delete' | t"
-              (click)="$event.stopPropagation(); delete.emit(novel)"
-            >
-              <ds-icon class="library-items-delete-icon" name="trash" size="sm" />
-            </button>
+            <span class="library-soon" [dsTooltip]="'common.soon' | t">
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                iconOnly
+                type="button"
+                disabled
+                data-testid="lib-row-delete"
+                [attr.aria-label]="'library.items.delete' | t"
+              >
+                <ds-icon class="library-items-delete-icon" name="trash" size="sm" />
+              </button>
+            </span>
           </td>
         </tr>
       }

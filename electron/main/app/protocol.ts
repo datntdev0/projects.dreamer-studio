@@ -1,6 +1,7 @@
 import { app, net, protocol } from 'electron';
 import { isAbsolute, join, normalize, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { libraryScheme } from '../features/library/library-protocol';
 
 export const appScheme = 'app';
 export const appOrigin = `${appScheme}://renderer`;
@@ -8,6 +9,7 @@ export const appOrigin = `${appScheme}://renderer`;
 export function registerAppScheme(): void {
   protocol.registerSchemesAsPrivileged([
     { scheme: appScheme, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+    { scheme: libraryScheme, privileges: { standard: true, secure: true } },
   ]);
 }
 

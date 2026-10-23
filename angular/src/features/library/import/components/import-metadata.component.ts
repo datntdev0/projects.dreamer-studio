@@ -21,6 +21,7 @@ interface CoverView {
   name: string;
   size: number;
   source: 'package' | 'chosen';
+  url: string | null;
 }
 
 const REQUIRED_FIELDS: RequiredField[] = ['originalTitle', 'title', 'language'];
@@ -72,11 +73,11 @@ export class ImportMetadataComponent implements OnInit {
     const choice: ImportCoverChoice = this.store.cover();
     if (choice.kind === 'file') {
       const file: PickedImage | null = this.store.coverFile();
-      return file ? { name: file.name, size: file.size, source: 'chosen' } : null;
+      return file ? { name: file.name, size: file.size, source: 'chosen', url: null } : null;
     }
     if (choice.kind === 'package') {
       const cover: PackageCover | null | undefined = this.store.preview()?.cover;
-      return cover ? { name: cover.file, size: cover.size, source: 'package' } : null;
+      return cover ? { name: cover.file, size: cover.size, source: 'package', url: cover.url } : null;
     }
     return null;
   });

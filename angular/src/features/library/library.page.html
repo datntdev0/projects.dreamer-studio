@@ -15,7 +15,8 @@
       iconOnly
       type="button"
       data-testid="lib-left-collapse"
-      [dsTooltip]="'library.mock.collapse' | t"
+      [attr.aria-label]="'library.browse.collapse' | t"
+      [dsTooltip]="'library.browse.collapse' | t"
       (click)="layout.toggle('left')"
     >
       <ds-icon name="panel-left" size="sm" />
@@ -32,9 +33,9 @@
           data-testid="lib-search"
           aria-keyshortcuts="/"
           [attr.aria-label]="'library.browse.searchLabel' | t"
-          [placeholder]="'library.mock.search' | t"
-          [value]="store.query()"
-          (input)="store.query.set(search.value)"
+          [placeholder]="'library.browse.searchLabel' | t"
+          [value]="query()"
+          (input)="query.set(search.value)"
         />
         <kbd aria-hidden="true">/</kbd>
       </div>
@@ -64,82 +65,64 @@
         <ds-icon [name]="store.sortDirection() === 'asc' ? 'arrow-up' : 'arrow-down'" size="sm" />
       </button>
     </div>
-    @if (store.visibleNovels().length) {
+    @if (store.novels().length) {
       <div class="library-filter-section">
-        <h3>{{ 'library.mock.sourceLanguage' | t }}</h3>
-        @for (language of languages; track language.code) {
+        <h3>{{ 'library.browse.sourceLanguage' | t }}</h3>
+        @for (row of languageRows(); track row.value) {
           <button
             type="button"
             class="library-filter-row compact"
-            [class.selected]="languageFilter() === language.code"
-            [attr.data-testid]="'lib-lang-' + language.testId"
-            (click)="languageFilter.set(languageFilter() === language.code ? null : language.code)"
+            [class.selected]="languageFilter() === row.value"
+            [attr.aria-pressed]="languageFilter() === row.value"
+            [attr.data-testid]="'lib-lang-' + row.value"
+            (click)="languageFilter.set(languageFilter() === row.value ? null : row.value)"
           >
-            <span>{{ language.key | t }}</span
-            ><span class="library-filter-count">{{ languageCount(language.code) }}</span>
+            <span>{{ row.label }}</span
+            ><span class="library-filter-count">{{ row.count }}</span>
           </button>
         }
       </div>
       <div class="library-filter-section">
-        <h3>{{ 'library.mock.publication' | t }}</h3>
+        <h3>{{ 'library.browse.publication' | t }}</h3>
         @for (value of publications; track value) {
           <div class="library-filter-check">
             <ds-checkbox
               [checked]="publicationFilters().includes(value)"
               [attr.data-testid]="'lib-pub-' + value"
               (checkedChange)="togglePublication(value)"
-            />
-            <span>{{ publicationKey(value) | t }}</span
-            ><span class="library-filter-number">{{ publicationCount(value) }}</span>
+              >{{ publicationKey(value) | t }}</ds-checkbox
+            >
+            <span class="library-filter-count">{{ publicationCounts().get(value) ?? 0 }}</span>
           </div>
         }
       </div>
-      <div class="library-filter-section">
-        <h3>
-          {{ 'library.mock.appTags' | t }} <ds-pill icon="clock">{{ 'common.soon' | t }}</ds-pill>
-        </h3>
-        <div class="library-filter-chips">
-          @for (tag of appTags; track tag) {
+      @if (genreRows().length) {
+        <div class="library-filter-section">
+          <h3>{{ 'library.browse.genre' | t }}</h3>
+          @for (row of genreRows(); track row.value) {
             <button
               type="button"
-              class="library-items-chip"
-              disabled
-              [attr.aria-pressed]="tagFilters().includes(tag)"
-              [attr.data-testid]="'lib-tag-' + tag"
-              (click)="toggleTag(tag)"
+              class="library-filter-row compact"
+              [class.selected]="genreFilters().includes(row.value)"
+              [attr.aria-pressed]="genreFilters().includes(row.value)"
+              [attr.data-testid]="'lib-genre-' + row.value"
+              (click)="toggleGenre(row.value)"
             >
-              <ds-icon [name]="tag === 'analysed' ? 'sparkles' : 'languages'" size="sm" />{{ tagKey(tag) | t }}
-              {{ tagCount(tag) }}
+              <span>{{ row.label }}</span
+              ><span class="library-filter-count">{{ row.count }}</span>
             </button>
           }
+          @if (genreFilters().length > 1) {
+            <p class="library-filter-note" data-testid="lib-genre-and">{{ 'library.browse.genreAnd' | t }}</p>
+          }
         </div>
-      </div>
-      <div class="library-filter-section">
-        <h3>{{ 'library.mock.genre' | t }}</h3>
-        @for (genre of genres; track genre.value) {
-          <button
-            type="button"
-            class="library-filter-row compact"
-            [class.selected]="genreFilters().includes(genre.value)"
-            [attr.aria-pressed]="genreFilters().includes(genre.value)"
-            [attr.data-testid]="'lib-genre-' + genre.testId"
-            (click)="toggleGenre(genre.value)"
-          >
-            <span>{{ genre.key | t }}</span
-            ><span class="library-filter-count">{{ genreCount(genre.value) }}</span>
-          </button>
-        }
-        @if (genreFilters().length > 1) {
-          <p class="library-filter-note" data-testid="lib-genre-and">{{ 'library.browse.genreAnd' | t }}</p>
-        }
-      </div>
+      }
     } @else {
-      <p class="library-filter-note">{{ 'library.mock.filtersWhenFilled' | t }}</p>
+      <p class="library-filter-note">{{ 'library.browse.filtersEmpty' | t }}</p>
     }
   </div>
 </ng-template>
 <div class="ds-page-toolbar" data-testid="page-toolbar">
-  <h1 dsPageTitle>{{ 'library.browse.title' | t }}</h1>
   <ds-tabs
     class="library-browse-tabs"
     data-testid="library-tabs"
@@ -152,16 +135,11 @@
   @if (media() === 'novels' && selected().length) {
     <div class="library-browse-selection" role="status" data-testid="lib-selection">
       <span>{{ 'library.browse.selected' | t: { count: count(selected().length) } }}</span>
-      <button
-        dsBtn
-        variant="danger"
-        size="sm"
-        type="button"
-        data-testid="lib-selection-delete"
-        (click)="deleteSelected()"
-      >
-        <ds-icon name="trash" size="sm" />{{ 'library.browse.deleteSelected' | t }}
-      </button>
+      <span class="library-soon" [dsTooltip]="'common.soon' | t">
+        <button dsBtn variant="danger" size="sm" type="button" disabled data-testid="lib-selection-delete">
+          <ds-icon name="trash" size="sm" />{{ 'library.browse.deleteSelected' | t }}
+        </button>
+      </span>
       <button
         dsBtn
         variant="ghost"
@@ -189,7 +167,7 @@
       />
       <span class="library-browse-sep"></span>
       <button dsBtn variant="primary" size="sm" type="button" data-testid="lib-import" (click)="goImport()">
-        <ds-icon name="plus" size="sm" />{{ 'library.mock.import' | t }}
+        <ds-icon name="plus" size="sm" />{{ 'library.browse.import' | t }}
       </button>
     </div>
   }
@@ -207,22 +185,22 @@
       <ds-pill icon="clock">{{ 'common.soon' | t }}</ds-pill>
       <p class="ds-area-state-description">{{ 'library.browse.mediaSoon' | t }}</p>
     </div>
-  } @else if (store.loading()) {
+  } @else if (store.state() === 'loading') {
     <ds-area-state kind="loading" [heading]="'library.browse.loading' | t" />
-  } @else if (store.scenario() === 'error') {
+  } @else if (store.state() === 'error') {
     <ds-area-state
       kind="error"
       [heading]="'library.browse.errorTitle' | t"
       [description]="'library.browse.errorMessage' | t"
-      [details]="errorDetails"
+      [details]="store.error() ?? ''"
       [detailsLabel]="'common.details' | t"
       data-testid="library-page-error"
     >
-      <button dsBtn variant="primary" type="button" data-testid="library-page-retry" (click)="retry()">
+      <button dsBtn variant="primary" type="button" data-testid="library-page-retry" (click)="store.reload()">
         <ds-icon name="retry" size="sm" />{{ 'common.retry' | t }}
       </button>
     </ds-area-state>
-  } @else if (!store.visibleNovels().length) {
+  } @else if (!store.novels().length && !store.pending().length) {
     <ds-area-state
       kind="empty"
       icon="library"
@@ -230,28 +208,31 @@
       [description]="'library.browse.emptyMessage' | t"
       data-testid="library-page-empty"
     >
-      <button dsBtn variant="primary" type="button" (click)="goImport()">
+      <button dsBtn variant="primary" type="button" data-testid="library-page-import" (click)="goImport()">
         {{ 'library.browse.emptyAction' | t }}
       </button>
     </ds-area-state>
-  } @else if (!results().length) {
+  } @else if (!results().length && !store.pending().length) {
     <ds-area-state
       kind="empty"
       icon="search"
       [heading]="'library.browse.noResultsTitle' | t"
       [description]="'library.browse.noResultsMessage' | t"
+      data-testid="library-page-no-results"
     >
-      <button dsBtn type="button" (click)="clearFilters()">{{ 'library.browse.clearFilters' | t }}</button>
+      <button dsBtn type="button" data-testid="library-page-clear" (click)="clearFilters()">
+        {{ 'library.browse.clearFilters' | t }}
+      </button>
     </ds-area-state>
   } @else {
     <ds-library-items
       [novels]="results()"
+      [pending]="store.pending()"
       [view]="store.view()"
       [active]="active()"
       [(selected)]="selected"
       (activate)="active.set($event)"
       (open)="open($event)"
-      (delete)="startDelete($event)"
     />
   }
 </main>
@@ -272,7 +253,8 @@
       iconOnly
       type="button"
       data-testid="lib-right-collapse"
-      [dsTooltip]="'library.mock.collapse' | t"
+      [attr.aria-label]="'library.browse.collapse' | t"
+      [dsTooltip]="'library.browse.collapse' | t"
       (click)="layout.toggle('right')"
     >
       <ds-icon name="panel-right" size="sm" />
@@ -280,147 +262,9 @@
   </div>
   <div class="ds-panel-body">
     @if (activeNovel(); as novel) {
-      <div class="library-inspector-header">
-        <ds-library-cover
-          size="sm"
-          [cover]="novel.cover"
-          [palette]="novel.coverPalette"
-          [originalTitle]="novel.originalTitle"
-          [language]="novel.language"
-        />
-        <div>
-          <strong class="library-inspector-original" [attr.lang]="novel.language">{{ novel.originalTitle }}</strong>
-          <strong>{{ novel.title }}</strong
-          ><span class="meta"
-            >{{ novel.author }} · {{ novel.language.toUpperCase() }} · {{ publicationKey(novel.publication) | t }}</span
-          >
-        </div>
-      </div>
-      <div class="library-inspector-actions">
-        <button
-          dsBtn
-          variant="primary"
-          size="sm"
-          type="button"
-          data-testid="insp-open"
-          [disabled]="!canOpen(novel)"
-          [dsTooltip]="canOpen(novel) ? ('library.mock.open' | t) : ('library.mock.opensAfterImport' | t)"
-          (click)="open(novel.id)"
-        >
-          <ds-icon name="book" size="sm" />{{ 'library.mock.open' | t }}
-        </button>
-        <button
-          dsBtn
-          size="sm"
-          iconOnly
-          type="button"
-          data-testid="insp-export"
-          [disabled]="novel.id === 'n-0006' && importBusy()"
-          [dsTooltip]="
-            novel.id === 'n-0006' && importBusy() ? ('library.mock.finishImport' | t) : ('library.mock.export' | t)
-          "
-          (click)="exportOpen.set(true)"
-        >
-          <ds-icon name="upload" size="sm" />
-        </button>
-        <input
-          #coverInput
-          type="file"
-          accept="image/png,image/jpeg"
-          class="visually-hidden"
-          (change)="changeCover($event, novel)"
-        />
-        <button
-          dsBtn
-          size="sm"
-          iconOnly
-          type="button"
-          data-testid="insp-cover-change"
-          [dsTooltip]="'library.mock.changeCover' | t"
-          (click)="coverInput.click()"
-        >
-          <ds-icon name="image" size="sm" />
-        </button>
-        <button
-          dsBtn
-          size="sm"
-          iconOnly
-          type="button"
-          data-testid="insp-cover-remove"
-          [dsTooltip]="'library.mock.removeCover' | t"
-          (click)="store.updateNovel(novel.id, { cover: null })"
-        >
-          <ds-icon name="image-off" size="sm" />
-        </button>
-        <button
-          dsBtn
-          size="sm"
-          iconOnly
-          type="button"
-          data-testid="insp-open-folder"
-          [dsTooltip]="'library.mock.openFolder' | t"
-          (click)="showFolder(novel)"
-        >
-          <ds-icon name="folder" size="sm" />
-        </button>
-        <button
-          dsBtn
-          variant="danger"
-          size="sm"
-          iconOnly
-          type="button"
-          data-testid="insp-delete"
-          [dsTooltip]="'library.mock.delete' | t"
-          (click)="startDelete(novel)"
-        >
-          <ds-icon name="trash" size="sm" />
-        </button>
-      </div>
-      <div class="library-inspector-stats">
-        <div>
-          <strong class="num">{{ chapterStat(novel) }}</strong
-          ><span>{{ 'library.mock.chapters' | t }}</span>
-        </div>
-        <div>
-          <strong class="num">{{ novel.characterCount }}</strong
-          ><span>{{ 'library.mock.characters' | t }}</span>
-        </div>
-        <div [dsTooltip]="'common.soon' | t">
-          <strong class="meta">&mdash;</strong><span>{{ 'library.mock.analysed' | t }}</span>
-        </div>
-        <div [dsTooltip]="'common.soon' | t">
-          <strong class="meta">&mdash;</strong><span>{{ 'library.mock.translated' | t }}</span>
-        </div>
-      </div>
-      <section class="library-inspector-section library-inspector-metadata">
-        <div class="library-inspector-section-heading">
-          <h3>{{ 'library.mock.metadata' | t }}</h3>
-          @if (!editing()) {
-            <button dsBtn variant="ghost" size="sm" type="button" data-testid="insp-edit" (click)="editing.set(true)">
-              <ds-icon name="pencil" size="sm" />{{ 'library.mock.edit' | t }}
-            </button>
-          }
-        </div>
-        @if (editing()) {
-          <ds-novel-metadata-form
-            [novel]="novel"
-            [compact]="true"
-            (done)="editing.set(false)"
-            (cancelled)="editing.set(false)"
-          />
-        } @else {
-          <ds-novel-info [novel]="novel" [showCover]="false" [inspector]="true" />
-        }
-      </section>
+      <ds-library-inspector [novel]="novel" (open)="open($event)" />
     } @else {
       <ds-area-state kind="empty" icon="book" compact [heading]="'library.browse.inspector.none' | t" />
     }
   </div>
 </ng-template>
-<ds-novel-delete-dialog
-  [open]="deleteOpen()"
-  [novels]="deleteTargets()"
-  (deleted)="onDeleted()"
-  (closed)="deleteOpen.set(false)"
-/>
-<ds-novel-export-dialog [open]="exportOpen()" [novel]="activeNovel()" (closed)="exportOpen.set(false)" />

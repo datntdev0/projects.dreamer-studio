@@ -17,7 +17,7 @@ import type { ImportState } from '../../src/features/library/library.models';
 import type { LibraryScenario } from '../../src/features/library/library.models';
 import type { NovelSearchState } from '../../src/features/library/library.models';
 import type { NovelTab } from '../../src/features/library/library.models';
-import { LibraryStore } from '../../src/features/library/library.store';
+import { LibraryMockStore } from '../../src/features/library/library.store';
 import { NovelPage } from '../../src/features/library/novel.page';
 import { provideDesktopApi } from './desktop-api';
 import { makeChapters } from './library';
@@ -58,7 +58,7 @@ export class LibraryStoryHostComponent implements OnInit {
   readonly editing = input<boolean>(false);
   readonly lock = input<boolean>(false);
   private readonly router: Router = inject(Router);
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
 
   ngOnInit(): void {
     const novelId: string = this.route().split('/').at(-1) ?? '';

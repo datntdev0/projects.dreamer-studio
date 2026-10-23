@@ -17,7 +17,7 @@ import { isTypingTarget } from '../library-format';
 import type { LibraryChapter } from '../library.models';
 import type { LibraryNovel } from '../library.models';
 import type { ReaderHighlight } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 
 interface ReaderTextPart {
   text: string;
@@ -43,7 +43,7 @@ export class NovelReaderComponent {
   readonly current = model<string | null>(null);
   readonly highlight = input<ReaderHighlight | null>(null);
 
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private scrollFrame: number = 0;

@@ -46,7 +46,7 @@ function matches(run: PipelineRun, query: PipelineListQuery): boolean {
   );
 }
 
-class FakePipelinesApi extends DesktopApi {
+export class FakePipelinesApi extends DesktopApi {
   private runs: PipelineRun[];
   private readonly failAt = new Map<string, number>([[QUEUED_RUN.id, DEMO_BACKEND_STEP]]);
   private readonly logged = new Map<string, number>();

@@ -124,7 +124,11 @@
       <div class="import-metadata-cover" data-testid="import-metadata-cover">
         @if (cover(); as currentCover) {
           <span class="import-metadata-cover-tile" data-testid="import-metadata-cover-image">
-            <ds-icon name="image" size="lg" />
+            @if (currentCover.url) {
+              <img [src]="currentCover.url" [alt]="currentCover.name" />
+            } @else {
+              <ds-icon name="image" size="lg" />
+            }
           </span>
           <div class="import-metadata-cover-body">
             <span class="import-metadata-cover-name" data-testid="import-metadata-cover-name">{{

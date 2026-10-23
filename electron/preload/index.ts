@@ -19,6 +19,7 @@ import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/mo
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { LibraryChangedEvent, NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 
@@ -89,6 +90,11 @@ const api: DreamerApi = {
     pickImage: (): Promise<PickedImage | null> => call(LibraryChannel.PickImage),
     import: (request: NovelImportRequest): Promise<PipelineRun> => call(LibraryChannel.Import, request),
     pathForFile: (file: File): string => webUtils.getPathForFile(file),
+    list: (): Promise<NovelSummary[]> => call(LibraryChannel.List),
+    get: (id: string): Promise<NovelDetail> => call(LibraryChannel.Get, id),
+    openFolder: (id: string): Promise<void> => call(LibraryChannel.OpenFolder, id),
+    onChanged: (listener: (event: LibraryChangedEvent) => void): (() => void) =>
+      subscribe(LibraryChannel.Changed, listener),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

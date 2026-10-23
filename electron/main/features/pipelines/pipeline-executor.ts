@@ -38,6 +38,7 @@ export class PipelineExecutor {
   private readonly logger: Logger = createLogger('pipeline');
   private readonly queue: RunState[] = [];
   private readonly active: Map<string, RunState> = new Map<string, RunState>();
+  private readonly finishListeners: ((run: PipelineRun) => void)[] = [];
   private closed: boolean = false;
 
   constructor(
@@ -131,6 +132,10 @@ export class PipelineExecutor {
     this.queue.length = 0;
     this.repo.markActiveCancelled(reason, nowIso());
     running.forEach((state: RunState): void => this.appendClosedLine(state.run.id));
+  }
+
+  onRunFinished(listener: (run: PipelineRun) => void): void {
+    this.finishListeners.push(listener);
   }
 
   hasActive(): boolean {
@@ -284,7 +289,18 @@ export class PipelineExecutor {
     state.run.status = status;
     state.run.cancelReason = reason;
     state.run.finishedAt = nowIso();
+    this.notifyFinished(state.run);
     this.save(state);
+  }
+
+  private notifyFinished(run: PipelineRun): void {
+    this.finishListeners.forEach((listener: (run: PipelineRun) => void): void => {
+      try {
+        listener({ ...run });
+      } catch (error) {
+        this.logger.error(`pipeline run ${run.id} finish listener failed`, error);
+      }
+    });
   }
 
   private reportProgress(state: RunState, percent: number): void {

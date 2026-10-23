@@ -1,4 +1,5 @@
-import type { I18nService } from '../../core/i18n/i18n.service';
+import type { NovelSummary } from '@dreamer/shared/models/novel';
+import type { I18nService, Language } from '../../core/i18n/i18n.service';
 import type { LanguageOption, LibraryChapter, LibraryNovel, NovelDraft, ReadingSettings } from './library.models';
 
 export const LANGUAGE_OPTIONS: LanguageOption[] = [
@@ -7,16 +8,6 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'ko', label: '한국어 · ko' },
   { code: 'en', label: 'English · en' },
   { code: 'vi', label: 'Tiếng Việt · vi' },
-];
-
-export const LIBRARY_GENRES: { value: string; key: string; testId: string }[] = [
-  { value: '仙侠', key: 'library.mock.genre.xianxia', testId: 'xianxia' },
-  { value: '玄幻', key: 'library.mock.genre.xuanhuan', testId: 'xuanhuan' },
-  { value: '竞技', key: 'library.mock.genre.esports', testId: 'esports' },
-  { value: '历史', key: 'library.mock.genre.history', testId: 'history' },
-  { value: '权谋', key: 'library.mock.genre.intrigue', testId: 'intrigue' },
-  { value: 'Fantasy', key: 'library.mock.genre.fantasy', testId: 'fantasy' },
-  { value: 'Isekai', key: 'library.mock.genre.isekai', testId: 'isekai' },
 ];
 
 export const EXPORT_MS = 6000;
@@ -29,6 +20,7 @@ export const LIST_LIMIT = 5;
 
 export const DEFAULT_READING_SETTINGS: ReadingSettings = { font: 'serif', size: 18, leading: 1.75, width: 72 };
 
+const COVER_PALETTES: string[] = ['green', 'gold', 'jade', 'slate', 'rose', 'charcoal'];
 const PACKAGE_EXTENSION = '.zip';
 const UNSAFE_FILE_CHARS = /[<>:"/\\|?*]+/g;
 
@@ -121,6 +113,23 @@ export function fold(value: string): string {
     .toLocaleLowerCase();
 }
 
-export function matches(novel: LibraryNovel, query: string): boolean {
-  return [novel.title, novel.originalTitle, novel.author, novel.language].some((value) => fold(value).includes(query));
+export function matches(novel: { title: string; originalTitle: string; author: string }, query: string): boolean {
+  return [novel.title, novel.originalTitle, novel.author].some((value: string): boolean => fold(value).includes(query));
+}
+
+export function coverUrl(novel: NovelSummary): string | null {
+  return novel.hasCover ? `library-file://cover/${novel.id}?v=${encodeURIComponent(novel.updatedAt)}` : null;
+}
+
+export function coverPalette(id: string): string {
+  const hash: number = [...id].reduce((sum: number, char: string): number => sum + char.charCodeAt(0), 0);
+  return COVER_PALETTES[hash % COVER_PALETTES.length];
+}
+
+export function languageName(code: string, language: Language): string {
+  try {
+    return new Intl.DisplayNames(language, { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }

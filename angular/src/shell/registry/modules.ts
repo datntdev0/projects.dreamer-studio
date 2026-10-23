@@ -1,5 +1,7 @@
 import type { Type } from '@angular/core';
 import { HomePage } from '../../features/home/home.page';
+import { LibraryPage } from '../../features/library/library.page';
+import { NovelPlaceholderPage } from '../../features/library/novel-placeholder.page';
 import { ImportPage } from '../../features/library/import/import.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 import { SettingsPage } from '../../features/settings/settings.page';
@@ -20,6 +22,7 @@ export interface AppModule {
   description: string;
   release: string | null;
   page: Type<unknown> | null;
+  detailPage?: Type<unknown>;
   detailRoute?: boolean;
   subRoutes?: AppSubRoute[];
 }
@@ -50,7 +53,8 @@ export const MODULES: AppModule[] = [
     label: 'nav.library',
     description: 'module.library.desc',
     release: '0.1.0',
-    page: null,
+    page: LibraryPage,
+    detailPage: NovelPlaceholderPage,
     detailRoute: true,
     subRoutes: [{ path: 'import', page: ImportPage, title: 'library.import.page.title' }],
   },

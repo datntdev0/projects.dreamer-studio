@@ -1,13 +1,16 @@
-import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue } from 'electron';
+import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue, shell } from 'electron';
 import { stat } from 'node:fs/promises';
-import { basename, isAbsolute } from 'node:path';
+import { basename, dirname, isAbsolute } from 'node:path';
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
+import { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import { isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import * as NovelPackage from '@dreamer/shared/models/novel-package';
 import { t } from '../app/app-i18n';
+import { AppDataSession } from '../app/app-data-session';
+import { novelFolder } from '../features/library/library-files';
 import { importLabel, importParams } from '../features/library/novel-import-pipeline';
 import { readPackage } from '../features/library/package-reader';
-import { PipelineExecutor } from '../features/pipelines/pipeline-executor';
 import { handle, handleValidated } from './handle';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -83,14 +86,24 @@ async function openDialog(event: IpcMainInvokeEvent, options: OpenDialogOptions)
   return parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options);
 }
 
-async function pickPackage(event: IpcMainInvokeEvent): Promise<string | null> {
-  const result: OpenDialogReturnValue = await openDialog(event, {
-    title: t('library.import.dialog.package'),
-    properties: ['openFile'],
-    filters: [{ name: t('library.import.dialog.packageFilter'), extensions: ['zip'] }],
-  });
-  return result.canceled ? null : (result.filePaths[0] ?? null);
+export function createPackagePicker(): (event: IpcMainInvokeEvent) => Promise<string | null> {
+  let lastDirectory: string | undefined;
+  return async (event: IpcMainInvokeEvent): Promise<string | null> => {
+    const options: OpenDialogOptions = {
+      title: t('library.import.dialog.package'),
+      properties: ['openFile'],
+      filters: [{ name: t('library.import.dialog.packageFilter'), extensions: ['zip'] }],
+    };
+    if (lastDirectory !== undefined) options.defaultPath = lastDirectory;
+    const result: OpenDialogReturnValue = await openDialog(event, options);
+    const path: string | undefined = result.filePaths[0];
+    if (result.canceled || path === undefined) return null;
+    lastDirectory = dirname(path);
+    return path;
+  };
 }
+
+const pickPackage: (event: IpcMainInvokeEvent) => Promise<string | null> = createPackagePicker();
 
 async function pickImage(event: IpcMainInvokeEvent): Promise<NovelPackage.PickedImage | null> {
   const result: OpenDialogReturnValue = await openDialog(event, {
@@ -106,11 +119,26 @@ async function pickImage(event: IpcMainInvokeEvent): Promise<NovelPackage.Picked
   return { path, name: basename(path), size: details.size };
 }
 
-export function registerLibraryIpc(executor: () => PipelineExecutor): void {
+function isNovelIdValue(value: unknown): value is string {
+  return typeof value === 'string' && isNovelId(value);
+}
+
+async function openFolder(session: AppDataSession, id: string): Promise<void> {
+  session.index.get(id);
+  const failure: string = await shell.openPath(novelFolder(session.paths, id).dir);
+  if (failure) {
+    throw new Error(failure);
+  }
+}
+
+export function registerLibraryIpc(session: () => AppDataSession): void {
   handle(LibraryChannel.PickPackage, pickPackage);
   handleValidated(LibraryChannel.ReadPackage, isAbsolutePath, readPackage);
   handle(LibraryChannel.PickImage, pickImage);
   handleValidated(LibraryChannel.Import, isImportRequest, (request: NovelPackage.NovelImportRequest): PipelineRun =>
-    executor().startRun('novel-import', importParams(request), importLabel(request)),
+    session().executor.startRun('novel-import', importParams(request), importLabel(request)),
   );
+  handle(LibraryChannel.List, (): NovelSummary[] => session().index.list());
+  handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => session().index.get(id));
+  handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> => openFolder(session(), id));
 }

@@ -11,7 +11,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { packageFileName, withExtension } from '../library-format';
 import type { LibraryNovel } from '../library.models';
-import { LibraryStore } from '../library.store';
+import { LibraryMockStore } from '../library.store';
 import { NovelDialogSummaryComponent } from './novel-dialog-summary.component';
 
 const EXPORT_FOLDER = 'C:\\Users\\me\\Documents';
@@ -39,7 +39,7 @@ export class NovelExportDialogComponent {
   protected readonly simulateFailure = signal<boolean>(false);
   protected readonly touched = signal<boolean>(false);
 
-  private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly toast: ToastService = inject(ToastService);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly router: Router = inject(Router);

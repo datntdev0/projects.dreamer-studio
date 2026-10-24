@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { DEFAULT_READING_SETTINGS, LOADING_MS, isConsecutive, renumber } from './library-format';
+import { LOADING_MS, isConsecutive, renumber } from './library-format';
 import type { ChapterChangeError, DeleteNovelsResult, ImportState } from './library.models';
 import type { LibraryChapter, LibraryNovel, LibraryScenario, LibrarySortKey } from './library.models';
 import type { LibraryStoreData } from './library.models';
@@ -8,7 +8,6 @@ import type { LibraryView } from './library.models';
 import type { NovelDetailInitialState } from './library.models';
 import type { NovelLock } from './library.models';
 import type { SortDirection } from './library.models';
-import type { ReadingSettings } from './library.models';
 import type { TaskStatus } from './library.models';
 
 const DEFAULT_DETAIL_INITIAL_STATE: NovelDetailInitialState = {
@@ -31,7 +30,6 @@ export class LibraryMockStore {
   readonly sortKey = signal<LibrarySortKey>('updatedAt');
   readonly sortDirection = signal<SortDirection>('desc');
   readonly missingChapterIds = signal<ReadonlySet<string>>(new Set());
-  readonly readingSettings = signal<ReadingSettings>({ ...DEFAULT_READING_SETTINGS });
   readonly detailInitialState = signal<NovelDetailInitialState>({ ...DEFAULT_DETAIL_INITIAL_STATE });
 
   readonly visibleNovels: Signal<LibraryNovel[]> = computed(() => (this.scenario() === 'filled' ? this.novels() : []));

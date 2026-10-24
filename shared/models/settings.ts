@@ -4,7 +4,30 @@ export type Theme = 'light' | 'dark';
 
 export type SettingsNotice = 'none' | 'invalidFields' | 'unreadable';
 
-export type SettingsSection = 'general' | 'pipeline';
+export type SettingsSection = 'general' | 'pipeline' | 'reading';
+
+export type ReadingFont = 'serif' | 'sans';
+
+export interface ReadingSettings {
+  font: ReadingFont;
+  size: number;
+  leading: number;
+  width: number;
+}
+
+export interface ReadingLimit {
+  min: number;
+  max: number;
+  step: number;
+}
+
+export const READING_LIMITS: Record<'size' | 'leading' | 'width', ReadingLimit> = {
+  size: { min: 14, max: 28, step: 1 },
+  leading: { min: 1.4, max: 2.2, step: 0.05 },
+  width: { min: 48, max: 96, step: 2 },
+};
+
+export const DEFAULT_READING_SETTINGS: ReadingSettings = { font: 'serif', size: 18, leading: 1.75, width: 72 };
 
 export interface PipelineSettings {
   maxConcurrent: number;
@@ -16,12 +39,14 @@ export interface AppSettings {
   theme: Theme;
   appDataDir: string;
   pipelines: PipelineSettings;
+  reading: ReadingSettings;
 }
 
 export interface SettingsPatch {
   language?: Language;
   theme?: Theme;
   pipelines?: PipelineSettings;
+  reading?: ReadingSettings;
 }
 
 export interface SettingsState {
@@ -46,12 +71,14 @@ export function defaultSettings(appDataDir: string): AppSettings {
     theme: 'light',
     appDataDir,
     pipelines: { maxConcurrent: MAX_CONCURRENT_MIN },
+    reading: { ...DEFAULT_READING_SETTINGS },
   };
 }
 
 const THEMES: Theme[] = ['light', 'dark'];
 
-const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines'];
+const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines', 'reading'];
+const READING_KEYS: (keyof ReadingSettings)[] = ['font', 'size', 'leading', 'width'];
 
 const ABSOLUTE_PATH: RegExp = /^([a-zA-Z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+|\/)/;
 
@@ -67,8 +94,37 @@ function isTheme(value: unknown): value is Theme {
   return THEMES.includes(value as Theme);
 }
 
+export function isReadingFont(value: unknown): value is ReadingFont {
+  return value === 'serif' || value === 'sans';
+}
+
+export function sameReading(a: ReadingSettings, b: ReadingSettings): boolean {
+  return READING_KEYS.every((key: keyof ReadingSettings): boolean => a[key] === b[key]);
+}
+
 function isMaxConcurrent(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= MAX_CONCURRENT_MIN && (value as number) <= MAX_CONCURRENT_MAX;
+}
+
+function isReadingNumber(value: unknown, limit: ReadingLimit): value is number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false;
+  if (value < limit.min || value > limit.max) return false;
+  return value === snapReadingNumber(value, limit);
+}
+
+function snapReadingNumber(value: number, limit: ReadingLimit): number {
+  const clamped: number = Math.min(limit.max, Math.max(limit.min, value));
+  const snapped: number = limit.min + Math.round((clamped - limit.min) / limit.step) * limit.step;
+  const decimals: number = String(limit.step).split('.')[1]?.length ?? 0;
+  return Number(snapped.toFixed(decimals));
+}
+
+function sanitizeReadingNumber(name: 'size' | 'leading' | 'width', value: unknown, invalid: string[]): number {
+  const limit: ReadingLimit = READING_LIMITS[name];
+  if (isReadingNumber(value, limit)) return value;
+  invalid.push(`reading.${name}`);
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_READING_SETTINGS[name];
+  return snapReadingNumber(value, limit);
 }
 
 export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSettings {
@@ -76,6 +132,22 @@ export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSet
   if (!isPlainObject(raw)) return { settings: defaults, invalid: [] };
   const pipelines: unknown = isPlainObject(raw.pipelines) ? raw.pipelines.maxConcurrent : undefined;
   const invalid: string[] = [];
+  let reading: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
+  if ('reading' in raw) {
+    if (!isPlainObject(raw.reading)) {
+      invalid.push('reading');
+    } else {
+      const value: Record<string, unknown> = raw.reading;
+      const font: ReadingFont = isReadingFont(value.font) ? value.font : DEFAULT_READING_SETTINGS.font;
+      if (font !== value.font) invalid.push('reading.font');
+      reading = {
+        font,
+        size: sanitizeReadingNumber('size', value.size, invalid),
+        leading: sanitizeReadingNumber('leading', value.leading, invalid),
+        width: sanitizeReadingNumber('width', value.width, invalid),
+      };
+    }
+  }
   const pick = <T>(name: string, value: unknown, isValid: (value: unknown) => boolean, fallback: T): T => {
     if (isValid(value)) return value as T;
     invalid.push(name);
@@ -89,6 +161,7 @@ export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSet
     pipelines: {
       maxConcurrent: pick('pipelines.maxConcurrent', pipelines, isMaxConcurrent, defaults.pipelines.maxConcurrent),
     },
+    reading,
   };
   return { settings, invalid };
 }
@@ -106,5 +179,19 @@ export function validateSettingsPatch(patch: unknown): string | null {
   if ('language' in patch && !isLanguage(patch.language)) return 'language';
   if ('theme' in patch && !isTheme(patch.theme)) return 'theme';
   if (isPlainObject(pipelines) && !isMaxConcurrent(pipelines.maxConcurrent)) return 'pipelines.maxConcurrent';
+  if ('reading' in patch) {
+    if (!isPlainObject(patch.reading)) return 'reading';
+    const reading: Record<string, unknown> = patch.reading;
+    const readingKeys: string[] = Object.keys(reading);
+    if (
+      readingKeys.length !== READING_KEYS.length ||
+      readingKeys.some((key: string): boolean => !READING_KEYS.includes(key as keyof ReadingSettings))
+    )
+      return 'reading';
+    if (!isReadingFont(reading.font)) return 'reading.font';
+    for (const name of ['size', 'leading', 'width'] as const) {
+      if (!isReadingNumber(reading[name], READING_LIMITS[name])) return `reading.${name}`;
+    }
+  }
   return null;
 }

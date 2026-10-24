@@ -5,7 +5,7 @@ import { SettingsStore } from '../features/settings/settings-store';
 import { broadcast } from './broadcast';
 import { handle } from './handle';
 
-const SECTIONS: string[] = ['general', 'pipeline'];
+const SECTIONS: string[] = ['general', 'pipeline', 'reading'];
 
 export function registerSettingsIpc(store: SettingsStore): void {
   handle(SettingsChannel.Get, (): SettingsState => store.state());

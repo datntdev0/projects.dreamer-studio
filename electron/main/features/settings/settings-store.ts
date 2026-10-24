@@ -88,6 +88,9 @@ export class SettingsStore {
     if (section === 'general') {
       return this.commit({ ...this.settings, language: defaults.language, theme: defaults.theme });
     }
+    if (section === 'reading') {
+      return this.commit({ ...this.settings, reading: defaults.reading });
+    }
     return this.commit({ ...this.settings, pipelines: defaults.pipelines });
   }
 

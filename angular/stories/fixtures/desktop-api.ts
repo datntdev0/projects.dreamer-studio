@@ -20,7 +20,7 @@ import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppDataCandidate, AppDataStatus } from '@dreamer/shared/models/app-data';
 import type { CheckResult, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { defaultSettings } from '@dreamer/shared/models/settings';
-import type { AppSettings, SettingsPatch, SettingsState } from '@dreamer/shared/models/settings';
+import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '@core/desktop-api';
 
 export interface DesktopApiFixture {
@@ -159,8 +159,14 @@ export function fakeSettingsApi(): FakeSettingsApi {
       current = { ...current, ...patch };
       return Promise.resolve(current);
     },
-    resetSettings: (): Promise<AppSettings | null> => {
-      current = defaultSettings(APP_INFO.appDataDir);
+    resetSettings: (section: SettingsSection): Promise<AppSettings | null> => {
+      const defaults: AppSettings = defaultSettings(APP_INFO.appDataDir);
+      current =
+        section === 'general'
+          ? { ...current, language: defaults.language, theme: defaults.theme }
+          : section === 'reading'
+            ? { ...current, reading: defaults.reading }
+            : { ...current, pipelines: defaults.pipelines };
       return Promise.resolve(current);
     },
     onSettingsChanged: (): (() => void) => () => undefined,

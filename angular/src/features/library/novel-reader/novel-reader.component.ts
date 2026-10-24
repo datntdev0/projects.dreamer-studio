@@ -14,11 +14,11 @@ import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { SettingsStore } from '@core/stores/settings-store';
 import { chapterNumber } from '../library-format';
 import { isTypingTarget } from '../library-format';
 import type { LibraryChapter } from '../library.models';
 import type { ReaderHighlight } from '../library.models';
-import { LibraryMockStore } from '../library.store';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
 import { NovelStore } from '../novel.store';
 import type { ChapterTextState } from '../novel.store';
@@ -47,7 +47,7 @@ export class NovelReaderComponent {
   readonly current = model<string | null>(null);
   readonly highlight = input<ReaderHighlight | null>(null);
 
-  private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly settingsStore: SettingsStore = inject(SettingsStore);
   private readonly novelStore: NovelStore = inject(NovelStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -65,10 +65,10 @@ export class NovelReaderComponent {
   });
   protected readonly previous: Signal<LibraryChapter | null> = computed(() => this.adjacent(-1));
   protected readonly next: Signal<LibraryChapter | null> = computed(() => this.adjacent(1));
-  protected readonly readerFont = computed(() => `var(--font-${this.store.readingSettings().font})`);
-  protected readonly readerSize = computed(() => `${this.store.readingSettings().size}px`);
-  protected readonly readerLeading = computed(() => String(this.store.readingSettings().leading));
-  protected readonly readerMeasure = computed(() => `${this.store.readingSettings().width}ch`);
+  protected readonly readerFont = computed(() => `var(--font-${this.settingsStore.reading().font})`);
+  protected readonly readerSize = computed(() => `${this.settingsStore.reading().size}px`);
+  protected readonly readerLeading = computed(() => String(this.settingsStore.reading().leading));
+  protected readonly readerMeasure = computed(() => `${this.settingsStore.reading().width}ch`);
   protected readonly paragraphParts: Signal<ReaderTextPart[][]> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
     if (!chapter) return [];

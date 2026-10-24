@@ -12,6 +12,7 @@ import { ComingSoonPage } from '@shell/coming-soon/coming-soon.page';
 import { MODULES } from '@shell/registry/modules';
 import { ShellComponent } from '@shell/shell.component';
 import { buildRoutes } from '@shell/shell.routes';
+import { SettingsStore } from '@core/stores/settings-store';
 import { LibraryPage } from '../../src/features/library/library.page';
 import type { ImportState } from '../../src/features/library/library.models';
 import type { LibraryScenario } from '../../src/features/library/library.models';
@@ -59,8 +60,10 @@ export class LibraryStoryHostComponent implements OnInit {
   readonly lock = input<boolean>(false);
   private readonly router: Router = inject(Router);
   private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly settingsStore: SettingsStore = inject(SettingsStore);
 
   async ngOnInit(): Promise<void> {
+    await this.settingsStore.load();
     const novelId: string = this.route().split('/').at(-1) ?? '';
     const novels = novelId === NO_CHAPTERS_NOVEL.id ? [...NOVELS, NO_CHAPTERS_NOVEL] : NOVELS;
     this.store.load({

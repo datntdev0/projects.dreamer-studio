@@ -98,13 +98,6 @@ export interface ReaderHighlight {
   query: string;
 }
 
-export interface ReadingSettings {
-  font: 'serif' | 'sans';
-  size: number;
-  leading: number;
-  width: number;
-}
-
 export interface SearchHit {
   chapterId: string;
   paragraph: number | null;

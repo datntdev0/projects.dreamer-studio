@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { AppSettings, defaultSettings } from '@dreamer/shared/models/settings';
+import { AppSettings, DEFAULT_READING_SETTINGS, defaultSettings } from '@dreamer/shared/models/settings';
 import { SettingsStore } from './settings-store';
 
 vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));
@@ -53,6 +53,18 @@ describe('SettingsStore', () => {
     expect(store.get().language).toBe('vi');
   });
 
+  it('loads a settings file written before reading settings existed without a notice', () => {
+    new SettingsStore(file, defaultDir).load();
+    const old: Record<string, unknown> = { ...defaultSettings(defaultDir) };
+    delete old.reading;
+    const text: string = JSON.stringify(old);
+    writeFileSync(file, text);
+    const store: SettingsStore = new SettingsStore(file, defaultDir);
+    expect(store.load()).toEqual({ notice: 'none', invalid: [] });
+    expect(store.get().reading).toEqual(DEFAULT_READING_SETTINGS);
+    expect(readFileSync(file, 'utf8')).toBe(text);
+  });
+
   it('fixes one bad field, keeps the others and rewrites the file', () => {
     new SettingsStore(file, defaultDir).load();
     writeFileSync(file, JSON.stringify({ ...defaultSettings(defaultDir), language: 'vi', theme: 'blue' }));
@@ -61,6 +73,20 @@ describe('SettingsStore', () => {
     expect(readFile()).toEqual({ ...defaultSettings(defaultDir), language: 'vi' });
     expect(store.state().notice).toBe('invalidFields');
     expect(existsSync(`${file}.tmp`)).toBe(false);
+  });
+
+  it('clamps reading values in settings.json and reports the changed fields', () => {
+    new SettingsStore(file, defaultDir).load();
+    writeFileSync(
+      file,
+      JSON.stringify({ ...defaultSettings(defaultDir), reading: { font: 'sans', size: 30, leading: 1.76, width: 47 } }),
+    );
+    const store: SettingsStore = new SettingsStore(file, defaultDir);
+    expect(store.load()).toEqual({
+      notice: 'invalidFields',
+      invalid: ['reading.size', 'reading.leading', 'reading.width'],
+    });
+    expect(readFile().reading).toEqual({ font: 'sans', size: 28, leading: 1.75, width: 48 });
   });
 
   it.each([['{ not json'], ['[1, 2]']])('backs up %s and writes the defaults', (content: string) => {
@@ -146,6 +172,14 @@ describe('SettingsStore', () => {
       store.update({ language: 'vi', theme: 'dark', pipelines: { maxConcurrent: 4 } });
       const result: AppSettings = store.reset('pipeline');
       expect(result).toEqual({ ...defaultSettings(defaultDir), language: 'vi', theme: 'dark' });
+      expect(readFile()).toEqual(result);
+    });
+
+    it('reset reading restores only reading settings', () => {
+      const reading: AppSettings['reading'] = { font: 'sans', size: 24, leading: 2, width: 84 };
+      store.update({ language: 'vi', pipelines: { maxConcurrent: 3 }, reading });
+      const result: AppSettings = store.reset('reading');
+      expect(result).toEqual({ ...defaultSettings(defaultDir), language: 'vi', pipelines: { maxConcurrent: 3 } });
       expect(readFile()).toEqual(result);
     });
 

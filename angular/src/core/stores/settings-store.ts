@@ -1,12 +1,15 @@
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
+import { computed, inject, Injectable, signal, Signal, WritableSignal } from '@angular/core';
 import { ToastService } from '@components/toast/toast.service';
 import { ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { validateSettingsPatch } from '@dreamer/shared/models/settings';
-import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+import { DEFAULT_READING_SETTINGS, validateSettingsPatch } from '@dreamer/shared/models/settings';
+import type { AppSettings, ReadingSettings } from '@dreamer/shared/models/settings';
+import type { SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { DesktopApi } from '../desktop-api';
 import { I18nService } from '../i18n/i18n.service';
 import { ThemeService } from '../theme/theme.service';
+
+const READING_DEBOUNCE_MS: number = 300;
 
 @Injectable({ providedIn: 'root' })
 export class SettingsStore {
@@ -15,9 +18,14 @@ export class SettingsStore {
   private readonly i18n: I18nService = inject(I18nService);
   private readonly theme: ThemeService = inject(ThemeService);
   private unsubscribe: (() => void) | null = null;
+  private readonly localReading: WritableSignal<ReadingSettings | null> = signal<ReadingSettings | null>(null);
+  private readingTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly state = signal<SettingsState | null>(null);
   readonly settings: Signal<AppSettings | null> = computed(() => this.state()?.settings ?? null);
+  readonly reading: Signal<ReadingSettings> = computed(
+    () => this.localReading() ?? this.settings()?.reading ?? DEFAULT_READING_SETTINGS,
+  );
 
   async load(): Promise<void> {
     try {
@@ -40,7 +48,30 @@ export class SettingsStore {
     return this.run(() => this.desktopApi.updateSettings(patch));
   }
 
+  updateReading(patch: Partial<ReadingSettings>): void {
+    const reading: ReadingSettings = { ...this.reading(), ...patch };
+    const invalidField: string | null = validateSettingsPatch({ reading });
+    if (invalidField) {
+      this.notifyError(ErrorCode.SettingsInvalid, invalidField);
+      return;
+    }
+    this.localReading.set(reading);
+    if (this.readingTimer) clearTimeout(this.readingTimer);
+    this.readingTimer = setTimeout(async (): Promise<void> => {
+      this.readingTimer = null;
+      const reading: ReadingSettings | null = this.localReading();
+      if (!reading) return;
+      await this.update({ reading });
+      if (this.localReading() === reading) this.localReading.set(null);
+    }, READING_DEBOUNCE_MS);
+  }
+
   async reset(section: SettingsSection): Promise<boolean> {
+    if (section === 'reading') {
+      if (this.readingTimer) clearTimeout(this.readingTimer);
+      this.readingTimer = null;
+      this.localReading.set(null);
+    }
     return this.run(() => this.desktopApi.resetSettings(section));
   }
 

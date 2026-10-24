@@ -6,9 +6,9 @@ import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { DEFAULT_READING_SETTINGS } from '../library-format';
-import type { ReadingSettings } from '../library.models';
-import { LibraryMockStore } from '../library.store';
+import { SettingsStore } from '@core/stores/settings-store';
+import { DEFAULT_READING_SETTINGS, READING_LIMITS, sameReading } from '@dreamer/shared/models/settings';
+import type { ReadingSettings } from '@dreamer/shared/models/settings';
 
 @Component({
   selector: 'ds-reading-settings',
@@ -17,26 +17,27 @@ import { LibraryMockStore } from '../library.store';
   templateUrl: './reading-settings.component.html',
 })
 export class ReadingSettingsComponent {
-  private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly store: SettingsStore = inject(SettingsStore);
   private readonly i18n: I18nService = inject(I18nService);
 
-  protected readonly settings: Signal<ReadingSettings> = this.store.readingSettings;
+  protected readonly limits: typeof READING_LIMITS = READING_LIMITS;
+  protected readonly settings: Signal<ReadingSettings> = this.store.reading;
   protected readonly canReset: Signal<boolean> = computed(
-    () => JSON.stringify(this.settings()) !== JSON.stringify(DEFAULT_READING_SETTINGS),
+    () => !sameReading(this.settings(), DEFAULT_READING_SETTINGS),
   );
 
   protected setFont(event: Event): void {
     const font: ReadingSettings['font'] = (event.target as HTMLSelectElement).value as ReadingSettings['font'];
-    this.store.readingSettings.update((settings: ReadingSettings): ReadingSettings => ({ ...settings, font }));
+    this.store.updateReading({ font });
   }
 
   protected setNumber(key: 'size' | 'leading' | 'width', event: Event): void {
     const value: number = Number((event.target as HTMLInputElement).value);
-    this.store.readingSettings.update((settings: ReadingSettings): ReadingSettings => ({ ...settings, [key]: value }));
+    this.store.updateReading({ [key]: value });
   }
 
   protected reset(): void {
-    this.store.readingSettings.set({ ...DEFAULT_READING_SETTINGS });
+    void this.store.reset('reading');
   }
 
   protected number(value: number): string {

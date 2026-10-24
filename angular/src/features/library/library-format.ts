@@ -1,7 +1,7 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelLock } from '@dreamer/shared/models/novel';
 import type { I18nService, Language } from '@core/i18n/i18n.service';
-import type { LibraryChapter, ReadingSettings } from './library.models';
+import type { LibraryChapter } from './library.models';
 
 export interface LanguageOption {
   code: string;
@@ -19,8 +19,6 @@ export const LOADING_MS = 500;
 export const CHANGE_MS = 400;
 
 export const LIST_LIMIT = 5;
-
-export const DEFAULT_READING_SETTINGS: ReadingSettings = { font: 'serif', size: 18, leading: 1.75, width: 72 };
 
 const COVER_PALETTES: string[] = ['green', 'gold', 'jade', 'slate', 'rose', 'charcoal'];
 

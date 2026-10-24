@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AppSettings, defaultSettings, sanitizeSettings, validateSettingsPatch } from './settings';
+import { AppSettings, DEFAULT_READING_SETTINGS, defaultSettings } from './settings';
+import { sanitizeSettings, validateSettingsPatch } from './settings';
 
 const defaultDir: string = 'C:\\Users\\me\\AppData\\Local\\DreamerStudio';
 
@@ -11,6 +12,7 @@ describe('sanitizeSettings', () => {
       theme: 'dark',
       appDataDir: 'D:\\studio',
       pipelines: { maxConcurrent: 3 },
+      reading: { font: 'sans', size: 22, leading: 1.8, width: 80 },
     };
     expect(sanitizeSettings(valid, defaultDir)).toEqual({ settings: valid, invalid: [] });
   });
@@ -47,6 +49,51 @@ describe('sanitizeSettings', () => {
     expect(result.invalid).toEqual([]);
   });
 
+  it('loads an older settings file without a reading notice', () => {
+    const raw: Record<string, unknown> = { ...defaultSettings(defaultDir) };
+    delete raw.reading;
+    const result = sanitizeSettings(raw, defaultDir);
+    expect(result.settings.reading).toEqual(DEFAULT_READING_SETTINGS);
+    expect(result.invalid).toEqual([]);
+  });
+
+  it('snaps and clamps reading values while preserving valid fields', () => {
+    const raw: object = {
+      ...defaultSettings(defaultDir),
+      reading: { font: 'sans', size: 29, leading: 1.76, width: 47 },
+    };
+    const result = sanitizeSettings(raw, defaultDir);
+    expect(result.settings.reading).toEqual({ font: 'sans', size: 28, leading: 1.75, width: 48 });
+    expect(result.invalid).toEqual(['reading.size', 'reading.leading', 'reading.width']);
+  });
+
+  it('normalizes a near-step number without storing floating-point noise', () => {
+    const result = sanitizeSettings(
+      { ...defaultSettings(defaultDir), reading: { ...DEFAULT_READING_SETTINGS, leading: 1.7500000001 } },
+      defaultDir,
+    );
+    expect(result.settings.reading.leading).toBe(1.75);
+    expect(result.invalid).toEqual(['reading.leading']);
+    expect(validateSettingsPatch({ reading: { ...DEFAULT_READING_SETTINGS, leading: 1.7500000001 } })).toBe(
+      'reading.leading',
+    );
+  });
+
+  it('defaults a malformed reading object without reporting a missing one', () => {
+    const result = sanitizeSettings({ ...defaultSettings(defaultDir), reading: null }, defaultDir);
+    expect(result.settings.reading).toEqual(DEFAULT_READING_SETTINGS);
+    expect(result.invalid).toEqual(['reading']);
+  });
+
+  it('defaults reading fields with an invalid font or nonfinite numbers', () => {
+    const result = sanitizeSettings(
+      { ...defaultSettings(defaultDir), reading: { font: 'mono', size: '20', leading: NaN, width: Infinity } },
+      defaultDir,
+    );
+    expect(result.settings.reading).toEqual(DEFAULT_READING_SETTINGS);
+    expect(result.invalid).toEqual(['reading.font', 'reading.size', 'reading.leading', 'reading.width']);
+  });
+
   it.each([[null], [undefined], ['text'], [42], [[]]])('returns all defaults for %s', (raw: unknown) => {
     expect(sanitizeSettings(raw, defaultDir).settings).toEqual(defaultSettings(defaultDir));
   });
@@ -59,6 +106,8 @@ describe('validateSettingsPatch', () => {
     [{ pipelines: { maxConcurrent: 1 } }],
     [{ pipelines: { maxConcurrent: 5 } }],
     [{ language: 'en', theme: 'light', pipelines: { maxConcurrent: 3 } }],
+    [{ reading: DEFAULT_READING_SETTINGS }],
+    [{ reading: { font: 'sans', size: 28, leading: 2.2, width: 96 } }],
   ])('accepts %j', (patch: unknown) => {
     expect(validateSettingsPatch(patch)).toBeNull();
   });
@@ -85,6 +134,13 @@ describe('validateSettingsPatch', () => {
     ['language', { language: 1 }],
     ['theme', { theme: 'blue' }],
     ['theme', { theme: null }],
+    ['reading', { reading: null }],
+    ['reading', { reading: { font: 'serif', size: 18, leading: 1.75 } }],
+    ['reading', { reading: { ...DEFAULT_READING_SETTINGS, extra: 1 } }],
+    ['reading.font', { reading: { ...DEFAULT_READING_SETTINGS, font: 'mono' } }],
+    ['reading.size', { reading: { ...DEFAULT_READING_SETTINGS, size: 18.5 } }],
+    ['reading.leading', { reading: { ...DEFAULT_READING_SETTINGS, leading: 1.76 } }],
+    ['reading.width', { reading: { ...DEFAULT_READING_SETTINGS, width: 49 } }],
   ])('reports %s for %j', (field: string, patch: unknown) => {
     expect(validateSettingsPatch(patch)).toBe(field);
   });

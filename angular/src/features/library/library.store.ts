@@ -200,6 +200,7 @@ export class LibraryMockStore {
       id: `${chapter.id}-s${Date.now().toString(16)}`,
       position: chapter.position + 1,
       title: newTitle.trim(),
+      file: chapter.file,
       chars: chapter.chars - head.chars,
       paragraphCount: chapter.paragraphCount - atParagraph,
     };

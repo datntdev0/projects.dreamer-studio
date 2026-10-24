@@ -1,7 +1,20 @@
 import type { ChapterText } from '@dreamer/shared/models/novel';
+import type { ChapterRequest } from '@dreamer/shared/models/novel';
+import { CodedError } from '@dreamer/shared/errors/app-error';
+import { ErrorCode } from '@dreamer/shared/errors/app-error';
+import type { LibraryNovel } from '../../src/features/library/library.models';
+import type { LibraryChapter } from '../../src/features/library/library.models';
+import type { NovelChapter } from '@dreamer/shared/models/novel';
+import { toNovelSummary } from './library-list-api';
+import { CHAPTER_PARAGRAPHS } from './library';
+import { makeChapters } from './library';
+import { NO_CHAPTERS_NOVEL } from './library';
+import { NOVELS } from './library';
+import { SAMPLE_PARAGRAPHS } from './library';
 import type { DeleteNovelsResult, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { Provider } from '@angular/core';
+import type { ValueProvider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { AppDataCandidate, AppDataStatus } from '@dreamer/shared/models/app-data';
@@ -15,6 +28,51 @@ export interface DesktopApiFixture {
   backend?: BackendState;
   openDataDirFails?: boolean;
   diagnostics?: DiagnosticsScenario;
+}
+
+export interface ReaderApiFixture {
+  missingChapter: number | null;
+  lock: boolean;
+}
+
+export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
+  const novels: LibraryNovel[] = [...NOVELS, NO_CHAPTERS_NOVEL];
+  const api: Partial<DesktopApi> = {
+    onLibraryChanged: (): (() => void) => () => undefined,
+    onPipelineUpdate: (): (() => void) => () => undefined,
+    getNovel: async (id: string): Promise<NovelDetail | null> => {
+      if (id === 'n-broken')
+        throw new CodedError(ErrorCode.NovelMetadataInvalid, 'The novel metadata could not be read');
+      const novel: LibraryNovel | undefined = novels.find((item: LibraryNovel): boolean => item.id === id);
+      if (!novel) throw new CodedError(ErrorCode.NovelNotFound, `Novel ${id} was not found`);
+      const chapters: NovelChapter[] = makeChapters(novel).map((chapter: LibraryChapter): NovelChapter => ({
+        position: chapter.position,
+        title: chapter.title,
+        file: chapter.file,
+        paragraphs: chapter.paragraphCount,
+        chars: chapter.chars,
+      }));
+      return {
+        ...toNovelSummary(novel),
+        chapterCount: chapters.length,
+        description: novel.description,
+        chapters,
+        lock: fixture.lock
+          ? { runId: 'run-story-export', type: 'novel-export', label: novel.originalTitle, status: 'running' }
+          : null,
+      };
+    },
+    getChapter: async (request: ChapterRequest): Promise<ChapterText | null> => {
+      const position: number = parseInt(request.file, 16);
+      if (position === fixture.missingChapter) {
+        throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter ${position} is missing`);
+      }
+      const key: string = `${request.novelId}-c${String(position).padStart(4, '0')}`;
+      return { paragraphs: CHAPTER_PARAGRAPHS[key] ?? SAMPLE_PARAGRAPHS };
+    },
+  };
+  const base: ValueProvider = provideDesktopApi() as ValueProvider;
+  return { provide: DesktopApi, useValue: { ...(base.useValue as Partial<DesktopApi>), ...api } };
 }
 
 export type DiagnosticsScenario = 'ok' | 'issues' | 'engineError';

@@ -47,6 +47,7 @@ export interface LibraryChapter {
   id: string;
   position: number;
   title: string;
+  file: string;
   chars: number;
   paragraphCount: number;
 }

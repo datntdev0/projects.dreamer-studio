@@ -1,4 +1,5 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
+import type { NovelLock } from '@dreamer/shared/models/novel';
 import type { I18nService, Language } from '@core/i18n/i18n.service';
 import type { LibraryChapter, ReadingSettings } from './library.models';
 
@@ -25,6 +26,10 @@ const COVER_PALETTES: string[] = ['green', 'gold', 'jade', 'slate', 'rose', 'cha
 
 export function chapterNumber(chapter: LibraryChapter): string {
   return String(chapter.position).padStart(4, '0');
+}
+
+export function lockKind(lock: NovelLock): 'export' | 'import' {
+  return lock.type === 'novel-export' ? 'export' : 'import';
 }
 
 export function toParagraphs(content: string): string[] {

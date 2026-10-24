@@ -223,6 +223,7 @@ export function makeChapters(novel: LibraryNovel): LibraryChapter[] {
       novel.id === 'n-0001' && n === 12 ? CHAPTER_PARAGRAPHS['n-0001-c0012'].length : n % 17 === 0 ? 1 : 4 + (n % 6);
     return {
       id: `${novel.id}-c${String(n).padStart(4, '0')}`,
+      file: n.toString(16).padStart(64, '0'),
       position: n,
       title:
         novel.language === 'zh'

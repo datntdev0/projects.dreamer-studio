@@ -7,6 +7,7 @@ backend
 _docs
 .claude
 worktree
+.data
 .playwright-cli
 pnpm-lock.yaml
 *.md

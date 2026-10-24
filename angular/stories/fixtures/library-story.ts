@@ -19,7 +19,7 @@ import type { NovelSearchState } from '../../src/features/library/library.models
 import type { NovelTab } from '../../src/features/library/library.models';
 import { LibraryMockStore } from '../../src/features/library/library.store';
 import { NovelPage } from '../../src/features/library/novel.page';
-import { provideDesktopApi } from './desktop-api';
+import { provideReaderDesktopApi } from './desktop-api';
 import { makeChapters } from './library';
 import { CHAPTER_PARAGRAPHS } from './library';
 import { NO_CHAPTERS_NOVEL } from './library';
@@ -60,7 +60,7 @@ export class LibraryStoryHostComponent implements OnInit {
   private readonly router: Router = inject(Router);
   private readonly store: LibraryMockStore = inject(LibraryMockStore);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const novelId: string = this.route().split('/').at(-1) ?? '';
     const novels = novelId === NO_CHAPTERS_NOVEL.id ? [...NOVELS, NO_CHAPTERS_NOVEL] : NOVELS;
     this.store.load({
@@ -71,23 +71,11 @@ export class LibraryStoryHostComponent implements OnInit {
     });
     this.store.setScenario(this.scenario());
     this.store.importState.set(this.importState());
-    this.store.setDetailInitialState({
-      chapter: this.chapter(),
-      tab: this.tab(),
-      searchQuery: this.searchQuery(),
-      searchState: this.searchState(),
-      focusMode: this.focusMode(),
-      editing: this.editing(),
-    });
-    const missing = this.store.chapters(novelId).find((item) => item.position === this.missingChapter());
-    this.store.missingChapterIds.set(new Set(missing ? [missing.id] : []));
-    if (this.lock()) {
-      const novel = this.store.novel(novelId);
-      if (novel) {
-        this.store.setLock(novelId, { kind: 'export', runId: 'run-story-export', runLabel: novel.originalTitle });
-      }
+    const route: string = this.chapter() ? `${this.route()}?chapter=${this.chapter()}` : this.route();
+    await this.router.navigateByUrl(route);
+    if (this.focusMode()) {
+      setTimeout(() => document.querySelector<HTMLElement>('[data-testid="novel-page-focus"]')?.click());
     }
-    void this.router.navigateByUrl(this.route());
   }
 }
 
@@ -105,9 +93,15 @@ const routes: Routes = [
 
 export const libraryStoryDecorators: Decorator<LibraryStoryArgs>[] = [
   moduleMetadata<LibraryStoryArgs>({ imports: [LibraryStoryHostComponent] }),
-  (story) => {
+  (story, context) => {
     const result = story();
-    const providers = [provideRouter(routes, withHashLocation()), provideDesktopApi()];
+    const providers = [
+      provideRouter(routes, withHashLocation()),
+      provideReaderDesktopApi({
+        missingChapter: context.args.missingChapter ?? null,
+        lock: context.args.lock ?? false,
+      }),
+    ];
     return {
       ...result,
       applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },

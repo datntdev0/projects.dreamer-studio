@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LibraryPage } from '../features/library/library.page';
-import { LibraryPlaceholderPage } from '../features/library/library-placeholder.page';
+import { NovelPage } from '../features/library/novel.page';
 import { ImportPage } from '../features/library/import/import.page';
 import { MODULES } from './registry/modules';
 import { buildRoutes } from './shell.routes';
@@ -38,11 +38,11 @@ describe('buildRoutes', () => {
     expect(route?.data).toEqual({ module: 'library', title: 'library.import.page.title' });
   });
 
-  it('resolves library imports before novel details and shows novel details with the placeholder page', () => {
+  it('resolves library imports before novel details and shows novel details with the reader page', () => {
     const importRoute = routes.find((entry) => entry.path === 'library/import');
     const detailRoute = routes.find((entry) => entry.path === 'library/:id');
     expect(importRoute?.component).toBe(ImportPage);
-    expect(detailRoute?.component).toBe(LibraryPlaceholderPage);
+    expect(detailRoute?.component).toBe(NovelPage);
     expect(routes.indexOf(importRoute!)).toBeLessThan(routes.indexOf(detailRoute!));
   });
 

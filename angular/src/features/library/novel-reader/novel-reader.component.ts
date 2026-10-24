@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component } from '@angular/core';
 import { DestroyRef } from '@angular/core';
 import { ElementRef } from '@angular/core';
@@ -6,6 +7,7 @@ import { effect } from '@angular/core';
 import { inject } from '@angular/core';
 import { input } from '@angular/core';
 import { model } from '@angular/core';
+import { untracked } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
@@ -15,9 +17,11 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { chapterNumber } from '../library-format';
 import { isTypingTarget } from '../library-format';
 import type { LibraryChapter } from '../library.models';
-import type { LibraryNovel } from '../library.models';
 import type { ReaderHighlight } from '../library.models';
 import { LibraryMockStore } from '../library.store';
+import type { NovelDetail } from '@dreamer/shared/models/novel';
+import { NovelStore } from '../novel.store';
+import type { ChapterTextState } from '../novel.store';
 
 interface ReaderTextPart {
   text: string;
@@ -29,7 +33,7 @@ type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
 
 @Component({
   selector: 'ds-novel-reader',
-  imports: [AreaStateComponent, ButtonDirective, IconComponent, TranslatePipe],
+  imports: [AreaStateComponent, ButtonDirective, IconComponent, NgTemplateOutlet, TranslatePipe],
   host: {
     class: 'library-reader',
     'data-testid': 'novel-reader',
@@ -38,12 +42,13 @@ type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
   templateUrl: './novel-reader.component.html',
 })
 export class NovelReaderComponent {
-  readonly novel = input.required<LibraryNovel>();
+  readonly novel = input.required<NovelDetail>();
   readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
   readonly highlight = input<ReaderHighlight | null>(null);
 
   private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly novelStore: NovelStore = inject(NovelStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private scrollFrame: number = 0;
@@ -53,10 +58,10 @@ export class NovelReaderComponent {
     () => this.chapters().find((chapter: LibraryChapter): boolean => chapter.id === this.current()) ?? null,
   );
   protected readonly state: Signal<ReaderState> = computed(() => {
-    if (this.store.loading()) return 'loading';
     if (!this.chapters().length) return 'empty';
     if (!this.chapter()) return 'select';
-    return this.store.missingChapterIds().has(this.chapter()!.id) ? 'error' : 'ready';
+    const text: ChapterTextState = this.novelStore.text(this.chapter()!);
+    return text.status === 'missing' ? 'error' : text.status;
   });
   protected readonly previous: Signal<LibraryChapter | null> = computed(() => this.adjacent(-1));
   protected readonly next: Signal<LibraryChapter | null> = computed(() => this.adjacent(1));
@@ -68,7 +73,9 @@ export class NovelReaderComponent {
     const chapter: LibraryChapter | null = this.chapter();
     if (!chapter) return [];
     let currentTaken: boolean = false;
-    return this.store.paragraphs(chapter).map((paragraph: string): ReaderTextPart[] => {
+    const text: ChapterTextState = this.novelStore.text(chapter);
+    if (text.status !== 'ready') return [];
+    return text.paragraphs.map((paragraph: string): ReaderTextPart[] => {
       const parts: ReaderTextPart[] = this.textParts(paragraph, currentTaken);
       currentTaken ||= parts.some((part: ReaderTextPart): boolean => part.current);
       return parts;
@@ -81,6 +88,7 @@ export class NovelReaderComponent {
       const chapter: LibraryChapter | null = this.chapter();
       const highlight: ReaderHighlight | null = this.highlight();
       if (!chapter) return;
+      untracked(() => this.novelStore.ensure(chapter));
       this.scheduleScroll(highlight?.chapterId === chapter.id && !!highlight.query.trim());
     });
   }
@@ -98,11 +106,7 @@ export class NovelReaderComponent {
   protected retry(): void {
     const chapter: LibraryChapter | null = this.chapter();
     if (!chapter) return;
-    this.store.missingChapterIds.update((ids: ReadonlySet<string>) => {
-      const next: Set<string> = new Set(ids);
-      next.delete(chapter.id);
-      return next;
-    });
+    this.novelStore.retry(chapter);
   }
 
   protected onKeydown(event: KeyboardEvent): void {

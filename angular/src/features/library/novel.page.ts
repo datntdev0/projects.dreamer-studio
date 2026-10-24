@@ -1,61 +1,52 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component } from '@angular/core';
-import { DestroyRef } from '@angular/core';
 import { computed } from '@angular/core';
+import { DestroyRef } from '@angular/core';
 import { effect } from '@angular/core';
 import { inject } from '@angular/core';
-import { Injector } from '@angular/core';
 import { signal } from '@angular/core';
 import { untracked } from '@angular/core';
 import { viewChild } from '@angular/core';
-import { afterNextRender } from '@angular/core';
 import type { Signal } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
-import { TabsComponent } from '@components/tabs/tabs.component';
 import type { SplitterEdge } from '@components/splitter/splitter.directive';
+import { TabsComponent } from '@components/tabs/tabs.component';
 import type { TabItem } from '@components/tabs/tabs.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LayoutService } from '@shell/layout/layout.service';
 import { PanelDirective } from '@shell/layout/panel.directive';
 import { PageCrumbService } from '@shell/page-crumb.service';
 import { PageTitleDirective } from '@shell/page-title.directive';
+import type { NovelDetail } from '@dreamer/shared/models/novel';
+import type { NovelLock } from '@dreamer/shared/models/novel';
+import { map } from 'rxjs';
 import { chapterNumber } from './library-format';
 import { isTypingTarget } from './library-format';
+import { lockKind } from './library-format';
 import type { LibraryChapter } from './library.models';
-import type { LibraryNovel } from './library.models';
-import type { NovelLock } from './library.models';
-import type { NovelSearchState } from './library.models';
-import type { NovelTab } from './library.models';
 import type { PageState } from './library.models';
+import type { NovelTab } from './library.models';
 import type { ReaderHighlight } from './library.models';
-import { LibraryMockStore } from './library.store';
-import { ChapterEditorComponent } from './novel-reader/chapter-editor.component';
 import { NovelChaptersComponent } from './novel-reader/novel-chapters.component';
 import { NovelReaderComponent } from './novel-reader/novel-reader.component';
 import { NovelSearchComponent } from './novel-reader/novel-search.component';
 import type { NovelSearchSelection } from './novel-reader/novel-search.component';
 import { ReadingSettingsComponent } from './novel-reader/reading-settings.component';
-import { UnsavedChangesDialogComponent } from './novel-list/unsaved-changes-dialog.component';
+import { NovelStore } from './novel.store';
 
-const BROKEN_ID: string = 'n-broken';
-
-const LOCK_HEADING_KEYS: Record<NovelLock['kind'], string> = {
-  export: 'library.novel.lock.export',
-  import: 'library.novel.lock.import',
-};
-
-const LOCK_REASON_KEYS: Record<NovelLock['kind'], string> = {
-  export: 'library.novel.lock.reasonExport',
-  import: 'library.novel.lock.reasonImport',
+const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }> = {
+  export: { heading: 'library.novel.lock.export', reason: 'library.novel.lock.reasonExport' },
+  import: { heading: 'library.novel.lock.import', reason: 'library.novel.lock.reasonImport' },
 };
 
 @Component({
@@ -64,7 +55,6 @@ const LOCK_REASON_KEYS: Record<NovelLock['kind'], string> = {
     AreaStateComponent,
     BannerComponent,
     ButtonDirective,
-    ChapterEditorComponent,
     IconComponent,
     NovelChaptersComponent,
     NovelReaderComponent,
@@ -77,103 +67,100 @@ const LOCK_REASON_KEYS: Record<NovelLock['kind'], string> = {
     TabsComponent,
     TooltipDirective,
     TranslatePipe,
-    UnsavedChangesDialogComponent,
   ],
+  providers: [NovelStore],
   host: {
     class: 'ds-page library-novel',
     'data-testid': 'novel-page',
-    '[attr.data-state]': 'state()',
-    '[attr.aria-busy]': "state() === 'loading' || null",
+    '[attr.data-state]': 'store.state()',
+    '[attr.aria-busy]': "store.state() === 'loading' || null",
     '(document:keydown)': 'onDocumentKeydown($event)',
   },
   templateUrl: './novel.page.html',
 })
 export class NovelPage {
-  protected readonly store: LibraryMockStore = inject(LibraryMockStore);
+  protected readonly store: NovelStore = inject(NovelStore);
   private readonly i18n: I18nService = inject(I18nService);
-  private readonly injector: Injector = inject(Injector);
   private readonly layout: LayoutService = inject(LayoutService);
   private readonly crumb: PageCrumbService = inject(PageCrumbService);
-  private readonly editor = viewChild(ChapterEditorComponent);
-  private readonly hiddenPanels = new Set<SplitterEdge>();
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly router: Router = inject(Router);
+  private readonly hiddenPanels: Set<SplitterEdge> = new Set<SplitterEdge>();
   private readonly search = viewChild(NovelSearchComponent);
-  private leaveResolve: ((leave: boolean) => void) | null = null;
-  private searchInitialState: { query: string; state: NovelSearchState } | null = null;
-
-  protected readonly lockHeadingKeys: Record<NovelLock['kind'], string> = LOCK_HEADING_KEYS;
-  protected readonly skeletonCount: number[] = Array.from({ length: 8 }, (_, index: number): number => index);
   protected readonly id: Signal<string> = toSignal(
-    inject(ActivatedRoute).paramMap.pipe(map((params) => params.get('id') ?? '')),
-    { initialValue: '' },
+    this.route.paramMap.pipe(map((params): string => params.get('id') ?? '')),
+    {
+      initialValue: this.route.snapshot.paramMap.get('id') ?? '',
+    },
   );
-  protected readonly novel: Signal<LibraryNovel | null> = computed(() =>
-    this.store.loading() ? null : this.store.novel(this.id()),
+  private readonly queryChapter: Signal<string | null> = toSignal(
+    this.route.queryParamMap.pipe(map((params): string | null => params.get('chapter'))),
+    { initialValue: this.route.snapshot.queryParamMap.get('chapter') },
   );
-  protected readonly state: Signal<PageState> = computed(() => {
-    if (this.store.loading()) return 'loading';
-    if (this.id() === BROKEN_ID) return 'error';
-    return this.novel() ? 'ready' : 'notFound';
-  });
-  protected readonly tab = signal<NovelTab>('reading');
-  protected readonly editing = signal<boolean>(false);
-  protected readonly focusMode = signal<boolean>(false);
-  protected readonly current = signal<string | null>(null);
-  protected readonly highlight = signal<ReaderHighlight | null>(null);
-  protected readonly leaveOpen = signal<boolean>(false);
-  private initialized = false;
 
+  protected readonly skeletonCount: number[] = Array.from({ length: 8 }, (_, index: number): number => index);
+  protected readonly novel: Signal<NovelDetail | null> = this.store.novel;
+  protected readonly state: Signal<PageState> = this.store.state;
+  protected readonly chapters: Signal<LibraryChapter[]> = this.store.chapters;
+  protected readonly tab: WritableSignal<NovelTab> = signal<NovelTab>('reading');
+  protected readonly focusMode: WritableSignal<boolean> = signal<boolean>(false);
+  protected readonly current: WritableSignal<string | null> = signal<string | null>(null);
+  protected readonly highlight: WritableSignal<ReaderHighlight | null> = signal<ReaderHighlight | null>(null);
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
     { id: 'reading', label: this.i18n.t('library.novel.tabs.reading') },
     { id: 'search', label: this.i18n.t('library.novel.tabs.search') },
   ]);
-  protected readonly chapters: Signal<LibraryChapter[]> = computed(() => {
-    const novel: LibraryNovel | null = this.novel();
-    return novel ? this.store.chapters(novel.id) : [];
-  });
   protected readonly chapter: Signal<LibraryChapter | null> = computed(
-    () => this.chapters().find((chapter: LibraryChapter): boolean => chapter.id === this.current()) ?? null,
+    () => this.chapters().find((item: LibraryChapter): boolean => item.id === this.current()) ?? null,
   );
-  protected readonly lockReason: Signal<string> = computed(() => {
-    const lock: NovelLock | null = this.novel()?.lock ?? null;
-    return lock ? this.i18n.t(LOCK_REASON_KEYS[lock.kind], { run: lock.runLabel }) : '';
-  });
+  protected readonly lockHeading: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'heading'));
+  protected readonly lockReason: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'reason'));
   protected readonly editReason: Signal<string> = computed(
-    () => this.lockReason() || (this.chapter() ? '' : this.i18n.t('library.novel.page.noChapters')),
+    () =>
+      this.lockReason() ||
+      (!this.chapters().length ? this.i18n.t('library.novel.page.noChapters') : this.i18n.t('common.soon')),
   );
   protected readonly heading: Signal<string> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
     return chapter ? `${chapterNumber(chapter)} · ${chapter.title}` : (this.novel()?.title ?? '');
   });
-  protected readonly errorDetails: Signal<string> = computed(
-    () => `LibraryReadError: library/${this.id()}/novel.json is not valid JSON (line 1, column 214)`,
-  );
 
   constructor() {
     effect(() => {
-      this.id();
+      const id: string = this.id();
       untracked(() => {
-        this.initialized = false;
-        this.editing.set(false);
         this.current.set(null);
         this.highlight.set(null);
         this.tab.set('reading');
         this.focusMode.set(false);
-        this.searchInitialState = null;
-        this.store.simulateLoading();
+        void this.store.open(id);
       });
     });
     effect(() => {
-      if (this.state() !== 'ready' || this.initialized) return;
-      this.initialized = true;
-      const initial = untracked(() => this.store.detailInitialState());
-      const chapter: LibraryChapter | undefined = this.chapters().find(
-        (item: LibraryChapter): boolean => item.position === initial.chapter,
-      );
-      this.current.set(chapter?.id ?? null);
-      this.tab.set(initial.tab);
-      this.editing.set(initial.editing && !!chapter);
-      this.focusMode.set(initial.focusMode);
-      this.searchInitialState = { query: initial.searchQuery, state: initial.searchState };
+      const chapters: LibraryChapter[] = this.chapters();
+      const query: string | null = this.queryChapter();
+      if (this.state() !== 'ready') return;
+      untracked(() => {
+        const requested: number | null = query !== null && /^\d+$/.test(query) ? Number(query) : null;
+        const selected: LibraryChapter | undefined = chapters.find(
+          (item: LibraryChapter): boolean => item.position === requested,
+        );
+        const fallback: LibraryChapter | undefined =
+          query !== null && this.current()
+            ? (chapters.find((item: LibraryChapter): boolean => item.position === Number(this.current())) ??
+              chapters.at(-1))
+            : chapters[0];
+        const chapter: LibraryChapter | undefined = selected ?? fallback;
+        const id: string | null = chapter?.id ?? null;
+        if (this.current() !== id) this.current.set(id);
+        if (query !== null && chapter && query !== String(chapter.position)) {
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { chapter: String(chapter.position) },
+            replaceUrl: true,
+          });
+        }
+      });
     });
     effect(() => this.crumb.detail.set(this.novel()?.title ?? null));
     effect(() => {
@@ -184,46 +171,25 @@ export class NovelPage {
       this.crumb.detail.set(null);
       this.syncFocusMode(false);
     });
-    effect(() => {
-      if (this.state() !== 'ready' || this.tab() !== 'search' || !this.searchInitialState) return;
-      afterNextRender(
-        () => {
-          const initial = this.searchInitialState;
-          const search = this.search();
-          if (!initial || !search) return;
-          search.initialize(initial.query, initial.state);
-          this.searchInitialState = null;
-        },
-        {
-          injector: this.injector,
-        },
-      );
-    });
   }
 
-  canLeave(): boolean | Promise<boolean> {
-    if (!this.editing() || !this.editor()?.dirty()) return true;
-    this.leaveOpen.set(true);
-    return new Promise<boolean>((resolve: (leave: boolean) => void) => (this.leaveResolve = resolve));
+  canLeave(): boolean {
+    return true;
   }
 
-  protected async cancelEdit(): Promise<void> {
-    if (await this.canLeave()) this.editing.set(false);
-  }
-
-  protected settleLeave(leave: boolean): void {
-    this.leaveOpen.set(false);
-    if (leave) this.editing.set(false);
-    this.leaveResolve?.(leave);
-    this.leaveResolve = null;
+  protected selectChapter(id: string | null): void {
+    if (!id || id === this.current()) return;
+    this.current.set(id);
+    this.highlight.set(null);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { chapter: id }, replaceUrl: true });
   }
 
   protected toggleFocusMode(): void {
-    this.focusMode.update((enabled: boolean) => !enabled);
+    this.focusMode.update((enabled: boolean): boolean => !enabled);
   }
 
   protected onSearchSelected(selection: NovelSearchSelection): void {
-    this.current.set(selection.chapterId);
+    this.selectChapter(selection.chapterId);
     this.highlight.set({ chapterId: selection.chapterId, query: selection.query });
   }
 
@@ -243,15 +209,20 @@ export class NovelPage {
     }
   }
 
+  private lockText(lock: NovelLock | null | undefined, kind: 'heading' | 'reason'): string {
+    if (!lock || (lock.type !== 'novel-export' && lock.type !== 'novel-import')) return '';
+    return this.i18n.t(LOCK_KEYS[lockKind(lock)][kind], { run: lock.label ?? this.novel()?.title ?? '' });
+  }
+
   private syncFocusMode(enabled: boolean): void {
     if (!enabled) {
-      this.hiddenPanels.forEach((edge: SplitterEdge) => {
+      this.hiddenPanels.forEach((edge: SplitterEdge): void => {
         if (!this.layout.isOpen(edge)) this.layout.toggle(edge);
       });
       this.hiddenPanels.clear();
       return;
     }
-    (['left', 'right'] as SplitterEdge[]).forEach((edge: SplitterEdge) => {
+    (['left', 'right'] as SplitterEdge[]).forEach((edge: SplitterEdge): void => {
       if (this.layout.isOpen(edge)) {
         this.layout.toggle(edge);
         this.hiddenPanels.add(edge);

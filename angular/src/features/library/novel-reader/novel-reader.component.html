@@ -19,12 +19,13 @@
         kind="error"
         data-testid="novel-reader-error"
         [heading]="'library.reader.error.heading' | t: { number: count(selected.position) }"
-        [description]="'library.reader.error.description' | t: { file: chapterNumber(selected) }"
+        [description]="'library.reader.error.description' | t"
       >
         <button dsBtn variant="primary" type="button" data-testid="novel-reader-retry" (click)="retry()">
           <ds-icon name="retry" size="sm" />{{ 'library.reader.retry' | t }}
         </button>
       </ds-area-state>
+      <ng-container *ngTemplateOutlet="pager" />
     }
   }
   @case ('ready') {
@@ -40,9 +41,7 @@
       >
         <header class="library-reader-article-head">
           <p class="library-reader-eyebrow num">
-            {{
-              'library.reader.eyebrow' | t: { position: count(selected.position), total: count(novel().chapterCount) }
-            }}
+            {{ 'library.reader.eyebrow' | t: { position: count(selected.position), total: count(chapters().length) } }}
           </p>
           <h1>{{ selected.title }}</h1>
           <p class="library-reader-meta num">
@@ -62,35 +61,39 @@
             }
           </p>
         }
-        <nav class="library-reader-pager" [attr.aria-label]="'library.reader.pager' | t">
-          <button
-            dsBtn
-            variant="ghost"
-            size="sm"
-            type="button"
-            data-testid="novel-reader-pager-prev"
-            [disabled]="!previous()"
-            (click)="open(previous())"
-          >
-            @if (previous(); as before) {
-              {{ 'library.reader.pager.previous' | t: { number: chapterNumber(before), title: before.title } }}
-            }
-          </button>
-          <button
-            dsBtn
-            variant="ghost"
-            size="sm"
-            type="button"
-            data-testid="novel-reader-pager-next"
-            [disabled]="!next()"
-            (click)="open(next())"
-          >
-            @if (next(); as after) {
-              {{ 'library.reader.pager.next' | t: { number: chapterNumber(after), title: after.title } }}
-            }
-          </button>
-        </nav>
+        <ng-container *ngTemplateOutlet="pager" />
       </article>
     }
   }
 }
+
+<ng-template #pager>
+  <nav class="library-reader-pager" [attr.aria-label]="'library.reader.pager' | t">
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      data-testid="novel-reader-pager-prev"
+      [disabled]="!previous()"
+      (click)="open(previous())"
+    >
+      @if (previous(); as before) {
+        {{ 'library.reader.pager.previous' | t: { number: chapterNumber(before), title: before.title } }}
+      }
+    </button>
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      data-testid="novel-reader-pager-next"
+      [disabled]="!next()"
+      (click)="open(next())"
+    >
+      @if (next(); as after) {
+        {{ 'library.reader.pager.next' | t: { number: chapterNumber(after), title: after.title } }}
+      }
+    </button>
+  </nav>
+</ng-template>

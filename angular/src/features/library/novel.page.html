@@ -27,10 +27,10 @@
         kind="error"
         data-testid="novel-page-error"
         [description]="'library.novel.error.description' | t"
-        [details]="errorDetails()"
+        [details]="store.error()"
         [detailsLabel]="'common.details' | t"
       >
-        <button dsBtn variant="primary" type="button" data-testid="novel-page-retry" (click)="store.simulateLoading()">
+        <button dsBtn variant="primary" type="button" data-testid="novel-page-retry" (click)="store.open(id())">
           <ds-icon name="retry" size="sm" />{{ 'common.retry' | t }}
         </button>
       </ds-area-state>
@@ -45,15 +45,7 @@
         </h1>
         <div class="ds-page-actions" role="group" [attr.aria-label]="'library.novel.page.actions' | t">
           <span class="library-novel-action" [dsTooltip]="editReason()" [attr.tabindex]="editReason() ? 0 : null">
-            <button
-              dsBtn
-              size="sm"
-              type="button"
-              data-testid="novel-page-edit"
-              [attr.aria-pressed]="editing()"
-              [disabled]="!!editReason() || editing()"
-              (click)="editing.set(true)"
-            >
+            <button dsBtn size="sm" type="button" data-testid="novel-page-edit" [disabled]="true">
               <ds-icon name="pencil" size="sm" />{{ 'library.novel.page.edit' | t }}
             </button>
           </span>
@@ -82,7 +74,7 @@
           class="library-novel-banner"
           variant="warning"
           [dismissible]="false"
-          [heading]="lockHeadingKeys[lock.kind] | t: { run: lock.runLabel }"
+          [heading]="lockHeading()"
           [message]="'library.novel.lock.message' | t"
           [meta]="lock.runId"
           [dismissLabel]="'common.dismiss' | t"
@@ -101,7 +93,12 @@
       [resizeLabel]="'library.novel.page.resizeChapters' | t"
     >
       @if (novel(); as item) {
-        <ds-novel-chapters [novel]="item" [(current)]="current" [attr.inert]="editing() || null" />
+        <ds-novel-chapters
+          [novel]="item"
+          [chapters]="chapters()"
+          [current]="current()"
+          (currentChange)="selectChapter($event)"
+        />
       } @else {
         <ng-container [ngTemplateOutlet]="skeletonRows" />
       }
@@ -113,16 +110,13 @@
       [attr.aria-label]="'library.reader.label' | t"
     >
       @if (novel(); as item) {
-        @if (editing() && chapter(); as selected) {
-          <ds-chapter-editor
-            [novel]="item"
-            [chapter]="selected"
-            (done)="editing.set(false)"
-            (cancelled)="cancelEdit()"
-          />
-        } @else {
-          <ds-novel-reader [novel]="item" [chapters]="chapters()" [(current)]="current" [highlight]="highlight()" />
-        }
+        <ds-novel-reader
+          [novel]="item"
+          [chapters]="chapters()"
+          [current]="current()"
+          (currentChange)="selectChapter($event)"
+          [highlight]="highlight()"
+        />
       }
     </main>
     <ng-template
@@ -152,12 +146,7 @@
           @if (tab() === 'reading') {
             <ds-reading-settings />
           } @else {
-            <ds-novel-search
-              [novel]="item"
-              [chapters]="chapters()"
-              [attr.inert]="editing() || null"
-              (selected)="onSearchSelected($event)"
-            />
+            <ds-novel-search [novel]="item" [chapters]="chapters()" (selected)="onSearchSelected($event)" />
           }
         } @else {
           <span class="skeleton library-novel-skeleton-cover" aria-hidden="true"></span>
@@ -190,5 +179,3 @@
     }
   </div>
 </ng-template>
-
-<ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />

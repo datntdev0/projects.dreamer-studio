@@ -15,7 +15,8 @@ import { AreaStateComponent } from '@components/state/area-state.component';
 import { BadgeComponent } from '@components/status/badge.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { LibraryChapter, LibraryNovel, NovelSearchState, SearchChapterResult, SearchHit } from '../library.models';
+import type { LibraryChapter, NovelSearchState, SearchChapterResult, SearchHit } from '../library.models';
+import type { NovelDetail } from '@dreamer/shared/models/novel';
 import { LibraryMockStore } from '../library.store';
 import { NovelSearchStore } from '../novel-search.store';
 
@@ -32,7 +33,7 @@ export interface NovelSearchSelection {
   templateUrl: './novel-search.component.html',
 })
 export class NovelSearchComponent {
-  readonly novel = input.required<LibraryNovel>();
+  readonly novel = input.required<NovelDetail>();
   readonly chapters = input.required<LibraryChapter[]>();
   readonly selected = output<NovelSearchSelection>();
 

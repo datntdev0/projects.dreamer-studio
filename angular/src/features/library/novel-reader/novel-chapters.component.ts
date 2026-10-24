@@ -20,17 +20,19 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { isConsecutive } from '../library-format';
+import { lockKind } from '../library-format';
 import type { ChapterChangeError } from '../library.models';
 import type { ChapterDialogKind } from '../library.models';
 import type { ChapterDialogState } from '../library.models';
 import type { DragState } from '../library.models';
 import type { LibraryChapter } from '../library.models';
-import type { LibraryNovel } from '../library.models';
 import type { MenuState } from '../library.models';
-import type { NovelLock } from '../library.models';
 import type { RenameState } from '../library.models';
 import type { TextParts } from '../library.models';
 import { LibraryMockStore } from '../library.store';
+import type { NovelDetail } from '@dreamer/shared/models/novel';
+import type { NovelLock as DetailLock } from '@dreamer/shared/models/novel';
+import { chapterNumber } from '../library-format';
 import { ChapterDeleteDialogComponent } from './chapter-delete-dialog.component';
 import { ChapterMergeDialogComponent } from './chapter-merge-dialog.component';
 import { ChapterMoveDialogComponent } from './chapter-move-dialog.component';
@@ -63,7 +65,8 @@ const SAVED_MS = 2000;
   templateUrl: './novel-chapters.component.html',
 })
 export class NovelChaptersComponent {
-  readonly novel = input.required<LibraryNovel>();
+  readonly novel = input.required<NovelDetail>();
+  readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
   private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly i18n: I18nService = inject(I18nService);
@@ -84,11 +87,8 @@ export class NovelChaptersComponent {
   private readonly menuPanel = viewChild<ElementRef<HTMLElement>>('menuPanel');
   private pointerY: number = 0;
   private frame: number = 0;
+  private listSelection: string | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | undefined;
-  protected readonly chapters: Signal<LibraryChapter[]> = computed(() => {
-    this.store.novels();
-    return this.store.chapters(this.novel().id);
-  });
   private readonly novelId: Signal<string> = computed(() => this.novel().id);
   protected readonly locked: Signal<boolean> = computed(() => !!this.novel().lock);
   protected readonly canOrganize: Signal<boolean> = computed(() => !this.locked() && this.chapters().length > 0);
@@ -133,7 +133,7 @@ export class NovelChaptersComponent {
       this.shown().every((chapter: LibraryChapter): boolean => this.selected().has(chapter.id)),
   );
   protected readonly organizeTooltip: Signal<string> = computed(() => {
-    const lock: NovelLock | null = this.novel().lock;
+    const lock: DetailLock | null = this.novel().lock;
     if (lock) return this.i18n.t(this.lockKey(lock));
     if (!this.chapters().length) return this.i18n.t('library.chapters.organizeEmpty');
     return this.organizing() ? '' : this.i18n.t('library.chapters.organizeHint');
@@ -179,14 +179,14 @@ export class NovelChaptersComponent {
     effect(() => {
       const ids: Set<string> = new Set(this.chapters().map((chapter: LibraryChapter): string => chapter.id));
       untracked(() => {
-        const current: string | null = this.current();
-        if (current && !ids.has(current)) this.current.set(null);
         if (!ids.size && this.organizing()) this.exitOrganize();
       });
     });
     effect(() => {
       const id: string | null = this.current();
-      if (id) requestAnimationFrame(() => this.row(id)?.scrollIntoView({ block: 'nearest' }));
+      const block: ScrollLogicalPosition = this.listSelection === id ? 'nearest' : 'center';
+      this.listSelection = null;
+      if (id) requestAnimationFrame(() => this.row(id)?.scrollIntoView({ block }));
     });
     effect(() => {
       const element: HTMLInputElement | undefined = this.renameInput()?.nativeElement;
@@ -204,10 +204,10 @@ export class NovelChaptersComponent {
     return this.numberFormat().format(value);
   }
   protected numberLabel(chapter: LibraryChapter): string {
-    return String(chapter.position).padStart(4, '0');
+    return chapterNumber(chapter);
   }
-  private lockKey(lock: NovelLock): string {
-    return `library.chapters.locked.${lock.kind}`;
+  private lockKey(lock: DetailLock): string {
+    return lockKind(lock) === 'export' ? 'library.chapters.locked.export' : 'library.chapters.locked.import';
   }
   protected mark(text: string, kind: 'number' | 'title'): TextParts {
     const query: string = this.query().trim();
@@ -251,6 +251,11 @@ export class NovelChaptersComponent {
     }
   }
   protected openChapter(chapter: LibraryChapter): void {
+    if (this.current() === chapter.id) {
+      requestAnimationFrame(() => this.row(chapter.id)?.scrollIntoView({ block: 'nearest' }));
+      return;
+    }
+    this.listSelection = chapter.id;
     this.current.set(chapter.id);
   }
   protected onRowKey(event: KeyboardEvent, chapter: LibraryChapter): void {

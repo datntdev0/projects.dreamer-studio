@@ -1,7 +1,7 @@
 import type { Type } from '@angular/core';
 import { HomePage } from '../../features/home/home.page';
 import { LibraryPage } from '../../features/library/library.page';
-import { LibraryPlaceholderPage } from '../../features/library/library-placeholder.page';
+import { NovelPage } from '../../features/library/novel.page';
 import { ImportPage } from '../../features/library/import/import.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 import { SettingsPage } from '../../features/settings/settings.page';
@@ -54,7 +54,7 @@ export const MODULES: AppModule[] = [
     description: 'module.library.desc',
     release: '0.1.0',
     page: LibraryPage,
-    detailPage: LibraryPlaceholderPage,
+    detailPage: NovelPage,
     detailRoute: true,
     subRoutes: [{ path: 'import', page: ImportPage, title: 'library.import.page.title' }],
   },

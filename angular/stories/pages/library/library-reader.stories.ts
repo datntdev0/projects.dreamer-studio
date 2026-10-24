@@ -35,19 +35,11 @@ export const Main: Story = {};
 
 export const ChapterMissing: Story = { args: { missingChapter: 12 } };
 
-export const Searching: Story = { args: { tab: 'search', searchQuery: '第', searchState: 'running' } };
-
-export const SearchResults: Story = { args: { tab: 'search', searchQuery: '第', searchState: 'results' } };
-
-export const SearchNoResults: Story = { args: { tab: 'search', searchQuery: 'no-results', searchState: 'none' } };
-
 export const FocusMode: Story = { args: { focusMode: true } };
 
 export const NoChapters: Story = { args: { route: '/library/n-empty', chapter: null } };
 
 export const Locked: Story = { args: { lock: true } };
-
-export const Editing: Story = { args: { editing: true } };
 
 export const NovelNotFound: Story = { args: { route: '/library/n-missing' } };
 

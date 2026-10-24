@@ -11,22 +11,6 @@
     >
   }
   <span class="ds-spacer"></span>
-  <span class="library-chapters-reason" [attr.tabindex]="canOrganize() ? null : 0" [dsTooltip]="organizeTooltip()">
-    <button
-      dsBtn
-      variant="ghost"
-      size="sm"
-      type="button"
-      class="library-chapters-organize"
-      data-testid="novel-chapters-organize"
-      [attr.aria-pressed]="organizing()"
-      [attr.aria-description]="organizeTooltip() || null"
-      [disabled]="!canOrganize()"
-      (click)="toggleOrganize()"
-    >
-      <ds-icon [name]="locked() ? 'lock' : 'sliders'" size="sm" />{{ 'library.chapters.organize' | t }}
-    </button>
-  </span>
 </header>
 
 @if (chapters().length) {

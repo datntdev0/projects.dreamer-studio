@@ -7,7 +7,12 @@
   (closed)="closed.emit()"
 >
   <div class="chapter-dlg" data-testid="chapter-dlg-merge">
-    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.merge.failed" />
+    <ds-chapter-dialog-alerts
+      [lock]="lock()"
+      [lockLabel]="lockLabel()"
+      [error]="error()"
+      failedKey="library.chapterDialog.merge.failed"
+    />
     @if (!mergeable()) {
       <p class="chapter-dlg-note warning" role="alert" data-testid="chapter-dlg-merge-invalid">
         <ds-icon name="alert-triangle" size="sm" />{{ 'library.chapterDialog.error.notConsecutive' | t }}

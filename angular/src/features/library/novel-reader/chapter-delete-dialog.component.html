@@ -8,7 +8,12 @@
   (closed)="closed.emit()"
 >
   <div class="chapter-dlg" data-testid="chapter-dlg-delete">
-    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.delete.failed" />
+    <ds-chapter-dialog-alerts
+      [lock]="lock()"
+      [lockLabel]="lockLabel()"
+      [error]="error()"
+      failedKey="library.chapterDialog.delete.failed"
+    />
     @if (single(); as only) {
       <p>{{ 'library.chapterDialog.delete.messageOne' | t: { position: only.position } }}</p>
     } @else {

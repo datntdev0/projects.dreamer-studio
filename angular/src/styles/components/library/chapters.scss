@@ -104,17 +104,12 @@
 }
 
 .library-chapters-list {
-  margin: 0;
-  padding: var(--sp-xs) 0;
-  list-style: none;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
 
-  &.drop-end::after {
-    display: block;
-    height: var(--sp-xxs);
-    margin: 0 var(--sp-sm);
-    background: var(--color-primary);
-    border-radius: var(--radius-full);
-    content: '';
+  .library-chapters & .cdk-virtual-scroll-content-wrapper {
+    width: 100%;
   }
 
   &.is-dragging {
@@ -127,7 +122,7 @@
   display: flex;
   gap: var(--sp-xs);
   align-items: center;
-  min-height: var(--control-h);
+  height: var(--control-h);
 
   &.is-current::before {
     position: absolute;
@@ -163,15 +158,23 @@
     }
   }
 
-  &.drop-before::after {
+  &.drop-before::after,
+  &.drop-after::after {
     position: absolute;
-    top: calc(-1 * var(--sp-xxs) / 2);
     right: var(--sp-sm);
     left: var(--sp-sm);
     height: var(--sp-xxs);
     background: var(--color-primary);
     border-radius: var(--radius-full);
     content: '';
+  }
+
+  &.drop-before::after {
+    top: calc(-1 * var(--sp-xxs) / 2);
+  }
+
+  &.drop-after::after {
+    bottom: calc(-1 * var(--sp-xxs) / 2);
   }
 }
 
@@ -260,11 +263,13 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 
   .ds-checkbox-label {
     flex: 1;
     min-width: 0;
     min-height: var(--control-h);
+    overflow: hidden;
   }
 
   .ds-checkbox-label > span {
@@ -273,6 +278,7 @@
     gap: var(--sp-sm);
     align-items: center;
     min-width: 0;
+    overflow: hidden;
   }
 }
 
@@ -281,25 +287,39 @@
 }
 
 .library-chapters-rename {
-  display: grid;
+  display: flex;
   flex: 1;
-  gap: var(--sp-xxs);
+  gap: var(--sp-xs);
+  align-items: center;
   min-width: 0;
-  padding: var(--sp-xs) 0;
 
   .ds-input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
     height: var(--control-h-sm);
   }
 }
 
 .library-chapters-rename-note {
   display: inline-flex;
+  flex: none;
   gap: var(--sp-xxs);
   align-items: center;
+  max-width: 40%;
+  overflow: hidden;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-small);
+  white-space: nowrap;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   &.is-error {
+    max-width: none;
     color: var(--color-danger);
   }
 }

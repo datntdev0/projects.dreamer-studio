@@ -1,4 +1,8 @@
-import { Component, computed, input, signal, type Signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { computed } from '@angular/core';
+import { input } from '@angular/core';
+import { signal } from '@angular/core';
+import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { FieldComponent } from '@components/form/field.component';
@@ -7,7 +11,10 @@ import type { SegmentedOption } from '@components/form/segmented.component';
 import { IconComponent } from '@components/icon/icon.component';
 import type { ToastOptions } from '@components/toast/toast.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { byPosition, isConsecutive, LIST_LIMIT } from '../library-format';
+import { byPosition } from '../library-format';
+import { chapterRef } from '../library-format';
+import { isConsecutive } from '../library-format';
+import { LIST_LIMIT } from '../library-format';
 import type { LibraryChapter, MoveMode } from '../library.models';
 import { ChapterChangeDialog } from './chapter-change-dialog';
 import { ChapterDialogAlertsComponent } from './chapter-dialog-alerts.component';
@@ -40,7 +47,7 @@ export class ChapterMoveDialogComponent extends ChapterChangeDialog {
   protected readonly items: Signal<LibraryChapter[]> = computed(() => byPosition(this.chapters()));
   protected readonly rest: Signal<LibraryChapter[]> = computed(() => {
     const ids: string[] = this.items().map((chapter: LibraryChapter): string => chapter.id);
-    return this.store.chapters(this.novelId()).filter((chapter: LibraryChapter): boolean => !ids.includes(chapter.id));
+    return this.store.chapters().filter((chapter: LibraryChapter): boolean => !ids.includes(chapter.id));
   });
   protected readonly maxPosition: Signal<number> = computed(() => this.rest().length + 1);
   protected readonly modeOptions: Signal<SegmentedOption[]> = computed(() => [
@@ -114,6 +121,10 @@ export class ChapterMoveDialogComponent extends ChapterChangeDialog {
           ? this.i18n.t('library.chapterDialog.move.doneOne', { title: this.items()[0].title, start: range.start })
           : this.i18n.t('library.chapterDialog.move.doneMany', { count: ids.length, ...range }),
     };
-    this.apply('library.chapterDialog.move.failed', () => this.store.moveChapters(this.novelId(), ids, index), success);
+    void this.apply(
+      'library.chapterDialog.move.failed',
+      { kind: 'move', chapters: this.items().map(chapterRef), toIndex: index },
+      success,
+    );
   }
 }

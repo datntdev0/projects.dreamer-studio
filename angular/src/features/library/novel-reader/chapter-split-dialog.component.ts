@@ -1,4 +1,10 @@
-import { Component, computed, input, signal, type Signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { computed } from '@angular/core';
+import { effect } from '@angular/core';
+import { input } from '@angular/core';
+import { signal } from '@angular/core';
+import { untracked } from '@angular/core';
+import type { Signal } from '@angular/core';
 import { BannerComponent } from '@components/banner/banner.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
@@ -6,7 +12,10 @@ import { FieldComponent } from '@components/form/field.component';
 import { IconComponent } from '@components/icon/icon.component';
 import type { ToastOptions } from '@components/toast/toast.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { CHAPTER_TITLE_MAX } from '@dreamer/shared/models/novel';
+import { chapterRef } from '../library-format';
 import type { LibraryChapter } from '../library.models';
+import type { ChapterTextState } from '../novel.store';
 import { ChapterChangeDialog } from './chapter-change-dialog';
 import { ChapterDialogAlertsComponent } from './chapter-dialog-alerts.component';
 
@@ -25,12 +34,18 @@ import { ChapterDialogAlertsComponent } from './chapter-dialog-alerts.component'
 })
 export class ChapterSplitDialogComponent extends ChapterChangeDialog {
   readonly chapter = input.required<LibraryChapter | null>();
+  protected readonly titleMax: number = CHAPTER_TITLE_MAX;
 
   protected readonly point = signal<number | null>(null);
   protected readonly title = signal<string>('');
   protected readonly paragraphs: Signal<string[]> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
-    return chapter ? this.store.paragraphs(chapter) : [];
+    const text: ChapterTextState | null = chapter ? this.store.text(chapter) : null;
+    return text?.status === 'ready' ? text.paragraphs : [];
+  });
+  protected readonly textStatus: Signal<ChapterTextState['status']> = computed(() => {
+    const chapter: LibraryChapter | null = this.chapter();
+    return chapter ? this.store.text(chapter).status : 'loading';
   });
   protected readonly splittable: Signal<boolean> = computed(() => this.paragraphs().length >= 2);
   protected readonly paragraphsLabel: Signal<string> = computed(() =>
@@ -42,6 +57,14 @@ export class ChapterSplitDialogComponent extends ChapterChangeDialog {
   protected readonly canApply: Signal<boolean> = computed(
     () => this.splittable() && this.point() !== null && this.titleValid() && !this.lock() && !this.busy(),
   );
+
+  constructor() {
+    super();
+    effect(() => {
+      const chapter: LibraryChapter | null = this.chapter();
+      if (this.open() && chapter) untracked(() => this.store.ensure(chapter));
+    });
+  }
 
   protected reset(): void {
     this.point.set(null);
@@ -89,9 +112,14 @@ export class ChapterSplitDialogComponent extends ChapterChangeDialog {
       title: this.i18n.t('library.chapterDialog.split.done', { title: chapter.title }),
       message: this.i18n.t('library.chapterDialog.split.doneMessage', { newTitle, start: point + 1 }),
     };
-    this.apply(
+    void this.apply(
       'library.chapterDialog.split.failed',
-      () => this.store.splitChapter(this.novelId(), chapter.id, point, newTitle),
+      {
+        kind: 'split',
+        chapter: chapterRef(chapter),
+        atParagraph: point,
+        title: newTitle,
+      },
       success,
     );
   }

@@ -1,19 +1,20 @@
 import { shell } from 'electron';
-import { readFile } from 'node:fs/promises';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { ChapterRequest, ChapterText, DeleteNovelsResult } from '@dreamer/shared/models/novel';
+import { applyChapterChange } from '@dreamer/shared/core/chapter-changes';
+import { ChapterChangeRequest, ChapterRequest, ChapterText, DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelChapter, NovelDetail, NovelLock } from '@dreamer/shared/models/novel';
 import { NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { normalizeTags, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { AppPaths } from '@storage/paths';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { readCoverImage } from './cover-image';
+import { chapterTexts } from './chapter-changes';
 import { LibraryIndex } from './library-index';
-import { chapterPath, novelFolder, NovelFolder } from './library-files';
+import { novelFolder, NovelFolder } from './library-files';
 import { exportOutputPath } from './novel/novel-export-pipeline';
 import { assertUnlocked, novelLocks } from './novel/novel-lock';
 import { deleteNovel, readMetadata, saveMetadata, withNovelLock, writeCover } from './novel/novel-files';
@@ -65,48 +66,63 @@ export class LibraryService {
   }
 
   async getChapter(request: ChapterRequest): Promise<ChapterText> {
-    const missing: CodedError = new CodedError(
-      ErrorCode.ChapterFileMissing,
-      `Chapter file is missing: ${request.file}`,
-    );
-    const folder: NovelFolder = novelFolder(this.paths, request.novelId);
     const listed: boolean = this.index
       .get(request.novelId)
       .chapters.some((chapter: NovelChapter): boolean => chapter.file === request.file);
     if (!isContentHash(request.file) || !listed) {
-      throw missing;
+      throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter file is missing: ${request.file}`);
     }
-    try {
-      return { paragraphs: splitParagraphs(await readFile(chapterPath(folder, request.file), 'utf-8')) };
-    } catch {
-      throw missing;
-    }
+    return { paragraphs: await chapterTexts(novelFolder(this.paths, request.novelId)).read(request.file) };
   }
 
   updateNovel(request: NovelUpdateRequest): Promise<NovelDetail> {
-    return withNovelLock(request.id, async (): Promise<NovelDetail> => {
+    return this.writeNovel(request.id, async (folder: NovelFolder, current: NovelMetadata): Promise<NovelMetadata> => {
+      const next: NovelMetadata = mergeMetadata(current, request.patch);
+      let cover: NovelCoverFile | null = current.cover;
+      if (request.patch.cover === 'remove') {
+        cover = null;
+      } else if (typeof request.patch.cover === 'object') {
+        const image: Awaited<ReturnType<typeof readCoverImage>> = await readCoverImage(request.patch.cover.path);
+        cover = await writeCover(folder, image.bytes, image.mime);
+      }
+      next.cover = cover;
+      return next;
+    });
+  }
+
+  changeChapters(request: ChapterChangeRequest): Promise<NovelDetail> {
+    return this.writeNovel(
+      request.novelId,
+      async (folder: NovelFolder, current: NovelMetadata): Promise<NovelMetadata> => {
+        const chapters: NovelChapterEntry[] = await applyChapterChange(
+          current.chapters,
+          request.change,
+          chapterTexts(folder),
+        );
+        return { ...current, chapters };
+      },
+    );
+  }
+
+  private writeNovel(
+    id: string,
+    change: (folder: NovelFolder, current: NovelMetadata) => Promise<NovelMetadata>,
+  ): Promise<NovelDetail> {
+    return withNovelLock(id, async (): Promise<NovelDetail> => {
       try {
-        this.index.get(request.id);
-        assertUnlocked(this.runs, request.id);
-        const folder: NovelFolder = novelFolder(this.paths, request.id);
+        this.index.get(id);
+        assertUnlocked(this.runs, id);
+        const folder: NovelFolder = novelFolder(this.paths, id);
         const current: NovelMetadata | null = readMetadata(folder);
         if (current === null) {
-          throw new CodedError(ErrorCode.NovelNotFound, `Novel not found: ${request.id}`);
+          throw new CodedError(ErrorCode.NovelNotFound, `Novel not found: ${id}`);
         }
-        const next: NovelMetadata = mergeMetadata(current, request.patch);
-        let cover: NovelCoverFile | null = current.cover;
-        if (request.patch.cover === 'remove') {
-          cover = null;
-        } else if (typeof request.patch.cover === 'object') {
-          const image: Awaited<ReturnType<typeof readCoverImage>> = await readCoverImage(request.patch.cover.path);
-          cover = await writeCover(folder, image.bytes, image.mime);
-        }
-        next.cover = cover;
+        const next: NovelMetadata = await change(folder, current);
         next.updatedAt = new Date().toISOString();
         await saveMetadata(folder, next);
-        this.index.refresh(request.id);
-        this.notify([request.id]);
-        return this.get(request.id);
+        this.index.refresh(id);
+        this.notify([id]);
+        return this.get(id);
       } catch (error: unknown) {
         if (error instanceof CodedError) {
           throw error;

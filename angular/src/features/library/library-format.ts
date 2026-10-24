@@ -1,5 +1,6 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelLock } from '@dreamer/shared/models/novel';
+import type { ChapterRef } from '@dreamer/shared/models/novel';
 import type { I18nService, Language } from '@core/i18n/i18n.service';
 import type { LibraryChapter } from './library.models';
 
@@ -15,8 +16,6 @@ export type TextField = RequiredField | 'author' | 'description';
 const LANGUAGE_CODES: string[] = ['zh', 'ja', 'ko', 'en', 'vi'];
 
 export const LOADING_MS = 500;
-
-export const CHANGE_MS = 400;
 
 export const LIST_LIMIT = 5;
 
@@ -52,11 +51,8 @@ export function isConsecutive(chapters: LibraryChapter[]): boolean {
   );
 }
 
-export function renumber(chapters: LibraryChapter[]): LibraryChapter[] {
-  return chapters.map((chapter: LibraryChapter, index: number): LibraryChapter => ({
-    ...chapter,
-    position: index + 1,
-  }));
+export function chapterRef(chapter: LibraryChapter): ChapterRef {
+  return { position: chapter.position, file: chapter.file };
 }
 
 export function byPosition(chapters: LibraryChapter[]): LibraryChapter[] {

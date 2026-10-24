@@ -1,9 +1,16 @@
 import type { ChapterText } from '@dreamer/shared/models/novel';
 import type { ChapterRequest } from '@dreamer/shared/models/novel';
+import type { ChapterChangeRequest } from '@dreamer/shared/models/novel';
 import type { SearchHit } from '@dreamer/shared/models/novel';
 import type { SearchProgress } from '@dreamer/shared/models/novel';
 import type { SearchRequest } from '@dreamer/shared/models/novel';
 import { findTextMatches } from '@dreamer/shared/core/text-match';
+import { applyChapterChange } from '@dreamer/shared/core/chapter-changes';
+import type { ChapterFile } from '@dreamer/shared/core/chapter-changes';
+import type { ChapterTexts } from '@dreamer/shared/core/chapter-changes';
+import { chapterStats } from '@dreamer/shared/core/novel-text';
+import { contentHash } from '@dreamer/shared/core/novel-text';
+import type { NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import type { TextMatch } from '@dreamer/shared/core/text-match';
 import { CodedError } from '@dreamer/shared/errors/app-error';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
@@ -43,8 +50,39 @@ export interface ReaderApiFixture {
 
 export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
   const novels: LibraryNovel[] = [...NOVELS, NO_CHAPTERS_NOVEL];
+  const chaptersByNovel: Map<string, NovelChapter[]> = new Map();
+  const textByFile: Map<string, string[]> = new Map();
+  const originalCharsByNovel: Map<string, number> = new Map();
+  const updatedAtByNovel: Map<string, string> = new Map();
   let progressListener: ((progress: SearchProgress) => void) | null = null;
   let activeSearchId: string | null = null;
+  const chaptersFor = (novel: LibraryNovel): NovelChapter[] => {
+    let chapters: NovelChapter[] | undefined = chaptersByNovel.get(novel.id);
+    if (!chapters) {
+      chapters = makeChapters(novel).map((chapter: LibraryChapter): NovelChapter => {
+        textByFile.set(`${novel.id}:${chapter.file}`, CHAPTER_PARAGRAPHS[chapter.id] ?? SAMPLE_PARAGRAPHS);
+        return {
+          position: chapter.position,
+          title: chapter.title,
+          file: chapter.file,
+          paragraphs: chapter.paragraphCount,
+          chars: chapter.chars,
+        };
+      });
+      chaptersByNovel.set(novel.id, chapters);
+      originalCharsByNovel.set(
+        novel.id,
+        chapters.reduce((sum: number, chapter: NovelChapter): number => sum + chapter.chars, 0),
+      );
+    }
+    return chapters;
+  };
+  const storeText = async (novelId: string, paragraphs: string[]): Promise<ChapterFile> => {
+    const text: string = paragraphs.join('\n');
+    const file: string = await contentHash(text);
+    textByFile.set(`${novelId}:${file}`, paragraphs);
+    return { file, ...chapterStats(text) };
+  };
   const api: Partial<DesktopApi> = {
     onSearchProgress: (listener: (progress: SearchProgress) => void): (() => void) => {
       progressListener = listener;
@@ -58,10 +96,12 @@ export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
     search: async (request: SearchRequest): Promise<void> => {
       activeSearchId = request.searchId;
       const novel: LibraryNovel | undefined = novels.find((item: LibraryNovel): boolean => item.id === request.novelId);
-      const chapters: LibraryChapter[] = novel ? makeChapters(novel).slice(0, 3) : [];
-      const hits: SearchHit[] = chapters.flatMap((chapter: LibraryChapter): SearchHit[] => {
-        const key: string = `${request.novelId}-c${String(chapter.position).padStart(4, '0')}`;
-        const texts: string[] = [chapter.title, ...(CHAPTER_PARAGRAPHS[key] ?? SAMPLE_PARAGRAPHS)];
+      const chapters: NovelChapter[] = novel ? chaptersFor(novel).slice(0, 3) : [];
+      const hits: SearchHit[] = chapters.flatMap((chapter: NovelChapter): SearchHit[] => {
+        const texts: string[] = [
+          chapter.title,
+          ...(textByFile.get(`${request.novelId}:${chapter.file}`) ?? SAMPLE_PARAGRAPHS),
+        ];
         return texts.flatMap((text: string, index: number): SearchHit[] => {
           const characters: string[] = Array.from(text);
           return findTextMatches(text, request.query).map((match: TextMatch): SearchHit => ({
@@ -95,18 +135,17 @@ export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
         throw new CodedError(ErrorCode.NovelMetadataInvalid, 'The novel metadata could not be read');
       const novel: LibraryNovel | undefined = novels.find((item: LibraryNovel): boolean => item.id === id);
       if (!novel) throw new CodedError(ErrorCode.NovelNotFound, `Novel ${id} was not found`);
-      const chapters: NovelChapter[] = makeChapters(novel).map((chapter: LibraryChapter): NovelChapter => ({
-        position: chapter.position,
-        title: chapter.title,
-        file: chapter.file,
-        paragraphs: chapter.paragraphCount,
-        chars: chapter.chars,
-      }));
+      const chapters: NovelChapter[] = chaptersFor(novel);
       return {
         ...toNovelSummary(novel),
         chapterCount: chapters.length,
+        charCount:
+          toNovelSummary(novel).charCount -
+          (originalCharsByNovel.get(id) ?? 0) +
+          chapters.reduce((sum: number, chapter: NovelChapter): number => sum + chapter.chars, 0),
+        updatedAt: updatedAtByNovel.get(id) ?? novel.updatedAt,
         description: novel.description,
-        chapters,
+        chapters: chapters.map((chapter: NovelChapter): NovelChapter => ({ ...chapter })),
         lock: fixture.lock
           ? { runId: 'run-story-export', type: 'novel-export', label: novel.originalTitle, status: 'running' }
           : null,
@@ -117,8 +156,24 @@ export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
       if (position === fixture.missingChapter) {
         throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter ${position} is missing`);
       }
-      const key: string = `${request.novelId}-c${String(position).padStart(4, '0')}`;
-      return { paragraphs: CHAPTER_PARAGRAPHS[key] ?? SAMPLE_PARAGRAPHS };
+      return { paragraphs: textByFile.get(`${request.novelId}:${request.file}`) ?? SAMPLE_PARAGRAPHS };
+    },
+    changeChapters: async (request: ChapterChangeRequest): Promise<NovelDetail | null> => {
+      const novel: LibraryNovel | undefined = novels.find((item: LibraryNovel): boolean => item.id === request.novelId);
+      if (!novel) throw new CodedError(ErrorCode.NovelNotFound, `Novel ${request.novelId} was not found`);
+      if (fixture.lock) throw new CodedError(ErrorCode.NovelLocked, 'Novel is busy');
+      const texts: ChapterTexts = {
+        read: async (file: string): Promise<string[]> =>
+          textByFile.get(`${request.novelId}:${file}`) ?? SAMPLE_PARAGRAPHS,
+        write: (paragraphs: string[]): Promise<ChapterFile> => storeText(request.novelId, paragraphs),
+      };
+      const next: NovelChapterEntry[] = await applyChapterChange(chaptersFor(novel), request.change, texts);
+      chaptersByNovel.set(
+        request.novelId,
+        next.map((chapter: NovelChapterEntry, index: number): NovelChapter => ({ ...chapter, position: index + 1 })),
+      );
+      updatedAtByNovel.set(request.novelId, new Date().toISOString());
+      return api.getNovel!(request.novelId);
     },
   };
   const base: ValueProvider = provideDesktopApi() as ValueProvider;
@@ -263,6 +318,7 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       void patch;
       return Promise.resolve(null);
     },
+    changeChapters: (): Promise<NovelDetail | null> => Promise.resolve(null),
     deleteNovels: (): Promise<DeleteNovelsResult | null> => Promise.resolve({ deleted: [], skipped: [] }),
     pickImage: (): Promise<PickedImage | null> => Promise.resolve(null),
     openNovelFolder: (): Promise<void> => Promise.resolve(),

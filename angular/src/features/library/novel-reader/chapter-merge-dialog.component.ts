@@ -1,10 +1,16 @@
-import { Component, computed, input, type Signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { computed } from '@angular/core';
+import { input } from '@angular/core';
+import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { IconComponent } from '@components/icon/icon.component';
 import type { ToastOptions } from '@components/toast/toast.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { byPosition, isConsecutive, totalChars } from '../library-format';
+import { byPosition } from '../library-format';
+import { chapterRef } from '../library-format';
+import { isConsecutive } from '../library-format';
+import { totalChars } from '../library-format';
 import type { LibraryChapter } from '../library.models';
 import { ChapterChangeDialog } from './chapter-change-dialog';
 import { ChapterDialogAlertsComponent } from './chapter-dialog-alerts.component';
@@ -41,6 +47,10 @@ export class ChapterMergeDialogComponent extends ChapterChangeDialog {
       kind: 'success',
       title: this.i18n.t('library.chapterDialog.merge.done', { count: ids.length, title: this.first()?.title ?? '' }),
     };
-    this.apply('library.chapterDialog.merge.failed', () => this.store.mergeChapters(this.novelId(), ids), success);
+    void this.apply(
+      'library.chapterDialog.merge.failed',
+      { kind: 'merge', chapters: this.items().map(chapterRef) },
+      success,
+    );
   }
 }

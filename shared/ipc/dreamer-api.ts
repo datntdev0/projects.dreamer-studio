@@ -8,7 +8,7 @@ import { DiagnosticsRun } from '../models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '../models/novel-package';
-import { ChapterRequest, ChapterText } from '../models/novel';
+import { ChapterChangeRequest, ChapterRequest, ChapterText } from '../models/novel';
 import { SearchProgress, SearchRequest } from '../models/novel';
 import { DeleteNovelsResult, LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '../models/novel';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
@@ -73,6 +73,7 @@ export interface DreamerApi {
     cancelSearch(searchId: string): Promise<void>;
     onSearchProgress(listener: (progress: SearchProgress) => void): () => void;
     updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail>;
+    changeChapters(request: ChapterChangeRequest): Promise<NovelDetail>;
     deleteNovels(ids: string[]): Promise<DeleteNovelsResult>;
     openFolder(id: string): Promise<void>;
     onChanged(listener: (event: LibraryChangedEvent) => void): () => void;

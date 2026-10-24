@@ -1,10 +1,15 @@
-import { Component, computed, input, type Signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { computed } from '@angular/core';
+import { input } from '@angular/core';
+import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { IconComponent } from '@components/icon/icon.component';
 import type { ToastOptions } from '@components/toast/toast.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { byPosition, LIST_LIMIT } from '../library-format';
+import { byPosition } from '../library-format';
+import { chapterRef } from '../library-format';
+import { LIST_LIMIT } from '../library-format';
 import type { LibraryChapter } from '../library.models';
 import { ChapterChangeDialog } from './chapter-change-dialog';
 import { ChapterDialogAlertsComponent } from './chapter-dialog-alerts.component';
@@ -31,7 +36,7 @@ export class ChapterDeleteDialogComponent extends ChapterChangeDialog {
     this.items().length === 1 ? this.items()[0] : null,
   );
   protected readonly deletesAll: Signal<boolean> = computed(
-    () => this.items().length > 0 && this.items().length === this.store.chapters(this.novelId()).length,
+    () => this.items().length > 0 && this.items().length === this.store.chapters().length,
   );
   protected readonly heading: Signal<string> = computed(() => {
     const single: LibraryChapter | null = this.single();
@@ -59,6 +64,10 @@ export class ChapterDeleteDialogComponent extends ChapterChangeDialog {
         ? this.i18n.t('library.chapterDialog.delete.doneOne', { title: single.title })
         : this.i18n.t('library.chapterDialog.delete.doneMany', { count: ids.length }),
     };
-    this.apply('library.chapterDialog.delete.failed', () => this.store.deleteChapters(this.novelId(), ids), success);
+    void this.apply(
+      'library.chapterDialog.delete.failed',
+      { kind: 'delete', chapters: this.items().map(chapterRef) },
+      success,
+    );
   }
 }

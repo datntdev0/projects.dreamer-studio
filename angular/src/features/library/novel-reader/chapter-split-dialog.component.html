@@ -8,14 +8,30 @@
   (closed)="closed.emit()"
 >
   <div class="chapter-dlg" data-testid="chapter-dlg-split">
-    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.split.failed" />
+    <ds-chapter-dialog-alerts
+      [lock]="lock()"
+      [lockLabel]="lockLabel()"
+      [error]="error()"
+      failedKey="library.chapterDialog.split.failed"
+    />
     @if (chapter(); as current) {
       <p class="chapter-dlg-title" data-testid="chapter-dlg-split-source">
         <span class="num muted">{{ 'library.chapterDialog.number' | t: { position: current.position } }}</span>
         <strong>{{ current.title }}</strong>
         <span class="meta num">{{ paragraphsLabel() }}</span>
       </p>
-      @if (splittable()) {
+      @if (textStatus() === 'loading') {
+        <p class="meta" data-testid="chapter-dlg-split-loading">{{ 'library.chapterDialog.split.loading' | t }}</p>
+      } @else if (textStatus() === 'missing') {
+        <ds-banner
+          variant="danger"
+          [heading]="'errors.CHAPTER_FILE_MISSING.title' | t"
+          [message]="'errors.CHAPTER_FILE_MISSING.message' | t"
+          [dismissible]="false"
+          [dismissLabel]="'common.dismiss' | t"
+          data-testid="chapter-dlg-split-missing"
+        />
+      } @else if (splittable()) {
         <p class="meta">{{ 'library.chapterDialog.split.instruction' | t }}</p>
         <div
           class="chapter-dlg-paragraphs"
@@ -73,6 +89,7 @@
             id="chapter-dlg-split-title"
             class="ds-input"
             required
+            [attr.maxlength]="titleMax"
             [value]="title()"
             [attr.aria-invalid]="!titleValid() || null"
             data-testid="chapter-dlg-split-title"

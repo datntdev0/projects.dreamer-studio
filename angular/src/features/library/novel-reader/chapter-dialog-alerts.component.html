@@ -2,7 +2,7 @@
   <ds-banner
     variant="warning"
     [heading]="'library.chapterDialog.locked.title' | t"
-    [message]="'library.chapterDialog.locked.message' | t: { run: current.runLabel }"
+    [message]="'library.chapterDialog.locked.message' | t: { run: lockLabel() }"
     [dismissible]="false"
     [dismissLabel]="'common.dismiss' | t"
     data-testid="chapter-dlg-locked"

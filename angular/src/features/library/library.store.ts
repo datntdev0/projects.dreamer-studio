@@ -1,7 +1,11 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
+import { computed } from '@angular/core';
+import { signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { LOADING_MS, isConsecutive, renumber } from './library-format';
-import type { ChapterChangeError, DeleteNovelsResult, ImportState } from './library.models';
+import { LOADING_MS } from './library-format';
+import type { ChapterEditorError } from './library.models';
+import type { DeleteNovelsResult } from './library.models';
+import type { ImportState } from './library.models';
 import type { LibraryChapter, LibraryNovel, LibraryScenario, LibrarySortKey } from './library.models';
 import type { LibraryStoreData } from './library.models';
 import type { LibraryView } from './library.models';
@@ -111,101 +115,29 @@ export class LibraryMockStore {
     return { deleted, skipped };
   }
 
-  renameChapter(novelId: string, chapterId: string, title: string): ChapterChangeError | null {
-    if (!title.trim()) {
-      return 'titleRequired';
+  editChapter(novelId: string, chapterId: string, title: string, paragraphs: string[]): ChapterEditorError | null {
+    if (this.novel(novelId)?.lock) {
+      return 'locked';
     }
-    return this.changeChapters(novelId, (chapters) =>
-      chapters.map((chapter) => (chapter.id === chapterId ? { ...chapter, title: title.trim() } : chapter)),
-    );
-  }
-
-  editChapter(novelId: string, chapterId: string, title: string, paragraphs: string[]): ChapterChangeError | null {
     if (!title.trim()) {
       return 'titleRequired';
     }
     if (!paragraphs.length) {
       return 'contentRequired';
     }
-    const error: ChapterChangeError | null = this.changeChapters(novelId, (chapters) =>
-      chapters.map((chapter) =>
+    this.chapterMap.update((map: Record<string, LibraryChapter[]>) => ({
+      ...map,
+      [novelId]: this.chapters(novelId).map((chapter: LibraryChapter): LibraryChapter =>
         chapter.id === chapterId
           ? { ...chapter, title: title.trim(), chars: paragraphs.join('').length, paragraphCount: paragraphs.length }
           : chapter,
       ),
-    );
-    if (!error) this.paragraphsByChapter.update((map) => ({ ...map, [chapterId]: [...paragraphs] }));
-    return error;
-  }
-
-  moveChapters(novelId: string, chapterIds: string[], toIndex: number): ChapterChangeError | null {
-    return this.changeChapters(novelId, (chapters) => {
-      const moving: LibraryChapter[] = chapters.filter((chapter) => chapterIds.includes(chapter.id));
-      const rest: LibraryChapter[] = chapters.filter((chapter) => !chapterIds.includes(chapter.id));
-      const index: number = Math.max(0, Math.min(toIndex, rest.length));
-      return [...rest.slice(0, index), ...moving, ...rest.slice(index)];
-    });
-  }
-
-  mergeChapters(novelId: string, chapterIds: string[]): ChapterChangeError | null {
-    const selected: LibraryChapter[] = this.chapters(novelId).filter((chapter) => chapterIds.includes(chapter.id));
-    if (selected.length < 2 || !isConsecutive(selected)) {
-      return 'notConsecutive';
-    }
-    const [first, ...others] = selected;
-    const merged: LibraryChapter = {
-      ...first,
-      chars: selected.reduce((sum: number, chapter: LibraryChapter): number => sum + chapter.chars, 0),
-      paragraphCount: selected.reduce(
-        (sum: number, chapter: LibraryChapter): number => sum + chapter.paragraphCount,
-        0,
-      ),
-    };
-    const removed: string[] = others.map((chapter: LibraryChapter): string => chapter.id);
-    return this.changeChapters(novelId, (chapters) =>
-      chapters
-        .filter((chapter) => !removed.includes(chapter.id))
-        .map((chapter) => (chapter.id === first.id ? merged : chapter)),
-    );
-  }
-
-  splitChapter(novelId: string, chapterId: string, atParagraph: number, newTitle: string): ChapterChangeError | null {
-    const chapter: LibraryChapter | undefined = this.chapters(novelId).find((item) => item.id === chapterId);
-    if (!chapter || chapter.paragraphCount < 2 || atParagraph < 1 || atParagraph >= chapter.paragraphCount) {
-      return 'tooFewParagraphs';
-    }
-    if (!newTitle.trim()) {
-      return 'titleRequired';
-    }
-    const ratio: number = atParagraph / chapter.paragraphCount;
-    const head: LibraryChapter = { ...chapter, chars: Math.round(chapter.chars * ratio), paragraphCount: atParagraph };
-    const tail: LibraryChapter = {
-      id: `${chapter.id}-s${Date.now().toString(16)}`,
-      position: chapter.position + 1,
-      title: newTitle.trim(),
-      file: chapter.file,
-      chars: chapter.chars - head.chars,
-      paragraphCount: chapter.paragraphCount - atParagraph,
-    };
-    return this.changeChapters(novelId, (chapters) =>
-      chapters.flatMap((item: LibraryChapter): LibraryChapter[] => (item.id === chapterId ? [head, tail] : [item])),
-    );
-  }
-
-  deleteChapters(novelId: string, chapterIds: string[]): ChapterChangeError | null {
-    return this.changeChapters(novelId, (chapters) => chapters.filter((chapter) => !chapterIds.includes(chapter.id)));
-  }
-
-  private changeChapters(
-    novelId: string,
-    change: (chapters: LibraryChapter[]) => LibraryChapter[],
-  ): ChapterChangeError | null {
-    if (this.novel(novelId)?.lock) {
-      return 'locked';
-    }
-    const next: LibraryChapter[] = renumber(change(this.chapters(novelId)));
-    this.chapterMap.update((map: Record<string, LibraryChapter[]>) => ({ ...map, [novelId]: next }));
-    this.updateNovel(novelId, { chapterCount: next.length });
+    }));
+    this.paragraphsByChapter.update((map: Record<string, string[]>): Record<string, string[]> => ({
+      ...map,
+      [chapterId]: [...paragraphs],
+    }));
+    this.updateNovel(novelId, { chapterCount: this.chapters(novelId).length });
     return null;
   }
 

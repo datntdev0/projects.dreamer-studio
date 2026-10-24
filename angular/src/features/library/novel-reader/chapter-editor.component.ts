@@ -17,7 +17,7 @@ import { ToastService } from '@components/toast/toast.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { toParagraphs } from '../library-format';
-import type { ChapterChangeError } from '../library.models';
+import type { ChapterEditorError } from '../library.models';
 import type { LibraryChapter } from '../library.models';
 import type { LibraryNovel } from '../library.models';
 import { LibraryMockStore } from '../library.store';
@@ -42,7 +42,7 @@ export class ChapterEditorComponent implements OnInit {
 
   protected readonly title = signal<string>('');
   protected readonly content = signal<string>('');
-  protected readonly error = signal<ChapterChangeError | null>(null);
+  protected readonly error = signal<ChapterEditorError | null>(null);
   protected readonly paragraphCount: Signal<number> = computed(() => toParagraphs(this.content()).length);
   readonly dirty: Signal<boolean> = computed(
     () =>
@@ -76,7 +76,7 @@ export class ChapterEditorComponent implements OnInit {
   protected save(event: Event): void {
     event.preventDefault();
     const title: string = this.title().trim();
-    const error: ChapterChangeError | null = this.store.editChapter(
+    const error: ChapterEditorError | null = this.store.editChapter(
       this.novel().id,
       this.chapter().id,
       title,

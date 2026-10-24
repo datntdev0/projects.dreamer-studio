@@ -1,4 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { CdkFixedSizeVirtualScroll } from '@angular/cdk/scrolling';
+import { CdkVirtualForOf } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { Component } from '@angular/core';
 import { computed } from '@angular/core';
 import { DestroyRef } from '@angular/core';
@@ -19,7 +22,9 @@ import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { CHAPTER_TITLE_MAX } from '@dreamer/shared/models/novel';
 import { isConsecutive } from '../library-format';
+import { chapterRef } from '../library-format';
 import { lockKind } from '../library-format';
 import type { ChapterChangeError } from '../library.models';
 import type { ChapterDialogKind } from '../library.models';
@@ -29,7 +34,7 @@ import type { LibraryChapter } from '../library.models';
 import type { MenuState } from '../library.models';
 import type { RenameState } from '../library.models';
 import type { TextParts } from '../library.models';
-import { LibraryMockStore } from '../library.store';
+import { NovelStore } from '../novel.store';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
 import type { NovelLock as DetailLock } from '@dreamer/shared/models/novel';
 import { chapterNumber } from '../library-format';
@@ -40,6 +45,12 @@ import { ChapterSplitDialogComponent } from './chapter-split-dialog.component';
 
 const NUMBER_QUERY = /^\d+$/;
 const SAVED_MS = 2000;
+const ERROR_KEYS: Record<ChapterChangeError, string> = {
+  locked: 'library.chapters.error.locked',
+  stale: 'library.chapters.error.stale',
+  missing: 'library.chapters.error.missing',
+  failed: 'library.chapters.error.failed',
+};
 
 @Component({
   selector: 'ds-novel-chapters',
@@ -51,6 +62,9 @@ const SAVED_MS = 2000;
     ChapterMoveDialogComponent,
     ChapterSplitDialogComponent,
     CheckboxComponent,
+    CdkFixedSizeVirtualScroll,
+    CdkVirtualForOf,
+    CdkVirtualScrollViewport,
     IconComponent,
     NgTemplateOutlet,
     TooltipDirective,
@@ -61,6 +75,9 @@ const SAVED_MS = 2000;
     'data-testid': 'novel-chapters',
     '[class.is-organizing]': 'organizing()',
     '(document:pointerdown)': 'onDocumentPointer($event)',
+    '(document:pointermove)': 'onDocumentPointerMove($event)',
+    '(document:pointerup)': 'onDocumentPointerUp()',
+    '(document:pointercancel)': 'onDocumentPointerCancel()',
   },
   templateUrl: './novel-chapters.component.html',
 })
@@ -68,7 +85,7 @@ export class NovelChaptersComponent {
   readonly novel = input.required<NovelDetail>();
   readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
-  private readonly store: LibraryMockStore = inject(LibraryMockStore);
+  private readonly store: NovelStore = inject(NovelStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -80,13 +97,17 @@ export class NovelChaptersComponent {
   protected readonly menu = signal<MenuState | null>(null);
   protected readonly dialog = signal<ChapterDialogState | null>(null);
   protected readonly saved = signal<boolean>(false);
+  protected readonly titleMax: number = CHAPTER_TITLE_MAX;
   protected readonly announcement = signal<string>('');
-  private readonly list = viewChild<ElementRef<HTMLElement>>('list');
+  private readonly viewport = viewChild(CdkVirtualScrollViewport);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('renameInput');
   private readonly menuPanel = viewChild<ElementRef<HTMLElement>>('menuPanel');
   private pointerY: number = 0;
   private frame: number = 0;
+  private movingHandleFocus: boolean = false;
+  private clickingMore: boolean = false;
+  private focusRequest: number = 0;
   private listSelection: string | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly novelId: Signal<string> = computed(() => this.novel().id);
@@ -157,6 +178,8 @@ export class NovelChaptersComponent {
   private readonly numberFormat: Signal<Intl.NumberFormat> = computed(
     () => new Intl.NumberFormat(this.i18n.language()),
   );
+  protected readonly rowHeight: number =
+    Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--control-h')) || 28;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -186,7 +209,7 @@ export class NovelChaptersComponent {
       const id: string | null = this.current();
       const block: ScrollLogicalPosition = this.listSelection === id ? 'nearest' : 'center';
       this.listSelection = null;
-      if (id) requestAnimationFrame(() => this.row(id)?.scrollIntoView({ block }));
+      if (id) requestAnimationFrame(() => this.scrollToRow(id, block));
     });
     effect(() => {
       const element: HTMLInputElement | undefined = this.renameInput()?.nativeElement;
@@ -226,19 +249,29 @@ export class NovelChaptersComponent {
     return dialog?.kind === kind ? dialog.chapters : [];
   }
   protected setQuery(event: Event): void {
-    this.query.set((event.target as HTMLInputElement).value);
+    const value: string = (event.target as HTMLInputElement).value;
+    if (!value) {
+      this.clearSearch();
+      return;
+    }
+    this.query.set(value);
     this.closeMenu(false);
-    this.list()?.nativeElement.scrollTo({ top: 0 });
+    this.viewport()?.scrollToIndex(0);
   }
   protected clearSearch(): void {
     this.query.set('');
     this.searchInput()?.nativeElement.focus();
+    requestAnimationFrame(() => {
+      const id: string | null = this.current();
+      if (id) this.scrollToRow(id, 'center');
+      else this.viewport()?.scrollToIndex(0);
+    });
   }
   protected onSearchKey(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.query()) {
       event.preventDefault();
       event.stopPropagation();
-      this.query.set('');
+      this.clearSearch();
     } else if (event.key === 'Enter') {
       const target: LibraryChapter | null = this.jumpTarget();
       if (!target) return;
@@ -252,7 +285,7 @@ export class NovelChaptersComponent {
   }
   protected openChapter(chapter: LibraryChapter): void {
     if (this.current() === chapter.id) {
-      requestAnimationFrame(() => this.row(chapter.id)?.scrollIntoView({ block: 'nearest' }));
+      requestAnimationFrame(() => this.scrollToRow(chapter.id, 'nearest'));
       return;
     }
     this.listSelection = chapter.id;
@@ -295,6 +328,7 @@ export class NovelChaptersComponent {
     );
   }
   protected openDialog(kind: ChapterDialogKind, chapters: LibraryChapter[]): void {
+    if (this.store.changing()) return;
     this.closeMenu(false);
     this.dialog.set({ kind, chapters });
   }
@@ -302,12 +336,16 @@ export class NovelChaptersComponent {
     if (chapter.paragraphCount >= 2) this.openDialog('split', [chapter]);
   }
   protected onDialogDone(): void {
-    const kind: ChapterDialogKind | undefined = this.dialog()?.kind;
     this.dialog.set(null);
-    if (kind !== 'split') this.selected.set(new Set());
+    this.selected.set(new Set());
     this.flashSaved();
   }
+  protected onDialogInvalidated(): void {
+    this.dialog.set(null);
+    this.selected.set(new Set());
+  }
   protected startRename(chapter: LibraryChapter): void {
+    if (this.store.changing()) return;
     this.closeMenu(false);
     this.renaming.set({ id: chapter.id, value: chapter.title, error: false });
   }
@@ -333,6 +371,8 @@ export class NovelChaptersComponent {
     else this.renaming.set(null);
   }
   protected toggleMenu(event: MouseEvent, chapter: LibraryChapter): void {
+    this.clickingMore = false;
+    if (this.drag() && !this.drag()!.pointer) this.cancelDrag();
     if (this.menu()?.id === chapter.id) {
       this.closeMenu(false);
       return;
@@ -374,11 +414,31 @@ export class NovelChaptersComponent {
     }
   }
   protected onDocumentPointer(event: PointerEvent): void {
+    this.focusRequest++;
+    this.movingHandleFocus = false;
     const target: Element | null = event.target as Element | null;
+    this.clickingMore = !!target?.closest('.library-chapters-more');
     if (!this.menu() || target?.closest('.library-chapters-menu, .library-chapters-more')) return;
     this.closeMenu(false);
   }
+  protected onDocumentPointerMove(event: PointerEvent): void {
+    this.movePointer(event);
+  }
+  protected onDocumentPointerUp(): void {
+    if (this.drag()?.pointer) this.drop();
+  }
+  protected onDocumentPointerCancel(): void {
+    this.clickingMore = false;
+    if (this.drag()?.pointer) this.cancelDrag();
+  }
+  protected onListFocus(event: FocusEvent): void {
+    if (event.target === event.currentTarget && this.focusId()) this.focusRow(this.focusId()!);
+  }
+  protected trackChapter(index: number, chapter: LibraryChapter): string {
+    return chapter.id;
+  }
   protected onHandleKey(event: KeyboardEvent, chapter: LibraryChapter): void {
+    if (this.store.changing()) return;
     const drag: DragState | null = this.drag();
     if (event.key === ' ' || event.key === 'Enter') {
       event.preventDefault();
@@ -396,9 +456,10 @@ export class NovelChaptersComponent {
     }
   }
   protected onHandleBlur(): void {
-    if (this.drag() && !this.drag()!.pointer) this.cancelDrag();
+    if (this.drag() && !this.drag()!.pointer && !this.movingHandleFocus && !this.clickingMore) this.cancelDrag();
   }
   protected startPointerDrag(event: PointerEvent, chapter: LibraryChapter): void {
+    if (this.store.changing()) return;
     if (event.button !== 0) return;
     event.preventDefault();
     const handle: HTMLElement = event.currentTarget as HTMLElement;
@@ -414,6 +475,10 @@ export class NovelChaptersComponent {
     this.updatePointerTarget();
   }
   protected drop(): void {
+    if (this.store.changing()) {
+      this.stopDrag();
+      return;
+    }
     const drag: DragState | null = this.drag();
     if (!drag) return;
     this.stopDrag();
@@ -427,16 +492,25 @@ export class NovelChaptersComponent {
       if (!drag.pointer) this.announce(this.i18n.t('library.chapters.drag.cancelled'));
       return;
     }
-    const error: ChapterChangeError | null = this.store.moveChapters(this.novel().id, ids, toIndex);
+    void this.move(ids, toIndex, drag.pointer);
+  }
+  private async move(ids: string[], toIndex: number, pointer: boolean): Promise<void> {
+    const focusRequest: number = this.focusRequest;
+    const error: ChapterChangeError | null = await this.store.change({
+      kind: 'move',
+      chapters: this.selectedOf(ids).map(chapterRef),
+      toIndex,
+    });
     if (error) {
       this.showError(error);
       return;
     }
     this.flashSaved();
+    this.selected.set(new Set());
     this.announce(
       this.i18n.t('library.chapters.drag.dropped', { position: toIndex + 1, total: this.chapters().length }),
     );
-    if (!drag.pointer) this.focusInRow(ids[0], 'novel-chapters-handle');
+    if (!pointer && focusRequest === this.focusRequest) this.focusInRow(String(toIndex + 1), 'novel-chapters-handle');
   }
   protected cancelDrag(): void {
     const drag: DragState | null = this.drag();
@@ -471,7 +545,10 @@ export class NovelChaptersComponent {
     if (this.toIndex(drag.ids, target) !== position) {
       this.drag.set({ ...drag, target });
       const row: LibraryChapter | undefined = this.chapters()[Math.min(target, total - 1)];
-      if (row) this.row(row.id)?.scrollIntoView({ block: 'nearest' });
+      if (row) {
+        this.movingHandleFocus = true;
+        this.focusInRow(row.id, 'novel-chapters-handle', () => (this.movingHandleFocus = false));
+      }
     }
     this.announce(
       this.i18n.t('library.chapters.drag.position', {
@@ -492,26 +569,22 @@ export class NovelChaptersComponent {
     return this.chapters().filter((chapter: LibraryChapter): boolean => ids.includes(chapter.id));
   }
   private updatePointerTarget(): void {
-    const rows: HTMLElement[] = Array.from(
-      this.list()?.nativeElement.querySelectorAll<HTMLElement>('.library-chapters-item') ?? [],
-    );
-    const index: number = rows.findIndex((row: HTMLElement): boolean => {
-      const rect: DOMRect = row.getBoundingClientRect();
-      return rect.top + rect.height / 2 > this.pointerY;
-    });
-    const target: number = index < 0 ? rows.length : index;
+    const viewport: CdkVirtualScrollViewport | undefined = this.viewport();
+    if (!viewport) return;
+    const rect: DOMRect = viewport.elementRef.nativeElement.getBoundingClientRect();
+    const index: number = Math.floor((this.pointerY - rect.top + viewport.measureScrollOffset()) / this.rowHeight);
+    const target: number = Math.max(0, Math.min(this.shown().length, index));
     const drag: DragState | null = this.drag();
     if (drag && drag.target !== target) this.drag.set({ ...drag, target });
   }
   private autoScroll(): void {
-    const list: HTMLElement | undefined = this.list()?.nativeElement;
+    const list: HTMLElement | undefined = this.viewport()?.elementRef.nativeElement;
     if (!list || !this.drag()?.pointer) return;
     const rect: DOMRect = list.getBoundingClientRect();
-    const rowHeight: number = list.querySelector<HTMLElement>('.library-chapters-item')?.offsetHeight ?? 0;
-    const edge: number = rowHeight * 2;
+    const edge: number = this.rowHeight * 2;
     const direction: number = this.pointerY < rect.top + edge ? -1 : this.pointerY > rect.bottom - edge ? 1 : 0;
     if (direction) {
-      list.scrollTop += (direction * rowHeight) / 2;
+      list.scrollTop += (direction * this.rowHeight) / 2;
       this.updatePointerTarget();
     }
     this.frame = requestAnimationFrame(() => this.autoScroll());
@@ -519,8 +592,10 @@ export class NovelChaptersComponent {
   private stopDrag(): void {
     cancelAnimationFrame(this.frame);
     this.drag.set(null);
+    this.movingHandleFocus = false;
   }
-  private commitRename(chapter: LibraryChapter, refocus: boolean = true): void {
+  private async commitRename(chapter: LibraryChapter, refocus: boolean = true): Promise<void> {
+    if (this.store.changing()) return;
     const edit: RenameState | null = this.renaming();
     if (!edit) return;
     const title: string = edit.value.trim();
@@ -531,7 +606,11 @@ export class NovelChaptersComponent {
     }
     this.renaming.set(null);
     if (title !== chapter.title) {
-      const error: ChapterChangeError | null = this.store.renameChapter(this.novel().id, chapter.id, title);
+      const error: ChapterChangeError | null = await this.store.change({
+        kind: 'rename',
+        chapter: chapterRef(chapter),
+        title,
+      });
       if (error) this.showError(error);
       else {
         this.flashSaved();
@@ -559,7 +638,7 @@ export class NovelChaptersComponent {
     this.toast.show({
       kind: 'danger',
       title: this.i18n.t('library.chapters.error.title'),
-      message: this.i18n.t(`library.chapters.error.${error}`),
+      message: this.i18n.t(ERROR_KEYS[error]),
     });
   }
   private flashSaved(): void {
@@ -574,17 +653,42 @@ export class NovelChaptersComponent {
   private row(id: string): HTMLElement | null {
     return this.host.querySelector<HTMLElement>(`[data-chapter-id="${id}"]`);
   }
+  private scrollToRow(id: string, block: ScrollLogicalPosition): void {
+    const viewport: CdkVirtualScrollViewport | undefined = this.viewport();
+    const index: number = this.shown().findIndex((chapter: LibraryChapter): boolean => chapter.id === id);
+    if (!viewport || index < 0) return;
+    const top: number = index * this.rowHeight;
+    const scrollTop: number = viewport.measureScrollOffset();
+    const size: number = viewport.getViewportSize();
+    if (block === 'center') {
+      viewport.scrollToOffset(Math.max(0, top - (size - this.rowHeight) / 2));
+    } else if (top < scrollTop) {
+      viewport.scrollToIndex(index);
+    } else if (top + this.rowHeight > scrollTop + size) {
+      viewport.scrollToOffset(top + this.rowHeight - size);
+    }
+  }
   private focusRow(id: string): void {
     this.focusInRow(id, this.organizing() ? 'novel-chapters-row-more' : 'novel-chapters-row-open');
   }
-  private focusInRow(id: string, testId: string): void {
-    requestAnimationFrame(() => {
+  private focusInRow(id: string, testId: string, onComplete?: () => void): void {
+    this.scrollToRow(id, 'nearest');
+    const request: number = ++this.focusRequest;
+    const tryFocus: (attempt: number) => void = (attempt: number): void => {
+      if (request !== this.focusRequest) return;
       const element: HTMLElement | null | undefined = this.row(id)?.querySelector<HTMLElement>(
         `[data-testid="${testId}"]`,
       );
-      element?.focus();
-      element?.scrollIntoView({ block: 'nearest' });
-    });
+      if (element) {
+        element.focus();
+        onComplete?.();
+      } else if (attempt < 8) {
+        requestAnimationFrame(() => tryFocus(attempt + 1));
+      } else {
+        onComplete?.();
+      }
+    };
+    requestAnimationFrame(() => tryFocus(0));
   }
   private focusSibling(chapter: LibraryChapter, step: number, testId: string): void {
     const index: number = this.shown().findIndex((item: LibraryChapter): boolean => item.id === chapter.id);

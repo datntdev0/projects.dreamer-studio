@@ -6,7 +6,13 @@ import { safeFileName } from '@dreamer/shared/core/file-name';
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
-import { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
+import {
+  ChapterChange,
+  ChapterChangeRequest,
+  ChapterRef,
+  ChapterRequest,
+  ChapterText,
+} from '@dreamer/shared/models/novel';
 import { SearchRequest } from '@dreamer/shared/models/novel';
 import { isContentHash, isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -212,6 +218,60 @@ export function isChapterRequest(value: unknown): value is ChapterRequest {
   );
 }
 
+function isChapterRef(value: unknown): value is ChapterRef {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['position', 'file']) &&
+    Number.isInteger(value.position) &&
+    (value.position as number) > 0 &&
+    typeof value.file === 'string' &&
+    isContentHash(value.file)
+  );
+}
+
+function isChapterRefs(value: unknown): value is ChapterRef[] {
+  return Array.isArray(value) && value.every(isChapterRef);
+}
+
+function isChapterChange(value: unknown): value is ChapterChange {
+  if (!isRecord(value)) return false;
+  switch (value.kind) {
+    case 'rename':
+      return (
+        hasOnlyKeys(value, ['kind', 'chapter', 'title']) &&
+        isChapterRef(value.chapter) &&
+        typeof value.title === 'string'
+      );
+    case 'move':
+      return (
+        hasOnlyKeys(value, ['kind', 'chapters', 'toIndex']) &&
+        isChapterRefs(value.chapters) &&
+        typeof value.toIndex === 'number'
+      );
+    case 'merge':
+    case 'delete':
+      return hasOnlyKeys(value, ['kind', 'chapters']) && isChapterRefs(value.chapters);
+    case 'split':
+      return (
+        hasOnlyKeys(value, ['kind', 'chapter', 'atParagraph', 'title']) &&
+        isChapterRef(value.chapter) &&
+        typeof value.atParagraph === 'number' &&
+        typeof value.title === 'string'
+      );
+    default:
+      return false;
+  }
+}
+
+export function isChapterChangeRequest(value: unknown): value is ChapterChangeRequest {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['novelId', 'change']) &&
+    isNovelIdValue(value.novelId) &&
+    isChapterChange(value.change)
+  );
+}
+
 function isSearchRequest(value: unknown): value is SearchRequest {
   return (
     isRecord(value) &&
@@ -260,6 +320,11 @@ export function registerLibraryIpc(session: () => AppDataSession): void {
     LibraryChannel.UpdateNovel,
     isNovelUpdateRequest,
     (request: NovelUpdateRequest): Promise<NovelDetail> => session().library.updateNovel(request),
+  );
+  handleValidated(
+    LibraryChannel.ChangeChapters,
+    isChapterChangeRequest,
+    (request: ChapterChangeRequest): Promise<NovelDetail> => session().library.changeChapters(request),
   );
   handleValidated(LibraryChannel.DeleteNovels, isNovelIdList, (ids: string[]): Promise<DeleteNovelsResult> =>
     session().library.deleteNovels(ids),

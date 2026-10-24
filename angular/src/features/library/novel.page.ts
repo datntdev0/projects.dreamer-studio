@@ -88,6 +88,8 @@ export class NovelPage {
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
   private readonly hiddenPanels: Set<SplitterEdge> = new Set<SplitterEdge>();
+  private previousChapters: LibraryChapter[] | null = null;
+  private previousQuery: string | null = null;
   private readonly search = viewChild(NovelSearchComponent);
   protected readonly id: Signal<string> = toSignal(
     this.route.paramMap.pipe(map((params): string => params.get('id') ?? '')),
@@ -148,25 +150,7 @@ export class NovelPage {
       const query: string | null = this.queryChapter();
       if (this.state() !== 'ready') return;
       untracked(() => {
-        const requested: number | null = query !== null && /^\d+$/.test(query) ? Number(query) : null;
-        const selected: LibraryChapter | undefined = chapters.find(
-          (item: LibraryChapter): boolean => item.position === requested,
-        );
-        const fallback: LibraryChapter | undefined =
-          query !== null && this.current()
-            ? (chapters.find((item: LibraryChapter): boolean => item.position === Number(this.current())) ??
-              chapters.at(-1))
-            : chapters[0];
-        const chapter: LibraryChapter | undefined = selected ?? fallback;
-        const id: string | null = chapter?.id ?? null;
-        if (this.current() !== id) this.current.set(id);
-        if (query !== null && chapter && query !== String(chapter.position)) {
-          void this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { chapter: String(chapter.position) },
-            replaceUrl: true,
-          });
-        }
+        this.syncChapter(chapters, query);
       });
     });
     effect(() => this.crumb.detail.set(this.novel()?.title ?? null));
@@ -178,6 +162,48 @@ export class NovelPage {
       this.crumb.detail.set(null);
       this.syncFocusMode(false);
     });
+  }
+
+  private syncChapter(chapters: LibraryChapter[], query: string | null): void {
+    const listChanged: boolean = this.previousChapters !== chapters;
+    const queryChanged: boolean = this.previousQuery !== query;
+    const oldChapter: LibraryChapter | undefined = this.previousChapters?.find(
+      (chapter: LibraryChapter): boolean => chapter.id === this.current(),
+    );
+    this.previousChapters = chapters;
+    this.previousQuery = query;
+    const requested: number | null = query !== null && /^\d+$/.test(query) ? Number(query) : null;
+    const selected: LibraryChapter | undefined =
+      queryChanged || !oldChapter
+        ? chapters.find((chapter: LibraryChapter): boolean => chapter.position === requested)
+        : undefined;
+    const sameFile: LibraryChapter | undefined =
+      listChanged && oldChapter
+        ? chapters
+            .filter((chapter: LibraryChapter): boolean => chapter.file === oldChapter.file)
+            .sort(
+              (a: LibraryChapter, b: LibraryChapter): number =>
+                Math.abs(a.position - oldChapter.position) - Math.abs(b.position - oldChapter.position),
+            )[0]
+        : undefined;
+    const fallback: LibraryChapter | undefined = this.current()
+      ? (chapters.find((chapter: LibraryChapter): boolean => chapter.position === Number(this.current())) ??
+        chapters.at(-1))
+      : chapters[0];
+    const chapter: LibraryChapter | undefined = selected ?? sameFile ?? fallback;
+    const id: string | null = chapter?.id ?? null;
+    const positionChanged: boolean = this.current() !== id;
+    if (positionChanged) {
+      this.current.set(id);
+      this.highlight.set(null);
+    }
+    if ((query !== null || (listChanged && positionChanged)) && query !== id) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { chapter: id },
+        replaceUrl: true,
+      });
+    }
   }
 
   canLeave(): boolean {

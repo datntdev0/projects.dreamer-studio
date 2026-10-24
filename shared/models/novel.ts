@@ -32,6 +32,25 @@ export interface NovelChapter {
   chars: number;
 }
 
+export const CHAPTER_TITLE_MAX: number = 200;
+
+export interface ChapterRef {
+  position: number;
+  file: string;
+}
+
+export type ChapterChange =
+  | { kind: 'rename'; chapter: ChapterRef; title: string }
+  | { kind: 'move'; chapters: ChapterRef[]; toIndex: number }
+  | { kind: 'merge'; chapters: ChapterRef[] }
+  | { kind: 'split'; chapter: ChapterRef; atParagraph: number; title: string }
+  | { kind: 'delete'; chapters: ChapterRef[] };
+
+export interface ChapterChangeRequest {
+  novelId: string;
+  change: ChapterChange;
+}
+
 export interface NovelDetail extends NovelSummary {
   description: string;
   chapters: NovelChapter[];

@@ -59,7 +59,9 @@ export interface DeleteNovelsResult {
   skipped: LibraryNovel[];
 }
 
-export type ChapterChangeError = 'locked' | 'notConsecutive' | 'tooFewParagraphs' | 'titleRequired' | 'contentRequired';
+export type ChapterChangeError = 'locked' | 'stale' | 'missing' | 'failed';
+
+export type ChapterEditorError = 'locked' | 'titleRequired' | 'contentRequired';
 
 export type MoveMode = 'position' | 'before';
 

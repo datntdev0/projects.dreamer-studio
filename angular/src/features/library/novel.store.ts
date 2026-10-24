@@ -9,11 +9,13 @@ import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { isAppError } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { LibraryChangedEvent } from '@dreamer/shared/models/novel';
+import type { ChapterChange } from '@dreamer/shared/models/novel';
 import type { NovelChapter } from '@dreamer/shared/models/novel';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { DesktopApi } from '@core/desktop-api';
 import type { LibraryChapter } from './library.models';
+import type { ChapterChangeError } from './library.models';
 import type { PageState } from './library.models';
 
 export type ChapterTextState =
@@ -32,12 +34,14 @@ export class NovelStore {
   private readonly textValues: WritableSignal<Map<string, ChapterTextState>> = signal<Map<string, ChapterTextState>>(
     new Map(),
   );
+  private readonly changingValue: WritableSignal<boolean> = signal<boolean>(false);
   private readonly pending: Map<string, Promise<void>> = new Map<string, Promise<void>>();
   private id: string = '';
   private request: number = 0;
 
   readonly novel: Signal<NovelDetail | null> = this.detailValue.asReadonly();
   readonly state: Signal<PageState> = this.pageState.asReadonly();
+  readonly changing: Signal<boolean> = this.changingValue.asReadonly();
   readonly error: Signal<string> = this.errorValue.asReadonly();
   readonly chapters: Signal<LibraryChapter[]> = computed(() =>
     (this.novel()?.chapters ?? []).map((chapter: NovelChapter): LibraryChapter => ({
@@ -95,6 +99,33 @@ export class NovelStore {
       this.detailValue.set(null);
       this.errorValue.set(errorMessage(error));
       this.pageState.set(isAppError(error) && error.code === ErrorCode.NovelNotFound ? 'notFound' : 'error');
+    }
+  }
+
+  async change(change: ChapterChange): Promise<ChapterChangeError | null> {
+    if (this.changing()) return 'failed';
+    this.changingValue.set(true);
+    try {
+      const detail: NovelDetail | null = await this.api.changeChapters({ novelId: this.id, change });
+      if (!detail) return 'failed';
+      this.detailValue.set(detail);
+      this.pageState.set('ready');
+      return null;
+    } catch (error) {
+      if (isAppError(error)) {
+        if (error.code === ErrorCode.NovelLocked) {
+          await this.reload();
+          return 'locked';
+        }
+        if (error.code === ErrorCode.ChapterChangeInvalid) {
+          await this.reload();
+          return 'stale';
+        }
+        if (error.code === ErrorCode.ChapterFileMissing) return 'missing';
+      }
+      return 'failed';
+    } finally {
+      this.changingValue.set(false);
     }
   }
 

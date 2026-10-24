@@ -117,6 +117,7 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
     },
     search: vi.fn(async (): Promise<void> => undefined),
     cancelSearch: vi.fn(async (): Promise<void> => undefined),
+    changeChapters: vi.fn(async (): Promise<NovelDetail | null> => detail),
   };
   const params = new BehaviorSubject(convertToParamMap({ id }));
   const queryParams = new BehaviorSubject(
@@ -175,9 +176,9 @@ describe('NovelPage', () => {
       ),
     ).toEqual(['novel-page-edit', 'novel-page-focus']);
     expect((query(fixture, 'novel-page-edit') as HTMLButtonElement).disabled).toBe(true);
-    expect(rows(fixture).map((row: HTMLElement): number => Number(row.dataset['position']))).toEqual(
-      CHAPTERS.map((chapter: LibraryChapter): number => chapter.position),
-    );
+    expect(rows(fixture).length).toBeLessThan(CHAPTERS.length);
+    expect(rows(fixture)[0].dataset['position']).toBe('1');
+    expect(query(fixture, 'novel-chapters-count').textContent).toContain(String(CHAPTERS.length));
     expect(query(fixture, 'novel-chapters-row-open').getAttribute('aria-current')).toBe('true');
   });
 
@@ -185,7 +186,11 @@ describe('NovelPage', () => {
     const { fixture, router } = await createPage({ chapter: 12 });
     expect(query(fixture, 'novel-page-title').textContent).toContain('0012 ·');
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    rows(fixture)[2].querySelector<HTMLElement>('[data-testid="novel-chapters-row-open"]')!.click();
+    const search: HTMLInputElement = query(fixture, 'novel-chapters-search') as HTMLInputElement;
+    search.value = '3';
+    search.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    rows(fixture)[0].querySelector<HTMLElement>('[data-testid="novel-chapters-row-open"]')!.click();
     await settle(fixture);
     expect(query(fixture, 'novel-page-title').textContent).toContain('0003 ·');
     expect(navigate).toHaveBeenCalledWith(

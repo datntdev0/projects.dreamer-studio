@@ -8,7 +8,7 @@ import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
-import type { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
+import type { ChapterChangeRequest, ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
 import type { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import type { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
@@ -190,6 +190,10 @@ export class DesktopApi {
 
   async updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {
     return window.dreamer ? window.dreamer.library.updateNovel(id, patch) : null;
+  }
+
+  async changeChapters(request: ChapterChangeRequest): Promise<NovelDetail | null> {
+    return window.dreamer ? window.dreamer.library.changeChapters(request) : null;
   }
 
   async deleteNovels(ids: string[]): Promise<DeleteNovelsResult | null> {

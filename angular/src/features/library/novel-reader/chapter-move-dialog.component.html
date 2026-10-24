@@ -7,7 +7,12 @@
   (closed)="closed.emit()"
 >
   <div class="chapter-dlg" data-testid="chapter-dlg-move">
-    <ds-chapter-dialog-alerts [lock]="lock()" [error]="error()" failedKey="library.chapterDialog.move.failed" />
+    <ds-chapter-dialog-alerts
+      [lock]="lock()"
+      [lockLabel]="lockLabel()"
+      [error]="error()"
+      failedKey="library.chapterDialog.move.failed"
+    />
     <p>
       {{ (items().length === 1 ? 'library.chapterDialog.move.introOne' : 'library.chapterDialog.move.intro') | t }}
     </p>

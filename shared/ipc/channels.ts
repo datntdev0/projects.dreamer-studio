@@ -53,6 +53,7 @@ export const LibraryChannel = {
   SearchCancel: 'library:search-cancel',
   SearchProgress: 'library:search-progress',
   UpdateNovel: 'library:update-novel',
+  ChangeChapters: 'library:change-chapters',
   DeleteNovels: 'library:delete-novels',
   OpenFolder: 'library:open-folder',
   Changed: 'library:changed',

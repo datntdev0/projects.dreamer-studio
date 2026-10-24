@@ -50,6 +50,8 @@ export const SearchNoResults: Story = {
 
 export const FocusMode: Story = { args: { focusMode: true } };
 
+export const Editing: Story = { args: { editing: true } };
+
 export const NoChapters: Story = { args: { route: '/library/n-empty', chapter: null } };
 
 export const Locked: Story = { args: { lock: true } };

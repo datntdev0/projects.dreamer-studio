@@ -61,8 +61,6 @@ export interface DeleteNovelsResult {
 
 export type ChapterChangeError = 'locked' | 'stale' | 'missing' | 'failed';
 
-export type ChapterEditorError = 'locked' | 'titleRequired' | 'contentRequired';
-
 export type MoveMode = 'position' | 'before';
 
 export type ChapterDialogKind = 'merge' | 'split' | 'delete' | 'move';
@@ -114,10 +112,3 @@ export type NovelTab = 'reading' | 'search';
 export type NovelSearchState = 'idle' | 'running' | 'results' | 'none';
 
 export type PageState = 'loading' | 'error' | 'notFound' | 'ready';
-
-export interface LibraryStoreData {
-  novels: LibraryNovel[];
-  sampleParagraphs: string[];
-  paragraphsByChapter: Record<string, string[]>;
-  makeChapters: (novel: LibraryNovel) => LibraryChapter[];
-}

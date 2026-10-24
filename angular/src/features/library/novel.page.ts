@@ -37,11 +37,13 @@ import type { LibraryChapter } from './library.models';
 import type { PageState } from './library.models';
 import type { NovelTab } from './library.models';
 import type { ReaderHighlight } from './library.models';
+import { ChapterEditorComponent } from './novel-reader/chapter-editor.component';
 import { NovelChaptersComponent } from './novel-reader/novel-chapters.component';
 import { NovelReaderComponent } from './novel-reader/novel-reader.component';
 import { NovelSearchComponent } from './novel-reader/novel-search.component';
 import type { NovelSearchSelection } from './novel-reader/novel-search.component';
 import { ReadingSettingsComponent } from './novel-reader/reading-settings.component';
+import { UnsavedChangesDialogComponent } from './novel-list/unsaved-changes-dialog.component';
 import { NovelSearchStore } from './novel-search.store';
 import { NovelStore } from './novel.store';
 
@@ -56,6 +58,7 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
     AreaStateComponent,
     BannerComponent,
     ButtonDirective,
+    ChapterEditorComponent,
     IconComponent,
     NovelChaptersComponent,
     NovelReaderComponent,
@@ -68,6 +71,7 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
     TabsComponent,
     TooltipDirective,
     TranslatePipe,
+    UnsavedChangesDialogComponent,
   ],
   providers: [NovelStore, NovelSearchStore],
   host: {
@@ -88,6 +92,8 @@ export class NovelPage {
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
   private readonly hiddenPanels: Set<SplitterEdge> = new Set<SplitterEdge>();
+  private readonly editor = viewChild(ChapterEditorComponent);
+  private leaveResolve: ((leave: boolean) => void) | null = null;
   private previousChapters: LibraryChapter[] | null = null;
   private previousQuery: string | null = null;
   private readonly search = viewChild(NovelSearchComponent);
@@ -108,6 +114,8 @@ export class NovelPage {
   protected readonly chapters: Signal<LibraryChapter[]> = this.store.chapters;
   protected readonly tab: WritableSignal<NovelTab> = signal<NovelTab>('reading');
   protected readonly focusMode: WritableSignal<boolean> = signal<boolean>(false);
+  protected readonly editing: WritableSignal<boolean> = signal<boolean>(false);
+  protected readonly leaveOpen: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly current: WritableSignal<string | null> = signal<string | null>(null);
   protected readonly highlight: WritableSignal<ReaderHighlight | null> = signal<ReaderHighlight | null>(null);
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
@@ -119,11 +127,14 @@ export class NovelPage {
   );
   protected readonly lockHeading: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'heading'));
   protected readonly lockReason: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'reason'));
-  protected readonly editReason: Signal<string> = computed(
-    () =>
-      this.lockReason() ||
-      (!this.chapters().length ? this.i18n.t('library.novel.page.noChapters') : this.i18n.t('common.soon')),
-  );
+  protected readonly editReason: Signal<string> = computed(() => {
+    if (this.lockReason()) return this.lockReason();
+    if (!this.chapters().length) return this.i18n.t('library.novel.page.noChapters');
+    const chapter: LibraryChapter | null = this.chapter();
+    return chapter && this.store.text(chapter).status === 'missing'
+      ? this.i18n.t('library.novel.page.chapterMissing')
+      : '';
+  });
   protected readonly heading: Signal<string> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
     return chapter ? `${chapterNumber(chapter)} · ${chapter.title}` : (this.novel()?.title ?? '');
@@ -139,6 +150,7 @@ export class NovelPage {
       const id: string = this.id();
       untracked(() => {
         this.current.set(null);
+        this.editing.set(false);
         this.highlight.set(null);
         this.tab.set('reading');
         this.focusMode.set(false);
@@ -206,12 +218,25 @@ export class NovelPage {
     }
   }
 
-  canLeave(): boolean {
-    return true;
+  canLeave(): boolean | Promise<boolean> {
+    if (!this.editing() || !this.editor()?.dirty()) return true;
+    this.leaveOpen.set(true);
+    return new Promise<boolean>((resolve: (leave: boolean) => void) => (this.leaveResolve = resolve));
+  }
+
+  protected async cancelEdit(): Promise<void> {
+    if (await this.canLeave()) this.editing.set(false);
+  }
+
+  protected settleLeave(leave: boolean): void {
+    this.leaveOpen.set(false);
+    if (leave) this.editing.set(false);
+    this.leaveResolve?.(leave);
+    this.leaveResolve = null;
   }
 
   protected selectChapter(id: string | null): void {
-    if (!id || id === this.current()) return;
+    if (this.editing() || !id || id === this.current()) return;
     this.current.set(id);
     this.highlight.set(null);
     void this.router.navigate([], { relativeTo: this.route, queryParams: { chapter: id }, replaceUrl: true });
@@ -233,6 +258,7 @@ export class NovelPage {
   }
 
   protected onDocumentKeydown(event: KeyboardEvent): void {
+    if (this.editing()) return;
     if (isTypingTarget(event.target) || event.altKey || event.metaKey) return;
     const isF: boolean = event.key.toLocaleLowerCase() === 'f';
     if (event.ctrlKey && event.shiftKey && isF) {

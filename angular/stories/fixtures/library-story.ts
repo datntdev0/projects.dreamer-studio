@@ -18,14 +18,8 @@ import type { ImportState } from '../../src/features/library/library.models';
 import type { LibraryScenario } from '../../src/features/library/library.models';
 import type { NovelSearchState } from '../../src/features/library/library.models';
 import type { NovelTab } from '../../src/features/library/library.models';
-import { LibraryMockStore } from '../../src/features/library/library.store';
 import { NovelPage } from '../../src/features/library/novel.page';
 import { provideReaderDesktopApi } from './desktop-api';
-import { makeChapters } from './library';
-import { CHAPTER_PARAGRAPHS } from './library';
-import { NO_CHAPTERS_NOVEL } from './library';
-import { NOVELS } from './library';
-import { SAMPLE_PARAGRAPHS } from './library';
 
 export interface LibraryStoryArgs {
   route: string;
@@ -59,21 +53,10 @@ export class LibraryStoryHostComponent implements OnInit {
   readonly editing = input<boolean>(false);
   readonly lock = input<boolean>(false);
   private readonly router: Router = inject(Router);
-  private readonly store: LibraryMockStore = inject(LibraryMockStore);
   private readonly settingsStore: SettingsStore = inject(SettingsStore);
 
   async ngOnInit(): Promise<void> {
     await this.settingsStore.load();
-    const novelId: string = this.route().split('/').at(-1) ?? '';
-    const novels = novelId === NO_CHAPTERS_NOVEL.id ? [...NOVELS, NO_CHAPTERS_NOVEL] : NOVELS;
-    this.store.load({
-      novels,
-      sampleParagraphs: SAMPLE_PARAGRAPHS,
-      paragraphsByChapter: CHAPTER_PARAGRAPHS,
-      makeChapters,
-    });
-    this.store.setScenario(this.scenario());
-    this.store.importState.set(this.importState());
     const route: string = this.chapter() ? `${this.route()}?chapter=${this.chapter()}` : this.route();
     await this.router.navigateByUrl(route);
     if (this.tab() === 'search') {
@@ -91,6 +74,9 @@ export class LibraryStoryHostComponent implements OnInit {
     }
     if (this.focusMode()) {
       setTimeout(() => document.querySelector<HTMLElement>('[data-testid="novel-page-focus"]')?.click());
+    }
+    if (this.editing()) {
+      setTimeout(() => document.querySelector<HTMLElement>('[data-testid="novel-page-edit"]')?.click(), 120);
     }
   }
 }

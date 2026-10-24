@@ -2,6 +2,7 @@ import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelLock } from '@dreamer/shared/models/novel';
 import type { ChapterRef } from '@dreamer/shared/models/novel';
 import type { I18nService, Language } from '@core/i18n/i18n.service';
+import type { ChapterChangeError } from './library.models';
 import type { LibraryChapter } from './library.models';
 
 export interface LanguageOption {
@@ -18,6 +19,13 @@ const LANGUAGE_CODES: string[] = ['zh', 'ja', 'ko', 'en', 'vi'];
 export const LOADING_MS = 500;
 
 export const LIST_LIMIT = 5;
+
+export const CHAPTER_ERROR_KEYS: Record<ChapterChangeError, string> = {
+  locked: 'library.chapters.error.locked',
+  stale: 'library.chapters.error.stale',
+  missing: 'library.chapters.error.missing',
+  failed: 'library.chapters.error.failed',
+};
 
 const COVER_PALETTES: string[] = ['green', 'gold', 'jade', 'slate', 'rose', 'charcoal'];
 

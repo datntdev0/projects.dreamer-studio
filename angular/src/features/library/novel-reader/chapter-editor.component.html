@@ -4,43 +4,60 @@
       variant="danger"
       data-testid="chapter-editor-refused"
       [heading]="'library.novel.form.refusedHeading' | t"
-      [message]="'library.novel.form.refusedMessage' | t: { run: novel().lock?.runLabel ?? novel().originalTitle }"
+      [message]="'library.novel.form.refusedMessage' | t: { run: novel().lock?.label ?? novel().title }"
       [dismissLabel]="'common.dismiss' | t"
       (dismiss)="error.set(null)"
     />
   }
-  <ds-field
-    required
-    controlId="chapter-editor-title"
-    [label]="'library.chapterEditor.title' | t"
-    [error]="error() === 'titleRequired' ? ('library.novel.form.required' | t) : ''"
-  >
-    <input
-      id="chapter-editor-title"
-      class="ds-input"
-      data-testid="chapter-editor-title"
-      [attr.lang]="novel().language"
-      [value]="title()"
-      (input)="setTitle($event)"
+  @if (error() === 'stale' || error() === 'missing' || error() === 'failed') {
+    <ds-banner
+      variant="danger"
+      data-testid="chapter-editor-error"
+      [heading]="'library.chapterEditor.notSaved' | t"
+      [message]="errorKey() | t"
+      [dismissLabel]="'common.dismiss' | t"
+      (dismiss)="error.set(null)"
     />
-  </ds-field>
-  <ds-field
-    required
-    class="library-chapter-editor-content"
-    controlId="chapter-editor-content"
-    [label]="'library.chapterEditor.content' | t"
-    [hint]="'library.chapterEditor.contentHint' | t: { count: count(paragraphCount()) }"
-    [error]="error() === 'contentRequired' ? ('library.novel.form.required' | t) : ''"
-  >
-    <textarea
-      id="chapter-editor-content"
-      class="ds-input"
-      data-testid="chapter-editor-content"
-      [attr.lang]="novel().language"
-      [value]="content()"
-      (input)="setContent($event)"
-    ></textarea>
-  </ds-field>
+  }
+  @if (!editable() && text().status === 'loading') {
+    <p data-testid="chapter-editor-loading">{{ 'library.reader.loading' | t }}</p>
+  } @else if (!editable() && text().status === 'missing') {
+    <p data-testid="chapter-editor-missing">{{ 'library.reader.error.description' | t }}</p>
+  } @else {
+    <ds-field
+      required
+      controlId="chapter-editor-title"
+      [label]="'library.chapterEditor.title' | t"
+      [error]="titleRequired() ? ('library.novel.form.required' | t) : ''"
+    >
+      <input
+        id="chapter-editor-title"
+        class="ds-input"
+        data-testid="chapter-editor-title"
+        [attr.lang]="novel().language"
+        [value]="title()"
+        [attr.maxlength]="titleMax"
+        (input)="setTitle($event)"
+      />
+    </ds-field>
+    <ds-field
+      required
+      class="library-chapter-editor-content"
+      controlId="chapter-editor-content"
+      [label]="'library.chapterEditor.content' | t"
+      [hint]="'library.chapterEditor.contentHint' | t: { count: count(paragraphCount()) }"
+      [error]="contentRequired() ? ('library.novel.form.required' | t) : ''"
+    >
+      <textarea
+        id="chapter-editor-content"
+        class="ds-input"
+        data-testid="chapter-editor-content"
+        [attr.lang]="novel().language"
+        [value]="content()"
+        (input)="setContent($event)"
+      ></textarea>
+    </ds-field>
+  }
   <div class="library-chapter-editor-actions">
     @if (dirty()) {
       <ds-pill kind="warning" icon="pencil" data-testid="chapter-editor-unsaved">{{
@@ -58,7 +75,14 @@
     >
       {{ 'common.cancel' | t }}
     </button>
-    <button dsBtn variant="primary" size="sm" type="submit" data-testid="chapter-editor-save" [disabled]="!dirty()">
+    <button
+      dsBtn
+      variant="primary"
+      size="sm"
+      type="submit"
+      data-testid="chapter-editor-save"
+      [disabled]="!dirty() || changing()"
+    >
       <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
     </button>
   </div>

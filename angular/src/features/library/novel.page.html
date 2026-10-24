@@ -45,7 +45,15 @@
         </h1>
         <div class="ds-page-actions" role="group" [attr.aria-label]="'library.novel.page.actions' | t">
           <span class="library-novel-action" [dsTooltip]="editReason()" [attr.tabindex]="editReason() ? 0 : null">
-            <button dsBtn size="sm" type="button" data-testid="novel-page-edit" [disabled]="true">
+            <button
+              dsBtn
+              size="sm"
+              type="button"
+              data-testid="novel-page-edit"
+              [attr.aria-pressed]="editing()"
+              [disabled]="!!editReason() || editing()"
+              (click)="editing.set(true)"
+            >
               <ds-icon name="pencil" size="sm" />{{ 'library.novel.page.edit' | t }}
             </button>
           </span>
@@ -94,6 +102,7 @@
     >
       @if (novel(); as item) {
         <ds-novel-chapters
+          [attr.inert]="editing() || null"
           [novel]="item"
           [chapters]="chapters()"
           [current]="current()"
@@ -110,13 +119,22 @@
       [attr.aria-label]="'library.reader.label' | t"
     >
       @if (novel(); as item) {
-        <ds-novel-reader
-          [novel]="item"
-          [chapters]="chapters()"
-          [current]="current()"
-          (currentChange)="selectChapter($event)"
-          [highlight]="highlight()"
-        />
+        @if (editing() && chapter(); as selected) {
+          <ds-chapter-editor
+            [novel]="item"
+            [chapter]="selected"
+            (done)="editing.set(false)"
+            (cancelled)="cancelEdit()"
+          />
+        } @else {
+          <ds-novel-reader
+            [novel]="item"
+            [chapters]="chapters()"
+            [current]="current()"
+            (currentChange)="selectChapter($event)"
+            [highlight]="highlight()"
+          />
+        }
       }
     </main>
     <ng-template
@@ -126,7 +144,7 @@
       [label]="'library.novel.tabs.label' | t"
       [resizeLabel]="'library.novel.page.resizeNovel' | t"
     >
-      <div class="ds-panel-head">
+      <div class="ds-panel-head" [attr.inert]="editing() || null">
         <ds-tabs
           idPrefix="novel-page-tab"
           controls="novel-page-tabpanel"
@@ -139,6 +157,7 @@
       <div
         id="novel-page-tabpanel"
         class="ds-panel-body library-novel-body"
+        [attr.inert]="editing() || null"
         role="tabpanel"
         [attr.aria-labelledby]="'novel-page-tab-' + tab()"
       >
@@ -171,6 +190,8 @@
     <ds-icon name="arrow-left" size="sm" />
   </a>
 </ng-template>
+
+<ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />
 
 <ng-template #skeletonRows>
   <div class="library-novel-skeleton-rows" aria-hidden="true">

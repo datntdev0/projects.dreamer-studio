@@ -242,6 +242,13 @@ function isChapterChange(value: unknown): value is ChapterChange {
         isChapterRef(value.chapter) &&
         typeof value.title === 'string'
       );
+    case 'edit':
+      return (
+        hasOnlyKeys(value, ['kind', 'chapter', 'title', 'paragraphs']) &&
+        isChapterRef(value.chapter) &&
+        typeof value.title === 'string' &&
+        isStringArray(value.paragraphs)
+      );
     case 'move':
       return (
         hasOnlyKeys(value, ['kind', 'chapters', 'toIndex']) &&

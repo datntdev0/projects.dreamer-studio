@@ -25,6 +25,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CHAPTER_TITLE_MAX } from '@dreamer/shared/models/novel';
 import { isConsecutive } from '../library-format';
 import { chapterRef } from '../library-format';
+import { CHAPTER_ERROR_KEYS } from '../library-format';
 import { lockKind } from '../library-format';
 import type { ChapterChangeError } from '../library.models';
 import type { ChapterDialogKind } from '../library.models';
@@ -45,12 +46,6 @@ import { ChapterSplitDialogComponent } from './chapter-split-dialog.component';
 
 const NUMBER_QUERY = /^\d+$/;
 const SAVED_MS = 2000;
-const ERROR_KEYS: Record<ChapterChangeError, string> = {
-  locked: 'library.chapters.error.locked',
-  stale: 'library.chapters.error.stale',
-  missing: 'library.chapters.error.missing',
-  failed: 'library.chapters.error.failed',
-};
 
 @Component({
   selector: 'ds-novel-chapters',
@@ -638,7 +633,7 @@ export class NovelChaptersComponent {
     this.toast.show({
       kind: 'danger',
       title: this.i18n.t('library.chapters.error.title'),
-      message: this.i18n.t(ERROR_KEYS[error]),
+      message: this.i18n.t(CHAPTER_ERROR_KEYS[error]),
     });
   }
   private flashSaved(): void {

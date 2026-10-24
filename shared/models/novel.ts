@@ -41,6 +41,7 @@ export interface ChapterRef {
 
 export type ChapterChange =
   | { kind: 'rename'; chapter: ChapterRef; title: string }
+  | { kind: 'edit'; chapter: ChapterRef; title: string; paragraphs: string[] }
   | { kind: 'move'; chapters: ChapterRef[]; toIndex: number }
   | { kind: 'merge'; chapters: ChapterRef[] }
   | { kind: 'split'; chapter: ChapterRef; atParagraph: number; title: string }

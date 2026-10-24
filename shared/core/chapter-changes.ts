@@ -5,6 +5,7 @@ import type { ChapterChange } from '../models/novel';
 import type { ChapterRef } from '../models/novel';
 import type { NovelChapterEntry } from '../models/novel-store';
 import type { ChapterStats } from './novel-text';
+import { splitParagraphs } from './novel-text';
 
 export interface ChapterFile extends ChapterStats {
   file: string;
@@ -59,6 +60,18 @@ export async function applyChapterChange(
       const title: string = checkedTitle(change.title);
       return chapters.map((entry: NovelChapterEntry, index: number): NovelChapterEntry =>
         index === position - 1 ? { ...entry, title } : entry,
+      );
+    }
+    case 'edit': {
+      const [position] = checkedPositions(chapters, [change.chapter], 1);
+      const title: string = checkedTitle(change.title);
+      const paragraphs: string[] = splitParagraphs(change.paragraphs.join('\n'));
+      if (paragraphs.length === 0) {
+        throw invalid('at least one paragraph required');
+      }
+      const edited: ChapterFile = await texts.write(paragraphs);
+      return chapters.map((entry: NovelChapterEntry, index: number): NovelChapterEntry =>
+        index === position - 1 ? { title, ...edited } : entry,
       );
     }
     case 'move': {

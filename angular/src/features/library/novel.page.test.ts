@@ -175,7 +175,7 @@ describe('NovelPage', () => {
         (button: Element) => button.getAttribute('data-testid'),
       ),
     ).toEqual(['novel-page-edit', 'novel-page-focus']);
-    expect((query(fixture, 'novel-page-edit') as HTMLButtonElement).disabled).toBe(true);
+    expect((query(fixture, 'novel-page-edit') as HTMLButtonElement).disabled).toBe(false);
     expect(rows(fixture).length).toBeLessThan(CHAPTERS.length);
     expect(rows(fixture)[0].dataset['position']).toBe('1');
     expect(query(fixture, 'novel-chapters-count').textContent).toContain(String(CHAPTERS.length));

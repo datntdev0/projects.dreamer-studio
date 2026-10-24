@@ -29,12 +29,12 @@ export function handle<A extends unknown[], R>(
 export function handleValidated<T, R>(
   channel: string,
   guard: (value: unknown) => value is T,
-  run: (payload: T) => R,
+  run: (payload: T, event: IpcMainInvokeEvent) => R,
 ): void {
-  handle(channel, (_event, payload: unknown): R => {
+  handle(channel, (event, payload: unknown): R => {
     if (!guard(payload)) {
       throw new Error(`Invalid ${channel} payload`);
     }
-    return run(payload);
+    return run(payload, event);
   });
 }

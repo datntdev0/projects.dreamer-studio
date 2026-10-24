@@ -22,6 +22,7 @@ function isStartRequest(value: unknown): value is PipelineStartRequest {
     isObject(value) &&
     typeof value.type === 'string' &&
     value.type !== 'novel-import' &&
+    value.type !== 'novel-export' &&
     (value.failAtStep === null || (Number.isInteger(value.failAtStep) && (value.failAtStep as number) >= 1))
   );
 }

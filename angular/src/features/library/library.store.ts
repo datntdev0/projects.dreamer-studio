@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { DEFAULT_READING_SETTINGS, EXPORT_MS, LOADING_MS, isConsecutive, renumber } from './library-format';
+import { DEFAULT_READING_SETTINGS, LOADING_MS, isConsecutive, renumber } from './library-format';
 import type { ChapterChangeError, DeleteNovelsResult, ImportState } from './library.models';
 import type { LibraryChapter, LibraryNovel, LibraryScenario, LibrarySortKey } from './library.models';
 import type { LibraryStoreData } from './library.models';
@@ -126,19 +126,6 @@ export class LibraryMockStore {
     const deleted: string[] = targets.filter((novel: LibraryNovel): boolean => !novel.lock).map((novel) => novel.id);
     this.novels.update((novels: LibraryNovel[]) => novels.filter((novel: LibraryNovel) => !deleted.includes(novel.id)));
     return { deleted, skipped };
-  }
-
-  startExport(id: string, onDone: () => void): void {
-    const novel: LibraryNovel | null = this.novel(id);
-    if (!novel) {
-      return;
-    }
-    const lock: NovelLock = { kind: 'export', runId: `run-${Date.now().toString(16)}`, runLabel: novel.originalTitle };
-    this.setLock(id, lock);
-    setTimeout(() => {
-      this.setLock(id, null);
-      onDone();
-    }, EXPORT_MS);
   }
 
   renameChapter(novelId: string, chapterId: string, title: string): ChapterChangeError | null {

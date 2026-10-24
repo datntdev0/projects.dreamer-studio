@@ -137,7 +137,12 @@ describe('PipelineRunRepository', () => {
     seed('r', 'running', '2026-01-01T00:00:02.000Z');
     const done: PipelineRun = seed('s', 'succeeded', '2026-01-01T00:00:03.000Z');
     const finishedAt: string = '2026-01-02T00:00:00.000Z';
-    expect(repository.markActiveCancelled('appClosed', finishedAt).sort()).toEqual(['q', 'r']);
+    expect(
+      repository
+        .markActiveCancelled('appClosed', finishedAt)
+        .map((run) => run.id)
+        .sort(),
+    ).toEqual(['q', 'r']);
     for (const id of ['q', 'r']) {
       expect(repository.get(id)).toMatchObject({ status: 'cancelled', cancelReason: 'appClosed', finishedAt });
     }

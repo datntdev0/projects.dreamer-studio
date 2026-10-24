@@ -1,14 +1,20 @@
 import { shell } from 'electron';
+import { readFile } from 'node:fs/promises';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
-import { NovelDetail, NovelLock, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
+import { ChapterRequest, ChapterText, DeleteNovelsResult } from '@dreamer/shared/models/novel';
+import { NovelChapter, NovelDetail, NovelLock } from '@dreamer/shared/models/novel';
+import { NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
+import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { normalizeTags, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { AppPaths } from '@storage/paths';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { readCoverImage } from './cover-image';
 import { LibraryIndex } from './library-index';
-import { novelFolder, NovelFolder } from './library-files';
+import { chapterPath, novelFolder, NovelFolder } from './library-files';
+import { exportOutputPath } from './novel/novel-export-pipeline';
 import { assertUnlocked, novelLocks } from './novel/novel-lock';
 import { deleteNovel, readMetadata, saveMetadata, withNovelLock, writeCover } from './novel/novel-files';
 
@@ -56,6 +62,25 @@ export class LibraryService {
   get(id: string): NovelDetail {
     const novel: NovelDetail = this.index.get(id);
     return { ...novel, lock: novelLocks(this.runs).get(id) ?? null };
+  }
+
+  async getChapter(request: ChapterRequest): Promise<ChapterText> {
+    const missing: CodedError = new CodedError(
+      ErrorCode.ChapterFileMissing,
+      `Chapter file is missing: ${request.file}`,
+    );
+    const folder: NovelFolder = novelFolder(this.paths, request.novelId);
+    const listed: boolean = this.index
+      .get(request.novelId)
+      .chapters.some((chapter: NovelChapter): boolean => chapter.file === request.file);
+    if (!isContentHash(request.file) || !listed) {
+      throw missing;
+    }
+    try {
+      return { paragraphs: splitParagraphs(await readFile(chapterPath(folder, request.file), 'utf-8')) };
+    } catch {
+      throw missing;
+    }
   }
 
   updateNovel(request: NovelUpdateRequest): Promise<NovelDetail> {
@@ -124,6 +149,15 @@ export class LibraryService {
       this.notify(result.deleted);
     }
     return result;
+  }
+
+  showExport(runId: string): void {
+    const run: PipelineRun | null = this.runs.get(runId);
+    const params: Record<string, unknown> | null = this.runs.getParams(runId);
+    if (run === null || params === null || run.type !== 'novel-export' || run.status !== 'succeeded') {
+      throw new CodedError(ErrorCode.PipelineNotFound, `Finished novel export not found: ${runId}`);
+    }
+    shell.showItemInFolder(exportOutputPath(params));
   }
 
   async openFolder(id: string): Promise<void> {

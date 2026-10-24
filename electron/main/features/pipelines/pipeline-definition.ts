@@ -23,6 +23,7 @@ export interface PipelineDefinition {
   type: PipelineType;
   steps: PipelineStep[];
   cleanup?(ctx: StepContext): Promise<void>;
+  discard?(params: Record<string, unknown>): void;
 }
 
 export function abortError(): DOMException {

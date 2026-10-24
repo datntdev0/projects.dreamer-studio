@@ -24,8 +24,17 @@ export interface NovelSummary {
   lock: NovelLock | null;
 }
 
+export interface NovelChapter {
+  position: number;
+  title: string;
+  file: string;
+  paragraphs: number;
+  chars: number;
+}
+
 export interface NovelDetail extends NovelSummary {
   description: string;
+  chapters: NovelChapter[];
 }
 
 export type NovelCoverPatch = 'keep' | 'remove' | { path: string };
@@ -44,6 +53,15 @@ export interface NovelPatch {
 export interface NovelUpdateRequest {
   id: string;
   patch: NovelPatch;
+}
+
+export interface ChapterRequest {
+  novelId: string;
+  file: string;
+}
+
+export interface ChapterText {
+  paragraphs: string[];
 }
 
 export interface DeleteNovelsResult {

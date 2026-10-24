@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, rm, stat } from 'node:fs/promises';
 import { decodeUtf8 } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
@@ -8,8 +8,9 @@ import type { ImportPreview, NovelImportRequest, PreviewChapter } from '@dreamer
 import { NOVEL_STORE_VERSION, normalizeTags, type NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import type { NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { t } from '../../../app/app-i18n';
-import { PipelineDefinition, sleep, StepContext } from '../../pipelines/pipeline-definition';
+import { PipelineDefinition, StepContext } from '../../pipelines/pipeline-definition';
 import { readCoverImage } from '../cover-image';
+import { asWriteError, renameWithRetry } from '../library-io';
 import { importStagingDir, NovelFolder, novelFolder, novelFolderAt } from '../library-files';
 import { writeChapter, writeCover, writeMetadata, WrittenChapter } from './novel-files';
 import { openPackageArchive, PackageArchive, readPackage } from '../package-reader';
@@ -28,8 +29,6 @@ interface SelectedChapter {
 }
 
 const states: Map<string, ImportState> = new Map<string, ImportState>();
-const renameDelayMs: number = 200;
-const renameRetries: number = 3;
 
 function requestFrom(ctx: StepContext): NovelImportRequest {
   const request: unknown = ctx.params.request;
@@ -49,17 +48,6 @@ function stateFor(ctx: StepContext): ImportState {
 
 function packageChanged(message: string): CodedError {
   return new CodedError(ErrorCode.PackageChanged, message);
-}
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError';
-}
-
-function asWriteError(error: unknown): never {
-  if (error instanceof CodedError || isAbortError(error)) {
-    throw error;
-  }
-  throw new CodedError(ErrorCode.LibraryWriteFailed, errorMessage(error));
 }
 
 async function checkStep(ctx: StepContext): Promise<void> {
@@ -196,25 +184,6 @@ function buildMetadata(state: ImportState, id: string): NovelMetadata {
     updatedAt: now,
     chapters: state.chapters,
   };
-}
-
-function isRetryableRename(error: unknown): boolean {
-  const code: string | undefined = (error as NodeJS.ErrnoException).code;
-  return code === 'EPERM' || code === 'EBUSY' || code === 'EACCES';
-}
-
-async function renameWithRetry(source: string, destination: string, signal: AbortSignal): Promise<void> {
-  for (let attempt: number = 0; ; attempt += 1) {
-    try {
-      await rename(source, destination);
-      return;
-    } catch (error: unknown) {
-      if (!isRetryableRename(error) || attempt >= renameRetries) {
-        throw error;
-      }
-      await sleep(renameDelayMs, signal);
-    }
-  }
 }
 
 async function saveStep(ctx: StepContext): Promise<void> {

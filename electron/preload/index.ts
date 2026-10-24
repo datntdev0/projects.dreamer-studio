@@ -20,6 +20,7 @@ import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
+import { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -90,9 +91,12 @@ const api: DreamerApi = {
     readPackage: (path: string): Promise<PackageReadResult> => call(LibraryChannel.ReadPackage, path),
     pickImage: (): Promise<PickedImage | null> => call(LibraryChannel.PickImage),
     import: (request: NovelImportRequest): Promise<PipelineRun> => call(LibraryChannel.Import, request),
+    export: (id: string): Promise<PipelineRun | null> => call(LibraryChannel.Export, id),
+    showExport: (runId: string): Promise<void> => call(LibraryChannel.ShowExport, runId),
     pathForFile: (file: File): string => webUtils.getPathForFile(file),
     list: (): Promise<NovelSummary[]> => call(LibraryChannel.List),
     get: (id: string): Promise<NovelDetail> => call(LibraryChannel.Get, id),
+    getChapter: (request: ChapterRequest): Promise<ChapterText> => call(LibraryChannel.GetChapter, request),
     updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail> =>
       call(LibraryChannel.UpdateNovel, { id, patch }),
     deleteNovels: (ids: string[]): Promise<DeleteNovelsResult> => call(LibraryChannel.DeleteNovels, ids),

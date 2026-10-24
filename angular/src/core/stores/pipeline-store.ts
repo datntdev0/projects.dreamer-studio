@@ -138,6 +138,10 @@ export class PipelineStore {
       this.notifyImportFinished(run);
       return;
     }
+    if (run.type === 'novel-export') {
+      this.notifyExportFinished(run);
+      return;
+    }
     if (run.status === 'succeeded') {
       this.toast.show({
         kind: 'success',
@@ -163,7 +167,7 @@ export class PipelineStore {
   }
 
   private notifyImportFinished(run: PipelineRun): void {
-    const title: string = run.label ?? this.i18n.t('run.type.novel-import');
+    const title: string = this.runTitle(run);
     if (run.status === 'succeeded') {
       const novelId: string | null = run.novelId;
       this.toast.show({
@@ -182,7 +186,29 @@ export class PipelineStore {
     }
   }
 
-  private openPipeline(id: string): void {
+  private notifyExportFinished(run: PipelineRun): void {
+    const title: string = this.runTitle(run);
+    if (run.status === 'succeeded') {
+      this.toast.show({
+        kind: 'success',
+        title: this.i18n.t('toast.export.succeeded', { title }),
+        action: { label: this.i18n.t('toast.export.showInFolder'), run: () => void this.desktopApi.showExport(run.id) },
+      });
+    } else if (run.status === 'failed') {
+      this.toast.show({
+        kind: 'danger',
+        title: this.i18n.t('toast.export.failed', { title }),
+        message: this.i18n.t('toast.export.failedMsg'),
+        action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
+      });
+    }
+  }
+
+  private runTitle(run: PipelineRun): string {
+    return run.label ?? this.i18n.t(`run.type.${run.type}`);
+  }
+
+  openPipeline(id: string): void {
     void this.router.navigate(['/pipelines', id]);
   }
 

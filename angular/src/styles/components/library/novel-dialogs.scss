@@ -102,20 +102,4 @@
       color: var(--color-warning);
     }
   }
-
-  .novel-dlg-proto {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--sp-xs);
-    padding: var(--sp-sm) var(--sp-md);
-    color: var(--color-text);
-    font-size: var(--font-size-meta);
-    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-    border-radius: var(--radius-md);
-
-    ds-icon {
-      flex: none;
-      color: var(--color-warning);
-    }
-  }
 }

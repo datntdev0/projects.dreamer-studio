@@ -8,6 +8,7 @@ import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
+import type { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
 import type { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
@@ -150,6 +151,14 @@ export class DesktopApi {
     return window.dreamer ? window.dreamer.library.import(request) : null;
   }
 
+  async exportNovel(id: string): Promise<PipelineRun | null> {
+    return window.dreamer ? window.dreamer.library.export(id) : null;
+  }
+
+  async showExport(runId: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.library.showExport(runId);
+  }
+
   pathForFile(file: File): string | null {
     return window.dreamer ? window.dreamer.library.pathForFile(file) : null;
   }
@@ -160,6 +169,10 @@ export class DesktopApi {
 
   async getNovel(id: string): Promise<NovelDetail | null> {
     return window.dreamer ? window.dreamer.library.get(id) : null;
+  }
+
+  async getChapter(request: ChapterRequest): Promise<ChapterText | null> {
+    return window.dreamer ? window.dreamer.library.getChapter(request) : null;
   }
 
   async updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {

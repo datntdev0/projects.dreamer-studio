@@ -21,6 +21,18 @@ interface PipelineRunRow {
   finished_at: string | null;
 }
 
+interface RecoveredRunRow {
+  id: string;
+  type: string;
+  params: string;
+}
+
+export interface RecoveredRun {
+  id: string;
+  type: PipelineType;
+  params: Record<string, unknown>;
+}
+
 const activeStatuses: PipelineRunStatus[] = ['queued', 'running'];
 
 function where(conditions: string[]): string {
@@ -53,8 +65,8 @@ export class PipelineRunRepository {
   insert(run: PipelineRun, params: Record<string, unknown>): void {
     this.db.run(
       `INSERT INTO pipeline_run (id, type, status, cancel_reason, params, progress, step_index, step_count, step_name,
-        error_code, error, label, created_at, started_at, finished_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        error_code, error, label, novel_id, created_at, started_at, finished_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         run.id,
         run.type,
@@ -68,6 +80,7 @@ export class PipelineRunRepository {
         run.errorCode,
         run.error,
         run.label,
+        run.novelId,
         run.createdAt,
         run.startedAt,
         run.finishedAt,
@@ -101,6 +114,14 @@ export class PipelineRunRepository {
       id,
     ]);
     return row ? toRun(row) : null;
+  }
+
+  getParams(id: string): Record<string, unknown> | null {
+    const row: { params: string } | undefined = this.db.get<{ params: string }>(
+      'SELECT params FROM pipeline_run WHERE id = ?',
+      [id],
+    );
+    return row ? (JSON.parse(row.params) as Record<string, unknown>) : null;
   }
 
   activeNovelRuns(): PipelineRun[] {
@@ -149,13 +170,17 @@ export class PipelineRunRepository {
     return { runs, total: totalRow.total, next };
   }
 
-  markActiveCancelled(reason: PipelineCancelReason, finishedAt: string): string[] {
-    const rows: { id: string }[] = this.db.all<{ id: string }>(
+  markActiveCancelled(reason: PipelineCancelReason, finishedAt: string): RecoveredRun[] {
+    const rows: RecoveredRunRow[] = this.db.all<RecoveredRunRow>(
       `UPDATE pipeline_run SET status = 'cancelled', cancel_reason = ?, finished_at = ?
-      WHERE status IN ('queued', 'running') RETURNING id`,
+      WHERE status IN ('queued', 'running') RETURNING id, type, params`,
       [reason, finishedAt],
     );
-    return rows.map((row: { id: string }): string => row.id);
+    return rows.map((row: RecoveredRunRow): RecoveredRun => ({
+      id: row.id,
+      type: row.type as PipelineType,
+      params: JSON.parse(row.params) as Record<string, unknown>,
+    }));
   }
 
   deleteFinished(ids: string[]): string[] {

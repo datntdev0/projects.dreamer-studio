@@ -26,6 +26,7 @@ import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
 import { handleLibraryProtocol } from './features/library/library-protocol';
+import { novelExportPipeline } from './features/library/novel/novel-export-pipeline';
 import { novelImportPipeline } from './features/library/novel/novel-import-pipeline';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
@@ -67,7 +68,11 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
 
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
-  registry: new PipelineRegistry(app.isPackaged ? [novelImportPipeline] : [demoPipeline, novelImportPipeline]),
+  registry: new PipelineRegistry(
+    app.isPackaged
+      ? [novelImportPipeline, novelExportPipeline]
+      : [demoPipeline, novelImportPipeline, novelExportPipeline],
+  ),
   limit: (): number => settings.get().pipelines.maxConcurrent,
   startBackend,
   stopBackend,

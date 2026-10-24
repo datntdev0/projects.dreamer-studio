@@ -39,7 +39,7 @@ class LibraryStoreStub {
     this.state.set(state);
     this.detail.mockImplementation(async (id) => {
       const novel: NovelSummary | undefined = novels.find((item) => item.id === id);
-      return novel ? { ...novel, description: '' } : null;
+      return novel ? { ...novel, description: '', chapters: [] } : null;
     });
   }
 }

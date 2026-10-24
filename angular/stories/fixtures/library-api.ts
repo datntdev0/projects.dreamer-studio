@@ -235,6 +235,14 @@ class FakeLibraryApi extends DesktopApi {
     });
   }
 
+  override exportNovel(): Promise<PipelineRun | null> {
+    return Promise.resolve(null);
+  }
+
+  override showExport(): Promise<void> {
+    return Promise.resolve();
+  }
+
   override pathForFile(file: File): string | null {
     const sample: LibrarySampleId | undefined = (Object.keys(LIBRARY_READ_RESULTS) as LibrarySampleId[]).find(
       (id: LibrarySampleId): boolean => {

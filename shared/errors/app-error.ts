@@ -21,6 +21,7 @@ export const ErrorCode = {
   NovelLocked: 'NOVEL_LOCKED',
   NovelMetadataInvalid: 'NOVEL_METADATA_INVALID',
   CoverInvalid: 'COVER_INVALID',
+  ChapterFileMissing: 'CHAPTER_FILE_MISSING',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

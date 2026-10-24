@@ -1,5 +1,5 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import { NovelChapter, NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
 import * as NovelStore from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 import { AppPaths } from '@storage/paths';
@@ -30,7 +30,17 @@ function toSummary(metadata: NovelStore.NovelMetadata): NovelSummary {
 }
 
 function toDetail(metadata: NovelStore.NovelMetadata): NovelDetail {
-  return { ...toSummary(metadata), description: metadata.description };
+  return {
+    ...toSummary(metadata),
+    description: metadata.description,
+    chapters: metadata.chapters.map((chapter: NovelStore.NovelChapterEntry, index: number): NovelChapter => ({
+      position: index + 1,
+      title: chapter.title,
+      file: chapter.file,
+      paragraphs: chapter.paragraphs,
+      chars: chapter.chars,
+    })),
+  };
 }
 
 export class LibraryIndex {

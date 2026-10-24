@@ -8,7 +8,7 @@ import { PipelineRun, PipelineRunStatus, PipelineStartRequest } from '@dreamer/s
 import { PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
-import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
+import { PipelineRunRepository, RecoveredRun } from '@storage/repositories/pipeline-run-repository';
 import { AppPaths } from '@storage/paths';
 import { abortError, PipelineDefinition, PipelineStep, StepContext } from './pipeline-definition';
 import { PipelineRegistry } from './pipeline-registry';
@@ -56,7 +56,12 @@ export class PipelineExecutor {
     return this.startRun(request.type, { failAtStep: request.failAtStep }, null);
   }
 
-  startRun(type: PipelineType, params: Record<string, unknown>, label: string | null): PipelineRun {
+  startRun(
+    type: PipelineType,
+    params: Record<string, unknown>,
+    label: string | null,
+    novelId: string | null = null,
+  ): PipelineRun {
     if (this.closed) {
       throw new Error('Pipeline executor is closed');
     }
@@ -64,7 +69,7 @@ export class PipelineExecutor {
     if (!definition) {
       throw new CodedError(ErrorCode.PipelineUnknownType, `Unknown pipeline type: ${type}`);
     }
-    const state: RunState = this.createState(definition, type, params, label);
+    const state: RunState = this.createState(definition, type, params, label, novelId);
     this.repo.insert(state.run, state.params);
     this.publish(state.run);
     const created: PipelineRun = { ...state.run };
@@ -114,7 +119,9 @@ export class PipelineExecutor {
   }
 
   recover(): string[] {
-    const ids: string[] = this.repo.markActiveCancelled('appClosed', nowIso());
+    const recovered: RecoveredRun[] = this.repo.markActiveCancelled('appClosed', nowIso());
+    const ids: string[] = recovered.map((run: RecoveredRun): string => run.id);
+    recovered.forEach((run: RecoveredRun): void => this.discardLeftovers(run));
     ids
       .filter((id: string): boolean => existsSync(runLogFile(this.paths, id)))
       .forEach((id: string): void => this.appendClosedLine(id));
@@ -130,7 +137,7 @@ export class PipelineExecutor {
     this.active.clear();
     running.forEach((state: RunState): void => state.controller.abort());
     this.queue.length = 0;
-    this.repo.markActiveCancelled(reason, nowIso());
+    this.repo.markActiveCancelled(reason, nowIso()).forEach((run: RecoveredRun): void => this.discardLeftovers(run));
     running.forEach((state: RunState): void => this.appendClosedLine(state.run.id));
   }
 
@@ -153,6 +160,7 @@ export class PipelineExecutor {
     type: PipelineType,
     params: Record<string, unknown>,
     label: string | null,
+    novelId: string | null,
   ): RunState {
     const run: PipelineRun = {
       id: randomUUID(),
@@ -166,7 +174,7 @@ export class PipelineExecutor {
       errorCode: null,
       error: null,
       label,
-      novelId: null,
+      novelId,
       createdAt: nowIso(),
       startedAt: null,
       finishedAt: null,
@@ -338,6 +346,14 @@ export class PipelineExecutor {
 
   private publish(run: PipelineRun): void {
     broadcast(PipelineChannel.Update, { ...run });
+  }
+
+  private discardLeftovers(run: RecoveredRun): void {
+    try {
+      this.registry.get(run.type)?.discard?.(run.params);
+    } catch (error) {
+      this.logger.warn(`could not discard the leftovers of run ${run.id}: ${errorMessage(error)}`);
+    }
   }
 
   private appendClosedLine(id: string): void {

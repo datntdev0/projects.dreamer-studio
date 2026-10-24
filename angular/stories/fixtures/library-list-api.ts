@@ -70,7 +70,7 @@ class FakeLibraryListApi extends FakePipelinesApi {
   override async getNovel(id: string): Promise<NovelDetail | null> {
     const novel: NovelSummary | undefined = this.novels.find((item: NovelSummary) => item.id === id);
     if (!novel) throw new CodedError(ErrorCode.NovelNotFound, `Novel ${id} was not found`);
-    return { ...novel, tags: [...novel.tags], description: this.descriptions.get(id) ?? '' };
+    return { ...novel, tags: [...novel.tags], description: this.descriptions.get(id) ?? '', chapters: [] };
   }
 
   override async updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {
@@ -118,6 +118,29 @@ class FakeLibraryListApi extends FakePipelinesApi {
   }
 
   override async openNovelFolder(): Promise<void> {}
+
+  override async exportNovel(id: string): Promise<PipelineRun | null> {
+    const novel: NovelSummary | undefined = this.novels.find((item: NovelSummary) => item.id === id);
+    return {
+      id: crypto.randomUUID(),
+      type: 'novel-export',
+      status: 'queued',
+      cancelReason: null,
+      progress: 0,
+      stepIndex: 0,
+      stepCount: 3,
+      stepName: null,
+      errorCode: null,
+      error: null,
+      createdAt: new Date().toISOString(),
+      startedAt: null,
+      finishedAt: null,
+      label: novel?.title ?? null,
+      novelId: id,
+    };
+  }
+
+  override async showExport(): Promise<void> {}
 
   override onLibraryChanged(listener: (event: LibraryChangedEvent) => void): () => void {
     this.changedListeners.add(listener);

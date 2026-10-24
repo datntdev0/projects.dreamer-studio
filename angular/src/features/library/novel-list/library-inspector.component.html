@@ -16,19 +16,19 @@
   <button dsBtn variant="primary" size="sm" type="button" data-testid="insp-open" (click)="open.emit(novel().id)">
     <ds-icon name="book" size="sm" />{{ 'library.inspector.open' | t }}
   </button>
-  <span class="library-disabled-action" [dsTooltip]="'common.soon' | t">
-    <button
-      dsBtn
-      size="sm"
-      iconOnly
-      type="button"
-      disabled
-      data-testid="insp-export"
-      [attr.aria-label]="'library.inspector.export' | t"
-    >
-      <ds-icon name="upload" size="sm" />
-    </button>
-  </span>
+  <button
+    dsBtn
+    size="sm"
+    iconOnly
+    type="button"
+    data-testid="insp-export"
+    [disabled]="exportBusy()"
+    [attr.aria-label]="'library.inspector.export' | t"
+    [dsTooltip]="'library.inspector.export' | t"
+    (click)="exportNovel()"
+  >
+    <ds-icon name="upload" size="sm" />
+  </button>
   <span class="library-disabled-action" [dsTooltip]="lockReason()">
     <button
       dsBtn

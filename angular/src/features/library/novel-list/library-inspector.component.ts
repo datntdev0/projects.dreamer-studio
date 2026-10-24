@@ -6,12 +6,15 @@ import { PillComponent } from '@components/status/pill.component';
 import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
+import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
+import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { formatCompact, formatCount, formatDateTime } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LibraryStore } from '@core/stores/library-store';
+import { PipelineStore } from '@core/stores/pipeline-store';
 import { coverPalette, coverUrl, languageName } from '../library-format';
 import { LibraryCoverComponent } from './library-cover.component';
 import { NovelMetadataFormComponent } from './novel-metadata-form.component';
@@ -36,10 +39,12 @@ export class LibraryInspectorComponent {
   readonly delete = output<string>();
   private readonly form = viewChild(NovelMetadataFormComponent);
   private readonly store: LibraryStore = inject(LibraryStore);
+  private readonly pipelines: PipelineStore = inject(PipelineStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   protected readonly detail: WritableSignal<NovelDetail | null> = signal(null);
   protected readonly coverBusy = signal<boolean>(false);
+  protected readonly exportBusy = signal<boolean>(false);
   private detailId: string | null = null;
 
   protected readonly coverUrl = coverUrl;
@@ -123,12 +128,38 @@ export class LibraryInspectorComponent {
     }
   }
 
+  protected async exportNovel(): Promise<void> {
+    if (this.exportBusy()) return;
+    this.exportBusy.set(true);
+    try {
+      const run: PipelineRun | null = await this.store.exportNovel(this.novel().id);
+      if (run) this.notifyExportStarted(run);
+    } catch (error: unknown) {
+      this.toast.show({
+        kind: 'danger',
+        title: this.i18n.t('library.inspector.exportFailed'),
+        message: errorMessage(error),
+      });
+    } finally {
+      this.exportBusy.set(false);
+    }
+  }
+
   protected async openFolder(): Promise<void> {
     try {
       await this.store.openFolder(this.novel().id);
     } catch {
       this.toast.show({ kind: 'danger', title: this.i18n.t('library.inspector.openFolderFailed') });
     }
+  }
+
+  private notifyExportStarted(run: PipelineRun): void {
+    this.toast.show({
+      kind: 'info',
+      title: this.i18n.t('toast.export.started', { title: run.label ?? this.novel().title }),
+      message: this.i18n.t('toast.export.startedMsg'),
+      action: { label: this.i18n.t('toast.export.view'), run: () => this.pipelines.openPipeline(run.id) },
+    });
   }
 
   private async updateCover(patch: NovelPatch): Promise<void> {

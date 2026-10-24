@@ -1,3 +1,4 @@
+import type { ChapterText } from '@dreamer/shared/models/novel';
 import type { DeleteNovelsResult, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { Provider } from '@angular/core';
@@ -138,6 +139,8 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     runDiagnostics: (): Promise<DiagnosticsRun | null> => fakeRunDiagnostics(fixture.diagnostics ?? 'issues'),
     listNovels: (): Promise<NovelSummary[]> => Promise.resolve([]),
     getNovel: (): Promise<NovelDetail | null> => Promise.resolve(null),
+    getChapter: (): Promise<ChapterText | null> =>
+      Promise.resolve({ paragraphs: ['Sample paragraph one.', 'Sample paragraph two.'] }),
     updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail | null> => {
       void id;
       void patch;

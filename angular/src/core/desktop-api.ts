@@ -9,6 +9,7 @@ import type { LogEntry } from '@dreamer/shared/ipc/log';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import type { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
+import type { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import type { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
@@ -173,6 +174,18 @@ export class DesktopApi {
 
   async getChapter(request: ChapterRequest): Promise<ChapterText | null> {
     return window.dreamer ? window.dreamer.library.getChapter(request) : null;
+  }
+
+  async search(request: SearchRequest): Promise<void> {
+    if (window.dreamer) await window.dreamer.library.search(request);
+  }
+
+  async cancelSearch(searchId: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.library.cancelSearch(searchId);
+  }
+
+  onSearchProgress(listener: (progress: SearchProgress) => void): () => void {
+    return window.dreamer ? window.dreamer.library.onSearchProgress(listener) : () => undefined;
   }
 
   async updateNovel(id: string, patch: NovelPatch): Promise<NovelDetail | null> {

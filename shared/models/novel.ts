@@ -64,6 +64,31 @@ export interface ChapterText {
   paragraphs: string[];
 }
 
+export interface SearchRequest {
+  novelId: string;
+  query: string;
+  searchId: string;
+}
+
+export interface SearchHit {
+  position: number;
+  file: string;
+  paragraph: number | null;
+  pre: string;
+  hit: string;
+  post: string;
+}
+
+export interface SearchProgress {
+  searchId: string;
+  done: number;
+  total: number;
+  hits: SearchHit[];
+  totalHits: number;
+  totalChapters: number;
+  finished: boolean;
+}
+
 export interface DeleteNovelsResult {
   deleted: string[];
   skipped: string[];

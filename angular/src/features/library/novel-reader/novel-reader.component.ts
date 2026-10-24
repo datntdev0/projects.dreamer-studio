@@ -15,6 +15,8 @@ import { AreaStateComponent } from '@components/state/area-state.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { SettingsStore } from '@core/stores/settings-store';
+import { findTextMatches } from '@dreamer/shared/core/text-match';
+import type { TextMatch } from '@dreamer/shared/core/text-match';
 import { chapterNumber } from '../library-format';
 import { isTypingTarget } from '../library-format';
 import type { LibraryChapter } from '../library.models';
@@ -57,10 +59,14 @@ export class NovelReaderComponent {
   protected readonly chapter: Signal<LibraryChapter | null> = computed(
     () => this.chapters().find((chapter: LibraryChapter): boolean => chapter.id === this.current()) ?? null,
   );
+  private readonly text: Signal<ChapterTextState | null> = computed(() => {
+    const chapter: LibraryChapter | null = this.chapter();
+    return chapter ? this.novelStore.text(chapter) : null;
+  });
   protected readonly state: Signal<ReaderState> = computed(() => {
     if (!this.chapters().length) return 'empty';
-    if (!this.chapter()) return 'select';
-    const text: ChapterTextState = this.novelStore.text(this.chapter()!);
+    const text: ChapterTextState | null = this.text();
+    if (!text) return 'select';
     return text.status === 'missing' ? 'error' : text.status;
   });
   protected readonly previous: Signal<LibraryChapter | null> = computed(() => this.adjacent(-1));
@@ -69,17 +75,16 @@ export class NovelReaderComponent {
   protected readonly readerSize = computed(() => `${this.settingsStore.reading().size}px`);
   protected readonly readerLeading = computed(() => String(this.settingsStore.reading().leading));
   protected readonly readerMeasure = computed(() => `${this.settingsStore.reading().width}ch`);
-  protected readonly paragraphParts: Signal<ReaderTextPart[][]> = computed(() => {
+  protected readonly titleParts: Signal<ReaderTextPart[]> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
-    if (!chapter) return [];
-    let currentTaken: boolean = false;
-    const text: ChapterTextState = this.novelStore.text(chapter);
-    if (text.status !== 'ready') return [];
-    return text.paragraphs.map((paragraph: string): ReaderTextPart[] => {
-      const parts: ReaderTextPart[] = this.textParts(paragraph, currentTaken);
-      currentTaken ||= parts.some((part: ReaderTextPart): boolean => part.current);
-      return parts;
-    });
+    return chapter ? this.textParts(chapter.title, null) : [];
+  });
+  protected readonly paragraphParts: Signal<ReaderTextPart[][]> = computed(() => {
+    const text: ChapterTextState | null = this.text();
+    if (text?.status !== 'ready') return [];
+    return text.paragraphs.map((paragraph: string, index: number): ReaderTextPart[] =>
+      this.textParts(paragraph, index),
+    );
   });
 
   constructor() {
@@ -89,7 +94,10 @@ export class NovelReaderComponent {
       const highlight: ReaderHighlight | null = this.highlight();
       if (!chapter) return;
       untracked(() => this.novelStore.ensure(chapter));
-      this.scheduleScroll(highlight?.chapterId === chapter.id && !!highlight.query.trim());
+      this.text();
+      this.scheduleScroll(
+        highlight?.chapterId === chapter.id && highlight.paragraph !== null && !!highlight.query.trim(),
+      );
     });
   }
 
@@ -127,28 +135,28 @@ export class NovelReaderComponent {
     return index < 0 ? null : (this.chapters()[index + direction] ?? null);
   }
 
-  private textParts(text: string, currentTaken: boolean): ReaderTextPart[] {
+  private textParts(text: string, paragraph: number | null): ReaderTextPart[] {
     const highlight: ReaderHighlight | null = this.highlight();
     const chapter: LibraryChapter | null = this.chapter();
     const query: string = highlight && highlight.chapterId === chapter?.id ? highlight.query.trim() : '';
     if (!query) return [{ text, highlighted: false, current: false }];
-    const haystack: string = text.toLocaleLowerCase();
-    const needle: string = query.toLocaleLowerCase();
+    const characters: string[] = Array.from(text);
+    const matches: TextMatch[] = findTextMatches(text, query);
     const parts: ReaderTextPart[] = [];
     let from: number = 0;
-    let index: number = haystack.indexOf(needle, from);
-    while (index >= 0) {
-      if (index > from) parts.push({ text: text.slice(from, index), highlighted: false, current: false });
-      parts.push({ text: text.slice(index, index + query.length), highlighted: true, current: false });
-      from = index + query.length;
-      index = haystack.indexOf(needle, from);
+    for (const [index, match] of matches.entries()) {
+      if (match.start > from)
+        parts.push({ text: characters.slice(from, match.start).join(''), highlighted: false, current: false });
+      parts.push({
+        text: characters.slice(match.start, match.end).join(''),
+        highlighted: true,
+        current: highlight?.paragraph === paragraph && highlight.occurrence === index,
+      });
+      from = match.end;
     }
     if (!parts.length) return [{ text, highlighted: false, current: false }];
-    if (from < text.length) parts.push({ text: text.slice(from), highlighted: false, current: false });
-    const first: ReaderTextPart | undefined = currentTaken
-      ? undefined
-      : parts.find((part: ReaderTextPart): boolean => part.highlighted);
-    if (first) first.current = true;
+    if (from < characters.length)
+      parts.push({ text: characters.slice(from).join(''), highlighted: false, current: false });
     return parts;
   }
 

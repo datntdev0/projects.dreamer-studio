@@ -146,7 +146,7 @@
           @if (tab() === 'reading') {
             <ds-reading-settings />
           } @else {
-            <ds-novel-search [novel]="item" [chapters]="chapters()" (selected)="onSearchSelected($event)" />
+            <ds-novel-search [novel]="item" (selected)="onSearchSelected($event)" />
           }
         } @else {
           <span class="skeleton library-novel-skeleton-cover" aria-hidden="true"></span>

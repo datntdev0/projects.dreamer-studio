@@ -43,7 +43,7 @@
           <p class="library-reader-eyebrow num">
             {{ 'library.reader.eyebrow' | t: { position: count(selected.position), total: count(chapters().length) } }}
           </p>
-          <h1>{{ selected.title }}</h1>
+          <h1><ng-container *ngTemplateOutlet="textParts; context: { $implicit: titleParts() }" /></h1>
           <p class="library-reader-meta num">
             {{
               'library.reader.meta' | t: { chars: count(selected.chars), paragraphs: count(selected.paragraphCount) }
@@ -51,21 +51,23 @@
           </p>
         </header>
         @for (parts of paragraphParts(); track $index) {
-          <p>
-            @for (part of parts; track $index) {
-              @if (part.highlighted) {
-                <mark [class.current]="part.current">{{ part.text }}</mark>
-              } @else {
-                {{ part.text }}
-              }
-            }
-          </p>
+          <p><ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" /></p>
         }
         <ng-container *ngTemplateOutlet="pager" />
       </article>
     }
   }
 }
+
+<ng-template #textParts let-parts>
+  @for (part of parts; track $index) {
+    @if (part.highlighted) {
+      <mark [class.current]="part.current">{{ part.text }}</mark>
+    } @else {
+      {{ part.text }}
+    }
+  }
+</ng-template>
 
 <ng-template #pager>
   <nav class="library-reader-pager" [attr.aria-label]="'library.reader.pager' | t">

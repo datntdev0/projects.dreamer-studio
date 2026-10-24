@@ -1,3 +1,5 @@
+import type { SearchHit } from '@dreamer/shared/models/novel';
+
 export type LibraryScenario = 'filled' | 'empty' | 'error';
 
 export type LibraryView = 'grid' | 'list';
@@ -96,14 +98,8 @@ export interface TextParts {
 export interface ReaderHighlight {
   chapterId: string;
   query: string;
-}
-
-export interface SearchHit {
-  chapterId: string;
   paragraph: number | null;
-  pre: string;
-  hit: string;
-  post: string;
+  occurrence: number;
 }
 
 export interface SearchChapterResult {
@@ -114,15 +110,6 @@ export interface SearchChapterResult {
 export type NovelTab = 'reading' | 'search';
 
 export type NovelSearchState = 'idle' | 'running' | 'results' | 'none';
-
-export interface NovelDetailInitialState {
-  chapter: number | null;
-  tab: NovelTab;
-  searchQuery: string;
-  searchState: NovelSearchState;
-  focusMode: boolean;
-  editing: boolean;
-}
 
 export type PageState = 'loading' | 'error' | 'notFound' | 'ready';
 

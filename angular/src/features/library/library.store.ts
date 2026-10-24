@@ -5,19 +5,9 @@ import type { ChapterChangeError, DeleteNovelsResult, ImportState } from './libr
 import type { LibraryChapter, LibraryNovel, LibraryScenario, LibrarySortKey } from './library.models';
 import type { LibraryStoreData } from './library.models';
 import type { LibraryView } from './library.models';
-import type { NovelDetailInitialState } from './library.models';
 import type { NovelLock } from './library.models';
 import type { SortDirection } from './library.models';
 import type { TaskStatus } from './library.models';
-
-const DEFAULT_DETAIL_INITIAL_STATE: NovelDetailInitialState = {
-  chapter: null,
-  tab: 'reading',
-  searchQuery: '',
-  searchState: 'idle',
-  focusMode: false,
-  editing: false,
-};
 
 @Injectable({ providedIn: 'root' })
 export class LibraryMockStore {
@@ -30,7 +20,6 @@ export class LibraryMockStore {
   readonly sortKey = signal<LibrarySortKey>('updatedAt');
   readonly sortDirection = signal<SortDirection>('desc');
   readonly missingChapterIds = signal<ReadonlySet<string>>(new Set());
-  readonly detailInitialState = signal<NovelDetailInitialState>({ ...DEFAULT_DETAIL_INITIAL_STATE });
 
   readonly visibleNovels: Signal<LibraryNovel[]> = computed(() => (this.scenario() === 'filled' ? this.novels() : []));
 
@@ -75,10 +64,6 @@ export class LibraryMockStore {
 
   setScenario(scenario: LibraryScenario): void {
     this.scenario.set(scenario);
-  }
-
-  setDetailInitialState(state: NovelDetailInitialState): void {
-    this.detailInitialState.set({ ...state });
   }
 
   simulateLoading(): void {

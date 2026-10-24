@@ -1,5 +1,10 @@
 import type { ChapterText } from '@dreamer/shared/models/novel';
 import type { ChapterRequest } from '@dreamer/shared/models/novel';
+import type { SearchHit } from '@dreamer/shared/models/novel';
+import type { SearchProgress } from '@dreamer/shared/models/novel';
+import type { SearchRequest } from '@dreamer/shared/models/novel';
+import { findTextMatches } from '@dreamer/shared/core/text-match';
+import type { TextMatch } from '@dreamer/shared/core/text-match';
 import { CodedError } from '@dreamer/shared/errors/app-error';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { LibraryNovel } from '../../src/features/library/library.models';
@@ -33,11 +38,56 @@ export interface DesktopApiFixture {
 export interface ReaderApiFixture {
   missingChapter: number | null;
   lock: boolean;
+  searchDelay?: number;
 }
 
 export function provideReaderDesktopApi(fixture: ReaderApiFixture): Provider {
   const novels: LibraryNovel[] = [...NOVELS, NO_CHAPTERS_NOVEL];
+  let progressListener: ((progress: SearchProgress) => void) | null = null;
+  let activeSearchId: string | null = null;
   const api: Partial<DesktopApi> = {
+    onSearchProgress: (listener: (progress: SearchProgress) => void): (() => void) => {
+      progressListener = listener;
+      return (): void => {
+        progressListener = null;
+      };
+    },
+    cancelSearch: async (searchId: string): Promise<void> => {
+      if (activeSearchId === searchId) activeSearchId = null;
+    },
+    search: async (request: SearchRequest): Promise<void> => {
+      activeSearchId = request.searchId;
+      const novel: LibraryNovel | undefined = novels.find((item: LibraryNovel): boolean => item.id === request.novelId);
+      const chapters: LibraryChapter[] = novel ? makeChapters(novel).slice(0, 3) : [];
+      const hits: SearchHit[] = chapters.flatMap((chapter: LibraryChapter): SearchHit[] => {
+        const key: string = `${request.novelId}-c${String(chapter.position).padStart(4, '0')}`;
+        const texts: string[] = [chapter.title, ...(CHAPTER_PARAGRAPHS[key] ?? SAMPLE_PARAGRAPHS)];
+        return texts.flatMap((text: string, index: number): SearchHit[] => {
+          const characters: string[] = Array.from(text);
+          return findTextMatches(text, request.query).map((match: TextMatch): SearchHit => ({
+            position: chapter.position,
+            file: chapter.file,
+            paragraph: index === 0 ? null : index - 1,
+            pre: characters.slice(Math.max(0, match.start - 40), match.start).join(''),
+            hit: characters.slice(match.start, match.end).join(''),
+            post: characters.slice(match.end, match.end + 40).join(''),
+          }));
+        });
+      });
+      setTimeout((): void => {
+        if (activeSearchId !== request.searchId) return;
+        progressListener?.({
+          searchId: request.searchId,
+          done: chapters.length,
+          total: chapters.length,
+          hits,
+          totalHits: hits.length,
+          totalChapters: new Set(hits.map((hit: SearchHit): number => hit.position)).size,
+          finished: true,
+        });
+        activeSearchId = null;
+      }, fixture.searchDelay ?? 120);
+    },
     onLibraryChanged: (): (() => void) => () => undefined,
     onPipelineUpdate: (): (() => void) => () => undefined,
     getNovel: async (id: string): Promise<NovelDetail | null> => {
@@ -205,6 +255,9 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     getNovel: (): Promise<NovelDetail | null> => Promise.resolve(null),
     getChapter: (): Promise<ChapterText | null> =>
       Promise.resolve({ paragraphs: ['Sample paragraph one.', 'Sample paragraph two.'] }),
+    search: (): Promise<void> => Promise.resolve(),
+    cancelSearch: (): Promise<void> => Promise.resolve(),
+    onSearchProgress: (): (() => void) => () => undefined,
     updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail | null> => {
       void id;
       void patch;

@@ -11,6 +11,7 @@ import { CodedError } from '@dreamer/shared/errors/app-error';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { LibraryChangedEvent } from '@dreamer/shared/models/novel';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
+import type { SearchProgress } from '@dreamer/shared/models/novel';
 import { LayoutService } from '@shell/layout/layout.service';
 import { PanelOutletComponent } from '@shell/layout/panel-outlet.component';
 import { PageCrumbService } from '@shell/page-crumb.service';
@@ -64,6 +65,7 @@ interface PageTest {
   fixture: ComponentFixture<NovelTestHost>;
   api: Partial<DesktopApi>;
   changed: (event: LibraryChangedEvent) => void;
+  progress: (event: SearchProgress) => void;
   router: Router;
 }
 
@@ -86,6 +88,7 @@ async function settle(fixture: ComponentFixture<NovelTestHost>): Promise<void> {
 async function createPage(options: TestOptions = {}): Promise<PageTest> {
   const id: string = options.id ?? NOVEL.id;
   let changed: (event: LibraryChangedEvent) => void = () => undefined;
+  let progress: (event: SearchProgress) => void = () => undefined;
   const detail: NovelDetail = {
     ...DETAIL,
     lock: options.lock ? { type: 'novel-export', runId: 'run-export', label: NOVEL.title, status: 'running' } : null,
@@ -108,6 +111,12 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
       return () => undefined;
     },
     onPipelineUpdate: (): (() => void) => () => undefined,
+    onSearchProgress: (listener): (() => void) => {
+      progress = listener;
+      return () => undefined;
+    },
+    search: vi.fn(async (): Promise<void> => undefined),
+    cancelSearch: vi.fn(async (): Promise<void> => undefined),
   };
   const params = new BehaviorSubject(convertToParamMap({ id }));
   const queryParams = new BehaviorSubject(
@@ -137,6 +146,7 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
     fixture,
     api,
     changed: (event: LibraryChangedEvent): void => changed(event),
+    progress: (event: SearchProgress): void => progress(event),
     router,
   };
 }
@@ -211,6 +221,48 @@ describe('NovelPage', () => {
     query(fixture, 'novel-page-tab-search').click();
     await settle(fixture);
     expect(query(fixture, 'novel-search-input')).toBeTruthy();
+  });
+
+  it('opens the selected occurrence within a paragraph', async () => {
+    const { fixture, api, progress } = await createPage();
+    api.getChapter = vi.fn(async (): Promise<{ paragraphs: string[] }> => ({ paragraphs: ['Test test TEST'] }));
+    const store: NovelStore = fixture.debugElement.query(By.directive(NovelPage)).injector.get(NovelStore);
+    store.retry(CHAPTERS[0]);
+    await settle(fixture);
+    query(fixture, 'novel-page-tab-search').click();
+    await settle(fixture);
+    const input: HTMLInputElement = query(fixture, 'novel-search-input') as HTMLInputElement;
+    input.value = 'test';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle(fixture);
+    const searchId: string = vi.mocked(api.search!).mock.calls[0][0].searchId;
+    progress({
+      searchId,
+      done: CHAPTERS.length,
+      total: CHAPTERS.length,
+      totalHits: 3,
+      totalChapters: 1,
+      finished: true,
+      hits: ['Test', 'test', 'TEST'].map((hit: string) => ({
+        position: CHAPTERS[0].position,
+        file: CHAPTERS[0].file,
+        paragraph: 0,
+        pre: '',
+        hit,
+        post: '',
+      })),
+    });
+    await settle(fixture);
+    const hits: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="novel-search-hit"]'));
+    hits[2].click();
+    await settle(fixture);
+    const marks: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-testid="novel-reader-article"] mark'),
+    );
+    expect(marks).toHaveLength(3);
+    expect(marks[2].classList.contains('current')).toBe(true);
+    expect(marks[2].textContent).toBe('TEST');
   });
 
   it('shows a loading state while the detail request is pending', async () => {

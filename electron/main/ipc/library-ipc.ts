@@ -7,12 +7,15 @@ import { LibraryChannel } from '@dreamer/shared/ipc/channels';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
 import { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
+import { SearchRequest } from '@dreamer/shared/models/novel';
 import { isContentHash, isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import * as NovelPackage from '@dreamer/shared/models/novel-package';
 import { t } from '../app/app-i18n';
 import { AppDataSession } from '../app/app-data-session';
 import { readCoverImage } from '../features/library/cover-image';
+import { NovelSearch } from '../features/library/novel-search';
+import { NovelSearches } from '../features/library/novel-search';
 import { exportLabel, exportParams } from '../features/library/novel/novel-export-pipeline';
 import { importLabel, importParams } from '../features/library/novel/novel-import-pipeline';
 import { readPackage } from '../features/library/package-reader';
@@ -209,7 +212,23 @@ export function isChapterRequest(value: unknown): value is ChapterRequest {
   );
 }
 
+function isSearchRequest(value: unknown): value is SearchRequest {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['novelId', 'query', 'searchId']) &&
+    isNovelIdValue(value.novelId) &&
+    typeof value.query === 'string' &&
+    typeof value.searchId === 'string' &&
+    value.searchId.trim().length > 0
+  );
+}
+
+function isSearchId(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 export function registerLibraryIpc(session: () => AppDataSession): void {
+  const searches: NovelSearches = new NovelSearches(() => new NovelSearch(session().paths, session().index));
   handleValidated(
     LibraryChannel.Export,
     isNovelIdValue,
@@ -230,6 +249,12 @@ export function registerLibraryIpc(session: () => AppDataSession): void {
   handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => session().library.get(id));
   handleValidated(LibraryChannel.GetChapter, isChapterRequest, (request: ChapterRequest): Promise<ChapterText> =>
     session().library.getChapter(request),
+  );
+  handleValidated(LibraryChannel.Search, isSearchRequest, (request: SearchRequest, event: IpcMainInvokeEvent): void =>
+    searches.start(event.sender, request),
+  );
+  handleValidated(LibraryChannel.SearchCancel, isSearchId, (searchId: string, event: IpcMainInvokeEvent): void =>
+    searches.cancel(event.sender, searchId),
   );
   handleValidated(
     LibraryChannel.UpdateNovel,

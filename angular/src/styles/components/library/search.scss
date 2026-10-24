@@ -45,6 +45,10 @@
 
   > .ds-input {
     padding-right: calc(var(--control-h) + var(--sp-xs));
+
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
   }
 
   > .ds-btn {

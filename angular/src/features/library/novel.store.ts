@@ -21,6 +21,8 @@ export type ChapterTextState =
 
 const CACHE_LIMIT = 8;
 
+const LOADING_TEXT: ChapterTextState = { status: 'loading' };
+
 @Injectable()
 export class NovelStore {
   private readonly api: DesktopApi = inject(DesktopApi);
@@ -97,7 +99,7 @@ export class NovelStore {
   }
 
   text(chapter: LibraryChapter): ChapterTextState {
-    return this.textValues().get(chapter.file) ?? { status: 'loading' };
+    return this.textValues().get(chapter.file) ?? LOADING_TEXT;
   }
 
   ensure(chapter: LibraryChapter): void {

@@ -2,6 +2,7 @@ import type { Meta } from '@storybook/angular';
 import type { StoryObj } from '@storybook/angular';
 import type { LibraryStoryArgs } from '../../fixtures/library-story';
 import { libraryStoryDecorators } from '../../fixtures/library-story';
+import { SAMPLE_PARAGRAPHS } from '../../fixtures/library';
 
 const meta: Meta<LibraryStoryArgs> = {
   title: 'Pages/Library/Reader',
@@ -34,6 +35,18 @@ type Story = StoryObj<LibraryStoryArgs>;
 export const Main: Story = {};
 
 export const ChapterMissing: Story = { args: { missingChapter: 12 } };
+
+export const Searching: Story = {
+  args: { tab: 'search', searchQuery: SAMPLE_PARAGRAPHS[0].slice(0, 1), searchState: 'running' },
+};
+
+export const SearchResults: Story = {
+  args: { tab: 'search', searchQuery: SAMPLE_PARAGRAPHS[0].slice(0, 1), searchState: 'results' },
+};
+
+export const SearchNoResults: Story = {
+  args: { tab: 'search', searchQuery: 'unfindable-story-query', searchState: 'none' },
+};
 
 export const FocusMode: Story = { args: { focusMode: true } };
 

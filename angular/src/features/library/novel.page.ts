@@ -42,6 +42,7 @@ import { NovelReaderComponent } from './novel-reader/novel-reader.component';
 import { NovelSearchComponent } from './novel-reader/novel-search.component';
 import type { NovelSearchSelection } from './novel-reader/novel-search.component';
 import { ReadingSettingsComponent } from './novel-reader/reading-settings.component';
+import { NovelSearchStore } from './novel-search.store';
 import { NovelStore } from './novel.store';
 
 const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }> = {
@@ -68,7 +69,7 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
     TooltipDirective,
     TranslatePipe,
   ],
-  providers: [NovelStore],
+  providers: [NovelStore, NovelSearchStore],
   host: {
     class: 'ds-page library-novel',
     'data-testid': 'novel-page',
@@ -80,6 +81,7 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
 })
 export class NovelPage {
   protected readonly store: NovelStore = inject(NovelStore);
+  private readonly searchStore: NovelSearchStore = inject(NovelSearchStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly layout: LayoutService = inject(LayoutService);
   private readonly crumb: PageCrumbService = inject(PageCrumbService);
@@ -126,6 +128,11 @@ export class NovelPage {
   });
 
   constructor() {
+    effect(() => {
+      const novelId: string = this.novel()?.id ?? '';
+      const chapters: LibraryChapter[] = this.chapters();
+      untracked(() => this.searchStore.setContext(novelId, chapters));
+    });
     effect(() => {
       const id: string = this.id();
       untracked(() => {
@@ -189,8 +196,14 @@ export class NovelPage {
   }
 
   protected onSearchSelected(selection: NovelSearchSelection): void {
-    this.selectChapter(selection.chapterId);
-    this.highlight.set({ chapterId: selection.chapterId, query: selection.query });
+    const chapterId: string = String(selection.hit.position);
+    this.selectChapter(chapterId);
+    this.highlight.set({
+      chapterId,
+      query: selection.query,
+      paragraph: selection.hit.paragraph,
+      occurrence: selection.occurrence,
+    });
   }
 
   protected onDocumentKeydown(event: KeyboardEvent): void {
@@ -199,6 +212,7 @@ export class NovelPage {
     if (event.ctrlKey && event.shiftKey && isF) {
       event.preventDefault();
       this.tab.set('search');
+      if (!this.layout.isOpen('right')) this.layout.toggle('right');
       requestAnimationFrame(() => this.search()?.focus());
     } else if (!event.ctrlKey && event.shiftKey && isF) {
       event.preventDefault();

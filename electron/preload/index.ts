@@ -21,6 +21,7 @@ import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shar
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
+import { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
@@ -97,6 +98,10 @@ const api: DreamerApi = {
     list: (): Promise<NovelSummary[]> => call(LibraryChannel.List),
     get: (id: string): Promise<NovelDetail> => call(LibraryChannel.Get, id),
     getChapter: (request: ChapterRequest): Promise<ChapterText> => call(LibraryChannel.GetChapter, request),
+    search: (request: SearchRequest): Promise<void> => call(LibraryChannel.Search, request),
+    cancelSearch: (searchId: string): Promise<void> => call(LibraryChannel.SearchCancel, searchId),
+    onSearchProgress: (listener: (progress: SearchProgress) => void): (() => void) =>
+      subscribe(LibraryChannel.SearchProgress, listener),
     updateNovel: (id: string, patch: NovelPatch): Promise<NovelDetail> =>
       call(LibraryChannel.UpdateNovel, { id, patch }),
     deleteNovels: (ids: string[]): Promise<DeleteNovelsResult> => call(LibraryChannel.DeleteNovels, ids),

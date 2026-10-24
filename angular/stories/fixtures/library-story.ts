@@ -76,6 +76,19 @@ export class LibraryStoryHostComponent implements OnInit {
     this.store.importState.set(this.importState());
     const route: string = this.chapter() ? `${this.route()}?chapter=${this.chapter()}` : this.route();
     await this.router.navigateByUrl(route);
+    if (this.tab() === 'search') {
+      setTimeout((): void => {
+        document.querySelector<HTMLElement>('[data-testid="novel-page-tab-search"]')?.click();
+        const field: HTMLInputElement | null = document.querySelector<HTMLInputElement>(
+          '[data-testid="novel-search-input"]',
+        );
+        if (field && this.searchQuery()) {
+          field.value = this.searchQuery();
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        }
+      }, 120);
+    }
     if (this.focusMode()) {
       setTimeout(() => document.querySelector<HTMLElement>('[data-testid="novel-page-focus"]')?.click());
     }
@@ -103,6 +116,7 @@ export const libraryStoryDecorators: Decorator<LibraryStoryArgs>[] = [
       provideReaderDesktopApi({
         missingChapter: context.args.missingChapter ?? null,
         lock: context.args.lock ?? false,
+        searchDelay: context.args.searchState === 'running' ? 10000 : 120,
       }),
     ];
     return {

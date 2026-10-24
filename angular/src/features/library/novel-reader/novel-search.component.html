@@ -73,7 +73,7 @@
             @for (hit of group.hits; track $index) {
               <button type="button" class="library-search-hit" data-testid="novel-search-hit" (click)="select(hit)">
                 @if (hit.paragraph !== null) {
-                  <span class="where">¶{{ hit.paragraph }}</span>
+                  <span class="where">¶{{ hit.paragraph + 1 }}</span>
                 } @else {
                   <span class="where">{{ 'library.search.title' | t }}</span>
                 }

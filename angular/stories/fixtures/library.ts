@@ -1,4 +1,7 @@
+import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { LibraryChapter, LibraryNovel } from '../../src/features/library/library.models';
+
+const CHARS_PER_UNIT: Record<string, number> = { K: 1_000, M: 1_000_000 };
 
 export function landscapeCover(): string {
   const svg =
@@ -235,4 +238,27 @@ export function makeChapters(novel: LibraryNovel): LibraryChapter[] {
       paragraphCount: n % 23 === 0 ? 0 : paragraphCount,
     };
   });
+}
+
+function parseCharCount(text: string): number {
+  const unit: string = text.slice(-1);
+  return Math.round(parseFloat(text) * (CHARS_PER_UNIT[unit] ?? 1));
+}
+
+export function toNovelSummary(novel: LibraryNovel): NovelSummary {
+  return {
+    id: novel.id,
+    originalTitle: novel.originalTitle,
+    title: novel.title,
+    author: novel.author,
+    language: novel.language,
+    publication: novel.publication,
+    tags: novel.tags,
+    chapterCount: novel.chapterCount,
+    charCount: parseCharCount(novel.characterCount),
+    importedAt: novel.importedAt,
+    updatedAt: novel.updatedAt,
+    hasCover: false,
+    lock: null,
+  };
 }

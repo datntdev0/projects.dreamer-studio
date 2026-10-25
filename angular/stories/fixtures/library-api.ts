@@ -1,9 +1,11 @@
+import { DestroyRef, inject } from '@angular/core';
 import type { Provider } from '@angular/core';
 import type { NovelDetail, NovelPatch } from '@dreamer/shared/models/novel';
 import type { NovelImportRequest, PackageReadResult } from '@dreamer/shared/models/novel-package';
 import type { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { DesktopApi } from '@core/desktop-api';
+import { FakePipelinesApi } from './pipelines-api';
 
 export type LibrarySampleId =
   'ok' | 'minimal' | 'noChapters' | 'notZip' | 'unsafePath' | 'unsupportedType' | 'tooLarge' | 'problems';
@@ -190,9 +192,12 @@ const SAMPLE_PATHS: Record<LibrarySampleId, string> = {
   problems: 'C:\\Samples\\庆余年-broken.zip',
 };
 
-class FakeLibraryApi extends DesktopApi {
-  constructor(private readonly sample: LibrarySampleId) {
-    super();
+class FakeLibraryApi extends FakePipelinesApi {
+  constructor(
+    private readonly sample: LibrarySampleId,
+    destroyRef: DestroyRef,
+  ) {
+    super({ runs: [] }, destroyRef);
   }
 
   override pickPackage(): Promise<string | null> {
@@ -262,5 +267,5 @@ class FakeLibraryApi extends DesktopApi {
 }
 
 export function provideFakeLibraryApi(sample: LibrarySampleId = 'ok'): Provider {
-  return { provide: DesktopApi, useValue: new FakeLibraryApi(sample) };
+  return { provide: DesktopApi, useFactory: () => new FakeLibraryApi(sample, inject(DestroyRef)) };
 }

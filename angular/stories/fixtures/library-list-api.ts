@@ -7,7 +7,7 @@ import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { DesktopApi } from '@core/desktop-api';
 import type { LibraryNovel } from '../../src/features/library/library.models';
-import { NOVELS } from './library';
+import { NOVELS, toNovelSummary } from './library';
 import { FakePipelinesApi } from './pipelines-api';
 
 export interface FakeLibraryListOptions {
@@ -17,32 +17,8 @@ export interface FakeLibraryListOptions {
 }
 
 const LIST_ERROR = 'EACCES: permission denied, scandir sources/novels';
-const CHARS_PER_UNIT: Record<string, number> = { K: 1_000, M: 1_000_000 };
 const SAMPLE_COVER =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
-
-function parseCharCount(text: string): number {
-  const unit: string = text.slice(-1);
-  return Math.round(parseFloat(text) * (CHARS_PER_UNIT[unit] ?? 1));
-}
-
-export function toNovelSummary(novel: LibraryNovel): NovelSummary {
-  return {
-    id: novel.id,
-    originalTitle: novel.originalTitle,
-    title: novel.title,
-    author: novel.author,
-    language: novel.language,
-    publication: novel.publication,
-    tags: novel.tags,
-    chapterCount: novel.chapterCount,
-    charCount: parseCharCount(novel.characterCount),
-    importedAt: novel.importedAt,
-    updatedAt: novel.updatedAt,
-    hasCover: false,
-    lock: null,
-  };
-}
 
 export const FIXTURE_SUMMARIES: NovelSummary[] = NOVELS.map(toNovelSummary);
 

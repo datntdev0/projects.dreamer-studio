@@ -17,7 +17,7 @@ import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { LibraryNovel } from '../../src/features/library/library.models';
 import type { LibraryChapter } from '../../src/features/library/library.models';
 import type { NovelChapter } from '@dreamer/shared/models/novel';
-import { toNovelSummary } from './library-list-api';
+import { toNovelSummary } from './library';
 import { CHAPTER_PARAGRAPHS } from './library';
 import { makeChapters } from './library';
 import { NO_CHAPTERS_NOVEL } from './library';

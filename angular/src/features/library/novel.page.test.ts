@@ -26,7 +26,7 @@ import { CHAPTER_PARAGRAPHS } from '../../../stories/fixtures/library';
 import { makeChapters } from '../../../stories/fixtures/library';
 import { NOVELS } from '../../../stories/fixtures/library';
 import { SAMPLE_PARAGRAPHS } from '../../../stories/fixtures/library';
-import { toNovelSummary } from '../../../stories/fixtures/library-list-api';
+import { toNovelSummary } from '../../../stories/fixtures/library';
 import type { LibraryChapter } from './library.models';
 import type { LibraryNovel } from './library.models';
 import { NovelPage } from './novel.page';

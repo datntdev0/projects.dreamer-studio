@@ -1,59 +1,20 @@
-import { Component, inject, input, OnInit, provideAppInitializer } from '@angular/core';
-import { provideRouter, Router, withHashLocation } from '@angular/router';
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { Meta, StoryObj } from '@storybook/angular';
-import { moduleMetadata } from '@storybook/angular';
-import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '@core/slots';
-import { PipelineStore } from '@core/stores/pipeline-store';
-import { ComingSoonPage } from '@shell/coming-soon/coming-soon.page';
-import { MODULES } from '@shell/registry/modules';
-import { ShellComponent } from '@shell/shell.component';
-import { buildRoutes } from '@shell/shell.routes';
 import { FIXTURE_SUMMARIES, provideFakeLibraryListApi } from '../../fixtures/library-list-api';
 import type { FakeLibraryListOptions } from '../../fixtures/library-list-api';
 import { IMPORT_QUEUED_RUN, IMPORT_RUNNING_RUN } from '../../fixtures/pipelines';
+import { shellStoryDecorators } from '../../fixtures/shell-story';
 
 interface LibraryListArgs {
   api: FakeLibraryListOptions;
-}
-
-@Component({
-  selector: 'ds-library-list-story-host',
-  imports: [ShellComponent],
-  template: '<div style="width: 100vw; height: 100vh"><ds-shell [initialRailExpanded]="false" /></div>',
-})
-class LibraryListStoryHostComponent implements OnInit {
-  readonly route = input<string>('/library');
-
-  private readonly router: Router = inject(Router);
-
-  ngOnInit(): void {
-    void this.router.navigateByUrl(this.route());
-  }
 }
 
 const meta: Meta<LibraryListArgs> = {
   title: 'Pages/Library/List',
   parameters: { layout: 'fullscreen' },
   args: { api: { novels: FIXTURE_SUMMARIES, runs: [] } },
-  decorators: [
-    moduleMetadata({ imports: [LibraryListStoryHostComponent] }),
-    (story, context) => {
-      const result = story();
-      const providers = [
-        provideRouter(buildRoutes(MODULES, ComingSoonPage), withHashLocation()),
-        provideFakeLibraryListApi(context.args.api),
-        provideAppInitializer(() => inject(PipelineStore).init()),
-        { provide: ACTIVE_PIPELINES, useFactory: () => inject(PipelineStore).active },
-        { provide: RECENT_PIPELINES, useFactory: () => inject(PipelineStore).recent },
-      ];
-      return {
-        ...result,
-        applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },
-      };
-    },
-  ],
-  render: () => ({ template: '<ds-library-list-story-host />' }),
+  decorators: shellStoryDecorators<LibraryListArgs>((args) => provideFakeLibraryListApi(args.api)),
+  render: () => ({ template: '<ds-shell-story-host />' }),
 };
 
 export default meta;

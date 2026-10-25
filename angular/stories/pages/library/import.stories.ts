@@ -1,9 +1,6 @@
-import { provideRouter, withHashLocation } from '@angular/router';
-import { ToastOutletComponent } from '@components/toast/toast-outlet.component';
 import type { Meta, StoryObj } from '@storybook/angular';
-import { moduleMetadata } from '@storybook/angular';
-import { ImportPage } from '../../../src/features/library/import/import.page';
 import { provideFakeLibraryApi, type LibrarySampleId } from '../../fixtures/library-api';
+import { shellStoryDecorators } from '../../fixtures/shell-story';
 
 interface ImportArgs {
   sample: LibrarySampleId;
@@ -25,30 +22,8 @@ const meta: Meta<ImportArgs> = {
   parameters: { layout: 'fullscreen' },
   args: { sample: 'ok' },
   argTypes: { sample: { control: 'select', options: SAMPLE_OPTIONS } },
-  decorators: [
-    moduleMetadata({ imports: [ImportPage, ToastOutletComponent] }),
-    (story, context) => {
-      const result: ReturnType<typeof story> = story();
-      return {
-        ...result,
-        applicationConfig: {
-          providers: [
-            ...(result.applicationConfig?.providers ?? []),
-            provideRouter([], withHashLocation()),
-            provideFakeLibraryApi(context.args.sample),
-          ],
-        },
-      };
-    },
-  ],
-  render: () => ({
-    template: `
-      <div class="ds-app-center" style="display: flex; width: 100vw; height: 100vh">
-        <ds-import-page />
-      </div>
-      <ds-toast-outlet closeLabel="Close" />
-    `,
-  }),
+  decorators: shellStoryDecorators<ImportArgs>((args) => provideFakeLibraryApi(args.sample)),
+  render: () => ({ template: '<ds-shell-story-host route="/library/import" />' }),
 };
 
 export default meta;

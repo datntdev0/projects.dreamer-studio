@@ -7,8 +7,9 @@ Usage:
   python .claude/scripts/reqs.py next-id
   python .claude/scripts/reqs.py upsert patch.json
 
-Patch file (only the given fields are written; new IDs are inserted; "delete" removes requirement rows;
-"rename" changes capacity or requirement IDs, applied first and in order):
+Patch file (only the given fields are written; new IDs are inserted; "delete" removes requirement or capacity rows;
+"rename" changes capacity or requirement IDs, applied first and in order; a missing theme sheet is created,
+named after the theme part of the capacity name, e.g. "TH-04 Library Analysis"):
   {"rename":       [["TH03-05", "TH03-04"]],
    "delete":       ["REQ-012"],
    "capacities":   [{"ID": "TH03-10", "Capacity Full Name": "...", "Status": "1. Draft"}],
@@ -25,7 +26,7 @@ import re
 from common import (
     CATALOG_ID, CATALOG_NAME, CATALOG_SHEET, DECISION_ID, DECISION_STATUSES, DECISIONS_SHEET,
     REQ_CAPACITY, REQ_ID, STATUSES,
-    decisions_sheet, fail, headers, load_workbook, read_rows, save_workbook, theme_sheets,
+    create_theme_sheet, decisions_sheet, fail, headers, load_workbook, read_rows, save_workbook, theme_sheets,
 )
 
 CAPACITY_ID = re.compile(r"^TH\d{2}-\d{2}$")
@@ -229,13 +230,13 @@ def cmd_upsert(args):
         write_row(sheet, row["_row"], {id_key: new_id})
         print(f"renamed: {old_id} -> {new_id} ({sheet.title})")
 
-    for req_id in patch.get("delete", []):
-        sheet, row = next(((ws, r) for ws in theme_sheets(wb) for r in read_rows(ws) if r[REQ_ID] == req_id),
-                          (None, None))
+    for item_id in patch.get("delete", []):
+        sources = [(catalog, CATALOG_ID)] if CAPACITY_ID.match(item_id) else [(ws, REQ_ID) for ws in theme_sheets(wb)]
+        sheet, row = next(((ws, r) for ws, key in sources for r in read_rows(ws) if r[key] == item_id), (None, None))
         if sheet is None:
-            fail(f"{req_id}: not found")
+            fail(f"{item_id}: not found")
         sheet.delete_rows(row["_row"])
-        print(f"deleted: {req_id} ({sheet.title})")
+        print(f"deleted: {item_id} ({sheet.title})")
 
     for values in patch.get("capacities", []):
         result = upsert(catalog, read_rows(catalog), CATALOG_ID, values,
@@ -248,7 +249,10 @@ def cmd_upsert(args):
         sheet = sheet or next((ws for ws in theme_sheets(wb)
                                if ws.title.startswith(theme_of(values.get(REQ_CAPACITY)))), None)
         if sheet is None:
-            fail(f"{values[REQ_ID]}: no theme sheet for capacity '{values.get(REQ_CAPACITY)}'")
+            if values.get(REQ_CAPACITY) not in {c[CATALOG_NAME] for c in read_rows(catalog)}:
+                fail(f"{values[REQ_ID]}: capacity '{values.get(REQ_CAPACITY)}' not found in catalog")
+            sheet = create_theme_sheet(wb, values[REQ_CAPACITY].split(" - ")[0])
+            print(f"created sheet: {sheet.title}")
         result = upsert(sheet, read_rows(sheet), REQ_ID, values, lambda r: r.get(REQ_CAPACITY))
         print(f"{result}: {values[REQ_ID]} ({sheet.title})")
 

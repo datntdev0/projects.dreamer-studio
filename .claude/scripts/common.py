@@ -82,6 +82,23 @@ def decisions_sheet(wb):
     return ws
 
 
+def create_theme_sheet(wb, title):
+    """Create a theme sheet styled like the first one, placed before the decisions sheet."""
+    import copy
+
+    template = theme_sheets(wb)[0]
+    index = wb.sheetnames.index(DECISIONS_SHEET) if DECISIONS_SHEET in wb.sheetnames else None
+    ws = wb.create_sheet(title, index)
+    for column in range(1, template.max_column + 1):
+        cell = ws.cell(row=1, column=column, value=template.cell(row=1, column=column).value)
+        cell._style = copy.copy(template.cell(row=1, column=column)._style)
+        # insert_row() copies styles from row 2, so seed it with the template data style.
+        ws.cell(row=2, column=column)._style = copy.copy(template.cell(row=2, column=column)._style)
+        ws.column_dimensions[cell.column_letter].width = template.column_dimensions[cell.column_letter].width
+    ws.auto_filter.ref = f"A1:{ws.cell(row=1, column=template.max_column).column_letter}1"
+    return ws
+
+
 def list_rule(formula, column, ws):
     from openpyxl.worksheet.datavalidation import DataValidation
 

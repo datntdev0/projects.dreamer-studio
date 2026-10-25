@@ -20,7 +20,9 @@
 @use 'styles/components/coming-soon';
 @use 'styles/components/home';
 @use 'styles/components/pipelines';
-@use 'styles/components/settings';
+@use 'styles/components/settings/settings';
+@use 'styles/components/settings/llm-providers';
+@use 'styles/components/settings/llm-features';
 @use 'styles/components/library/import';
 @use 'styles/components/library/import-source';
 @use 'styles/components/library/import-metadata';

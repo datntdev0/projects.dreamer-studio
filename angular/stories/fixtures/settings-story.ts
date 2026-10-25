@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { provideRouter, Router, withHashLocation } from '@angular/router';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Decorator } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { defaultSettings } from '@dreamer/shared/models/settings';
@@ -16,10 +16,10 @@ import { ComingSoonPage } from '@shell/coming-soon/coming-soon.page';
 import { MODULES } from '@shell/registry/modules';
 import { ShellComponent } from '@shell/shell.component';
 import { buildRoutes } from '@shell/shell.routes';
-import { APP_INFO, provideDesktopApi } from '../fixtures/desktop-api';
-import type { DiagnosticsScenario } from '../fixtures/desktop-api';
+import { APP_INFO, provideDesktopApi } from './desktop-api';
+import type { DiagnosticsScenario } from './desktop-api';
 
-interface SettingsScenario {
+export interface SettingsScenario {
   loading: boolean;
   settingsReset: boolean;
   appDataDir: string;
@@ -30,14 +30,14 @@ interface SettingsScenario {
   devBuild: boolean;
 }
 
-interface SettingsArgs {
+export interface SettingsStoryArgs {
   route: string;
   scenario: SettingsScenario;
 }
 
 const DEFAULT_APP_DATA_DIR = 'C:\\Users\\me\\AppData\\Local\\DreamerStudio';
 
-const DEFAULT_SCENARIO: SettingsScenario = {
+export const DEFAULT_SETTINGS_SCENARIO: SettingsScenario = {
   loading: false,
   settingsReset: false,
   appDataDir: DEFAULT_APP_DATA_DIR,
@@ -140,7 +140,7 @@ function activeRuns(count: number): PipelineRun[] {
   imports: [ShellComponent],
   template: '<div style="width: 100vw; height: 100vh"><ds-shell /></div>',
 })
-class SettingsStoryHostComponent implements OnInit {
+export class SettingsStoryHostComponent implements OnInit {
   readonly route = input<string>('/settings/general');
 
   private readonly router: Router = inject(Router);
@@ -150,72 +150,33 @@ class SettingsStoryHostComponent implements OnInit {
   }
 }
 
-const meta: Meta<SettingsArgs> = {
-  title: 'Pages/Settings',
-  parameters: { layout: 'fullscreen' },
-  args: { route: '/settings/general', scenario: DEFAULT_SCENARIO },
-  decorators: [
-    moduleMetadata({ imports: [SettingsStoryHostComponent] }),
-    (story, context) => {
-      const result = story();
-      const scenario: SettingsScenario = context.args.scenario;
-      const providers = [
-        provideRouter(buildRoutes(MODULES, ComingSoonPage), withHashLocation()),
-        provideDesktopApi({
-          backend: 'running',
-          diagnostics: scenario.diagnostics,
-          info: {
-            ...APP_INFO,
-            appDataDir: scenario.appDataDir,
-            buildDate: scenario.devBuild ? null : APP_INFO.buildDate,
-          },
-        }),
-        {
-          provide: SettingsStore,
-          useFactory: () => new SettingsStoryStore(scenario, inject(I18nService), inject(ThemeService)),
+export const settingsStoryDecorators: Decorator<SettingsStoryArgs>[] = [
+  moduleMetadata({ imports: [SettingsStoryHostComponent] }),
+  (story, context) => {
+    const result = story();
+    const scenario: SettingsScenario = context.args.scenario;
+    const providers = [
+      provideRouter(buildRoutes(MODULES, ComingSoonPage), withHashLocation()),
+      provideDesktopApi({
+        backend: 'running',
+        diagnostics: scenario.diagnostics,
+        info: {
+          ...APP_INFO,
+          appDataDir: scenario.appDataDir,
+          buildDate: scenario.devBuild ? null : APP_INFO.buildDate,
         },
-        { provide: PipelineStore, useFactory: () => new PipelineStoryStore(scenario.pipelinesActive) },
-        { provide: ACTIVE_PIPELINES, useFactory: () => inject(PipelineStore).active },
-        { provide: RECENT_PIPELINES, useFactory: () => inject(PipelineStore).active },
-      ];
-      return {
-        ...result,
-        applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },
-      };
-    },
-  ],
-  render: (args) => ({
-    props: args,
-    template: '<ds-settings-story-host [route]="route" />',
-  }),
-};
-
-export default meta;
-
-type Story = StoryObj<SettingsArgs>;
-
-export const Main: Story = {};
-
-export const Loading: Story = {
-  args: { scenario: { ...DEFAULT_SCENARIO, loading: true } },
-};
-
-export const SettingsReset: Story = {
-  args: { scenario: { ...DEFAULT_SCENARIO, settingsReset: true } },
-};
-
-export const PipelinesActive: Story = {
-  args: { scenario: { ...DEFAULT_SCENARIO, pipelinesActive: 2, maxConcurrent: 3 } },
-};
-
-export const AllChecksOk: Story = {
-  args: { route: '/settings/diagnostics', scenario: { ...DEFAULT_SCENARIO, diagnostics: 'ok' } },
-};
-
-export const ChecksEngineError: Story = {
-  args: { route: '/settings/diagnostics', scenario: { ...DEFAULT_SCENARIO, diagnostics: 'engineError' } },
-};
-
-export const DevBuild: Story = {
-  args: { route: '/settings/diagnostics', scenario: { ...DEFAULT_SCENARIO, devBuild: true } },
-};
+      }),
+      {
+        provide: SettingsStore,
+        useFactory: () => new SettingsStoryStore(scenario, inject(I18nService), inject(ThemeService)),
+      },
+      { provide: PipelineStore, useFactory: () => new PipelineStoryStore(scenario.pipelinesActive) },
+      { provide: ACTIVE_PIPELINES, useFactory: () => inject(PipelineStore).active },
+      { provide: RECENT_PIPELINES, useFactory: () => inject(PipelineStore).active },
+    ];
+    return {
+      ...result,
+      applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },
+    };
+  },
+];

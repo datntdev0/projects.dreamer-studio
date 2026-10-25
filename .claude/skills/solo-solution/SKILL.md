@@ -35,7 +35,7 @@ argument-hint: "<capacity or requirement ID>"
    - Start Storybook once in the background with a larger heap (`NODE_OPTIONS=--max-old-space-size=8192 pnpm storybook --ci --no-open`); parallel style edits otherwise run sass out of memory. Designers only open URLs; only the architect restarts it.
    - Spawn one `designer` per slice in one message (prototype mode). Each prompt states: owned files, story / component names, `data-testid` prefix, i18n key prefix, decisions from step 3.
    - Designers never edit shared files. i18n keys go to `.claude/flows/<id>/i18n/<slice>.json` and are merged with `python .claude/scripts/i18n.py merge <fragment> --prefix <prefix>` (safe in parallel).
-   - Architect integrates: merge the slice files into one `angular/stories/pages/<page>.stories.ts` (title `Pages/<Page>`, no sub-folder, like the other pages); `pnpm lint`, `pnpm format`, stories render in light/dark and EN/VI; fixes go back to the slice owner.
+   - Architect integrates: merge the slice files into one `angular/stories/pages/<group>/<group>-<page>.stories.ts` (title `Pages/<Group>/<Page>`, grouped like `pages/library/` and `pages/settings/`); `pnpm lint`, `pnpm format`, stories render in light/dark and EN/VI; fixes go back to the slice owner.
    - Stories: one `Main` story where every state reachable by navigating or clicking can be seen; extra stories only for states that cannot be reached that way.
 5. **Propose**
    - `python .claude/scripts/docs.py new solution <id> --title "<name>"`.

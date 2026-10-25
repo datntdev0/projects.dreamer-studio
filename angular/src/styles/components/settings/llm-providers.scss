@@ -1,0 +1,144 @@
+// Settings › LLM: CLI providers section.
+// Sandbox note, optional "no CLI" banner, one row per CLI (status pill, path line, test result + fix), cloud rows.
+
+.llm-providers {
+  .settings-row {
+    gap: var(--sp-md);
+    align-items: flex-start;
+  }
+
+  .settings-row-control {
+    margin-left: var(--sp-md);
+  }
+
+  .llm-providers-note {
+    display: flex;
+    gap: var(--sp-xs);
+    align-items: flex-start;
+    margin: var(--sp-md) 0 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-meta);
+
+    ds-icon {
+      flex: none;
+      margin-top: var(--sp-xxs);
+    }
+  }
+
+  .llm-providers-banner {
+    margin-top: var(--sp-md);
+  }
+
+  .llm-providers-icon {
+    flex: none;
+    margin-top: var(--sp-xxs);
+    color: var(--color-text-secondary);
+  }
+
+  .llm-providers-cli-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs) var(--sp-sm);
+    align-items: center;
+    min-height: var(--pill-h);
+  }
+
+  .llm-providers-path-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xxs) var(--sp-xs);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .llm-providers-path {
+    min-width: 0;
+    max-width: 100%;
+    padding: var(--sp-xxs) var(--sp-xs);
+    overflow: hidden;
+    color: var(--color-text);
+    font: var(--font-size-meta) var(--font-mono);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: var(--color-surface-muted);
+    border-radius: var(--radius-sm);
+    user-select: text;
+  }
+
+  .llm-providers-result {
+    display: grid;
+    gap: var(--sp-xs);
+    min-width: 0;
+  }
+
+  .llm-providers-ok,
+  .llm-providers-error {
+    display: flex;
+    gap: var(--sp-xs);
+    align-items: flex-start;
+    margin: 0;
+    font-size: var(--font-size-meta);
+
+    ds-icon {
+      flex: none;
+      margin-top: var(--sp-xxs);
+    }
+  }
+
+  .llm-providers-ok {
+    color: var(--color-success);
+    font-weight: 500;
+  }
+
+  .llm-providers-error {
+    color: var(--color-danger);
+
+    b {
+      font-weight: 600;
+    }
+  }
+
+  .llm-providers-fix {
+    justify-self: start;
+    margin: 0;
+    padding: var(--sp-xs) var(--sp-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-meta);
+    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    border-radius: var(--radius-xs);
+
+    b {
+      font-weight: 600;
+    }
+  }
+
+  .llm-providers-cloud {
+    .settings-row {
+      padding: var(--sp-md) 0;
+    }
+
+    .settings-row-label {
+      color: var(--color-text-secondary);
+      font-weight: 500;
+    }
+  }
+
+  .llm-providers-cloud-hint {
+    padding-top: var(--sp-xs);
+  }
+
+  .llm-providers-path-input {
+    display: flex;
+    gap: var(--sp-sm);
+    min-width: 0;
+
+    .ds-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ds-btn {
+      flex: none;
+    }
+  }
+}

@@ -1,0 +1,189 @@
+<div class="ds-page-toolbar ds-world-toolbar">
+  <h1 dsPageTitle>
+    {{ 'analysis.page.title' | t }}
+    @if (store.novel(); as novel) {
+      <span class="ds-world-novel">&middot; {{ novel.title }}</span>
+    }
+  </h1>
+  <div class="ds-world-views" role="group" [attr.aria-label]="'analysis.page.views' | t">
+    @for (view of views; track view) {
+      <button
+        type="button"
+        [attr.data-testid]="'world-view-' + view"
+        [attr.aria-pressed]="store.view() === view"
+        [disabled]="!store.novelId()"
+        (click)="store.view.set(view)"
+      >
+        <ds-icon [name]="viewIcons[view]" size="sm" />{{ viewKeys[view] | t }}
+        @if (view === 'review' && store.openReviewCount()) {
+          <ds-badge>{{ store.openReviewCount() }}</ds-badge>
+        }
+      </button>
+    }
+  </div>
+  <span class="ds-spacer"></span>
+  <button
+    dsBtn
+    variant="ghost"
+    [iconOnly]="true"
+    type="button"
+    data-testid="world-ontology"
+    [attr.aria-label]="'analysis.page.ontology' | t"
+    [dsTooltip]="'analysis.page.ontology' | t"
+    [disabled]="!store.novelId()"
+    (click)="store.dialog.set({ kind: 'ontology' })"
+  >
+    <ds-icon name="nodes" />
+  </button>
+  <ds-merge-button />
+  @if (store.run()) {
+    <ds-run-pill />
+  } @else {
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-run"
+      [disabled]="!store.canRun()"
+      (click)="store.dialog.set({ kind: 'run' })"
+    >
+      <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.runAnalysis' | t }}
+    </button>
+  }
+</div>
+@if (store.error()) {
+  <ds-banner
+    variant="danger"
+    [dismissible]="false"
+    [heading]="'analysis.page.title' | t"
+    [message]="store.error()"
+    [dismissLabel]="'analysis.pipeline.close' | t"
+  />
+}
+@if (store.llm(); as llm) {
+  @if (!llm.available) {
+    <ds-banner
+      variant="warning"
+      [dismissible]="false"
+      [heading]="'analysis.pipeline.noLlmTitle' | t"
+      [message]="'analysis.pipeline.noLlmMessage' | t"
+      [dismissLabel]="'analysis.pipeline.close' | t"
+      data-testid="world-no-llm"
+      ><a dsBtn size="sm" routerLink="/settings/llm" data-testid="world-settings-llm">{{
+        'analysis.pipeline.settingsLlm' | t
+      }}</a></ds-banner
+    >
+  }
+}
+@if (store.ontologyProblems().length) {
+  <ds-banner
+    variant="danger"
+    [dismissible]="false"
+    [heading]="'analysis.pipeline.invalidOntologyTitle' | t"
+    [message]="'analysis.pipeline.invalidOntologyMessage' | t"
+    [dismissLabel]="'analysis.pipeline.close' | t"
+    data-testid="world-invalid-ontology"
+    ><button
+      dsBtn
+      size="sm"
+      type="button"
+      data-testid="world-view-problems"
+      (click)="store.dialog.set({ kind: 'ontology' })"
+    >
+      {{ 'analysis.pipeline.viewProblems' | t }}
+    </button></ds-banner
+  >
+}
+@if (store.novel()?.lock) {
+  <ds-banner
+    variant="warning"
+    [dismissible]="false"
+    [heading]="'analysis.pipeline.lockedTitle' | t"
+    [message]="'analysis.pipeline.lockedMessage' | t"
+    [dismissLabel]="'analysis.pipeline.close' | t"
+    data-testid="world-locked"
+  />
+}
+@if (!store.novels().length) {
+  <div class="ds-world-empty">
+    <ds-icon name="library" size="xl" />
+    <h2>{{ 'analysis.pipeline.emptyLibrary' | t }}</h2>
+    <p>{{ 'analysis.pipeline.emptyLibraryHint' | t }}</p>
+    <a dsBtn variant="primary" routerLink="/library/import" data-testid="world-import-package">{{
+      'analysis.pipeline.importPackage' | t
+    }}</a>
+  </div>
+} @else if (!store.loading() && !store.summary().analysed && !store.summary().stale && !store.run()) {
+  <div class="ds-world-empty">
+    <ds-icon name="network" size="xl" />
+    <h2>{{ 'analysis.pipeline.notAnalysed' | t }}</h2>
+    <p>{{ 'analysis.pipeline.notAnalysedHint' | t }}</p>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-run-empty"
+      [disabled]="!store.canRun()"
+      (click)="store.dialog.set({ kind: 'run' })"
+    >
+      <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.runAnalysis' | t }}
+    </button>
+  </div>
+} @else {
+  <div class="ds-world-body">
+    @switch (store.view()) {
+      @case ('graph') {
+        <ds-world-graph
+          [world]="store.graphWorld()"
+          [selectedId]="store.selectedId()"
+          [highlightQuery]="store.query()"
+          [entityTypes]="store.graphTypes()"
+          [predicates]="store.graphPredicates()"
+          (selectEntity)="store.select($event)"
+        />
+      }
+      @case ('table') {
+        <ds-entity-table />
+      }
+      @case ('review') {
+        <ds-review-view />
+      }
+    }
+  </div>
+  <ng-template
+    dsPanel="left"
+    panelClass="ds-world-panel"
+    testId="world-left-panel"
+    [label]="'analysis.page.entities' | t"
+    [resizeLabel]="'analysis.page.resizeEntities' | t"
+  >
+    <ds-entity-list />
+  </ng-template>
+  <ng-template
+    dsPanel="right"
+    panelClass="ds-world-panel"
+    testId="world-right-panel"
+    [label]="'analysis.page.details' | t"
+    [resizeLabel]="'analysis.page.resizeDetails' | t"
+  >
+    <ds-entity-panel />
+  </ng-template>
+  @if (store.view() !== 'review') {
+    <ng-template
+      dsPanel="bottom"
+      panelClass="ds-world-panel"
+      testId="world-bottom-panel"
+      [label]="'analysis.page.timeline' | t"
+      [resizeLabel]="'analysis.page.resizeTimeline' | t"
+    >
+      <ds-world-timeline />
+    </ng-template>
+  }
+}
+<ds-run-analysis-dialog />
+<ds-ontology-problems-dialog />
+<ds-fix-item-dialog />
+<ds-entity-dialog />
+<ds-entity-merge-dialog />
+<ds-entity-split-dialog />
+<ds-fact-dialog />

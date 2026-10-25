@@ -1,0 +1,252 @@
+<div class="ds-world-review-head">
+  <h2>{{ 'analysis.review.title' | t }}</h2>
+  <span class="meta num" data-testid="world-review-total">{{
+    'analysis.review.count' | t: { count: itemCount() }
+  }}</span>
+  <span class="ds-spacer"></span>
+  <div class="ds-world-review-filters">
+    <label class="ds-world-review-filter">
+      <span>{{ 'analysis.pipeline.statusFilter' | t }}</span>
+      <span class="ds-select">
+        <select class="ds-input" data-testid="world-review-status" (change)="setStatus($event)">
+          @for (status of statusFilters; track status) {
+            <option [value]="status" [selected]="store.reviewStatus() === status">
+              {{ statusFilterKeys[status] | t }}
+            </option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </label>
+    <label class="ds-world-review-filter">
+      <span>{{ 'analysis.review.filter.kind' | t }}</span>
+      <span class="ds-select">
+        <select class="ds-input" data-testid="world-review-kind" (change)="setKind($event)">
+          @for (kind of kindFilters; track kind) {
+            <option [value]="kind" [selected]="store.reviewKind() === kind">{{ kindFilterKeys[kind] | t }}</option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </label>
+    <label class="ds-world-review-filter">
+      <span>{{ 'analysis.pipeline.chapter' | t }}</span>
+      <span class="ds-select">
+        <select class="ds-input" data-testid="world-review-chapter" (change)="setChapter($event)">
+          <option value="" [selected]="store.reviewChapter() === null">
+            {{ 'analysis.review.filter.allChapters' | t }}
+          </option>
+          @for (chapter of store.reviewChapters(); track chapter.index) {
+            <option [value]="chapter.index" [selected]="store.reviewChapter() === chapter.index">
+              {{ 'analysis.review.chapter' | t: { index: chapter.index, title: chapter.title } }}
+            </option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+    </label>
+  </div>
+</div>
+@if (store.merge(); as merge) {
+  @if (merge.openIssues) {
+    <p class="ds-world-review-gate" data-state="blocked" data-testid="world-review-gate">
+      <ds-icon name="alert-triangle" size="sm" />{{
+        'analysis.merge.gateBlocked' | t: { count: merge.openIssues, chapters: store.issueChapterCount() }
+      }}
+    </p>
+  } @else if (merge.pending) {
+    <div class="ds-world-review-gate" data-state="ready" data-testid="world-review-gate">
+      <ds-icon name="check" size="sm" />
+      <span>{{ 'analysis.merge.gateReady' | t: { count: merge.pending } }}</span>
+      <span class="ds-spacer"></span>
+      <ds-merge-button variant="primary" testId="world-review-merge" />
+    </div>
+  } @else {
+    <p class="ds-world-review-gate" data-state="merged" data-testid="world-review-gate">
+      <ds-icon name="merge" size="sm" />{{ 'analysis.merge.upToDate' | t: { date: mergedAt() } }}
+    </p>
+  }
+}
+@if (lockReason()) {
+  <p class="ds-world-review-locked" id="world-review-locked" data-testid="world-review-locked">
+    <ds-icon name="lock" size="sm" />{{ lockReason() | t }}
+  </p>
+}
+<div class="ds-world-review-body">
+  @if (failedChapters().length) {
+    <section
+      class="ds-world-review-failed"
+      data-testid="world-review-failed"
+      aria-labelledby="world-review-failed-title"
+    >
+      <div class="ds-world-review-failed-head">
+        <ds-icon name="alert-circle" />
+        <h3 id="world-review-failed-title">
+          {{ 'analysis.review.failedChapters' | t: { count: failedChapters().length } }}
+        </h3>
+        <span class="ds-spacer"></span>
+        <button
+          dsBtn
+          size="sm"
+          type="button"
+          data-testid="world-review-retry"
+          [disabled]="!store.canRun()"
+          [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
+          (click)="store.retryFailed()"
+        >
+          <ds-icon name="retry" size="sm" />{{ 'analysis.pipeline.retryFailed' | t }}
+        </button>
+      </div>
+      <ul>
+        @for (chapter of failedChapters(); track chapter.index) {
+          <li [attr.data-testid]="'world-review-failed-' + chapter.index">
+            <strong>{{ 'analysis.review.chapter' | t: { index: chapter.index, title: chapter.title } }}</strong>
+            <span>{{ pipelineError(chapter.error) }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  @if (!store.review()) {
+    <ds-area-state kind="loading" [heading]="'analysis.review.loading' | t" compact />
+  } @else {
+    @for (group of groups(); track group.index) {
+      <section class="ds-world-review-group" [attr.data-testid]="'world-review-group-' + group.index">
+        <div class="ds-world-review-group-head">
+          <h3>
+            {{ 'analysis.review.chapter' | t: { index: group.index, title: group.title } }}
+            <span class="meta num">{{ group.items.length }}</span>
+          </h3>
+          <ds-pill
+            [kind]="group.status === 'reviewed' ? 'success' : 'warning'"
+            [icon]="chapterIcons[group.status]"
+            [attr.data-testid]="'world-review-group-status-' + group.index"
+            >{{ chapterKeys[group.status] | t }}</ds-pill
+          >
+        </div>
+        @for (item of group.items; track itemId(item)) {
+          <article
+            class="ds-world-review-item"
+            [attr.data-status]="status(item)"
+            [attr.data-testid]="'world-review-item-' + itemId(item)"
+          >
+            <div class="ds-world-review-item-head">
+              <span class="ds-world-review-type">
+                <ds-icon [name]="typeIcon(item)" size="sm" />{{ typeLabel(item) }}
+                @if (item.fact) {
+                  <span aria-hidden="true">&middot;</span>{{ item.fact.predicate }}
+                }
+              </span>
+              <span class="ds-spacer"></span>
+              @if (item.entity?.edited || item.fact?.edited) {
+                <ds-pill icon="pencil">{{ 'analysis.pipeline.edited' | t }}</ds-pill>
+              }
+              @if (item.fact?.addedByUser) {
+                <ds-pill icon="user">{{ 'analysis.pipeline.addedByUser' | t }}</ds-pill>
+              }
+              <ds-pill
+                [kind]="statusKinds[status(item)]"
+                [icon]="statusIcons[status(item)]"
+                [attr.data-testid]="'world-review-status-' + itemId(item)"
+                >{{ statusLabel(status(item)) }}</ds-pill
+              >
+            </div>
+            <p class="ds-world-review-name">
+              @if (item.entity; as entity) {
+                {{ entity.name }}
+                @if (entity.aliases.length) {
+                  <span class="meta">({{ entity.aliases.join(', ') }})</span>
+                }
+              } @else {
+                {{ subject(item) }} <span class="ds-world-review-sep" aria-hidden="true">&middot;</span>
+                {{ item.fact?.predicate }} <span class="ds-world-review-sep" aria-hidden="true">&middot;</span>
+                {{ object(item) }}
+              }
+            </p>
+            @if (failReason(item); as label) {
+              <p class="ds-world-review-reason" [attr.data-testid]="'world-review-reason-' + itemId(item)">
+                <ds-icon name="alert-circle" size="sm" />{{ label }}
+              </p>
+            }
+            @if (item.context; as context) {
+              <blockquote class="ds-world-review-context" [attr.data-testid]="'world-review-context-' + itemId(item)">
+                {{ context.before }}<mark>{{ context.match }}</mark
+                >{{ context.after }}
+              </blockquote>
+            } @else {
+              <div
+                class="ds-world-review-missing"
+                [class.failed]="status(item) === 'failed'"
+                [attr.data-testid]="'world-review-missing-' + itemId(item)"
+              >
+                @if (claimed(item); as claim) {
+                  <q class="ds-world-review-claim">{{ claim }}</q>
+                }
+                <span class="ds-world-review-missing-note">
+                  <ds-icon name="alert-circle" size="sm" />{{ missingKey(item) | t }}
+                </span>
+              </div>
+            }
+            <div class="ds-world-review-actions">
+              @if (status(item) !== 'rejected') {
+                <button
+                  dsBtn
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  [attr.data-testid]="'world-review-reject-' + itemId(item)"
+                  [disabled]="disabled()"
+                  [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
+                  (click)="review(item, 'review-reject')"
+                >
+                  <ds-icon name="x" size="sm" />{{ 'analysis.pipeline.reject' | t }}
+                </button>
+              }
+              <button
+                dsBtn
+                size="sm"
+                type="button"
+                [attr.data-testid]="'world-review-fix-' + itemId(item)"
+                [disabled]="disabled()"
+                [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
+                (click)="store.dialog.set({ kind: 'fix', item })"
+              >
+                <ds-icon name="pencil" size="sm" />{{ 'analysis.pipeline.fix' | t }}
+              </button>
+              @if (canAccept(item)) {
+                <button
+                  dsBtn
+                  size="sm"
+                  variant="primary"
+                  type="button"
+                  [attr.data-testid]="'world-review-accept-' + itemId(item)"
+                  [disabled]="disabled()"
+                  [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
+                  (click)="review(item, 'review-accept')"
+                >
+                  <ds-icon name="check" size="sm" />{{ 'analysis.pipeline.accept' | t }}
+                </button>
+              }
+            </div>
+          </article>
+        }
+      </section>
+    } @empty {
+      <div class="ds-world-review-empty" data-testid="world-review-empty">
+        <ds-area-state
+          kind="empty"
+          [icon]="store.reviewStatus() === 'open' ? 'check' : 'filter'"
+          [heading]="'analysis.review.empty' | t"
+          [description]="
+            (store.reviewStatus() === 'open' ? 'analysis.review.emptyOpenHint' : 'analysis.review.emptyFilterHint') | t
+          "
+        />
+        @if (store.reviewStatus() !== 'open' || store.reviewKind() !== 'all' || store.reviewChapter() !== null) {
+          <button dsBtn size="sm" type="button" data-testid="world-review-reset-filters" (click)="resetFilters()">
+            {{ 'analysis.review.resetFilters' | t }}
+          </button>
+        }
+      </div>
+    }
+  }
+</div>

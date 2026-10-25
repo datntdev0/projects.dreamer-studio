@@ -1,0 +1,74 @@
+<div
+  #graphContainer
+  class="analysis-world-graph"
+  data-testid="world-graph"
+  role="img"
+  [attr.aria-label]="'analysis.graph.label' | t"
+></div>
+@if (!visibleCount()) {
+  <ds-area-state
+    class="ds-world-graph-empty"
+    kind="empty"
+    icon="network"
+    compact
+    data-testid="world-graph-empty"
+    [heading]="'analysis.graph.empty' | t"
+    [description]="'analysis.graph.emptyHint' | t"
+  />
+}
+<div class="ds-world-graph-tools" role="toolbar" [attr.aria-label]="'analysis.graph.tools' | t">
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    iconOnly
+    type="button"
+    data-testid="world-zoom-in"
+    [attr.aria-label]="'analysis.world.zoomIn' | t"
+    [dsTooltip]="'analysis.world.zoomIn' | t"
+    (click)="zoomIn()"
+  >
+    <ds-icon name="plus" size="sm" />
+  </button>
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    iconOnly
+    type="button"
+    data-testid="world-zoom-out"
+    [attr.aria-label]="'analysis.world.zoomOut' | t"
+    [dsTooltip]="'analysis.world.zoomOut' | t"
+    (click)="zoomOut()"
+  >
+    <ds-icon name="minus" size="sm" />
+  </button>
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    iconOnly
+    type="button"
+    data-testid="world-fit"
+    [attr.aria-label]="'analysis.world.fit' | t"
+    [dsTooltip]="'analysis.world.fit' | t"
+    (click)="fit()"
+  >
+    <ds-icon name="maximize" size="sm" />
+  </button>
+</div>
+<div class="ds-world-graph-legend" data-testid="world-graph-legend">
+  <ul [attr.aria-label]="'analysis.graph.legend' | t">
+    @for (type of types; track type) {
+      <li [attr.data-testid]="'world-legend-' + type">
+        <span class="ds-world-type-dot" [attr.data-type]="type"></span>{{ typeKeys[type] | t }}
+      </li>
+    }
+    <li data-testid="world-legend-hostile">
+      <span class="ds-world-graph-dash"></span>{{ 'analysis.graph.hostile' | t }}
+    </li>
+  </ul>
+  @if (mergedAt()) {
+    <p class="meta" data-testid="world-graph-merged">{{ 'analysis.world.merged' | t: { date: mergedAt() } }}</p>
+  }
+</div>

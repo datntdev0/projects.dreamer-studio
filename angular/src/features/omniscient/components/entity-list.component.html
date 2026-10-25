@@ -1,0 +1,164 @@
+<div class="ds-world-entities" data-testid="world-entity-list">
+  <div class="ds-panel-head">
+    <h2>{{ 'analysis.world.entities' | t }}</h2>
+    <span class="ds-world-entities-count num" data-testid="world-entity-count">
+      @if (entities().length !== store.entities().length) {
+        {{ entities().length }} /
+      }
+      {{ store.entities().length }}
+    </span>
+    <span class="ds-spacer"></span>
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      iconOnly
+      type="button"
+      data-testid="world-add-entity"
+      [attr.aria-label]="'analysis.world.addEntity' | t"
+      [dsTooltip]="'analysis.world.addEntity' | t"
+      [disabled]="store.locked()"
+      (click)="store.dialog.set({ kind: 'entity', mode: 'add', entityId: null })"
+    >
+      <ds-icon name="plus" size="sm" />
+    </button>
+  </div>
+  <div class="ds-world-entities-tools">
+    <div class="ds-world-entities-search" role="search">
+      <ds-icon name="search" size="sm" />
+      <input
+        class="ds-input"
+        type="search"
+        data-testid="world-search"
+        [attr.aria-label]="'analysis.world.search' | t"
+        [placeholder]="'analysis.world.search' | t"
+        [value]="store.query()"
+        (input)="search($event)"
+      />
+    </div>
+    <ds-segmented
+      iconOnly
+      class="ds-world-entities-types"
+      data-testid="world-type-filter"
+      [label]="'analysis.world.filterType' | t"
+      [options]="typeOptions()"
+      [value]="store.typeFilter()"
+      (valueChange)="setType($event)"
+    />
+    <button
+      type="button"
+      class="ds-world-entities-queue"
+      data-testid="world-review-queue"
+      [attr.aria-current]="store.view() === 'review' ? 'page' : null"
+      (click)="store.openReview()"
+    >
+      <ds-icon name="tasks" />
+      <span class="label">{{ 'analysis.entities.reviewQueue' | t }}</span>
+      @if (store.openReviewCount()) {
+        <ds-badge aria-hidden="true" data-testid="world-review-count">{{ store.openReviewCount() }}</ds-badge>
+        <span class="visually-hidden">{{
+          'analysis.entities.reviewQueueCount' | t: { count: store.openReviewCount() }
+        }}</span>
+      }
+    </button>
+  </div>
+  <p id="world-entities-keys" class="visually-hidden">{{ 'analysis.entities.keyboardHint' | t }}</p>
+  <div
+    #listbox
+    class="ds-world-entities-list"
+    role="listbox"
+    tabindex="0"
+    aria-multiselectable="true"
+    aria-describedby="world-entities-keys"
+    data-testid="world-entity-listbox"
+    [attr.aria-label]="'analysis.world.entities' | t"
+    [attr.aria-activedescendant]="activeDescendant()"
+    (keydown)="keydown($event)"
+  >
+    @for (entity of entities(); track entity.id) {
+      <div
+        role="option"
+        class="ds-world-entity"
+        [id]="'world-entity-' + entity.id"
+        [class.is-active]="activeDescendant() === 'world-entity-' + entity.id"
+        [attr.aria-current]="store.selectedId() === entity.id"
+        [attr.aria-selected]="store.mergeIds().includes(entity.id)"
+        [attr.data-testid]="'world-entity-' + entity.id"
+        (click)="open(entity.id)"
+      >
+        <input
+          type="checkbox"
+          tabindex="-1"
+          aria-hidden="true"
+          [attr.data-testid]="'world-check-' + entity.id"
+          [checked]="store.mergeIds().includes(entity.id)"
+          [disabled]="store.locked()"
+          (click)="toggleMerge(entity.id, $event)"
+        />
+        <span class="ds-world-type" [attr.data-type]="entity.type" [dsTooltip]="typeKeys[entity.type] | t"
+          ><ds-icon size="sm" [name]="typeIcons[entity.type]" /><span class="visually-hidden">{{
+            typeKeys[entity.type] | t
+          }}</span></span
+        >
+        <span class="ds-world-entity-text">
+          <span class="name">{{ entity.name }}</span>
+          @if (entity.aliases.length) {
+            <span class="aliases">{{ entity.aliases.join(', ') }}</span>
+          }
+        </span>
+        @if (entity.overlay) {
+          <span class="ds-world-entity-edited" [dsTooltip]="'analysis.world.editedByYou' | t"
+            ><ds-icon name="pencil" size="sm" /><span class="visually-hidden">{{
+              'analysis.world.editedByYou' | t
+            }}</span></span
+          >
+        }
+        <span
+          class="ds-world-entity-count num"
+          [dsTooltip]="'analysis.entities.chapterCount' | t: { count: entity.chapters.length }"
+          >{{ entity.chapters.length }}</span
+        >
+      </div>
+    } @empty {
+      <div class="ds-world-entities-empty" data-testid="world-entity-empty">
+        @if (!store.entities().length) {
+          <strong>{{ 'analysis.entities.empty' | t }}</strong>
+          <span>{{ 'analysis.entities.emptyHint' | t }}</span>
+        } @else {
+          {{ (store.query() ? 'analysis.world.noSearch' : 'analysis.world.noFilters') | t }}
+        }
+      </div>
+    }
+  </div>
+  @if (store.mergeIds().length) {
+    <div class="ds-world-entities-merge" data-testid="world-merge-bar">
+      <span class="num">{{ 'analysis.entities.selected' | t: { count: store.mergeIds().length } }}</span>
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="world-merge-clear"
+        (click)="store.mergeIds.set([])"
+      >
+        {{ 'analysis.entities.clearSelection' | t }}
+      </button>
+      <span class="ds-spacer"></span>
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="button"
+        data-testid="world-merge"
+        [attr.aria-describedby]="store.mergeIds().length < 2 ? 'world-merge-hint' : null"
+        [disabled]="store.mergeIds().length < 2 || store.locked()"
+        (click)="merge()"
+      >
+        <ds-icon name="merge" size="sm" />{{ 'analysis.world.merge' | t }}
+      </button>
+    </div>
+    @if (store.mergeIds().length < 2) {
+      <p id="world-merge-hint" class="ds-world-entities-hint">{{ 'analysis.entities.mergeHint' | t }}</p>
+    }
+  }
+</div>

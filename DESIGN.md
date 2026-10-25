@@ -39,6 +39,11 @@ The theme is set by `data-theme="dark" | "light"` on `<html>` (Storybook: theme 
 | `--color-danger` | `#ff8a91` | `#b4232c` | Errors, destructive actions |
 | `--color-code-background` | `#0a0c0b` | `#1b1e1c` | Code blocks (dark in both themes) |
 | `--color-code-text` | `#e8eeea` | `#edf2ef` | Code block text |
+| `--color-entity-character` | `#7cb4ff` | `#1f5fbf` | Entity type: character (graph node, list dot, legend) |
+| `--color-entity-persona` | `#c9a2f2` | `#7a3db8` | Entity type: persona |
+| `--color-entity-location` | `#f2bd5b` | `#8a5a00` | Entity type: location |
+| `--color-entity-organization` | `#ffa36b` | `#b04a12` | Entity type: organization |
+| `--color-entity-glossary` | `#5fd0dc` | `#0d7480` | Entity type: glossary term |
 
 ### Elevation and overlay
 

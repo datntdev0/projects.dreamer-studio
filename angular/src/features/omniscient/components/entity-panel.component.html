@@ -1,0 +1,436 @@
+@if (store.selected(); as entity) {
+  <div class="ds-panel-head">
+    <ds-tabs
+      idPrefix="world-entity-tab"
+      controls="world-entity-tabpanel"
+      [tabs]="tabs()"
+      [label]="'analysis.page.details' | t"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+    />
+  </div>
+  <div
+    id="world-entity-tabpanel"
+    class="ds-panel-body ds-world-detail-body"
+    role="tabpanel"
+    data-testid="world-entity-panel"
+    [attr.aria-labelledby]="'world-entity-tab-' + tab()"
+  >
+    @switch (tab()) {
+      @case ('entity') {
+        <header class="ds-world-detail-head">
+          <h2 class="ds-world-detail-name" data-testid="world-entity-name">{{ entity.name }}</h2>
+          <div class="ds-world-detail-tags">
+            <ds-pill [icon]="typeIcons[entity.type]" data-testid="world-entity-type">{{
+              typeKeys[entity.type] | t
+            }}</ds-pill>
+            @if (entity.overlay) {
+              <ds-pill kind="warning" icon="pencil" data-testid="world-entity-edited">{{
+                'analysis.world.editedByYou' | t
+              }}</ds-pill>
+            }
+            @if (entity.stale) {
+              <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>
+            }
+          </div>
+          <p class="meta num">
+            @if (entity.chapters.length) {
+              {{ 'analysis.entity.firstSeen' | t: { chapter: entity.chapters[0] } }} &middot;
+              {{ 'analysis.entity.chapterCount' | t: { count: entity.chapters.length } }}
+            } @else {
+              {{ 'analysis.entity.notInChapters' | t }}
+            }
+          </p>
+        </header>
+        <div class="ds-world-detail-actions" role="group" [attr.aria-label]="'analysis.entity.actions' | t">
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="world-entity-rename"
+            [disabled]="store.locked()"
+            (click)="openDialog('rename', entity)"
+          >
+            <ds-icon name="pencil" size="sm" />{{ 'analysis.world.rename' | t }}
+          </button>
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="world-entity-change-type"
+            [disabled]="store.locked()"
+            (click)="openDialog('type', entity)"
+          >
+            <ds-icon name="tag" size="sm" />{{ 'analysis.world.changeType' | t }}
+          </button>
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="world-entity-merge"
+            [disabled]="store.locked()"
+            (click)="openMerge(entity)"
+          >
+            <ds-icon name="merge" size="sm" />{{ 'analysis.world.merge' | t }}
+          </button>
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="world-entity-split"
+            [disabled]="store.locked()"
+            (click)="store.dialog.set({ kind: 'split', entityId: entity.id })"
+          >
+            <ds-icon name="scissors" size="sm" />{{ 'analysis.world.split' | t }}
+          </button>
+          <button
+            dsBtn
+            variant="danger"
+            size="sm"
+            type="button"
+            data-testid="world-entity-delete"
+            [disabled]="store.locked()"
+            (click)="deleteEntity(entity)"
+          >
+            <ds-icon name="trash" size="sm" />{{ 'analysis.world.delete' | t }}
+          </button>
+          @if (entity.overlay) {
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              data-testid="world-entity-reset"
+              [disabled]="store.locked()"
+              (click)="resetEntity(entity)"
+            >
+              <ds-icon name="undo" size="sm" />{{ 'analysis.world.reset' | t }}
+            </button>
+          }
+        </div>
+        <section class="ds-world-detail-section" data-testid="world-entity-aliases">
+          <h3>
+            {{ 'analysis.world.aliases' | t }} <span class="meta num">{{ entity.aliases.length }}</span>
+          </h3>
+          @if (entity.aliases.length) {
+            <ul class="ds-world-detail-chips">
+              @for (alias of entity.aliases; track alias) {
+                <li>
+                  {{ alias
+                  }}<button
+                    type="button"
+                    [attr.aria-label]="'analysis.entity.removeAlias' | t: { alias }"
+                    [attr.data-testid]="'world-entity-alias-remove-' + $index"
+                    [disabled]="store.locked()"
+                    (click)="removeAlias(entity, alias)"
+                  >
+                    <ds-icon name="x" size="sm" />
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="meta">{{ 'analysis.entity.noAliases' | t }}</p>
+          }
+          <div class="ds-world-detail-inline">
+            <input
+              class="ds-input"
+              data-testid="world-entity-alias-input"
+              [attr.aria-label]="'analysis.entity.addAlias' | t"
+              [attr.aria-invalid]="aliasExists() || null"
+              [placeholder]="'analysis.world.newAlias' | t"
+              [value]="alias()"
+              [disabled]="store.locked()"
+              (input)="alias.set($any($event.target).value)"
+              (keydown.enter)="addAlias(entity)"
+            />
+            <button
+              dsBtn
+              type="button"
+              [iconOnly]="true"
+              data-testid="world-entity-alias-add"
+              [attr.aria-label]="'analysis.entity.addAlias' | t"
+              [dsTooltip]="'analysis.entity.addAlias' | t"
+              [disabled]="store.locked() || !alias().trim() || aliasExists()"
+              (click)="addAlias(entity)"
+            >
+              <ds-icon name="plus" size="sm" />
+            </button>
+          </div>
+          @if (aliasExists()) {
+            <p class="ds-world-detail-error" role="alert">
+              <ds-icon name="alert-circle" size="sm" />{{ 'analysis.entity.aliasExists' | t }}
+            </p>
+          }
+        </section>
+        <section class="ds-world-detail-section" data-testid="world-entity-values">
+          <h3>{{ 'analysis.entity.values' | t }}</h3>
+          @for (group of scalarGroups(); track group.predicate) {
+            <div class="ds-world-detail-group">
+              <h4>{{ group.predicate }}</h4>
+              <ul class="ds-world-detail-list">
+                @for (scalar of group.values; track scalar.factId ?? $index) {
+                  <li
+                    class="ds-world-detail-item"
+                    [attr.data-testid]="'world-entity-value-' + (scalar.factId ?? $index)"
+                  >
+                    <div class="ds-world-detail-row">
+                      <strong>{{ scalar.value }}</strong>
+                      <span class="meta num">{{
+                        'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex }
+                      }}</span>
+                      <span class="ds-spacer"></span>
+                      <button
+                        dsBtn
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        [iconOnly]="true"
+                        [attr.data-testid]="'world-entity-value-edit-' + (scalar.factId ?? $index)"
+                        [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: scalar.predicate }"
+                        [dsTooltip]="'analysis.world.edit' | t"
+                        [disabled]="store.locked() || !scalar.factId"
+                        (click)="openFact(entity, scalar.factId ?? null)"
+                      >
+                        <ds-icon name="pencil" size="sm" />
+                      </button>
+                      @if (scalar.overlay && scalar.factId) {
+                        <button
+                          dsBtn
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          [iconOnly]="true"
+                          [attr.data-testid]="'world-entity-value-reset-' + scalar.factId"
+                          [attr.aria-label]="'analysis.entity.resetFact' | t: { predicate: scalar.predicate }"
+                          [dsTooltip]="'analysis.world.reset' | t"
+                          [disabled]="store.locked()"
+                          (click)="resetScalar(scalar)"
+                        >
+                          <ds-icon name="undo" size="sm" />
+                        </button>
+                      }
+                    </div>
+                    @if (scalar.quote) {
+                      <blockquote class="serif">{{ scalar.quote }}</blockquote>
+                    }
+                    @if (scalar.overlay || !scalar.quote || scalar.stale) {
+                      <div class="ds-world-detail-tags">
+                        @if (!scalar.quote) {
+                          <ds-pill icon="user">{{ 'analysis.entity.addedByUser' | t }}</ds-pill>
+                        }
+                        @if (scalar.overlay) {
+                          <ds-pill kind="warning" icon="pencil">{{ 'analysis.world.editedByYou' | t }}</ds-pill>
+                        }
+                        @if (scalar.stale) {
+                          <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>
+                        }
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          } @empty {
+            <p class="meta">{{ 'analysis.entity.noValues' | t }}</p>
+          }
+        </section>
+      }
+      @case ('relations') {
+        <div class="ds-world-detail-section-head">
+          <h3 class="num">{{ 'analysis.entity.relationsOf' | t: { name: entity.name, count: links().length } }}</h3>
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="world-entity-add-relation"
+            [disabled]="store.locked()"
+            (click)="openFact(entity, null)"
+          >
+            <ds-icon name="plus" size="sm" />{{ 'analysis.entity.addRelation' | t }}
+          </button>
+        </div>
+        <ul class="ds-world-detail-list">
+          @for (link of links(); track linkKey(link)) {
+            @let other = otherOf(link, entity);
+            @let open = expanded().includes(linkKey(link));
+            <li class="ds-world-detail-item" [attr.data-testid]="'world-entity-relation-' + $index">
+              <div class="ds-world-detail-row">
+                <ds-icon
+                  [name]="link.source === entity.id ? 'arrow-right' : 'arrow-left'"
+                  size="sm"
+                  class="ds-world-detail-dir"
+                />
+                <span class="visually-hidden">{{
+                  (link.source === entity.id ? 'analysis.entity.outgoing' : 'analysis.entity.incoming') | t
+                }}</span>
+                <span class="ds-world-detail-predicate">{{ link.predicate }}</span>
+                <button
+                  type="button"
+                  class="ds-world-detail-link"
+                  [attr.data-testid]="'world-entity-relation-open-' + $index"
+                  (click)="store.select(other?.id ?? null)"
+                >
+                  @if (other) {
+                    <ds-icon [name]="typeIcons[other.type]" size="sm" />
+                  }
+                  <span>{{ other?.name ?? store.entityName(store.otherId(link, entity.id)) }}</span>
+                </button>
+              </div>
+              <div class="ds-world-detail-row">
+                <span class="meta num"
+                  >{{ 'analysis.entity.chapterShort' | t: { chapter: firstChapter(link) } }}
+                  @if (link.chapters.length > 1) {
+                    &middot; {{ 'analysis.entity.inChapters' | t: { count: link.chapters.length } }}
+                  }
+                </span>
+                <span class="ds-spacer"></span>
+                @if (link.quotes.length) {
+                  <button
+                    dsBtn
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    [iconOnly]="true"
+                    [attr.aria-expanded]="open"
+                    [attr.aria-label]="(open ? 'analysis.entity.hideQuote' : 'analysis.entity.showQuote') | t"
+                    [attr.data-testid]="'world-entity-relation-quote-' + $index"
+                    [dsTooltip]="(open ? 'analysis.entity.hideQuote' : 'analysis.entity.showQuote') | t"
+                    (click)="toggleQuote(link)"
+                  >
+                    <ds-icon [name]="open ? 'chevron-up' : 'chevron-down'" size="sm" />
+                  </button>
+                }
+                <button
+                  dsBtn
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  [iconOnly]="true"
+                  [attr.data-testid]="'world-entity-relation-edit-' + $index"
+                  [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: link.predicate }"
+                  [dsTooltip]="'analysis.world.edit' | t"
+                  [disabled]="store.locked() || !link.factIds?.length"
+                  (click)="openFact(entity, link.factIds?.[0] ?? null)"
+                >
+                  <ds-icon name="pencil" size="sm" />
+                </button>
+                @if (link.overlay && link.factIds?.length) {
+                  <button
+                    dsBtn
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    [iconOnly]="true"
+                    [attr.data-testid]="'world-entity-relation-reset-' + $index"
+                    [attr.aria-label]="'analysis.entity.resetFact' | t: { predicate: link.predicate }"
+                    [dsTooltip]="'analysis.world.reset' | t"
+                    [disabled]="store.locked()"
+                    (click)="resetLink(link)"
+                  >
+                    <ds-icon name="undo" size="sm" />
+                  </button>
+                }
+              </div>
+              @if (link.overlay || !link.quotes.length || link.stale) {
+                <div class="ds-world-detail-tags">
+                  @if (!link.quotes.length) {
+                    <ds-pill icon="user">{{ 'analysis.entity.addedByUser' | t }}</ds-pill>
+                  }
+                  @if (link.overlay) {
+                    <ds-pill kind="warning" icon="pencil">{{ 'analysis.world.editedByYou' | t }}</ds-pill>
+                  }
+                  @if (link.stale) {
+                    <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>
+                  }
+                </div>
+              }
+              @if (open) {
+                @for (quote of link.quotes; track $index) {
+                  <blockquote class="serif">{{ quote }}</blockquote>
+                }
+              }
+            </li>
+          } @empty {
+            <li class="meta">{{ 'analysis.entity.noRelations' | t }}</li>
+          }
+        </ul>
+      }
+      @case ('occurrences') {
+        @if (occurrences(); as result) {
+          @if (result.error) {
+            <ds-area-state
+              kind="error"
+              compact
+              [heading]="'analysis.entity.occurrencesError' | t"
+              [details]="result.error"
+              [detailsLabel]="'common.details' | t"
+            />
+          } @else {
+            <div class="ds-world-detail-section-head">
+              <h3 class="num">
+                {{ 'analysis.entity.occurrencesOf' | t: { name: entity.name, count: result.items.length } }}
+              </h3>
+            </div>
+            @if (result.items.length) {
+              <p class="meta">{{ 'analysis.entity.occurrencesHint' | t }}</p>
+            }
+            <ul class="ds-world-detail-list">
+              @for (item of result.items.slice(0, occurrenceLimit()); track item.chapterIndex) {
+                <li>
+                  <button
+                    type="button"
+                    class="ds-world-detail-occurrence"
+                    [attr.aria-label]="'analysis.entity.openReview' | t: { chapter: item.chapterIndex }"
+                    [attr.data-testid]="'world-entity-occurrence-' + item.chapterIndex"
+                    (click)="store.openReview(item.chapterIndex)"
+                  >
+                    <span class="ds-world-detail-row">
+                      <span class="meta num">{{
+                        'analysis.entity.chapterShort' | t: { chapter: item.chapterIndex }
+                      }}</span>
+                      <strong>{{ item.chapterTitle }}</strong>
+                      <span class="ds-spacer"></span>
+                      <ds-icon name="chevron-right" size="sm" />
+                    </span>
+                    @if (item.context; as context) {
+                      <span class="ds-world-detail-snippet serif"
+                        >{{ context.before }}<mark>{{ context.match }}</mark
+                        >{{ context.after }}</span
+                      >
+                    }
+                  </button>
+                </li>
+              } @empty {
+                <li class="meta">{{ 'analysis.entity.occurrencesEmpty' | t }}</li>
+              }
+            </ul>
+            @if (result.items.length > occurrenceLimit()) {
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="world-entity-occurrence-more"
+                (click)="showMoreOccurrences()"
+              >
+                {{ 'analysis.entity.showMore' | t: { count: result.items.length - occurrenceLimit() } }}
+              </button>
+            }
+          }
+        } @else {
+          <ds-area-state kind="loading" compact [heading]="'analysis.entity.occurrencesLoading' | t" />
+        }
+      }
+    }
+  </div>
+} @else {
+  <ds-area-state
+    kind="empty"
+    icon="pointer"
+    compact
+    data-testid="world-entity-empty"
+    [heading]="'analysis.world.noSelection' | t"
+    [description]="'analysis.world.noSelectionHint' | t"
+  />
+}

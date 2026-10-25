@@ -13,6 +13,24 @@ import { SearchProgress, SearchRequest } from '../models/novel';
 import { DeleteNovelsResult, LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '../models/novel';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '../models/app-data';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '../models/settings';
+import {
+  AnalysisChanged,
+  AnalysisChapterDetail,
+  AnalysisChapterRequest,
+  AnalysisEditRequest,
+} from '../models/analysis';
+import { AnalysisPlan, AnalysisProgress, AnalysisRunRequest, AnalysisStatus } from '../models/analysis';
+import {
+  Occurrence,
+  OccurrenceQuery,
+  OntologyProblem,
+  QuoteMatch,
+  QuoteQuery,
+  ReviewPage,
+  ReviewQuery,
+  World,
+  WorldQuery,
+} from '../models/analysis';
 
 export interface DreamerApi {
   app: {
@@ -77,6 +95,24 @@ export interface DreamerApi {
     deleteNovels(ids: string[]): Promise<DeleteNovelsResult>;
     openFolder(id: string): Promise<void>;
     onChanged(listener: (event: LibraryChangedEvent) => void): () => void;
+  };
+  analysis: {
+    status(novelId: string): Promise<AnalysisStatus>;
+    chapter(request: AnalysisChapterRequest): Promise<AnalysisChapterDetail>;
+    plan(request: AnalysisRunRequest): Promise<AnalysisPlan>;
+    start(request: AnalysisRunRequest): Promise<void>;
+    cancel(novelId: string): Promise<void>;
+    world(query: WorldQuery): Promise<World>;
+    review(query: ReviewQuery): Promise<ReviewPage>;
+    occurrences(query: OccurrenceQuery): Promise<Occurrence[]>;
+    edit(request: AnalysisEditRequest): Promise<void>;
+    merge(novelId: string): Promise<void>;
+    findQuote(query: QuoteQuery): Promise<QuoteMatch[]>;
+    ontologyOpen(novelId: string): Promise<void>;
+    ontologyReset(novelId: string): Promise<OntologyProblem[]>;
+    ontologyCheck(novelId: string): Promise<OntologyProblem[]>;
+    onProgress(listener: (progress: AnalysisProgress) => void): () => void;
+    onChanged(listener: (event: AnalysisChanged) => void): () => void;
   };
   dev: {
     crash(kind: DevCrashKind): Promise<void>;

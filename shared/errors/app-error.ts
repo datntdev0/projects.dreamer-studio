@@ -23,6 +23,8 @@ export const ErrorCode = {
   CoverInvalid: 'COVER_INVALID',
   ChapterFileMissing: 'CHAPTER_FILE_MISSING',
   ChapterChangeInvalid: 'CHAPTER_CHANGE_INVALID',
+  NotImplemented: 'NOT_IMPLEMENTED',
+  AnalysisOpenIssues: 'ANALYSIS_OPEN_ISSUES',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

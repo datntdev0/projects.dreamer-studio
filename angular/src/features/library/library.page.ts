@@ -14,6 +14,7 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { LibraryStore } from '@core/stores/library-store';
 import type { LibrarySortKey, LibraryView, SortDirection } from '@core/stores/library-store';
 import { LayoutService } from '@shell/layout/layout.service';
@@ -61,6 +62,7 @@ export class LibraryPage implements OnInit {
   protected readonly layout: LayoutService = inject(LayoutService);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly router: Router = inject(Router);
+  private readonly currentNovel: CurrentNovelStore = inject(CurrentNovelStore);
   private readonly search = viewChild<ElementRef<HTMLInputElement>>('search');
   private readonly inspector = viewChild(LibraryInspectorComponent);
   private leaveResolve: ((leave: boolean) => void) | null = null;
@@ -200,6 +202,7 @@ export class LibraryPage implements OnInit {
   }
 
   protected open(id: string): void {
+    this.currentNovel.select(id);
     void this.router.navigateByUrl(`/library/${id}`);
   }
 

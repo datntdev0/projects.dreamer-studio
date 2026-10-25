@@ -1,0 +1,102 @@
+<ds-dialog
+  [open]="!!item()"
+  [heading]="'analysis.pipeline.fixItem' | t"
+  icon="pencil"
+  [dismissible]="!store.busy()"
+  [closeLabel]="'analysis.pipeline.close' | t"
+  (closed)="close()"
+>
+  @if (item(); as current) {
+    <div class="ds-world-fix" data-testid="world-fix-dialog">
+      <div class="ds-world-fix-current">
+        <span class="meta">{{
+          'analysis.review.chapter' | t: { index: current.chapterIndex, title: current.chapterTitle }
+        }}</span>
+        <strong data-testid="world-fix-current">
+          @if (current.entity; as entity) {
+            {{ entity.name }} &middot; {{ typeLabel(entity.type) }}
+          } @else if (current.fact; as fact) {
+            {{ current.subjectName || store.entityName(fact.subjectId) }} &middot; {{ fact.predicate }} &middot;
+            {{ fact.kind === 'scalar' ? fact.value : current.objectName || store.entityName(fact.objectId ?? '') }}
+          }
+        </strong>
+        @if (reason()) {
+          <span class="ds-world-fix-reason" data-testid="world-fix-reason">
+            <ds-icon name="alert-circle" size="sm" />{{ reason() }}
+          </span>
+        }
+      </div>
+      <p class="meta">{{ 'analysis.review.fixHint' | t }}</p>
+      @if (current.entity) {
+        <ds-field [label]="'analysis.pipeline.type' | t" controlId="world-fix-type">
+          <span class="ds-select">
+            <select id="world-fix-type" class="ds-input" data-testid="world-fix-type" (change)="setType($event)">
+              @for (option of types(); track option) {
+                <option [value]="option" [selected]="type() === option">{{ typeLabel(option) }}</option>
+              }
+            </select>
+            <ds-icon name="chevron-down" size="sm" />
+          </span>
+        </ds-field>
+      } @else {
+        <ds-field [label]="'analysis.pipeline.predicate' | t" controlId="world-fix-predicate">
+          <span class="ds-select">
+            <select
+              id="world-fix-predicate"
+              class="ds-input"
+              data-testid="world-fix-predicate"
+              (change)="setPredicate($event)"
+            >
+              @for (option of predicates(); track option) {
+                <option [value]="option" [selected]="predicate() === option">{{ option }}</option>
+              }
+            </select>
+            <ds-icon name="chevron-down" size="sm" />
+          </span>
+        </ds-field>
+        <ds-field
+          [label]="(scalar() ? 'analysis.world.value' : 'analysis.world.object') | t"
+          controlId="world-fix-value"
+          [error]="scalar() && !values().length ? ('analysis.review.noValues' | t) : ''"
+        >
+          <span class="ds-select">
+            <select
+              id="world-fix-value"
+              class="ds-input"
+              data-testid="world-fix-value"
+              [disabled]="scalar() && !values().length"
+              (change)="setValue($event)"
+            >
+              @if (scalar()) {
+                @for (option of values(); track option) {
+                  <option [value]="option" [selected]="value() === option">{{ option }}</option>
+                }
+              } @else {
+                @for (option of objects(); track option.id) {
+                  <option [value]="option.id" [selected]="value() === option.id">{{ option.name }}</option>
+                }
+              }
+            </select>
+            <ds-icon name="chevron-down" size="sm" />
+          </span>
+        </ds-field>
+      }
+    </div>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="world-fix-cancel" [disabled]="store.busy()" (click)="close()">
+      {{ 'analysis.pipeline.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-fix-save"
+      [loading]="store.busy()"
+      [disabled]="!canSave()"
+      (click)="save()"
+    >
+      <ds-icon name="check" size="sm" />{{ 'analysis.review.saveFix' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

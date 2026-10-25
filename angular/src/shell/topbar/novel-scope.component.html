@@ -1,0 +1,70 @@
+<button
+  #trigger
+  type="button"
+  class="ds-novel-scope-main"
+  data-testid="topbar-novel"
+  aria-haspopup="listbox"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="'topbar.novel' | t"
+  [disabled]="!store.novels().length"
+  (click)="toggle()"
+>
+  <ds-icon name="book" size="sm" />
+  @if (store.novel(); as novel) {
+    <b class="title">{{ novel.title }}</b>
+    <span class="count">{{ 'topbar.novelChapters' | t: { count: novel.chapterCount } }}</span>
+  } @else {
+    <span class="count">{{ 'topbar.noNovel' | t }}</span>
+  }
+  <ds-icon class="caret" name="chevron-down" size="sm" />
+</button>
+@if (open()) {
+  <div class="ds-novel-scope-menu" data-testid="topbar-novel-menu">
+    <div class="ds-novel-scope-search">
+      <ds-icon name="search" size="sm" />
+      <input
+        #search
+        type="search"
+        data-testid="topbar-novel-search"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="topbar-novel-list"
+        [attr.aria-activedescendant]="results().length ? 'topbar-novel-' + active() : null"
+        [attr.aria-label]="'topbar.novelSearch' | t"
+        [placeholder]="'topbar.novelSearch' | t"
+        [value]="query()"
+        (input)="setQuery($event)"
+        (keydown)="move($event)"
+      />
+    </div>
+    <ul id="topbar-novel-list" class="ds-novel-scope-list" role="listbox" [attr.aria-label]="'topbar.novel' | t">
+      @for (novel of results(); track novel.id; let index = $index) {
+        <li
+          role="option"
+          [id]="'topbar-novel-' + index"
+          [attr.data-testid]="'topbar-novel-option-' + novel.id"
+          [attr.aria-selected]="novel.id === store.novelId()"
+          [class.active]="index === active()"
+          (pointerenter)="active.set(index)"
+          (click)="choose(novel)"
+        >
+          <ds-icon name="book" size="sm" />
+          <span class="text">
+            <span class="title">{{ novel.title }}</span>
+            <span class="meta"
+              >{{ novel.author }} &middot; {{ 'topbar.novelChapters' | t: { count: novel.chapterCount } }}</span
+            >
+          </span>
+          @if (novel.id === store.novelId()) {
+            <ds-icon class="check" name="check" size="sm" />
+          }
+        </li>
+      } @empty {
+        <li class="empty" role="presentation">{{ 'topbar.novelNoMatch' | t }}</li>
+      }
+    </ul>
+    <button type="button" class="ds-novel-scope-footer" data-testid="topbar-novel-library" (click)="openLibrary()">
+      <ds-icon name="library" size="sm" />{{ 'topbar.novelOpenLibrary' | t }}
+    </button>
+  </div>
+}

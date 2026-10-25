@@ -1,0 +1,69 @@
+<div class="ds-world-table" data-testid="world-entity-table">
+  <table class="ds-table dense">
+    <caption class="visually-hidden">
+      {{
+        'analysis.world.entities' | t
+      }}
+    </caption>
+    <thead>
+      <tr>
+        @for (column of columns; track column.key) {
+          <th scope="col" [class.num]="column.numeric" [attr.aria-sort]="ariaSort(column.key)">
+            <button type="button" [attr.data-testid]="'world-table-sort-' + column.key" (click)="sort(column.key)">
+              {{ column.label | t }}
+              <ds-icon
+                size="sm"
+                [class.is-idle]="sortKey() !== column.key"
+                [name]="sortKey() === column.key && sortDirection() === 'asc' ? 'chevron-up' : 'chevron-down'"
+              />
+            </button>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (entity of rows(); track entity.id) {
+        <tr
+          tabindex="0"
+          [attr.aria-current]="store.selectedId() === entity.id"
+          [attr.data-testid]="'world-table-row-' + entity.id"
+          (click)="store.select(entity.id)"
+          (keydown.enter)="store.select(entity.id)"
+        >
+          <td class="ds-world-table-name">
+            <strong>{{ entity.name }}</strong>
+          </td>
+          <td>
+            <span class="ds-world-type-label">
+              <span class="ds-world-type" [attr.data-type]="entity.type"
+                ><ds-icon size="sm" [name]="typeIcons[entity.type]"
+              /></span>
+              {{ typeKeys[entity.type] | t }}
+            </span>
+          </td>
+          <td class="ds-world-table-aliases">{{ entity.aliases.join(', ') }}</td>
+          <td class="num">{{ entity.chapters.length }}</td>
+          <td class="num">{{ entity.degree }}</td>
+          <td>
+            @if (entity.overlay) {
+              <span class="ds-world-edited"
+                ><ds-icon name="pencil" size="sm" />{{ 'analysis.world.editedByYou' | t }}</span
+              >
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td class="ds-table-empty" colspan="6" data-testid="world-table-empty">
+            @if (!store.entities().length) {
+              <strong>{{ 'analysis.entities.empty' | t }}</strong>
+              <div>{{ 'analysis.entities.emptyHint' | t }}</div>
+            } @else {
+              {{ (store.query() ? 'analysis.world.noSearch' : 'analysis.world.noFilters') | t }}
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

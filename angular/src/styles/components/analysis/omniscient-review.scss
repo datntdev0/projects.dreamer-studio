@@ -1,0 +1,305 @@
+.ds-world-review {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-world-review-head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--sp-sm) var(--sp-md);
+  align-items: center;
+  min-height: var(--top-h);
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: var(--gutter) solid var(--color-border);
+
+  h2 {
+    margin: 0;
+    font-size: var(--font-size-h3);
+  }
+}
+
+.ds-world-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.ds-world-review-filter {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-meta);
+  white-space: nowrap;
+
+  .ds-select {
+    min-width: calc(var(--panel-min-w) - var(--sp-xl));
+  }
+}
+
+.ds-world-review-locked {
+  display: flex;
+  flex: none;
+  gap: var(--sp-sm);
+  align-items: center;
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: var(--gutter) solid var(--color-border);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+}
+
+.ds-world-review-gate {
+  display: flex;
+  flex: none;
+  gap: var(--sp-sm);
+  align-items: center;
+  min-height: var(--control-h);
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: var(--gutter) solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+
+  > ds-icon {
+    flex: none;
+  }
+
+  &[data-state='blocked'] {
+    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+
+    > ds-icon {
+      color: var(--color-warning);
+    }
+  }
+
+  &[data-state='ready'] {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+
+    > ds-icon {
+      color: var(--color-success);
+    }
+  }
+
+  &[data-state='merged'] {
+    color: var(--color-text-secondary);
+  }
+}
+
+.ds-world-review-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-lg);
+  min-height: 0;
+  padding: var(--sp-lg);
+  overflow: auto;
+}
+
+.ds-world-review-failed {
+  flex: none;
+  padding: var(--sp-md);
+  border: var(--gutter) solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+
+  ul {
+    display: grid;
+    gap: var(--sp-xs);
+    margin: var(--sp-sm) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs) var(--sp-sm);
+    font-size: var(--font-size-meta);
+  }
+
+  li span {
+    color: var(--color-text-secondary);
+  }
+}
+
+.ds-world-review-failed-head {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  color: var(--color-danger);
+
+  h3 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: var(--font-size-h3);
+  }
+}
+
+.ds-world-review-group {
+  display: grid;
+  flex: none;
+  gap: var(--sp-sm);
+}
+
+.ds-world-review-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: center;
+
+  h3 {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: baseline;
+    margin: 0;
+    font-size: var(--font-size-h3);
+  }
+}
+
+.ds-world-review-item {
+  display: grid;
+  gap: var(--sp-sm);
+  padding: var(--sp-md);
+  border: var(--gutter) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+
+  &[data-status='failed'] {
+    border-left: var(--sp-xs) solid var(--color-danger);
+  }
+
+  &[data-status='rejected'] .ds-world-review-name {
+    color: var(--color-text-tertiary);
+    text-decoration: line-through;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.ds-world-review-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  align-items: center;
+}
+
+.ds-world-review-type {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+}
+
+.ds-world-review-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+
+  .meta {
+    font-weight: 400;
+  }
+}
+
+.ds-world-review-sep {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+.ds-world-review-reason,
+.ds-world-fix-reason {
+  display: flex;
+  gap: var(--sp-xs);
+  align-items: center;
+  color: var(--color-danger);
+  font-size: var(--font-size-meta);
+}
+
+.ds-world-review-context {
+  margin: 0;
+  padding: var(--sp-sm) var(--sp-md);
+  border-left: var(--sp-xxs) solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-serif);
+  font-size: var(--font-size-base);
+  line-height: var(--reader-leading);
+
+  mark {
+    padding: 0 var(--sp-xxs);
+    border-radius: var(--radius-xs);
+    background: color-mix(in srgb, var(--color-warning) 35%, transparent);
+    color: var(--color-text);
+  }
+}
+
+.ds-world-review-missing {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  border: var(--gutter) dashed var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-meta);
+
+  &.failed .ds-world-review-missing-note {
+    color: var(--color-danger);
+  }
+}
+
+.ds-world-review-claim {
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: var(--font-size-base);
+  line-height: var(--reader-leading);
+}
+
+.ds-world-review-missing-note {
+  display: flex;
+  gap: var(--sp-xs);
+  align-items: center;
+}
+
+.ds-world-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  justify-content: flex-end;
+}
+
+.ds-world-review-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-md);
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-world-fix {
+  display: grid;
+  gap: var(--sp-md);
+
+  p {
+    margin: 0;
+  }
+}
+
+.ds-world-fix-current {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+
+  strong {
+    overflow-wrap: anywhere;
+  }
+}

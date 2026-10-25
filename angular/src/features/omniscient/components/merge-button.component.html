@@ -1,0 +1,21 @@
+<span class="ds-world-merge-wrap" [dsTooltip]="reason()">
+  <button
+    dsBtn
+    type="button"
+    [variant]="variant()"
+    [attr.data-testid]="testId()"
+    [disabled]="!!reason() || store.busy()"
+    [loading]="store.busy()"
+    (click)="merge()"
+  >
+    <ds-icon name="merge" size="sm" />
+    @if (pending()) {
+      {{ 'analysis.merge.button' | t: { count: pending() } }}
+    } @else {
+      {{ 'analysis.merge.action' | t }}
+    }
+    @if (reason()) {
+      <span class="visually-hidden">{{ reason() }}</span>
+    }
+  </button>
+</span>

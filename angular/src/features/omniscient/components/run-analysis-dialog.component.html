@@ -1,0 +1,149 @@
+<ds-dialog
+  class="ds-world-run-dialog"
+  icon="play"
+  [open]="open()"
+  [heading]="'analysis.pipeline.runDialog' | t"
+  [closeLabel]="'analysis.pipeline.close' | t"
+  (closed)="close()"
+>
+  <div class="ds-world-run-columns" data-testid="world-run-dialog">
+    <fieldset class="ds-world-run-modes">
+      <legend class="ds-world-run-heading">{{ 'analysis.run.mode' | t }}</legend>
+      @for (item of modes; track item.mode) {
+        <div class="ds-world-run-mode" [class.is-selected]="mode() === item.mode">
+          <label>
+            <input
+              type="radio"
+              name="world-run-mode"
+              [value]="item.mode"
+              [checked]="mode() === item.mode"
+              [attr.data-testid]="'world-run-mode-' + item.mode"
+              (change)="setMode(item.mode)"
+            />
+            <span class="ds-world-run-mode-text">
+              <strong>{{ item.title | t }}</strong>
+              <span>{{ item.hint | t }}</span>
+            </span>
+          </label>
+          @if (item.mode === 'range' && mode() === 'range') {
+            <div class="ds-world-run-range">
+              <label>
+                <span>{{ 'analysis.pipeline.from' | t }}</span>
+                <input
+                  class="ds-input num"
+                  type="number"
+                  min="1"
+                  [max]="total()"
+                  data-testid="world-run-from"
+                  [attr.aria-invalid]="invalidRange() || null"
+                  [value]="from()"
+                  (input)="setNumber('from', $event)"
+                />
+              </label>
+              <span class="ds-world-run-range-sep" aria-hidden="true">–</span>
+              <label>
+                <span>{{ 'analysis.pipeline.to' | t }}</span>
+                <input
+                  class="ds-input num"
+                  type="number"
+                  min="1"
+                  [max]="total()"
+                  data-testid="world-run-to"
+                  [attr.aria-invalid]="invalidRange() || null"
+                  [value]="to()"
+                  (input)="setNumber('to', $event)"
+                />
+              </label>
+            </div>
+          }
+        </div>
+      }
+    </fieldset>
+    <div class="ds-world-run-settings">
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'analysis.run.stage' | t }}</h3>
+        <span class="ds-select">
+          <select
+            class="ds-input"
+            data-testid="world-run-stage"
+            [attr.aria-label]="'analysis.run.stage' | t"
+            (change)="setStage($event)"
+          >
+            <option value="all" [selected]="stage() === 'all'">{{ 'analysis.pipeline.allTypes' | t }}</option>
+            @for (type of entityTypes; track type) {
+              <option [value]="type" [selected]="stage() === type">{{ entityTypeKeys[type] | t }}</option>
+            }
+          </select>
+          <ds-icon name="chevron-down" size="sm" />
+        </span>
+        <p class="ds-world-run-hint">{{ 'analysis.run.stageHint' | t }}</p>
+      </section>
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'analysis.run.parameters' | t }}</h3>
+        <label class="ds-world-run-field" for="world-run-batch">{{ 'analysis.run.batchSize' | t }}</label>
+        <span class="ds-select ds-world-run-batch">
+          <select
+            id="world-run-batch"
+            class="ds-input num"
+            data-testid="world-run-batch"
+            (change)="setBatchSize($event)"
+          >
+            @for (size of batchSizes; track size) {
+              <option [value]="size" [selected]="batchSize() === size">{{ size }}</option>
+            }
+          </select>
+          <ds-icon name="chevron-down" size="sm" />
+        </span>
+        <p class="ds-world-run-hint">{{ 'analysis.run.batchSizeHint' | t }}</p>
+        <label class="ds-checkbox-label ds-world-run-overwrite" [class.is-disabled]="mode() === 'missing'">
+          <input
+            type="checkbox"
+            data-testid="world-run-overwrite"
+            [checked]="options().overwrite"
+            [disabled]="mode() === 'missing'"
+            (change)="setOverwrite($event)"
+          />
+          <span>{{ 'analysis.pipeline.overwrite' | t }}</span>
+        </label>
+        <p class="ds-world-run-hint ds-world-run-hint-indent">
+          {{ (mode() === 'missing' ? 'analysis.run.overwriteMissing' : 'analysis.run.overwriteHint') | t }}
+        </p>
+      </section>
+    </div>
+  </div>
+  @let current = plan();
+  <div class="ds-world-run-summary" role="status" data-testid="world-run-summary">
+    <p class="ds-world-run-summary-line num" [class.is-pending]="planning()">
+      <span>{{ 'analysis.run.summaryChapters' | t: { count: current?.count ?? 0 } }}</span>
+      @if (current && current.from !== null && current.to !== null) {
+        <span>{{ 'analysis.run.summaryRange' | t: { from: current.from, to: current.to } }}</span>
+      }
+      <span>{{ 'analysis.run.summaryBatches' | t: { count: current?.batches ?? 0 } }}</span>
+      <span>{{ 'analysis.run.summaryLlm' | t: { llm: store.llm()?.label || ('analysis.pipeline.none' | t) } }}</span>
+    </p>
+    <p class="ds-world-run-hint">
+      <ds-icon name="save" size="sm" />{{ (planning() ? 'analysis.run.planning' : 'analysis.run.savedPerChapter') | t }}
+    </p>
+  </div>
+  @if (reason()) {
+    <p class="ds-world-run-reason" role="alert" data-testid="world-run-reason">
+      <ds-icon name="alert-circle" size="sm" />{{ reason() }}
+    </p>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="world-run-cancel" (click)="close()">
+      {{ 'analysis.pipeline.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-run-start"
+      [loading]="store.busy()"
+      [disabled]="!canStart()"
+      (click)="start()"
+    >
+      <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.start' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

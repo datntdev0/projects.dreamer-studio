@@ -1,0 +1,115 @@
+<div class="ds-panel-head">
+  <h2>{{ 'analysis.page.timeline' | t }}</h2>
+  <span class="ds-spacer"></span>
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    iconOnly
+    type="button"
+    data-testid="world-timeline-collapse"
+    [attr.aria-label]="'analysis.graph.collapse' | t"
+    [dsTooltip]="'analysis.graph.collapse' | t"
+    (click)="layout.toggle('bottom')"
+  >
+    <ds-icon name="panel-bottom" size="sm" />
+  </button>
+</div>
+<div class="ds-panel-body ds-world-timeline" data-testid="world-timeline">
+  <div class="ds-world-timeline-scrub">
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      iconOnly
+      type="button"
+      data-testid="world-timeline-prev"
+      [attr.aria-label]="'analysis.graph.prev' | t"
+      [dsTooltip]="'analysis.graph.prev' | t"
+      [disabled]="previous() === null"
+      (click)="go(previous())"
+    >
+      <ds-icon name="chevron-left" size="sm" />
+    </button>
+    <input
+      type="range"
+      data-testid="world-timeline-range"
+      [attr.aria-label]="'analysis.graph.slider' | t"
+      [attr.aria-valuetext]="'analysis.graph.asOf' | t: { chapter: counts().chapter, total: counts().total }"
+      [min]="min()"
+      [max]="max()"
+      [value]="value()"
+      [disabled]="!indexes().length"
+      (input)="onSlide($event)"
+      (change)="onSlideEnd($event)"
+    />
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      iconOnly
+      type="button"
+      data-testid="world-timeline-next"
+      [attr.aria-label]="'analysis.graph.next' | t"
+      [dsTooltip]="'analysis.graph.next' | t"
+      [disabled]="next() === null"
+      (click)="go(next())"
+    >
+      <ds-icon name="chevron-right" size="sm" />
+    </button>
+    <output class="ds-world-timeline-asof num" data-testid="world-timeline-asof">
+      @if (whole()) {
+        {{ 'analysis.world.wholeNovel' | t }}
+      } @else {
+        {{ 'analysis.graph.asOf' | t: { chapter: counts().chapter, total: counts().total } }}
+      }
+    </output>
+    @if (store.asOfChapter() !== null) {
+      <button dsBtn size="sm" type="button" data-testid="world-timeline-whole" (click)="store.setTimeline(null)">
+        <ds-icon name="book" size="sm" />{{ 'analysis.world.wholeNovel' | t }}
+      </button>
+    }
+  </div>
+  <div class="ds-world-timeline-info">
+    <ds-checkbox
+      data-testid="world-timeline-only"
+      [checked]="store.onlyChapter()"
+      [disabled]="!indexes().length"
+      (checkedChange)="setOnly($event)"
+      >{{ 'analysis.graph.onlyChapter' | t }}</ds-checkbox
+    >
+    <span class="ds-spacer"></span>
+    <p class="meta num" data-testid="world-timeline-summary">
+      <span>{{ 'analysis.graph.analysed' | t: { analysed: counts().analysed, total: counts().total } }}</span>
+      @if (store.summary().stale) {
+        <span class="ds-world-timeline-stale" data-testid="world-timeline-stale"
+          ><ds-icon [name]="staleIcon" size="sm" />{{ 'analysis.graph.stale' | t: { count: counts().stale } }}</span
+        >
+      }
+      @if (store.summary().failed) {
+        <span
+          ><button
+            type="button"
+            class="ds-world-timeline-failed"
+            data-testid="world-timeline-failed"
+            (click)="store.openReview()"
+          >
+            <ds-icon [name]="failedIcon" size="sm" />{{ 'analysis.graph.failed' | t: { count: counts().failed } }}
+          </button></span
+        >
+      }
+      @if (store.merge()?.pending) {
+        <span
+          ><button
+            type="button"
+            class="ds-world-timeline-pending"
+            data-testid="world-timeline-pending"
+            (click)="store.openReview()"
+          >
+            <ds-icon name="merge" size="sm" />{{ 'analysis.graph.pending' | t: { count: counts().pending } }}
+          </button></span
+        >
+      }
+    </p>
+  </div>
+</div>

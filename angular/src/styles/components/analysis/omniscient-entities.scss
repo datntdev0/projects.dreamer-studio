@@ -1,0 +1,319 @@
+.ds-world-type {
+  --world-type-color: var(--color-text-tertiary);
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--pill-h);
+  height: var(--pill-h);
+  color: var(--color-text-secondary);
+  border: var(--sp-xxs) solid var(--world-type-color);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--world-type-color) 14%, transparent);
+
+  @each $type in character, persona, location, organization, glossary {
+    &[data-type='#{$type}'] {
+      --world-type-color: var(--color-entity-#{$type});
+    }
+  }
+}
+
+.ds-world-type-label,
+.ds-world-edited {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  align-items: center;
+}
+
+.ds-world-edited {
+  color: var(--color-text-secondary);
+}
+
+ds-entity-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-world-entities {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-world-entities-count {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.ds-world-entities-tools {
+  display: grid;
+  flex: none;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ds-world-entities-search {
+  position: relative;
+
+  ds-icon {
+    position: absolute;
+    top: 50%;
+    left: var(--sp-sm);
+    color: var(--color-text-tertiary);
+    transform: translateY(-50%);
+  }
+
+  .ds-input {
+    width: 100%;
+    padding-left: calc(var(--sp-sm) * 2 + var(--icon-sm));
+  }
+}
+
+.ds-world-entities-types {
+  display: flex;
+
+  button {
+    flex: 1;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+.ds-world-entities-queue {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  height: var(--rail-row-h);
+  padding: 0 var(--sp-sm);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-meta);
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  transition:
+    color var(--motion-fast),
+    background-color var(--motion-fast);
+
+  .label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover,
+  &[aria-current='page'] {
+    color: var(--color-text);
+    background: var(--color-surface-muted);
+  }
+
+  &[aria-current='page'] {
+    box-shadow: inset var(--sp-xxs) 0 0 var(--color-primary);
+  }
+}
+
+.ds-world-entities-list {
+  flex: 1;
+  min-height: 0;
+  padding: var(--sp-xs) var(--sp-sm);
+  overflow: auto;
+
+  &:focus-visible {
+    outline-offset: var(--focus-offset-inset);
+  }
+
+  &:focus-visible:has(.is-active) {
+    outline: none;
+  }
+}
+
+.ds-world-entity {
+  position: relative;
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  min-height: var(--rail-row-h);
+  padding: 0 var(--sp-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-meta);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    margin: 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
+
+  &:hover,
+  &[aria-current='true'] {
+    color: var(--color-text);
+    background: var(--color-surface-muted);
+  }
+
+  &[aria-current='true']::before {
+    position: absolute;
+    top: var(--sp-xs);
+    bottom: var(--sp-xs);
+    left: 0;
+    width: var(--sp-xxs);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    content: '';
+  }
+
+  &[aria-selected='true'] {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+}
+
+.ds-world-entities-list:focus-visible .ds-world-entity.is-active {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset-inset);
+}
+
+.ds-world-entity-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .name {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  .aliases {
+    margin-left: var(--sp-xs);
+    color: var(--color-text-tertiary);
+  }
+}
+
+.ds-world-entity-edited {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.ds-world-entity-count {
+  flex: none;
+  min-width: var(--badge-h);
+  height: var(--badge-h);
+  padding: 0 var(--sp-xs);
+  color: var(--color-text-secondary);
+  font: 700 var(--font-size-badge) / var(--badge-h) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+}
+
+.ds-world-entity[aria-current='true'] .ds-world-entity-count,
+.ds-world-entity:hover .ds-world-entity-count {
+  background: var(--color-surface-raised);
+}
+
+.ds-world-entities-empty {
+  display: grid;
+  gap: var(--sp-xs);
+  padding: var(--sp-xl) var(--sp-md);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-meta);
+  text-align: center;
+
+  strong {
+    color: var(--color-text-secondary);
+  }
+}
+
+.ds-world-entities-merge {
+  display: flex;
+  flex: none;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: var(--sp-sm);
+  font-size: var(--font-size-meta);
+  white-space: nowrap;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.ds-world-entities-hint {
+  flex: none;
+  margin: 0;
+  padding: 0 var(--sp-sm) var(--sp-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+  background: var(--color-surface-raised);
+}
+
+ds-entity-table {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-world-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+
+  .ds-table.dense {
+    table-layout: auto;
+  }
+
+  th button {
+    display: inline-flex;
+    vertical-align: middle;
+    gap: var(--sp-xs);
+    align-items: center;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    border: 0;
+    background: none;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-text);
+    }
+
+    .is-idle {
+      opacity: 0;
+    }
+
+    &:hover .is-idle,
+    &:focus-visible .is-idle {
+      opacity: 1;
+    }
+  }
+
+  th.num button {
+    flex-direction: row-reverse;
+  }
+
+  tbody tr {
+    cursor: pointer;
+  }
+
+  .ds-world-table-name strong {
+    font-weight: 500;
+  }
+
+  .ds-world-table-aliases {
+    max-width: var(--right-w);
+    color: var(--color-text-secondary);
+  }
+}

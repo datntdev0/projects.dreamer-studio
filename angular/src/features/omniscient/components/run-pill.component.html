@@ -1,0 +1,58 @@
+@if (store.run(); as run) {
+  <button
+    type="button"
+    class="ds-world-run-pill"
+    data-testid="world-run-pill"
+    aria-haspopup="dialog"
+    aria-controls="world-run-menu"
+    [attr.aria-expanded]="menuOpen()"
+    (click)="menuOpen.set(!menuOpen())"
+  >
+    <ds-dot kind="primary" pulse />
+    @if (chapter(); as current) {
+      <span class="num">{{ 'analysis.run.pillChapter' | t: { chapter: current } }}</span>
+      <span class="ds-world-run-pill-sep" aria-hidden="true">&middot;</span>
+    }
+    <span>{{ stepKeys[run.step] | t }}</span>
+    <span class="ds-world-run-pill-sep" aria-hidden="true">&middot;</span>
+    <span class="num">{{ run.done }} / {{ run.total }}</span>
+    @if (run.failed) {
+      <span class="ds-world-run-pill-failed num" data-testid="world-run-pill-failed">
+        <ds-icon name="alert-circle" size="sm" />{{ 'analysis.run.pillFailed' | t: { count: run.failed } }}
+      </span>
+    }
+    <ds-icon name="chevron-down" size="sm" />
+  </button>
+  @if (menuOpen()) {
+    <div
+      id="world-run-menu"
+      class="ds-world-run-menu"
+      role="dialog"
+      data-testid="world-run-menu"
+      [attr.aria-label]="'analysis.run.running' | t"
+    >
+      <div class="ds-world-run-menu-head">
+        <strong>{{ 'analysis.run.running' | t }}</strong>
+        <span class="num meta">{{ run.done }} / {{ run.total }}</span>
+      </div>
+      <ds-progress [value]="percent()" />
+      <p class="meta">{{ 'analysis.pipeline.graphAfterRun' | t }}</p>
+      <div class="ds-world-run-menu-actions">
+        <a dsBtn size="sm" variant="ghost" routerLink="/pipelines" data-testid="world-run-open-pipelines">
+          <ds-icon name="external" size="sm" />{{ 'analysis.run.openPipelines' | t }}
+        </a>
+        <button
+          dsBtn
+          size="sm"
+          variant="danger"
+          type="button"
+          data-testid="world-run-cancel-run"
+          [loading]="store.busy()"
+          (click)="cancel()"
+        >
+          <ds-icon name="stop" size="sm" />{{ 'analysis.pipeline.cancelRun' | t }}
+        </button>
+      </div>
+    </div>
+  }
+}

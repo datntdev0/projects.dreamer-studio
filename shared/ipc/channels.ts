@@ -59,6 +59,25 @@ export const LibraryChannel = {
   Changed: 'library:changed',
 } as const;
 
+export const AnalysisChannel = {
+  Status: 'analysis:status',
+  Chapter: 'analysis:chapter',
+  Plan: 'analysis:plan',
+  Start: 'analysis:start',
+  Cancel: 'analysis:cancel',
+  World: 'analysis:world',
+  Review: 'analysis:review',
+  Occurrences: 'analysis:occurrences',
+  Edit: 'analysis:edit',
+  Merge: 'analysis:merge',
+  FindQuote: 'analysis:find-quote',
+  OntologyOpen: 'analysis:ontology-open',
+  OntologyReset: 'analysis:ontology-reset',
+  OntologyCheck: 'analysis:ontology-check',
+  Progress: 'analysis:progress',
+  Changed: 'analysis:changed',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

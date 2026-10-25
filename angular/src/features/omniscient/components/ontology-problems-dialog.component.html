@@ -1,0 +1,62 @@
+<ds-dialog
+  class="ds-world-ontology-dialog"
+  icon="nodes"
+  [open]="open()"
+  [heading]="'analysis.pipeline.ontology' | t"
+  [closeLabel]="'analysis.pipeline.close' | t"
+  (closed)="close()"
+>
+  <div class="ds-world-ontology" data-testid="world-ontology-dialog">
+    <p class="ds-world-run-hint">{{ 'analysis.run.ontologyHint' | t }}</p>
+    <div aria-live="polite">
+      @if (problems().length) {
+        <p class="ds-world-ontology-status is-invalid" data-testid="world-ontology-status">
+          <ds-icon name="alert-circle" size="sm" />{{
+            'analysis.run.ontologyProblems' | t: { count: problems().length }
+          }}
+        </p>
+        <ul class="ds-world-ontology-problems" data-testid="world-ontology-problems">
+          @for (problem of problems(); track problem.line) {
+            <li>
+              <span class="ds-world-ontology-line num">{{ 'analysis.pipeline.line' | t }} {{ problem.line }}</span>
+              <span>{{ problem.reason }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="ds-world-ontology-status is-valid" data-testid="world-ontology-status">
+          <ds-icon name="check" size="sm" />{{ 'analysis.pipeline.ontologyValid' | t }}
+        </p>
+      }
+    </div>
+    @if (store.locked()) {
+      <p class="ds-world-run-hint">{{ 'analysis.run.resetLocked' | t }}</p>
+    }
+  </div>
+  <ng-container dialogFooter>
+    <button
+      dsBtn
+      variant="danger"
+      type="button"
+      data-testid="world-ontology-reset"
+      [disabled]="store.locked() || store.busy()"
+      (click)="reset()"
+    >
+      <ds-icon name="undo" size="sm" />{{ 'analysis.pipeline.resetDefault' | t }}
+    </button>
+    <span class="ds-spacer"></span>
+    <button dsBtn type="button" data-testid="world-ontology-open" [disabled]="store.busy()" (click)="openEditor()">
+      <ds-icon name="external" size="sm" />{{ 'analysis.run.openSystemEditor' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-ontology-recheck"
+      [loading]="store.busy()"
+      (click)="recheck()"
+    >
+      <ds-icon name="retry" size="sm" />{{ 'analysis.pipeline.recheck' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

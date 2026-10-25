@@ -77,6 +77,195 @@ html:not([data-theme='light']) .ds-only-light {
   }
 }
 
+.ds-novel-scope {
+  position: relative;
+  min-width: 0;
+  margin-left: var(--sp-md);
+}
+
+.ds-novel-scope-main {
+  display: inline-flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  min-width: 0;
+  max-width: var(--area-details-w);
+  height: var(--control-h-sm);
+  padding: 0 var(--sp-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-meta);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast);
+
+  > ds-icon:first-child {
+    color: var(--color-link);
+  }
+
+  .title {
+    overflow: hidden;
+    color: var(--color-text);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .count {
+    flex: none;
+    color: var(--color-text-tertiary);
+  }
+
+  .caret {
+    flex: none;
+    color: var(--color-text-tertiary);
+    transition: transform var(--motion-fast);
+  }
+
+  &:hover:not(:disabled),
+  &[aria-expanded='true'] {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-muted);
+  }
+
+  &[aria-expanded='true'] .caret {
+    transform: rotate(180deg);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.ds-novel-scope-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + var(--sp-xs));
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--area-details-w);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-2);
+}
+
+.ds-novel-scope-search {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+  }
+}
+
+.ds-novel-scope-list {
+  max-height: calc(var(--panel-min-h) * 3);
+  margin: 0;
+  padding: var(--sp-xs);
+  overflow-y: auto;
+  list-style: none;
+
+  li[role='option'] {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    padding: var(--sp-xs) var(--sp-sm);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+
+    &.active {
+      background: var(--color-surface-muted);
+      color: var(--color-text);
+    }
+
+    &[aria-selected='true'] .title {
+      color: var(--color-link);
+    }
+  }
+
+  .text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .title {
+    overflow: hidden;
+    color: var(--color-text);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .meta {
+    overflow: hidden;
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .check {
+    flex: none;
+    color: var(--color-link);
+  }
+
+  .empty {
+    padding: var(--sp-md);
+    color: var(--color-text-tertiary);
+    text-align: center;
+  }
+}
+
+.ds-novel-scope-footer {
+  display: flex;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-meta);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset-inset);
+  }
+}
+
 .ds-app-crumbs {
   display: flex;
   gap: var(--sp-xs);

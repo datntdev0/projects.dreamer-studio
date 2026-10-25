@@ -5,6 +5,7 @@ import { NovelPage } from '../../features/library/novel.page';
 import { ImportPage } from '../../features/library/import/import.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 import { SettingsPage } from '../../features/settings/settings.page';
+import { OmniscientPage } from '../../features/omniscient/omniscient.page';
 
 export type ModuleGroup = 'library' | 'analysis' | 'production' | 'system';
 
@@ -25,6 +26,7 @@ export interface AppModule {
   detailPage?: Type<unknown>;
   detailRoute?: boolean;
   subRoutes?: AppSubRoute[];
+  novelScoped?: boolean;
 }
 
 export const HOME_MODULE_ID = 'home';
@@ -59,13 +61,14 @@ export const MODULES: AppModule[] = [
     subRoutes: [{ path: 'import', page: ImportPage, title: 'library.import.page.title' }],
   },
   {
-    id: 'analysis',
+    id: 'omniscient',
     group: 'analysis',
     icon: 'network',
-    label: 'nav.analysis',
-    description: 'module.analysis.desc',
+    label: 'nav.omniscient',
+    description: 'module.omniscient.desc',
     release: '0.2.0',
-    page: null,
+    page: OmniscientPage,
+    novelScoped: true,
   },
   {
     id: 'projects',

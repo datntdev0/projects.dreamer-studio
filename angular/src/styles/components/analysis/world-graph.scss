@@ -1,0 +1,102 @@
+$world-types: character, persona, location, organization, glossary;
+
+ds-world-graph {
+  --world-hostile: var(--color-danger);
+
+  position: relative;
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.analysis-world-graph {
+  width: 100%;
+  height: 100%;
+  min-height: var(--panel-min-h);
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+.ds-world-type-dot {
+  display: inline-block;
+  flex: none;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: var(--radius-full);
+  background: var(--color-text-tertiary);
+
+  @each $type in $world-types {
+    &[data-type='#{$type}'] {
+      background: var(--color-entity-#{$type});
+    }
+  }
+}
+
+.ds-world-graph-tools,
+.ds-world-graph-legend {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-1);
+}
+
+.ds-world-graph-tools {
+  top: var(--sp-md);
+  right: var(--sp-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xxs);
+  padding: var(--sp-xxs);
+}
+
+.ds-world-graph-legend {
+  bottom: var(--sp-md);
+  left: var(--sp-md);
+  max-width: calc(100% - 2 * var(--sp-md));
+  padding: var(--sp-xs) var(--sp-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-small);
+  pointer-events: none;
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-xs) var(--sp-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: inline-flex;
+    gap: var(--sp-xs);
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .meta {
+    margin: var(--sp-xxs) 0 0;
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-small);
+  }
+}
+
+.ds-world-graph-dash {
+  flex: none;
+  width: var(--sp-lg);
+  border-top: var(--sp-xxs) dashed var(--world-hostile);
+}
+
+.ds-world-graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}

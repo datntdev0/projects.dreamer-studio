@@ -30,6 +30,9 @@
     }
   }
 </nav>
+@if (currentModule()?.novelScoped) {
+  <ds-novel-scope />
+}
 <span class="ds-spacer"></span>
 <span class="ds-app-tools">
   @for (edge of panelEdges; track edge) {

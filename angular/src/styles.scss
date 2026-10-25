@@ -38,4 +38,11 @@
 @use 'styles/components/library/chapter-dialogs';
 @use 'styles/components/library/novel-dialogs';
 @use 'styles/components/library/search';
+@use 'styles/components/analysis/omniscient';
+@use 'styles/components/analysis/world-graph';
+@use 'styles/components/analysis/world-timeline';
+@use 'styles/components/analysis/omniscient-entities';
+@use 'styles/components/analysis/omniscient-review';
+@use 'styles/components/analysis/omniscient-entity';
+@use 'styles/components/analysis/omniscient-run';
 @use 'styles/storybook';

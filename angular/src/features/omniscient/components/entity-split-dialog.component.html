@@ -1,0 +1,114 @@
+<ds-dialog
+  data-testid="world-split-dialog"
+  icon="scissors"
+  [open]="!!request()"
+  [heading]="'analysis.entity.splitTitle' | t: { name: entity()?.name ?? '' }"
+  [dismissible]="!store.busy()"
+  [closeLabel]="'common.dismiss' | t"
+  (closed)="close()"
+>
+  @if (entity(); as current) {
+    <div class="ds-world-detail-form">
+      <p>{{ 'analysis.world.splitHint' | t }}</p>
+      <div class="ds-world-detail-fields">
+        <ds-field controlId="world-split-name" required [label]="'analysis.entity.newEntity' | t" [error]="nameError()">
+          <input
+            id="world-split-name"
+            class="ds-input"
+            data-testid="world-split-name"
+            autofocus
+            [value]="name()"
+            [attr.aria-invalid]="!!nameError() || null"
+            (input)="name.set($any($event.target).value)"
+          />
+        </ds-field>
+        <ds-field controlId="world-split-type" [label]="'analysis.world.typeLabel' | t">
+          <span class="ds-select">
+            <select id="world-split-type" class="ds-input" data-testid="world-split-type" (change)="setType($event)">
+              @for (item of types; track item) {
+                <option [value]="item" [selected]="item === type()">{{ typeKeys[item] | t }}</option>
+              }
+            </select>
+            <ds-icon name="chevron-down" size="sm" />
+          </span>
+        </ds-field>
+      </div>
+      <div class="ds-world-detail-moves">
+        @if (current.aliases.length) {
+          <fieldset>
+            <legend>{{ 'analysis.entity.moveAliases' | t }}</legend>
+            @for (alias of current.aliases; track alias) {
+              <ds-checkbox
+                [attr.data-testid]="'world-split-alias-' + $index"
+                [checked]="aliases().includes(alias)"
+                (checkedChange)="toggleAlias(alias, $event)"
+                >{{ alias }}</ds-checkbox
+              >
+            }
+          </fieldset>
+        }
+        @if (scalars().length) {
+          <fieldset>
+            <legend>{{ 'analysis.entity.moveValues' | t }}</legend>
+            @for (scalar of scalars(); track scalar.factId) {
+              <ds-checkbox
+                [attr.data-testid]="'world-split-value-' + $index"
+                [checked]="facts().includes(scalar.factId)"
+                (checkedChange)="toggleFacts([scalar.factId], $event)"
+                >{{ scalar.predicate }}: {{ scalar.value }}
+                <span class="meta num"
+                  >&middot; {{ 'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex } }}</span
+                ></ds-checkbox
+              >
+            }
+          </fieldset>
+        }
+        @if (links().length) {
+          <fieldset>
+            <legend>{{ 'analysis.entity.moveRelations' | t }}</legend>
+            @for (link of links(); track $index) {
+              <ds-checkbox
+                [attr.data-testid]="'world-split-relation-' + $index"
+                [checked]="hasLink(link.factIds ?? [])"
+                (checkedChange)="toggleFacts(link.factIds ?? [], $event)"
+                >{{ link.predicate }} &middot; {{ store.entityName(store.otherId(link, current.id)) }}
+                <span class="meta num"
+                  >&middot; {{ 'analysis.entity.chapterShort' | t: { chapter: link.chapters[0] } }}
+                  @if (link.chapters.length > 1) {
+                    &middot; {{ 'analysis.entity.inChapters' | t: { count: link.chapters.length } }}
+                  }
+                </span></ds-checkbox
+              >
+            }
+          </fieldset>
+        }
+      </div>
+      <p class="ds-world-detail-summary num" aria-live="polite" data-testid="world-split-count">
+        @if (selectedCount()) {
+          {{ 'analysis.entity.selectedCount' | t: { count: selectedCount() } }}
+        } @else {
+          {{ 'analysis.entity.splitNothing' | t }}
+        }
+      </p>
+      @if (error()) {
+        <p class="ds-world-detail-error" role="alert"><ds-icon name="alert-circle" size="sm" />{{ error() }}</p>
+      }
+    </div>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="world-split-cancel" [disabled]="store.busy()" (click)="close()">
+      {{ 'common.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-split-confirm"
+      [loading]="store.busy()"
+      [disabled]="!canSave()"
+      (click)="save()"
+    >
+      <ds-icon name="scissors" size="sm" />{{ 'analysis.entity.splitAction' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

@@ -13,6 +13,7 @@ import { SettingsStore } from '@core/stores/settings-store';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ThemeService } from '@core/theme/theme.service';
 import { LayoutService } from '../layout/layout.service';
+import { NovelScopeComponent } from './novel-scope.component';
 import { PageCrumbService } from '../page-crumb.service';
 import { GROUP_TITLES, MODULES } from '../registry/modules';
 import type { AppModule } from '../registry/modules';
@@ -24,7 +25,7 @@ interface ShellRouteData {
 
 @Component({
   selector: 'header[dsTopbar]',
-  imports: [ButtonDirective, IconComponent, TooltipDirective, RouterLink, TranslatePipe],
+  imports: [ButtonDirective, IconComponent, TooltipDirective, RouterLink, TranslatePipe, NovelScopeComponent],
   templateUrl: './topbar.component.html',
   host: { class: 'ds-app-top', 'data-testid': 'topbar' },
 })

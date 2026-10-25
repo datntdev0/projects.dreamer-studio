@@ -16,7 +16,7 @@ describe('buildRoutes', () => {
       'library',
       'library/import',
       'library/:id',
-      'analysis',
+      'omniscient',
       'projects',
       'pipelines',
       'pipelines/:id',
@@ -28,7 +28,7 @@ describe('buildRoutes', () => {
 
   it('uses the coming soon component only for entries without a page', () => {
     expect(routes.find((route) => route.path === 'library')?.component).toBe(LibraryPage);
-    expect(routes.find((route) => route.path === 'analysis')?.component).toBe(ComingSoonStub);
+    expect(routes.find((route) => route.path === 'projects')?.component).toBe(ComingSoonStub);
     expect(routes.find((route) => route.path === 'pipelines')?.component).not.toBe(ComingSoonStub);
   });
 

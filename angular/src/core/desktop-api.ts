@@ -15,6 +15,22 @@ import type { NovelImportRequest, PackageReadResult, PickedImage } from '@dreame
 import type { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import type { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import type { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+import type { AnalysisChanged, AnalysisChapterDetail, AnalysisChapterRequest } from '@dreamer/shared/models/analysis';
+import type {
+  AnalysisEditRequest,
+  AnalysisPlan,
+  AnalysisProgress,
+  AnalysisRunRequest,
+} from '@dreamer/shared/models/analysis';
+import type { AnalysisStatus, Occurrence, OccurrenceQuery, OntologyProblem } from '@dreamer/shared/models/analysis';
+import type {
+  QuoteMatch,
+  QuoteQuery,
+  ReviewPage,
+  ReviewQuery,
+  World,
+  WorldQuery,
+} from '@dreamer/shared/models/analysis';
 
 const EMPTY_PAGE: PipelinePage = { runs: [], total: 0, next: null };
 
@@ -206,5 +222,69 @@ export class DesktopApi {
 
   onLibraryChanged(listener: (event: LibraryChangedEvent) => void): () => void {
     return window.dreamer ? window.dreamer.library.onChanged(listener) : () => undefined;
+  }
+
+  async analysisStatus(novelId: string): Promise<AnalysisStatus | null> {
+    return window.dreamer ? window.dreamer.analysis.status(novelId) : null;
+  }
+
+  async analysisChapter(request: AnalysisChapterRequest): Promise<AnalysisChapterDetail | null> {
+    return window.dreamer ? window.dreamer.analysis.chapter(request) : null;
+  }
+
+  async analysisPlan(request: AnalysisRunRequest): Promise<AnalysisPlan | null> {
+    return window.dreamer ? window.dreamer.analysis.plan(request) : null;
+  }
+
+  async startAnalysis(request: AnalysisRunRequest): Promise<void> {
+    if (window.dreamer) await window.dreamer.analysis.start(request);
+  }
+
+  async cancelAnalysis(novelId: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.analysis.cancel(novelId);
+  }
+
+  async analysisWorld(query: WorldQuery): Promise<World | null> {
+    return window.dreamer ? window.dreamer.analysis.world(query) : null;
+  }
+
+  async analysisReview(query: ReviewQuery): Promise<ReviewPage | null> {
+    return window.dreamer ? window.dreamer.analysis.review(query) : null;
+  }
+
+  async analysisOccurrences(query: OccurrenceQuery): Promise<Occurrence[]> {
+    return window.dreamer ? window.dreamer.analysis.occurrences(query) : [];
+  }
+
+  async analysisEdit(request: AnalysisEditRequest): Promise<void> {
+    if (window.dreamer) await window.dreamer.analysis.edit(request);
+  }
+
+  async analysisMerge(novelId: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.analysis.merge(novelId);
+  }
+
+  async analysisFindQuote(query: QuoteQuery): Promise<QuoteMatch[]> {
+    return window.dreamer ? window.dreamer.analysis.findQuote(query) : [];
+  }
+
+  async analysisOntologyOpen(novelId: string): Promise<void> {
+    if (window.dreamer) await window.dreamer.analysis.ontologyOpen(novelId);
+  }
+
+  async analysisOntologyReset(novelId: string): Promise<OntologyProblem[]> {
+    return window.dreamer ? window.dreamer.analysis.ontologyReset(novelId) : [];
+  }
+
+  async analysisOntologyCheck(novelId: string): Promise<OntologyProblem[]> {
+    return window.dreamer ? window.dreamer.analysis.ontologyCheck(novelId) : [];
+  }
+
+  onAnalysisProgress(listener: (progress: AnalysisProgress) => void): () => void {
+    return window.dreamer ? window.dreamer.analysis.onProgress(listener) : () => undefined;
+  }
+
+  onAnalysisChanged(listener: (event: AnalysisChanged) => void): () => void {
+    return window.dreamer ? window.dreamer.analysis.onChanged(listener) : () => undefined;
   }
 }

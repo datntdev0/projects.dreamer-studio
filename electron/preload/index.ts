@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron';
-import { AppError } from '@dreamer/shared/errors/app-error';
+import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
 import { AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer/shared/ipc/channels';
@@ -25,6 +25,13 @@ import { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+
+function analysisUnavailable(): Promise<never> {
+  return Promise.reject({
+    code: ErrorCode.NotImplemented,
+    message: 'Analysis is available in the prototype only.',
+  } satisfies AppError);
+}
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
   const handler = (_event: IpcRendererEvent, value: T): void => listener(value);
@@ -110,6 +117,24 @@ const api: DreamerApi = {
     openFolder: (id: string): Promise<void> => call(LibraryChannel.OpenFolder, id),
     onChanged: (listener: (event: LibraryChangedEvent) => void): (() => void) =>
       subscribe(LibraryChannel.Changed, listener),
+  },
+  analysis: {
+    status: analysisUnavailable,
+    chapter: analysisUnavailable,
+    plan: analysisUnavailable,
+    start: analysisUnavailable,
+    cancel: analysisUnavailable,
+    world: analysisUnavailable,
+    review: analysisUnavailable,
+    occurrences: analysisUnavailable,
+    edit: analysisUnavailable,
+    merge: analysisUnavailable,
+    findQuote: analysisUnavailable,
+    ontologyOpen: analysisUnavailable,
+    ontologyReset: analysisUnavailable,
+    ontologyCheck: analysisUnavailable,
+    onProgress: (): (() => void) => () => undefined,
+    onChanged: (): (() => void) => () => undefined,
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

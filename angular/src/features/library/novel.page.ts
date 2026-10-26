@@ -49,6 +49,8 @@ import { UnsavedChangesDialogComponent } from './novel-list/unsaved-changes-dial
 import { NovelSearchStore } from './novel-search.store';
 import { NovelStore } from './novel.store';
 import { TranslationStore } from './translation.store';
+import { AppInfoStore } from '@core/app-info';
+import { RecentNovelStore } from '@core/stores/recent-novel-store';
 import { GlossaryViewComponent } from './translation/glossary-view.component';
 import { InstructionEditorComponent } from './translation/instruction-editor.component';
 import { TranslateContentDialogComponent } from './translation/translate-content-dialog.component';
@@ -128,6 +130,10 @@ export class NovelPage {
   private readonly crumb: PageCrumbService = inject(PageCrumbService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
+  private readonly appInfo = inject(AppInfoStore);
+  private readonly recentNovels = inject(RecentNovelStore);
+  private lastRecordedNovel: string | null = null;
+  private lastRecordedRoot: string | null = null;
   private readonly hiddenPanels: Set<SplitterEdge> = new Set<SplitterEdge>();
   private readonly editor = viewChild(ChapterEditorComponent);
   private leaveResolve: ((leave: boolean) => void) | null = null;
@@ -232,6 +238,20 @@ export class NovelPage {
   });
 
   constructor() {
+    effect(() => {
+      const novel = this.novel();
+      const root = this.appInfo.info()?.appDataDir;
+      if (
+        this.state() === 'ready' &&
+        novel &&
+        root &&
+        (novel.id !== this.lastRecordedNovel || root !== this.lastRecordedRoot)
+      ) {
+        this.lastRecordedNovel = novel.id;
+        this.lastRecordedRoot = root;
+        untracked(() => this.recentNovels.record(novel.id));
+      }
+    });
     effect(() => {
       const novelId: string = this.novel()?.id ?? '';
       const chapters: LibraryChapter[] = this.chapters();

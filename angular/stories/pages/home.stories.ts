@@ -1,9 +1,13 @@
+import { signal } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular';
 import { applicationConfig, moduleMetadata } from '@storybook/angular';
 import { ToastOutletComponent } from '@components/toast/toast-outlet.component';
 import { HomePage } from '../../src/features/home/home.page';
+import { LibraryStore } from '../../src/core/stores/library-store';
+import { RecentNovelStore } from '../../src/core/stores/recent-novel-store';
 import { provideDesktopApi } from '../fixtures/desktop-api';
+import { NOVELS, toNovelSummary } from '../fixtures/library';
 import {
   ERROR,
   LOADING,
@@ -38,6 +42,19 @@ export const Data: Story = {
       providers: [
         provideRouter([], withHashLocation()),
         provideDesktopApi({ backend: 'running' }),
+        {
+          provide: LibraryStore,
+          useValue: {
+            novels: signal([toNovelSummary(NOVELS[0])]),
+            state: signal('ready'),
+            error: signal(null),
+            load: async () => undefined,
+          },
+        },
+        {
+          provide: RecentNovelStore,
+          useValue: { entries: signal([{ id: NOVELS[0].id, openedAt: new Date().toISOString() }]) },
+        },
         ...providePipelines({ state: 'ready', runs: [RUNNING_RUN, QUEUED_RUN] }, { state: 'ready', runs: RECENT_RUNS }),
       ],
     }),

@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendStatus } from '@dreamer/shared/ipc/backend';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
+import type { NovelSummary } from '@dreamer/shared/models/novel';
 import { DesktopApi } from '@core/desktop-api';
+import { LibraryStore } from '@core/stores/library-store';
+import { RecentNovelStore } from '@core/stores/recent-novel-store';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES } from '@core/slots';
 import { HomePage } from './home.page';
 
@@ -42,6 +45,23 @@ function run(id: string, status: PipelineRun['status']): PipelineRun {
   };
 }
 
+const NOVEL: NovelSummary = {
+  id: 'novel-1',
+  originalTitle: 'Original',
+  title: 'Novel',
+  author: 'Author',
+  language: 'en',
+  publication: 'completed',
+  tags: [],
+  chapterCount: 12,
+  charCount: 1000,
+  importedAt: '2026-10-20T10:00:00.000Z',
+  updatedAt: '2026-10-20T10:00:00.000Z',
+  hasCover: false,
+  translations: [],
+  lock: null,
+};
+
 describe('HomePage', () => {
   it('renders the production cards with backend and pipeline data', async () => {
     const backend: BackendStatus = { state: 'running', address: '127.0.0.1:47123' };
@@ -66,6 +86,19 @@ describe('HomePage', () => {
         },
         { provide: ACTIVE_PIPELINES, useValue: signal({ state: 'ready' as const, runs: [run('active', 'running')] }) },
         {
+          provide: LibraryStore,
+          useValue: {
+            novels: signal([NOVEL]),
+            state: signal('ready'),
+            error: signal(null),
+            load: async () => undefined,
+          },
+        },
+        {
+          provide: RecentNovelStore,
+          useValue: { entries: signal([{ id: NOVEL.id, openedAt: '2026-10-20T10:00:00.000Z' }]) },
+        },
+        {
           provide: RECENT_PIPELINES,
           useValue: signal({ state: 'ready' as const, runs: [run('recent', 'succeeded')] }),
         },
@@ -80,6 +113,12 @@ describe('HomePage', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="home-backend-state"]')?.dataset.state).toBe('running');
     expect(fixture.nativeElement.querySelectorAll('[data-testid="home-running-row"]')).toHaveLength(1);
     expect(fixture.nativeElement.querySelectorAll('[data-testid="home-recent-row"]')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('[data-testid="home-recent-row"]')?.getAttribute('href')).toBe(
+      '/library/novel-1',
+    );
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-testid="home-recent-pipelines"] .home-recent-row'),
+    ).toHaveLength(1);
   });
 
   it('renders unavailable and empty states from the production child components', async () => {
@@ -103,6 +142,11 @@ describe('HomePage', () => {
           },
         },
         { provide: ACTIVE_PIPELINES, useValue: signal({ state: 'ready' as const, runs: [] }) },
+        {
+          provide: LibraryStore,
+          useValue: { novels: signal([]), state: signal('ready'), error: signal(null), load: async () => undefined },
+        },
+        { provide: RecentNovelStore, useValue: { entries: signal([]) } },
         { provide: RECENT_PIPELINES, useValue: signal({ state: 'ready' as const, runs: [] }) },
       ],
     }).compileComponents();

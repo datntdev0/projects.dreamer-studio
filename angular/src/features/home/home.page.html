@@ -122,6 +122,71 @@
 
     <section data-testid="home-recent">
       <div class="home-section-row">
+        <h3>{{ 'home.sources.title' | t }}</h3>
+        <a class="home-link" routerLink="/library" data-testid="home-all-novels">{{ 'home.sources.viewAll' | t }}</a>
+      </div>
+      @switch (library.state()) {
+        @case ('loading') {
+          <ds-area-state kind="loading" compact [heading]="'home.sources.loading' | t" />
+        }
+        @case ('error') {
+          <ds-area-state
+            kind="error"
+            compact
+            [heading]="'home.sources.error' | t"
+            [detailsLabel]="'home.details' | t"
+            [details]="library.error() ?? ''"
+          />
+        }
+        @default {
+          <div class="home-source-list">
+            @for (row of novelRows(); track row.novel.id) {
+              <a
+                class="home-source-row"
+                [routerLink]="['/library', row.novel.id]"
+                data-testid="home-recent-row"
+                [attr.data-novel-id]="row.novel.id"
+              >
+                <ds-library-cover
+                  size="sm"
+                  [cover]="coverUrl(row.novel)"
+                  [palette]="coverPalette(row.novel.id)"
+                  [originalTitle]="row.novel.originalTitle"
+                  [language]="row.novel.language"
+                />
+                <span class="home-source-title">{{ row.novel.title }}</span>
+                <span class="home-source-sub">{{ row.novel.originalTitle }} · {{ row.novel.author }}</span>
+                <span class="home-source-type"><ds-icon name="book" size="sm" /></span>
+                <span class="home-source-facts num">{{
+                  'library.items.chaptersShort' | t: { count: row.chapters }
+                }}</span>
+                <span class="home-source-state">
+                  @if (row.translated) {
+                    <ds-progress [value]="row.translated" />
+                    <span>{{ 'home.sources.translated' | t: { percent: row.translated } }}</span>
+                  } @else {
+                    <ds-pill kind="success">{{ 'common.ready' | t }}</ds-pill>
+                  }
+                </span>
+                <span class="home-source-when" [dsTooltip]="row.opened">{{ row.when }}</span>
+              </a>
+            } @empty {
+              <ds-area-state
+                kind="empty"
+                icon="library"
+                [heading]="'home.sources.emptyTitle' | t"
+                [description]="'home.sources.emptyDesc' | t"
+              >
+                <a dsBtn variant="primary" routerLink="/library/import">{{ 'home.import' | t }}</a>
+              </ds-area-state>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section data-testid="home-recent-pipelines">
+      <div class="home-section-row">
         <h3>{{ 'home.recent.title' | t }}</h3>
         <a class="home-link" routerLink="/pipelines" data-testid="home-recent-view-all">{{
           'home.recent.viewAll' | t
@@ -147,7 +212,7 @@
                 type="button"
                 class="home-recent-row"
                 [routerLink]="['/pipelines', row.run.id]"
-                data-testid="home-recent-row"
+                data-testid="home-pipeline-row"
                 [attr.data-run-id]="row.run.id"
                 [attr.data-status]="row.run.status"
               >

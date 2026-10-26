@@ -213,8 +213,8 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 | `--rail-entry` | 32px | Rail entry, collapsed (square) |
 | `--page-max-w` | 1040px | Page body `.narrow` (Home) |
 | `--home-card-min-w` | 280px | Home status card minimum width (`auto-fit` grid) |
-| `--home-tile-size` | 44px | Home recent pipeline tile |
-| `--home-when-w` | 96px | Home recent pipeline relative time column |
+| `--home-tile-size` | 44px | Home recent item tile |
+| `--home-when-w` | 96px | Home recent item relative time column |
 | `--dialog-w` | 420px | Dialog width |
 | `--toast-w` | 340px | Toast width |
 | `--tooltip-max-w` | 280px | Tooltip max width |
@@ -264,4 +264,4 @@ Layout (`_layout.scss`, stories in `angular/stories/layout/`):
 - Page: the page component host is the `.ds-page` (`host: { class: 'ds-page' }`), so `.ds-app-center > .ds-page` fills the center with `--color-background`.
 - Page title: `h1 dsPageTitle` gets `tabindex="-1"` and focus after navigation, without a focus ring.
 - Coming soon (`shell/coming-soon`): page toolbar + centered `.ds-area-state.coming-soon` (module icon, name, `clock` pill, description, release line, Back to Home).
-- Home (`features/home`, story `Pages/Home`): toolbar shortcuts, `.home-cards` (App data, AI backend, Running now), recent pipelines list `.home-recent-row` (tile tinted by `data-status`); each area has its own loading, error and empty state.
+- Home (`features/home`, story `Pages/Home`): toolbar shortcuts, `.home-cards` (App data, AI backend, Running now), recently opened novels list `.home-source-row`, and recent pipelines list `.home-recent-row` (tile tinted by `data-status`); each area has its own loading, error and empty state.

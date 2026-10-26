@@ -7,6 +7,9 @@ import { convertToParamMap } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { Router } from '@angular/router';
 import { DesktopApi } from '@core/desktop-api';
+import { AppInfoStore } from '@core/app-info';
+import { RecentNovelStore } from '@core/stores/recent-novel-store';
+import { signal } from '@angular/core';
 import { CodedError } from '@dreamer/shared/errors/app-error';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { LibraryChangedEvent } from '@dreamer/shared/models/novel';
@@ -128,6 +131,8 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
     providers: [
       provideRouter([]),
       { provide: DesktopApi, useValue: api },
+      { provide: AppInfoStore, useValue: { info: signal({ appDataDir: 'test-data' }) } },
+      { provide: RecentNovelStore, useValue: { record: vi.fn() } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -164,6 +169,7 @@ afterEach(() => {
 describe('NovelPage', () => {
   it('shows chapter one, its paragraphs, header, crumb, and Translate, Edit and Focus actions', async () => {
     const { fixture } = await createPage();
+    expect(TestBed.inject(RecentNovelStore).record).toHaveBeenCalledExactlyOnceWith(NOVEL.id);
     expect(TestBed.inject(PageCrumbService).detail()).toBe(NOVEL.title);
     expect(query(fixture, 'novel-page-title').textContent).toContain('0001 ·');
     const article: HTMLElement = query(fixture, 'novel-reader-article');
@@ -316,6 +322,7 @@ describe('NovelPage', () => {
     missing.fixture.destroy();
     TestBed.resetTestingModule();
     const failed = await createPage({ error: true });
+    expect(TestBed.inject(RecentNovelStore).record).not.toHaveBeenCalled();
     expect(query(failed.fixture, 'novel-page-error').textContent).toContain('Read failed');
     query(failed.fixture, 'novel-page-retry').click();
     await settle(failed.fixture);

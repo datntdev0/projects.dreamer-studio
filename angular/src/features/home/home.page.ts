@@ -11,11 +11,16 @@ import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { BackendState } from '@dreamer/shared/ipc/backend';
 import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
+import type { NovelSummary } from '@dreamer/shared/models/novel';
 import { AppInfoStore } from '@core/app-info';
 import { BackendStatus } from '@core/backend-status';
 import { DesktopApi } from '@core/desktop-api';
 import { LLM_SUMMARY_DOTS, LlmStore, type LlmCliSummary } from '@core/stores/llm-store';
 import { I18nService } from '@core/i18n/i18n.service';
+import { RecentNovelStore } from '@core/stores/recent-novel-store';
+import { LibraryStore } from '@core/stores/library-store';
+import { LibraryCoverComponent } from '../library/novel-list/library-cover.component';
+import { coverPalette, coverUrl } from '../library/library-format';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES, formatRunStep, type PipelineSlot } from '@core/slots';
 import { PageTitleDirective } from '@shell/page-title.directive';
@@ -44,6 +49,14 @@ interface RunningRow {
   run: PipelineRun;
   name: string;
   text: string;
+}
+
+interface NovelRow {
+  novel: NovelSummary;
+  when: string;
+  opened: string;
+  chapters: string;
+  translated: number;
 }
 
 const RECENT_LIMIT = 5;
@@ -82,6 +95,7 @@ const STATUS_VIEWS: Record<PipelineRunStatus, { label: string; pill: PillKind }>
     TooltipDirective,
     PageTitleDirective,
     TranslatePipe,
+    LibraryCoverComponent,
   ],
   templateUrl: './home.page.html',
   host: { class: 'ds-page', 'data-testid': 'home-page' },
@@ -95,6 +109,31 @@ export class HomePage {
   protected readonly appInfo: AppInfoStore = inject(AppInfoStore);
   protected readonly active: Signal<PipelineSlot> = inject(ACTIVE_PIPELINES);
   protected readonly recent: Signal<PipelineSlot> = inject(RECENT_PIPELINES);
+  protected readonly recentNovels = inject(RecentNovelStore);
+  protected readonly library = inject(LibraryStore);
+  protected readonly coverUrl = coverUrl;
+  protected readonly coverPalette = coverPalette;
+  protected readonly novelRows: Signal<NovelRow[]> = computed(() =>
+    this.recentNovels.entries().flatMap(({ id, openedAt }) => {
+      const novel = this.library.novels().find((item) => item.id === id);
+      return novel
+        ? [
+            {
+              novel,
+              when: formatRelative(openedAt, this.i18n.language()),
+              opened: formatDateTime(openedAt, this.i18n.language()),
+              chapters: new Intl.NumberFormat(this.i18n.language()).format(novel.chapterCount),
+              translated: Math.max(
+                0,
+                ...novel.translations.map((item) =>
+                  item.total ? Math.round((item.translated / item.total) * 100) : 0,
+                ),
+              ),
+            },
+          ]
+        : [];
+    }),
+  );
 
   protected readonly llm: LlmStore = inject(LlmStore);
   protected readonly llmView: Signal<BackendView> = computed(() => ({
@@ -131,6 +170,7 @@ export class HomePage {
 
   constructor() {
     void this.llm.load();
+    void this.library.load();
   }
 
   protected async openDataDir(path: string): Promise<void> {

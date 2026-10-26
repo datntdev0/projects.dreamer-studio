@@ -1,9 +1,6 @@
 <div class="ds-page-toolbar ds-world-toolbar">
   <h1 dsPageTitle>
     {{ 'analysis.page.title' | t }}
-    @if (store.novel(); as novel) {
-      <span class="ds-world-novel">&middot; {{ novel.title }}</span>
-    }
   </h1>
   <div class="ds-world-views" role="group" [attr.aria-label]="'analysis.page.views' | t">
     @for (view of views; track view) {

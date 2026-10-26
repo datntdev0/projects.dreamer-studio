@@ -29,6 +29,7 @@ export function createWindow(theme: Theme): BrowserWindow {
   });
   const devUrl: string | undefined = process.env.DREAMER_DEV_URL;
   secureWindow(window, devUrl ? new URL(devUrl).origin : appOrigin);
+  if (devUrl) window.webContents.openDevTools();
   window.once('ready-to-show', () => window.show());
   void window.loadURL(devUrl ?? `${appOrigin}/index.html`);
   return window;

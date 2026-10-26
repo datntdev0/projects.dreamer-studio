@@ -40,7 +40,7 @@ export class TopbarComponent {
   protected readonly appInfo: AppInfoStore = inject(AppInfoStore);
   protected readonly layout: LayoutService = inject(LayoutService);
   protected readonly crumb: PageCrumbService = inject(PageCrumbService);
-  protected readonly panelEdges: SplitterEdge[] = ['left', 'right', 'bottom'];
+  protected readonly panelEdges: SplitterEdge[] = ['left', 'bottom', 'right'];
   protected readonly groupTitles = GROUP_TITLES;
 
   private readonly title: Title = inject(Title);

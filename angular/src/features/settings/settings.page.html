@@ -39,8 +39,9 @@
         }
         @switch (section()) {
           @case ('llm') {
-            <div data-testid="settings-llm-pane">
+            <div class="settings-pane" data-testid="settings-llm-pane">
               <ds-settings-llm-providers />
+              <ds-settings-llm-features />
             </div>
           }
           @case ('diagnostics') {

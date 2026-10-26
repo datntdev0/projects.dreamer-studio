@@ -1,5 +1,5 @@
 import { DEFAULT_LANGUAGE, isLanguage, Language } from '../i18n/translate';
-import { DEFAULT_LLM_SETTINGS, LlmSettings, sanitizeLlmSettings } from './llm';
+import { defaultLlmSettings, LlmSettings, LlmSettingsPatch, sanitizeLlmSettings, validateLlmPatch } from './llm';
 import { isAbsolutePath, isPlainObject } from './validation';
 
 export { isAbsolutePath, isPlainObject } from './validation';
@@ -8,7 +8,7 @@ export type Theme = 'light' | 'dark';
 
 export type SettingsNotice = 'none' | 'invalidFields' | 'unreadable';
 
-export type SettingsSection = 'general' | 'pipeline' | 'reading';
+export type SettingsSection = 'general' | 'pipeline' | 'reading' | 'llm';
 
 export type ReadingFont = 'serif' | 'sans';
 
@@ -52,6 +52,7 @@ export interface SettingsPatch {
   theme?: Theme;
   pipelines?: PipelineSettings;
   reading?: ReadingSettings;
+  llm?: LlmSettingsPatch;
 }
 
 export interface SettingsState {
@@ -77,13 +78,13 @@ export function defaultSettings(appDataDir: string): AppSettings {
     appDataDir,
     pipelines: { maxConcurrent: MAX_CONCURRENT_MIN },
     reading: { ...DEFAULT_READING_SETTINGS },
-    llm: { paths: { ...DEFAULT_LLM_SETTINGS.paths } },
+    llm: defaultLlmSettings(),
   };
 }
 
 const THEMES: Theme[] = ['light', 'dark'];
 
-const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines', 'reading'];
+const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines', 'reading', 'llm'];
 const READING_KEYS: (keyof ReadingSettings)[] = ['font', 'size', 'leading', 'width'];
 
 function isTheme(value: unknown): value is Theme {
@@ -158,7 +159,7 @@ export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSet
       maxConcurrent: pick('pipelines.maxConcurrent', pipelines, isMaxConcurrent, defaults.pipelines.maxConcurrent),
     },
     reading,
-    llm: 'llm' in raw ? sanitizeLlmSettings(raw.llm, invalid) : { paths: {} },
+    llm: 'llm' in raw ? sanitizeLlmSettings(raw.llm, invalid) : defaultLlmSettings(),
   };
   return { settings, invalid };
 }
@@ -175,6 +176,10 @@ export function validateSettingsPatch(patch: unknown): string | null {
   }
   if ('language' in patch && !isLanguage(patch.language)) return 'language';
   if ('theme' in patch && !isTheme(patch.theme)) return 'theme';
+  if ('llm' in patch) {
+    const error: string | null = validateLlmPatch(patch.llm);
+    if (error !== null) return error;
+  }
   if (isPlainObject(pipelines) && !isMaxConcurrent(pipelines.maxConcurrent)) return 'pipelines.maxConcurrent';
   if ('reading' in patch) {
     if (!isPlainObject(patch.reading)) return 'reading';

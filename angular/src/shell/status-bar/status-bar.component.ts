@@ -6,6 +6,8 @@ import { IconComponent } from '@components/icon/icon.component';
 import { DotComponent } from '@components/status/dot.component';
 import { AppInfoStore } from '@core/app-info';
 import { BackendStatus } from '@core/backend-status';
+import { LLM_SUMMARY_DOTS, LlmStore, type LlmCliSummary } from '@core/stores/llm-store';
+import type { DotKind } from '@components/status/dot.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ACTIVE_PIPELINES, type PipelineSlot, formatRunStep } from '@core/slots';
@@ -13,6 +15,12 @@ import { ThemeService, type Theme } from '@core/theme/theme.service';
 import { runName } from '../../features/pipelines/run-status';
 
 const THEME_KEYS: Record<Theme, string> = { light: 'status.theme.light', dark: 'status.theme.dark' };
+
+const LLM_KEYS: Record<LlmCliSummary, string> = {
+  detecting: 'status.llm.detecting',
+  ready: 'status.llm.ready',
+  none: 'status.llm.none',
+};
 
 @Component({
   selector: 'footer[dsStatusBar]',
@@ -27,6 +35,12 @@ export class StatusBarComponent {
   private readonly i18n: I18nService = inject(I18nService);
   private readonly theme: Signal<Theme> = inject(ThemeService).theme;
   protected readonly backend: Signal<BackendState> = inject(BackendStatus).state;
+  private readonly llm: LlmStore = inject(LlmStore);
+  protected readonly llmSummary: Signal<LlmCliSummary> = this.llm.summary;
+  protected readonly llmDot: Signal<DotKind> = computed(() => LLM_SUMMARY_DOTS[this.llm.summary()]);
+  protected readonly llmText: Signal<string> = computed(() =>
+    this.i18n.t(LLM_KEYS[this.llm.summary()], { names: this.llm.installedNames() }),
+  );
 
   protected readonly dataDir = computed<string>(() => this.appInfo.info()?.appDataDir ?? '');
   protected readonly running = computed<PipelineRun[]>(() =>
@@ -50,6 +64,14 @@ export class StatusBarComponent {
   protected readonly langTheme = computed<string>(
     () => `${this.i18n.language().toUpperCase()} · ${this.i18n.t(THEME_KEYS[this.theme()])}`,
   );
+
+  constructor() {
+    void this.llm.load();
+  }
+
+  protected openLlmSettings(): void {
+    void this.router.navigateByUrl('/settings/llm');
+  }
 
   protected openPipelines(): void {
     const run = this.running()[0];

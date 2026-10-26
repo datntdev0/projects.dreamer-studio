@@ -1,6 +1,7 @@
 import { AppError, CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { LLM_CLI_IDS, LLM_TEST_TIMEOUT_MS, LlmCliId, LlmCliStatus, LlmPathRequest } from '@dreamer/shared/models/llm';
-import { LlmRunRequest, LlmRunResult, LlmTestResult } from '@dreamer/shared/models/llm';
+import { LlmFeatureId, LlmFeatureRunRequest, LlmResolution } from '@dreamer/shared/models/llm';
+import { LlmRunRequest, LlmRunResult, LlmTestResult, resolveLlm } from '@dreamer/shared/models/llm';
 import { isAbsolutePath } from '@dreamer/shared/models/validation';
 import { AppPaths } from '@storage/paths';
 import { createLogger, Logger } from '../../logging/logger';
@@ -126,6 +127,22 @@ export class LlmService {
       signal: options.signal,
       log: options.log,
     });
+  }
+
+  async runForFeature(
+    feature: LlmFeatureId,
+    request: LlmFeatureRunRequest,
+    options: { signal?: AbortSignal; log?: Logger } = {},
+  ): Promise<LlmRunResult> {
+    const resolution: LlmResolution = resolveLlm(this.settings.get().llm, feature, await this.status());
+    if (resolution.problem !== null || resolution.choice === null) {
+      throw new CodedError(
+        ErrorCode.LlmNotAvailable,
+        'No LLM is available for this feature.',
+        resolution.problem ?? 'noDefault',
+      );
+    }
+    return this.run({ ...request, cli: resolution.choice.cli, model: resolution.choice.model }, options);
   }
 
   onChanged(listener: (statuses: LlmCliStatus[]) => void): () => void {

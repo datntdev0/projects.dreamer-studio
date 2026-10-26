@@ -162,7 +162,7 @@ afterEach(() => {
 });
 
 describe('NovelPage', () => {
-  it('shows chapter one, its paragraphs, header, crumb, and only Edit and Focus actions', async () => {
+  it('shows chapter one, its paragraphs, header, crumb, and Translate, Edit and Focus actions', async () => {
     const { fixture } = await createPage();
     expect(TestBed.inject(PageCrumbService).detail()).toBe(NOVEL.title);
     expect(query(fixture, 'novel-page-title').textContent).toContain('0001 ·');
@@ -174,7 +174,7 @@ describe('NovelPage', () => {
       (Array.from(fixture.nativeElement.querySelectorAll('.ds-page-actions button')) as Element[]).map(
         (button: Element) => button.getAttribute('data-testid'),
       ),
-    ).toEqual(['novel-page-edit', 'novel-page-focus']);
+    ).toEqual(['translation-page-translate', 'novel-page-edit', 'novel-page-focus']);
     expect((query(fixture, 'novel-page-edit') as HTMLButtonElement).disabled).toBe(false);
     expect(rows(fixture).length).toBeLessThan(CHAPTERS.length);
     expect(rows(fixture)[0].dataset['position']).toBe('1');

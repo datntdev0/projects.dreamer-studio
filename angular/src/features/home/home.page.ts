@@ -14,6 +14,7 @@ import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipe
 import { AppInfoStore } from '@core/app-info';
 import { BackendStatus } from '@core/backend-status';
 import { DesktopApi } from '@core/desktop-api';
+import { LLM_SUMMARY_DOTS, LlmStore, type LlmCliSummary } from '@core/stores/llm-store';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ACTIVE_PIPELINES, RECENT_PIPELINES, formatRunStep, type PipelineSlot } from '@core/slots';
@@ -53,6 +54,12 @@ const BACKEND_VIEWS: Record<BackendState, BackendView> = {
   unavailable: { label: 'home.backend.failed', pill: 'warning', dot: 'warning' },
 };
 
+const LLM_VIEWS: Record<LlmCliSummary, { label: string; pill: PillKind }> = {
+  detecting: { label: 'home.llm.detecting', pill: 'info' },
+  ready: { label: 'home.llm.ready', pill: 'success' },
+  none: { label: 'home.llm.none', pill: 'warning' },
+};
+
 const STATUS_VIEWS: Record<PipelineRunStatus, { label: string; pill: PillKind }> = {
   queued: { label: 'run.queued', pill: 'neutral' },
   running: { label: 'run.running', pill: 'info' },
@@ -89,6 +96,12 @@ export class HomePage {
   protected readonly active: Signal<PipelineSlot> = inject(ACTIVE_PIPELINES);
   protected readonly recent: Signal<PipelineSlot> = inject(RECENT_PIPELINES);
 
+  protected readonly llm: LlmStore = inject(LlmStore);
+  protected readonly llmView: Signal<BackendView> = computed(() => ({
+    ...LLM_VIEWS[this.llm.summary()],
+    dot: LLM_SUMMARY_DOTS[this.llm.summary()],
+  }));
+
   protected readonly backendState: Signal<BackendState> = this.backendStatus.state;
   protected readonly backend: Signal<BackendView> = computed(() => BACKEND_VIEWS[this.backendStatus.state()]);
   protected readonly running: Signal<RunningRow[]> = computed(() =>
@@ -115,6 +128,10 @@ export class HomePage {
         label: STATUS_VIEWS[run.status].label,
       })),
   );
+
+  constructor() {
+    void this.llm.load();
+  }
 
   protected async openDataDir(path: string): Promise<void> {
     try {

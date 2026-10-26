@@ -60,6 +60,8 @@ describe('HomePage', () => {
               return () => undefined;
             },
             onAppDataChanged: () => () => undefined,
+            llmStatus: async () => [],
+            onLlmChanged: () => () => undefined,
           },
         },
         { provide: ACTIVE_PIPELINES, useValue: signal({ state: 'ready' as const, runs: [run('active', 'running')] }) },
@@ -96,6 +98,8 @@ describe('HomePage', () => {
               return () => undefined;
             },
             onAppDataChanged: () => () => undefined,
+            llmStatus: async () => [],
+            onLlmChanged: () => () => undefined,
           },
         },
         { provide: ACTIVE_PIPELINES, useValue: signal({ state: 'ready' as const, runs: [] }) },

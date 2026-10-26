@@ -1,8 +1,18 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
+import type { DotKind } from '@components/status/dot.component';
 import { ErrorCode, isAppError } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { LLM_CLIS } from '@dreamer/shared/models/llm';
 import type { LlmCliId, LlmCliStatus, LlmTestResult } from '@dreamer/shared/models/llm';
 import { DesktopApi } from '@core/desktop-api';
+
+export type LlmCliSummary = 'detecting' | 'ready' | 'none';
+
+export const LLM_SUMMARY_DOTS: Record<LlmCliSummary, DotKind> = {
+  detecting: 'primary',
+  ready: 'success',
+  none: 'warning',
+};
 
 interface CliTest {
   running: boolean;
@@ -18,10 +28,22 @@ export class LlmStore {
   readonly statuses = signal<LlmCliStatus[] | null>(null);
   readonly detecting = signal<boolean>(false);
   readonly tests = signal<Partial<Record<LlmCliId, CliTest>>>({});
+  readonly installed: Signal<LlmCliStatus[]> = computed(() =>
+    (this.statuses() ?? []).filter((cli: LlmCliStatus): boolean => cli.state === 'installed'),
+  );
+  readonly installedNames: Signal<string> = computed(() =>
+    this.installed()
+      .map((cli: LlmCliStatus): string => LLM_CLIS[cli.id].name)
+      .join(', '),
+  );
+  readonly summary: Signal<LlmCliSummary> = computed(() => {
+    if (this.statuses() === null || this.detecting()) return 'detecting';
+    return this.installed().length > 0 ? 'ready' : 'none';
+  });
 
   async load(): Promise<void> {
     this.unsubscribe ??= this.desktopApi.onLlmChanged((statuses: LlmCliStatus[]): void => this.accept(statuses));
-    if (this.statuses() !== null) return;
+    if (this.statuses() !== null || this.detecting()) return;
     this.detecting.set(true);
     try {
       const statuses: LlmCliStatus[] | null = await this.desktopApi.llmStatus();

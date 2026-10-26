@@ -81,7 +81,7 @@ export class SettingsStore {
     if (field !== null) {
       throw new CodedError(ErrorCode.SettingsInvalid, `Invalid settings patch: ${field}`, field);
     }
-    return this.commit({ ...this.settings, ...patch });
+    return this.commit({ ...this.settings, ...patch, llm: { ...this.settings.llm, ...patch.llm } });
   }
 
   setLlmPath(cli: LlmCliId, path: string | null): AppSettings {
@@ -91,7 +91,7 @@ export class SettingsStore {
     } else {
       paths[cli] = path;
     }
-    return this.commit({ ...this.settings, llm: { paths } });
+    return this.commit({ ...this.settings, llm: { ...this.settings.llm, paths } });
   }
 
   reset(section: SettingsSection): AppSettings {
@@ -101,6 +101,9 @@ export class SettingsStore {
     }
     if (section === 'reading') {
       return this.commit({ ...this.settings, reading: defaults.reading });
+    }
+    if (section === 'llm') {
+      return this.commit({ ...this.settings, llm: { ...this.settings.llm, features: {} } });
     }
     return this.commit({ ...this.settings, pipelines: defaults.pipelines });
   }

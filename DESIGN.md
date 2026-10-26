@@ -239,6 +239,7 @@ Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in
 | --- | --- | --- |
 | Button | `<button dsBtn variant size iconOnly loading>` | `.ds-btn` + `primary`, `ghost`, `danger`, `danger-solid`, `sm`, `lg`, `icon-only` |
 | Input / select | native elements in `<ds-field label hint error required span>` | `.ds-input` (`.mono`), `span.ds-select > select.ds-input + ds-icon` |
+| Combobox | `<ds-combobox inputId [value] [options] mono toggleLabel testId (committed)>`; `revert()` | `role="combobox"` input + chevron toggle, full suggestion list (`--shadow-2`), arrows / Enter / Esc, commit on Enter, blur or pick |
 | Segmented, checkbox | `<ds-segmented [options] [(value)]>`, `<ds-checkbox [(checked)]>` | radio-group with arrow keys |
 | Form grid | 2 columns when the grid is 760px or wider, 1 below; long fields `span="full"` | `.ds-form-grid > .ds-form-grid-fields` (container query) |
 | Card | `<ds-card icon heading interactive>`, right slot `[dsCardEnd]` | `.ds-card`, `.interactive` = button role, hover border, focus ring |

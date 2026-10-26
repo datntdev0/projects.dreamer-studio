@@ -16,7 +16,7 @@
 .llm-features-row {
   scroll-margin-top: var(--sp-xl);
 
-  &[data-state='warning'] .llm-features-cli select {
+  &[data-state='warning'] .llm-features-cli .ds-input {
     border-color: var(--color-warning);
   }
 }

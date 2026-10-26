@@ -97,6 +97,10 @@
   container-type: inline-size;
 }
 
+.settings-pane {
+  display: contents;
+}
+
 .settings-section {
   display: grid;
   align-content: start;

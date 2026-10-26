@@ -1,0 +1,126 @@
+<section
+  id="settings-llm-features"
+  class="settings-section llm-features"
+  aria-labelledby="settings-llm-features-title"
+  data-testid="settings-llm-features"
+>
+  <header class="settings-section-head">
+    <h3 id="settings-llm-features-title" tabindex="-1">{{ 'settings.llm.features.title' | t }}</h3>
+    <div class="settings-section-actions">
+      <button dsBtn variant="ghost" size="sm" type="button" data-testid="settings-llm-features-reset" (click)="reset()">
+        <ds-icon name="undo" size="sm" />{{ 'settings.page.reset' | t }}
+      </button>
+    </div>
+  </header>
+  @if (noCliInstalled()) {
+    <ds-banner
+      class="llm-features-notice"
+      variant="info"
+      [dismissible]="false"
+      [heading]="'settings.llm.features.noCli.title' | t"
+      [message]="'settings.llm.features.noCli.message' | t"
+      [dismissLabel]="'common.dismiss' | t"
+      data-testid="settings-llm-features-no-cli"
+    >
+      <button dsBtn size="sm" type="button" data-testid="settings-llm-features-no-cli-open" (click)="openProviders()">
+        <ds-icon name="arrow-up" size="sm" />{{ 'settings.llm.features.openProviders' | t }}
+      </button>
+    </ds-banner>
+  }
+  <div class="settings-group">
+    <ng-container *ngTemplateOutlet="row; context: { $implicit: defaultSlot() }" />
+  </div>
+  <div class="settings-group">
+    <h4>{{ 'settings.llm.features.perFeature' | t }}</h4>
+    @for (slot of featureSlots(); track slot.key) {
+      <ng-container *ngTemplateOutlet="row; context: { $implicit: slot }" />
+    }
+  </div>
+</section>
+
+<ng-template #row let-slot>
+  <div
+    class="settings-row llm-features-row"
+    [id]="'settings-llm-feature-' + slot.key"
+    [attr.data-state]="slot.problem ? 'warning' : null"
+    [attr.data-testid]="'settings-llm-feature-' + slot.key"
+  >
+    <div class="settings-row-text">
+      <label class="settings-row-label" [for]="'settings-llm-feature-' + slot.key + '-cli'">
+        {{ prefix + 'slot.' + slot.key | t }}
+      </label>
+      <span class="settings-row-hint" [id]="'settings-llm-feature-' + slot.key + '-hint'">
+        {{ prefix + 'slot.' + slot.key + 'Hint' | t }}
+      </span>
+      @if (slot.key !== 'default' && !slot.choice) {
+        <span class="settings-row-hint" [attr.data-testid]="'settings-llm-feature-' + slot.key + '-inherited'">
+          @if (slot.inherited; as llm) {
+            {{ 'settings.llm.features.usesDefault' | t: { llm: describe(llm) } }}
+          } @else {
+            {{ 'settings.llm.features.noDefaultYet' | t }}
+          }
+        </span>
+      }
+      @if (slot.problem; as problem) {
+        <span
+          class="llm-features-warning"
+          [id]="'settings-llm-feature-' + slot.key + '-warning'"
+          [attr.data-testid]="'settings-llm-feature-' + slot.key + '-warning'"
+        >
+          <ds-icon name="alert-triangle" size="sm" />
+          <span>
+            {{ prefix + 'problem.' + problem.key | t: { cli: problem.cli } }}
+            @if (problem.showLink) {
+              <button
+                type="button"
+                class="llm-features-link"
+                [attr.data-testid]="'settings-llm-feature-' + slot.key + '-open-providers'"
+                (click)="openProviders()"
+              >
+                {{ 'settings.llm.features.openProviders' | t }}
+              </button>
+            }
+          </span>
+        </span>
+      }
+    </div>
+    <div class="settings-row-control llm-features-control">
+      <span class="ds-select llm-features-cli">
+        <select
+          class="ds-input"
+          [id]="'settings-llm-feature-' + slot.key + '-cli'"
+          [disabled]="slot.selectDisabled"
+          [attr.aria-describedby]="describedBy(slot)"
+          [attr.data-testid]="'settings-llm-feature-' + slot.key + '-cli'"
+          (change)="setCli(slot, $event)"
+        >
+          @for (option of slot.options; track option.value) {
+            <option
+              [value]="option.value"
+              [disabled]="option.disabled"
+              [selected]="option.value === (slot.choice?.cli ?? '')"
+            >
+              {{ option.label }}
+            </option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
+      <ds-combobox
+        #modelField
+        class="llm-features-model"
+        [inputId]="'settings-llm-feature-' + slot.key + '-model'"
+        [testId]="'settings-llm-feature-' + slot.key + '-model'"
+        [value]="(slot.choice ?? slot.inherited)?.model ?? ''"
+        [options]="slot.suggestions"
+        [disabled]="!slot.choice"
+        [mono]="true"
+        [placeholder]="'settings.llm.features.cliDefault' | t"
+        [ariaLabel]="'settings.llm.features.modelLabel' | t: { name: prefix + 'slot.' + slot.key | t }"
+        [describedBy]="describedBy(slot)"
+        [toggleLabel]="'settings.llm.features.showModels' | t"
+        (committed)="setModel(slot, $event, modelField)"
+      />
+    </div>
+  </div>
+</ng-template>

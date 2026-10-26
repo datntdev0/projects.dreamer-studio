@@ -12,6 +12,7 @@ import { PageTitleDirective } from '@shell/page-title.directive';
 import { AboutSectionComponent } from './components/about-section.component';
 import { DiagnosticsSectionComponent } from './components/diagnostics-section.component';
 import { GeneralSectionComponent } from './components/general-section.component';
+import { LlmFeaturesSectionComponent } from './components/llm-features-section.component';
 import { LlmProvidersSectionComponent } from './components/llm-providers-section.component';
 import { PipelineSectionComponent } from './components/pipeline-section.component';
 import { StorageSectionComponent } from './components/storage-section.component';
@@ -49,6 +50,7 @@ function toSection(id: string | null): SettingsPane {
     DiagnosticsSectionComponent,
     GeneralSectionComponent,
     IconComponent,
+    LlmFeaturesSectionComponent,
     LlmProvidersSectionComponent,
     PageTitleDirective,
     PipelineSectionComponent,

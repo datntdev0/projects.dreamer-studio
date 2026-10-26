@@ -142,11 +142,76 @@ describe('SettingsStore', () => {
       expect(readFile()).toEqual(expected);
     });
 
+    it('updates LLM choices without losing paths and reloads them from disk', () => {
+      store.setLlmPath('claude', 'C:\\claude.exe');
+      const result: AppSettings = store.update({
+        llm: {
+          default: { cli: 'claude', model: 'claude-sonnet-5-5' },
+          features: { worldAnalysis: { cli: 'codex', model: null } },
+        },
+      });
+      expect(result.llm).toEqual({
+        paths: { claude: 'C:\\claude.exe' },
+        default: { cli: 'claude', model: 'claude-sonnet-5-5' },
+        features: { worldAnalysis: { cli: 'codex', model: null } },
+      });
+      const reloaded: SettingsStore = new SettingsStore(file, defaultDir);
+      expect(reloaded.load()).toEqual({ notice: 'none', invalid: [] });
+      expect(reloaded.get().llm).toEqual(result.llm);
+    });
+
+    it('replaces the feature map while preserving the default choice', () => {
+      store.update({
+        llm: { default: { cli: 'claude', model: null }, features: { worldAnalysis: { cli: 'codex', model: null } } },
+      });
+      const result: AppSettings = store.update({
+        llm: { features: { contentTranslation: { cli: 'antigravity', model: 'gemini-3-pro' } } },
+      });
+      expect(result.llm).toEqual({
+        paths: {},
+        default: { cli: 'claude', model: null },
+        features: { contentTranslation: { cli: 'antigravity', model: 'gemini-3-pro' } },
+      });
+    });
+
+    it('keeps the default and features when changing or clearing a CLI path', () => {
+      store.update({
+        llm: {
+          default: { cli: 'claude', model: null },
+          features: { worldAnalysis: { cli: 'codex', model: 'gpt-5.5' } },
+        },
+      });
+      store.setLlmPath('claude', 'C:\\claude.exe');
+      expect(store.get().llm.paths).toEqual({ claude: 'C:\\claude.exe' });
+      store.setLlmPath('claude', null);
+      expect(store.get().llm).toEqual({
+        paths: {},
+        default: { cli: 'claude', model: null },
+        features: { worldAnalysis: { cli: 'codex', model: 'gpt-5.5' } },
+      });
+      expect(readFile().llm).toEqual(store.get().llm);
+    });
+
+    it('resets LLM features while keeping the default and paths', () => {
+      store.setLlmPath('claude', 'C:\\claude.exe');
+      store.update({
+        llm: { default: { cli: 'claude', model: null }, features: { worldAnalysis: { cli: 'codex', model: null } } },
+      });
+      const result: AppSettings = store.reset('llm');
+      expect(result.llm).toEqual({
+        paths: { claude: 'C:\\claude.exe' },
+        default: { cli: 'claude', model: null },
+        features: {},
+      });
+      expect(readFile().llm).toEqual(result.llm);
+    });
+
     it.each([
       ['patch', {}],
       ['patch', { appDataDir: 'D:\\x' }],
       ['theme', { theme: 'blue' }],
       ['pipelines.maxConcurrent', { pipelines: { maxConcurrent: 9 } }],
+      ['patch', { llm: { paths: {} } }],
     ])('rejects the invalid patch (%s) %j and changes nothing', (field: string, patch: unknown) => {
       const listener = vi.fn();
       store.onChange(listener);

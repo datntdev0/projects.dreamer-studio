@@ -257,13 +257,18 @@ function fakeRunDiagnostics(scenario: DiagnosticsScenario): Promise<DiagnosticsR
 
 export type FakeSettingsApi = Pick<DesktopApi, 'settings' | 'updateSettings' | 'resetSettings' | 'onSettingsChanged'>;
 
-export function fakeSettingsApi(): FakeSettingsApi {
-  let current: AppSettings = defaultSettings(APP_INFO.appDataDir);
+export function fakeSettingsApi(initial: Partial<AppSettings> = {}): FakeSettingsApi {
+  const defaults: AppSettings = defaultSettings(APP_INFO.appDataDir);
+  let current: AppSettings = { ...defaults, ...initial, llm: { ...defaults.llm, ...initial.llm } };
   return {
     settings: (): Promise<SettingsState | null> =>
       Promise.resolve({ settings: current, defaultAppDataDir: APP_INFO.appDataDir, notice: 'none' }),
     updateSettings: (patch: SettingsPatch): Promise<AppSettings | null> => {
-      current = { ...current, ...patch };
+      current = {
+        ...current,
+        ...patch,
+        llm: { ...current.llm, ...patch.llm },
+      };
       return Promise.resolve(current);
     },
     resetSettings: (section: SettingsSection): Promise<AppSettings | null> => {
@@ -273,7 +278,9 @@ export function fakeSettingsApi(): FakeSettingsApi {
           ? { ...current, language: defaults.language, theme: defaults.theme }
           : section === 'reading'
             ? { ...current, reading: defaults.reading }
-            : { ...current, pipelines: defaults.pipelines };
+            : section === 'llm'
+              ? { ...current, llm: { ...current.llm, features: {} } }
+              : { ...current, pipelines: defaults.pipelines };
       return Promise.resolve(current);
     },
     onSettingsChanged: (): (() => void) => () => undefined,
@@ -300,7 +307,6 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
       return () => undefined;
     },
     backendStatus: (): Promise<BackendStatus | null> => Promise.resolve(fakeBackendStatus(fixture.backend)),
-    writeLog: (): void => undefined,
     pickAppDataFolder: (): Promise<string | null> => Promise.resolve(null),
     inspectAppData: (): Promise<AppDataCandidate | null> => Promise.resolve(null),
     switchAppData: (): Promise<AppInfo | null> => Promise.resolve(null),
@@ -326,6 +332,7 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     openNovelFolder: (): Promise<void> => Promise.resolve(),
     onLibraryChanged: (): (() => void) => () => undefined,
     ...fakeSettingsApi(),
+    ...fakeLlmApi('mixed'),
   };
   return { provide: DesktopApi, useValue: api };
 }

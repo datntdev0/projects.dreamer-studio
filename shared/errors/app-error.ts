@@ -19,6 +19,7 @@ export const ErrorCode = {
   LlmTimeout: 'LLM_TIMEOUT',
   LlmCliFailed: 'LLM_CLI_FAILED',
   LlmBadOutput: 'LLM_BAD_OUTPUT',
+  LlmNotAvailable: 'LLM_NOT_AVAILABLE',
   PackageUnreadable: 'PACKAGE_UNREADABLE',
   PackageChanged: 'PACKAGE_CHANGED',
   LibraryWriteFailed: 'LIBRARY_WRITE_FAILED',

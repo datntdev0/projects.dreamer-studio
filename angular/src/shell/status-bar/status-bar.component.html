@@ -14,6 +14,17 @@
   <ds-dot [kind]="running().length ? 'primary' : 'neutral'" [pulse]="running().length > 0" />
   <span>{{ pipelineText() }}</span>
 </button>
+<button
+  class="item"
+  type="button"
+  data-testid="status-llm"
+  [attr.aria-label]="'status.llm.aria' | t: { status: llmText() }"
+  [attr.data-state]="llmSummary()"
+  (click)="openLlmSettings()"
+>
+  <ds-dot [kind]="llmDot()" [pulse]="llmSummary() === 'detecting'" />
+  <span>{{ llmText() }}</span>
+</button>
 @if (backend() !== 'running') {
   <span class="item" data-testid="status-backend" [attr.data-state]="backend()">
     <ds-dot kind="warning" [pulse]="backend() === 'starting'" />

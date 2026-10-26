@@ -1,0 +1,63 @@
+<div class="ds-combobox">
+  <input
+    #inputElement
+    class="ds-input"
+    [class.mono]="mono()"
+    [id]="inputId()"
+    [value]="draft()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel()"
+    [attr.aria-describedby]="describedBy()"
+    [attr.aria-controls]="options().length ? listId() : null"
+    [attr.aria-expanded]="open()"
+    [attr.aria-activedescendant]="activeDescendant()"
+    [attr.data-testid]="testId() + '-input'"
+    role="combobox"
+    aria-autocomplete="none"
+    type="text"
+    (input)="onInput(inputElement.value)"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  />
+  @if (options().length) {
+    <button
+      class="ds-combobox-toggle"
+      type="button"
+      tabindex="-1"
+      [disabled]="disabled()"
+      [attr.aria-label]="toggleLabel()"
+      [attr.data-testid]="testId() + '-toggle'"
+      (mousedown)="keepFocus($event)"
+      (click)="toggleList()"
+    >
+      <ds-icon name="chevron-down" size="sm" />
+    </button>
+    <div
+      class="ds-combobox-list"
+      role="listbox"
+      [id]="listId()"
+      [hidden]="!open()"
+      [attr.data-testid]="testId() + '-list'"
+    >
+      @for (option of options(); track $index) {
+        <div
+          #optionElement
+          class="ds-combobox-option"
+          role="option"
+          [id]="optionId($index)"
+          [class.is-active]="activeIndex() === $index"
+          [attr.aria-selected]="draft() === option"
+          [attr.data-testid]="testId() + '-option'"
+          (mousedown)="keepFocus($event)"
+          (click)="pick($index)"
+        >
+          <span>{{ option }}</span>
+          @if (draft() === option) {
+            <ds-icon name="check" size="sm" />
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

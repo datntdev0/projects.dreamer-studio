@@ -57,7 +57,7 @@
       </ds-card>
 
       <ds-card icon="terminal" [heading]="'home.backend.title' | t" data-testid="home-card-backend">
-        <a dsCardEnd class="home-link" routerLink="/settings">{{ 'nav.settings' | t }}</a>
+        <a dsCardEnd class="home-link" routerLink="/settings/llm">{{ 'nav.settings' | t }}</a>
         <div class="home-status-row">
           <span class="home-status-name">
             <ds-dot [kind]="backend().dot" [pulse]="backendState() === 'starting'" />
@@ -68,6 +68,18 @@
           </span>
           <ds-pill [kind]="backend().pill" data-testid="home-backend-state" [attr.data-state]="backendState()">{{
             backend().label | t
+          }}</ds-pill>
+        </div>
+        <div class="home-status-row" data-testid="home-llm">
+          <span class="home-status-name">
+            <ds-dot [kind]="llmView().dot" [pulse]="llm.summary() === 'detecting'" />
+            {{ 'home.llm.name' | t }}
+            @if (llm.summary() === 'ready') {
+              <span class="meta">{{ llm.installedNames() }}</span>
+            }
+          </span>
+          <ds-pill [kind]="llmView().pill" data-testid="home-llm-state" [attr.data-state]="llm.summary()">{{
+            llmView().label | t: { count: llm.installed().length }
           }}</ds-pill>
         </div>
         <span class="meta">{{ 'home.backend.hint' | t }}</span>

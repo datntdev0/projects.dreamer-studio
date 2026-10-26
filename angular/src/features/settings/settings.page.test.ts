@@ -49,6 +49,7 @@ class SettingsStoreStub {
       ...current.settings,
       ...patch,
       pipelines: patch.pipelines ?? current.settings.pipelines,
+      llm: { ...current.settings.llm, ...patch.llm },
     };
     this.state.set({ ...current, settings });
     return true;

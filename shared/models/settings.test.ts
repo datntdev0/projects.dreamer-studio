@@ -13,7 +13,7 @@ describe('sanitizeSettings', () => {
       appDataDir: 'D:\\studio',
       pipelines: { maxConcurrent: 3 },
       reading: { font: 'sans', size: 22, leading: 1.8, width: 80 },
-      llm: { paths: {} },
+      llm: { paths: {}, default: null, features: {} },
     };
     expect(sanitizeSettings(valid, defaultDir)).toEqual({ settings: valid, invalid: [] });
   });
@@ -55,6 +55,17 @@ describe('sanitizeSettings', () => {
     delete raw.reading;
     const result = sanitizeSettings(raw, defaultDir);
     expect(result.settings.reading).toEqual(DEFAULT_READING_SETTINGS);
+    expect(result.invalid).toEqual([]);
+  });
+
+  it('loads a REQ-027 LLM block with only paths without a notice', () => {
+    const raw: AppSettings = {
+      ...defaultSettings(defaultDir),
+      llm: { paths: { claude: 'C:\\cli.exe' }, default: null, features: {} },
+    };
+    const old: Record<string, unknown> = { ...raw, llm: { paths: raw.llm.paths } };
+    const result = sanitizeSettings(old, defaultDir);
+    expect(result.settings).toEqual(raw);
     expect(result.invalid).toEqual([]);
   });
 
@@ -109,6 +120,8 @@ describe('validateSettingsPatch', () => {
     [{ language: 'en', theme: 'light', pipelines: { maxConcurrent: 3 } }],
     [{ reading: DEFAULT_READING_SETTINGS }],
     [{ reading: { font: 'sans', size: 28, leading: 2.2, width: 96 } }],
+    [{ llm: { default: null } }],
+    [{ llm: { features: { worldAnalysis: { cli: 'claude', model: null } } } }],
   ])('accepts %j', (patch: unknown) => {
     expect(validateSettingsPatch(patch)).toBeNull();
   });
@@ -142,6 +155,8 @@ describe('validateSettingsPatch', () => {
     ['reading.size', { reading: { ...DEFAULT_READING_SETTINGS, size: 18.5 } }],
     ['reading.leading', { reading: { ...DEFAULT_READING_SETTINGS, leading: 1.76 } }],
     ['reading.width', { reading: { ...DEFAULT_READING_SETTINGS, width: 49 } }],
+    ['patch', { llm: { paths: {} } }],
+    ['llm.model', { llm: { default: { cli: 'claude', model: 'bad model' } } }],
   ])('reports %s for %j', (field: string, patch: unknown) => {
     expect(validateSettingsPatch(patch)).toBe(field);
   });

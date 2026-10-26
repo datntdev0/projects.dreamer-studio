@@ -67,10 +67,7 @@ export class LlmProvidersSectionComponent implements OnInit {
   protected readonly pathError = signal<PathError | null>(null);
   protected readonly checkingPath = signal<boolean>(false);
 
-  protected readonly noneInstalled: Signal<boolean> = computed(() => {
-    const statuses: LlmCliStatus[] | null = this.store.statuses();
-    return statuses !== null && !this.store.detecting() && statuses.every((cli) => cli.state !== 'installed');
-  });
+  protected readonly noneInstalled: Signal<boolean> = computed(() => this.store.summary() === 'none');
 
   protected readonly rows: Signal<CliRow[]> = computed(() =>
     LLM_CLI_IDS.map((id: LlmCliId): CliRow => {

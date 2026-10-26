@@ -82,6 +82,7 @@ class SettingsStoryStore {
       ...current.settings,
       ...patch,
       pipelines: patch.pipelines ?? current.settings.pipelines,
+      llm: { ...current.settings.llm, ...patch.llm },
     };
     this.state.set({ ...current, settings });
     this.apply(settings);
@@ -95,7 +96,9 @@ class SettingsStoryStore {
     const settings: AppSettings =
       section === 'general'
         ? { ...current.settings, language: defaults.language, theme: defaults.theme }
-        : { ...current.settings, pipelines: defaults.pipelines };
+        : section === 'llm'
+          ? { ...current.settings, llm: { ...current.settings.llm, features: {} } }
+          : { ...current.settings, pipelines: defaults.pipelines };
     this.state.set({ ...current, settings });
     this.apply(settings);
     return true;

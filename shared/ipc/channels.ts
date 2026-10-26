@@ -26,6 +26,15 @@ export const SettingsChannel = {
   Changed: 'settings:changed',
 } as const;
 
+export const LlmChannel = {
+  Status: 'llm:status',
+  Detect: 'llm:detect',
+  Test: 'llm:test',
+  PickPath: 'llm:pick-path',
+  SetPath: 'llm:set-path',
+  Changed: 'llm:changed',
+} as const;
+
 export const AppDataChannel = {
   PickFolder: 'app-data:pick-folder',
   Inspect: 'app-data:inspect',

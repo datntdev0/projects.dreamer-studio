@@ -28,6 +28,7 @@ describe('resolveAppPaths', () => {
       logs: join(root, 'logs'),
       pipelineLogs: join(root, 'logs', 'pipelines'),
       cache: join(root, 'cache'),
+      llmCache: join(root, 'cache', 'llm'),
     });
   });
 
@@ -55,6 +56,7 @@ describe('ensureFolders', () => {
     expect(existsSync(paths.library)).toBe(true);
     expect(existsSync(paths.logs)).toBe(true);
     expect(existsSync(paths.cache)).toBe(true);
+    expect(existsSync(paths.llmCache)).toBe(false);
   });
 
   it('recreates a missing folder and keeps existing files', () => {

@@ -6,6 +6,7 @@ import type { AboutLink } from '@dreamer/shared/models/about';
 import type { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import type { AppError } from '@dreamer/shared/errors/app-error';
 import type { LogEntry } from '@dreamer/shared/ipc/log';
+import type { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
 import type { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import type { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import type { ChapterChangeRequest, ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
@@ -98,6 +99,30 @@ export class DesktopApi {
 
   onSettingsChanged(listener: (settings: AppSettings) => void): () => void {
     return window.dreamer ? window.dreamer.settings.onChanged(listener) : () => undefined;
+  }
+
+  async llmStatus(): Promise<LlmCliStatus[] | null> {
+    return window.dreamer ? window.dreamer.llm.status() : null;
+  }
+
+  async detectLlm(): Promise<LlmCliStatus[] | null> {
+    return window.dreamer ? window.dreamer.llm.detect() : null;
+  }
+
+  async testLlm(cli: LlmCliId): Promise<LlmTestResult | null> {
+    return window.dreamer ? window.dreamer.llm.test(cli) : null;
+  }
+
+  async pickLlmPath(cli: LlmCliId): Promise<string | null> {
+    return window.dreamer ? window.dreamer.llm.pickPath(cli) : null;
+  }
+
+  async setLlmPath(request: LlmPathRequest): Promise<LlmCliStatus | null> {
+    return window.dreamer ? window.dreamer.llm.setPath(request) : null;
+  }
+
+  onLlmChanged(listener: (statuses: LlmCliStatus[]) => void): () => void {
+    return window.dreamer ? window.dreamer.llm.onChanged(listener) : () => undefined;
   }
 
   async pickAppDataFolder(): Promise<string | null> {

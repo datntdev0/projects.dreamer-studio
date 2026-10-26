@@ -1,0 +1,263 @@
+<section
+  class="settings-section llm-providers"
+  aria-labelledby="settings-llm-providers-title"
+  id="settings-llm-providers"
+  data-testid="settings-llm-providers"
+  [attr.aria-busy]="store.detecting()"
+>
+  <header class="settings-section-head">
+    <h3 id="settings-llm-providers-title">{{ 'settings.llm.providers.title' | t }}</h3>
+    <div class="settings-section-actions">
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="settings-llm-providers-detect"
+        [loading]="store.detecting()"
+        (click)="detect()"
+      >
+        @if (store.detecting()) {
+          {{ 'settings.llm.providers.detecting' | t }}
+        } @else {
+          <ds-icon name="retry" size="sm" />{{ 'settings.llm.providers.detect' | t }}
+        }
+      </button>
+    </div>
+  </header>
+
+  <p class="llm-providers-note" data-testid="settings-llm-providers-sandbox">
+    <ds-icon name="shield" size="sm" />{{ 'settings.llm.providers.sandboxHint' | t }}
+  </p>
+
+  @if (noneInstalled()) {
+    <div class="llm-providers-banner" data-testid="settings-llm-providers-none">
+      <ds-banner
+        variant="warning"
+        [dismissible]="false"
+        [heading]="'settings.llm.providers.none.title' | t"
+        [message]="'settings.llm.providers.none.message' | t"
+        [dismissLabel]="'common.dismiss' | t"
+      />
+    </div>
+  }
+
+  <div class="settings-group">
+    <h4>{{ 'settings.llm.providers.cliGroup' | t }}</h4>
+    @for (row of rows(); track row.cli.id) {
+      @let cli = row.cli;
+      <div
+        class="settings-row llm-providers-cli"
+        data-testid="settings-llm-cli"
+        [attr.data-cli]="cli.id"
+        [attr.data-state]="cli.state"
+        [attr.data-test-state]="row.testState"
+      >
+        <ds-icon class="llm-providers-icon" name="terminal" />
+        <div class="settings-row-text">
+          <span class="llm-providers-cli-head">
+            <span class="settings-row-label" data-testid="settings-llm-cli-name">{{ info(cli.id).name }}</span>
+            <ds-pill data-testid="settings-llm-cli-state" [kind]="row.pill.kind" [icon]="row.pill.icon">
+              {{ row.pill.label | t }}
+            </ds-pill>
+            @if (cli.version && !store.detecting()) {
+              <span class="meta num" data-testid="settings-llm-cli-version">
+                {{ 'settings.llm.providers.version' | t: { version: cli.version } }}
+              </span>
+            }
+          </span>
+
+          @if (cli.path) {
+            <span class="llm-providers-path-line">
+              <code
+                class="llm-providers-path"
+                data-testid="settings-llm-cli-path"
+                dsTooltipWhenTruncated
+                [dsTooltip]="cli.path"
+                >{{ cli.path }}</code
+              >
+              <span class="settings-row-hint" data-testid="settings-llm-cli-path-source">
+                {{ (cli.customPath ? 'settings.llm.providers.path.custom' : 'settings.llm.providers.path.auto') | t }}
+              </span>
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="settings-llm-cli-change-path"
+                [iconOnly]="true"
+                [disabled]="store.detecting()"
+                [attr.aria-label]="('settings.llm.providers.changePath' | t) + ' · ' + info(cli.id).name"
+                [dsTooltip]="'settings.llm.providers.changePath' | t"
+                (click)="openPathDialog(cli)"
+              >
+                <ds-icon name="pencil" size="sm" />
+              </button>
+              @if (cli.customPath) {
+                <button
+                  dsBtn
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  data-testid="settings-llm-cli-clear-path"
+                  [iconOnly]="true"
+                  [disabled]="store.detecting()"
+                  [attr.aria-label]="('settings.llm.providers.clearPath' | t) + ' · ' + info(cli.id).name"
+                  [dsTooltip]="'settings.llm.providers.clearPath' | t"
+                  (click)="clearPath(cli.id)"
+                >
+                  <ds-icon name="undo" size="sm" />
+                </button>
+              }
+            </span>
+          } @else {
+            <span class="settings-row-hint" data-testid="settings-llm-cli-not-found">
+              {{ 'settings.llm.providers.notFound' | t }}
+            </span>
+          }
+
+          <div class="llm-providers-result" role="status" data-testid="settings-llm-cli-result">
+            @if (row.testState === 'running') {
+              <span class="visually-hidden">{{ 'settings.llm.providers.testing' | t }}</span>
+            } @else if (row.testedIn) {
+              <span class="llm-providers-ok" data-testid="settings-llm-cli-test-ok">
+                <ds-icon name="check" size="sm" />{{ 'settings.llm.providers.testOk' | t: { seconds: row.testedIn } }}
+              </span>
+            } @else if (row.problem; as problem) {
+              <p class="llm-providers-error" data-testid="settings-llm-cli-error" [attr.data-code]="problem.code">
+                <ds-icon name="alert-circle" size="sm" />
+                <span>
+                  @if (problem.failedAfter) {
+                    <b>{{ 'settings.llm.providers.testFailed' | t: { seconds: problem.failedAfter } }}</b>
+                    ·
+                  }
+                  {{ 'errors.' + problem.code + '.message' | t: problem.params }}
+                </span>
+              </p>
+              <p class="llm-providers-fix" data-testid="settings-llm-cli-fix">
+                <b>{{ 'settings.llm.providers.fixLabel' | t }}</b>
+                {{ 'errors.' + problem.code + '.fix' | t: problem.params }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="settings-row-control">
+          @if (cli.state === 'installed') {
+            <button
+              dsBtn
+              size="sm"
+              type="button"
+              data-testid="settings-llm-cli-test"
+              [loading]="row.testState === 'running'"
+              [disabled]="store.detecting()"
+              [dsTooltip]="'settings.llm.providers.testHint' | t: { name: info(cli.id).name }"
+              (click)="test(cli.id)"
+            >
+              @if (row.testState === 'running') {
+                {{ 'settings.llm.providers.testing' | t }}
+              } @else {
+                <ds-icon name="play" size="sm" />{{ 'settings.llm.providers.test' | t }}
+              }
+            </button>
+          } @else if (!cli.path) {
+            <button
+              dsBtn
+              size="sm"
+              type="button"
+              data-testid="settings-llm-cli-set-path"
+              [disabled]="store.detecting()"
+              (click)="openPathDialog(cli)"
+            >
+              <ds-icon name="folder" size="sm" />{{ 'settings.llm.providers.setPath' | t }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="settings-group llm-providers-cloud" data-testid="settings-llm-providers-cloud">
+    <h4>{{ 'settings.llm.providers.cloudGroup' | t }}</h4>
+    <span class="settings-row-hint llm-providers-cloud-hint">{{ 'settings.llm.providers.cloudHint' | t }}</span>
+    @for (provider of cloudProviders; track provider) {
+      <div class="settings-row" data-testid="settings-llm-cloud" [attr.data-provider]="provider">
+        <ds-icon class="llm-providers-icon" name="key" />
+        <div class="settings-row-text">
+          <span class="settings-row-label">{{ provider }}</span>
+        </div>
+        <div class="settings-row-control">
+          <ds-pill icon="clock" data-testid="settings-llm-cloud-soon">{{ 'common.soon' | t }}</ds-pill>
+        </div>
+      </div>
+    }
+  </div>
+
+  <ds-dialog
+    data-testid="settings-llm-cli-path-dialog"
+    icon="terminal"
+    [heading]="'settings.llm.providers.dialog.title' | t: { name: dialogCli() ? info(dialogCli()!.id).name : '' }"
+    [closeLabel]="'common.cancel' | t"
+    [dismissible]="!checkingPath()"
+    [open]="dialogCli() !== null"
+    (closed)="closePathDialog()"
+  >
+    @if (dialogCli(); as cli) {
+      <ds-field
+        controlId="settings-llm-cli-path-input"
+        required
+        [label]="'settings.llm.providers.dialog.label' | t"
+        [hint]="'settings.llm.providers.dialog.hint' | t: { name: info(cli.id).name, example: info(cli.id).example }"
+        [error]="pathErrorText()"
+      >
+        <span class="llm-providers-path-input">
+          <input
+            id="settings-llm-cli-path-input"
+            autofocus
+            class="ds-input mono"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            data-testid="settings-llm-cli-path-input"
+            [value]="pathDraft()"
+            [disabled]="checkingPath()"
+            [attr.placeholder]="info(cli.id).example"
+            [attr.aria-invalid]="pathError() ? true : null"
+            (input)="onPathInput($event)"
+            (keydown.enter)="savePath(cli)"
+          />
+          <button
+            dsBtn
+            type="button"
+            data-testid="settings-llm-cli-path-browse"
+            [disabled]="checkingPath()"
+            (click)="browse(cli.id)"
+          >
+            <ds-icon name="folder" size="sm" />{{ 'settings.llm.providers.dialog.browse' | t }}
+          </button>
+        </span>
+      </ds-field>
+    }
+    <ng-container dialogFooter>
+      <button
+        dsBtn
+        type="button"
+        data-testid="settings-llm-cli-path-cancel"
+        [disabled]="checkingPath()"
+        (click)="closePathDialog()"
+      >
+        {{ 'common.cancel' | t }}
+      </button>
+      <button
+        dsBtn
+        variant="primary"
+        type="button"
+        data-testid="settings-llm-cli-path-save"
+        [loading]="checkingPath()"
+        (click)="savePath(dialogCli()!)"
+      >
+        {{ (checkingPath() ? 'settings.llm.providers.dialog.checking' : 'settings.llm.providers.dialog.save') | t }}
+      </button>
+    </ng-container>
+  </ds-dialog>
+</section>

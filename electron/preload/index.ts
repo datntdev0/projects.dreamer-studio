@@ -6,6 +6,7 @@ import { AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer
 import {
   DiagnosticsChannel,
   LibraryChannel,
+  LlmChannel,
   LogChannel,
   PipelineChannel,
   SettingsChannel,
@@ -17,6 +18,7 @@ import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
+import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
@@ -82,6 +84,14 @@ const api: DreamerApi = {
     reset: (section: SettingsSection): Promise<AppSettings> => call(SettingsChannel.Reset, section),
     onChanged: (listener: (settings: AppSettings) => void): (() => void) =>
       subscribe(SettingsChannel.Changed, listener),
+  },
+  llm: {
+    status: (): Promise<LlmCliStatus[]> => call(LlmChannel.Status),
+    detect: (): Promise<LlmCliStatus[]> => call(LlmChannel.Detect),
+    test: (cli: LlmCliId): Promise<LlmTestResult> => call(LlmChannel.Test, cli),
+    pickPath: (cli: LlmCliId): Promise<string | null> => call(LlmChannel.PickPath, cli),
+    setPath: (request: LlmPathRequest): Promise<LlmCliStatus> => call(LlmChannel.SetPath, request),
+    onChanged: (listener: (statuses: LlmCliStatus[]) => void): (() => void) => subscribe(LlmChannel.Changed, listener),
   },
   appData: {
     pickFolder: (): Promise<string | null> => call(AppDataChannel.PickFolder),

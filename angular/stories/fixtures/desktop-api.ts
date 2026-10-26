@@ -26,6 +26,8 @@ import { SAMPLE_PARAGRAPHS } from './library';
 import type { DeleteNovelsResult, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { Provider } from '@angular/core';
+import { LLM_CLI_IDS, LLM_CLIS } from '@dreamer/shared/models/llm';
+import type { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
 import type { ValueProvider } from '@angular/core';
 import type { AppInfo } from '@dreamer/shared/ipc/app';
 import type { BackendState, BackendStatus } from '@dreamer/shared/ipc/backend';
@@ -326,4 +328,100 @@ export function provideDesktopApi(fixture: DesktopApiFixture = {}): Provider {
     ...fakeSettingsApi(),
   };
   return { provide: DesktopApi, useValue: api };
+}
+
+export type LlmScenario = 'mixed' | 'none';
+
+export type FakeLlmApi = Pick<
+  DesktopApi,
+  'llmStatus' | 'detectLlm' | 'testLlm' | 'pickLlmPath' | 'setLlmPath' | 'onLlmChanged' | 'writeLog'
+> & {
+  setScenario(scenario: LlmScenario): void;
+};
+
+const LLM_DELAY_MS = 180;
+
+function llmStatuses(scenario: LlmScenario): LlmCliStatus[] {
+  const mixed: Record<LlmCliId, LlmCliStatus> = {
+    claude: {
+      id: 'claude',
+      state: 'installed',
+      version: '2.4.1',
+      path: 'C:\\Users\\me\\AppData\\Roaming\\npm\\claude.cmd',
+      customPath: false,
+    },
+    codex: { id: 'codex', state: 'notInstalled', version: null, path: null, customPath: false },
+    antigravity: {
+      id: 'antigravity',
+      state: 'installed',
+      version: '1.1.8',
+      path: 'D:\\Tools\\antigravity\\agy.exe',
+      customPath: true,
+    },
+  };
+  return LLM_CLI_IDS.map((id: LlmCliId): LlmCliStatus =>
+    scenario === 'none' ? { id, state: 'notInstalled', version: null, path: null, customPath: false } : mixed[id],
+  );
+}
+
+function llmDelay<T>(value: T): Promise<T> {
+  return new Promise<T>((resolve): void => {
+    setTimeout((): void => resolve(value), LLM_DELAY_MS);
+  });
+}
+
+export function fakeLlmApi(scenario: LlmScenario): FakeLlmApi {
+  let current: LlmCliStatus[] = llmStatuses(scenario);
+  let listener: ((statuses: LlmCliStatus[]) => void) | null = null;
+  const publish = (statuses: LlmCliStatus[]): void => {
+    current = statuses;
+    listener?.(current);
+  };
+  return {
+    writeLog: (): void => undefined,
+    setScenario: (next: LlmScenario): void => {
+      scenario = next;
+      publish(llmStatuses(next));
+    },
+    llmStatus: (): Promise<LlmCliStatus[] | null> => llmDelay(current),
+    detectLlm: async (): Promise<LlmCliStatus[] | null> => {
+      const statuses: LlmCliStatus[] = await llmDelay(current);
+      publish(statuses);
+      return statuses;
+    },
+    testLlm: async (cli: LlmCliId): Promise<LlmTestResult | null> => {
+      await llmDelay(null);
+      return cli === 'antigravity'
+        ? {
+            ok: false,
+            durationMs: 900,
+            error: { code: ErrorCode.LlmNotSignedIn, message: 'Sign-in required' },
+          }
+        : { ok: true, durationMs: cli === 'claude' ? 4200 : 5600, error: null };
+    },
+    pickLlmPath: (cli: LlmCliId): Promise<string | null> =>
+      llmDelay(`C:\\Users\\me\\AppData\\Roaming\\npm\\${LLM_CLIS[cli].executable}.cmd`),
+    setLlmPath: async (request: LlmPathRequest): Promise<LlmCliStatus | null> => {
+      await llmDelay(null);
+      const path: string | null = request.path;
+      const executable: string = LLM_CLIS[request.cli].executable;
+      const file: string = path?.split(/[\\/]/).pop() ?? '';
+      if (path && !new RegExp(`^${executable}(\\.exe|\\.cmd)?$`, 'i').test(file)) {
+        throw new CodedError(ErrorCode.LlmPathInvalid, 'Wrong CLI executable');
+      }
+      const status: LlmCliStatus = path
+        ? { id: request.cli, state: 'installed', version: '1.0.0', path, customPath: true }
+        : request.cli === 'antigravity'
+          ? { id: request.cli, state: 'notInstalled', version: null, path: null, customPath: false }
+          : llmStatuses(scenario).find((item: LlmCliStatus): boolean => item.id === request.cli)!;
+      publish(current.map((item: LlmCliStatus): LlmCliStatus => (item.id === request.cli ? status : item)));
+      return status;
+    },
+    onLlmChanged: (callback: (statuses: LlmCliStatus[]) => void): (() => void) => {
+      listener = callback;
+      return (): void => {
+        if (listener === callback) listener = null;
+      };
+    },
+  };
 }

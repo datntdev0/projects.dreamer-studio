@@ -4,8 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
-import { PillComponent } from '@components/status/pill.component';
-import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { SettingsState } from '@dreamer/shared/models/settings';
 import { map } from 'rxjs';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
@@ -14,10 +12,11 @@ import { PageTitleDirective } from '@shell/page-title.directive';
 import { AboutSectionComponent } from './components/about-section.component';
 import { DiagnosticsSectionComponent } from './components/diagnostics-section.component';
 import { GeneralSectionComponent } from './components/general-section.component';
+import { LlmProvidersSectionComponent } from './components/llm-providers-section.component';
 import { PipelineSectionComponent } from './components/pipeline-section.component';
 import { StorageSectionComponent } from './components/storage-section.component';
 
-type SettingsPane = 'general' | 'diagnostics';
+type SettingsPane = 'general' | 'llm' | 'diagnostics';
 
 interface NavItem {
   section: SettingsPane;
@@ -25,20 +24,10 @@ interface NavItem {
   label: string;
 }
 
-interface UpcomingItem {
-  id: string;
-  icon: string;
-  label: string;
-  release: string;
-}
-
 const NAV_ITEMS: NavItem[] = [
   { section: 'general', icon: 'sliders', label: 'settings.page.nav.general' },
+  { section: 'llm', icon: 'sparkles', label: 'settings.page.nav.llm' },
   { section: 'diagnostics', icon: 'shield', label: 'settings.page.nav.diagnostics' },
-];
-
-const UPCOMING_ITEMS: UpcomingItem[] = [
-  { id: 'llm', icon: 'sparkles', label: 'settings.page.nav.llm', release: '0.2.0' },
 ];
 
 const SECTION_ALIASES: Record<string, SettingsPane> = {
@@ -60,12 +49,11 @@ function toSection(id: string | null): SettingsPane {
     DiagnosticsSectionComponent,
     GeneralSectionComponent,
     IconComponent,
+    LlmProvidersSectionComponent,
     PageTitleDirective,
-    PillComponent,
     PipelineSectionComponent,
     RouterLink,
     StorageSectionComponent,
-    TooltipDirective,
     TranslatePipe,
   ],
   templateUrl: './settings.page.html',
@@ -76,7 +64,6 @@ export class SettingsPage {
   private readonly noticeDismissed = signal<boolean>(false);
 
   protected readonly navItems: NavItem[] = NAV_ITEMS;
-  protected readonly upcoming: UpcomingItem[] = UPCOMING_ITEMS;
   protected readonly ready: Signal<boolean> = computed(() => this.store.state() !== null);
   protected readonly section: Signal<SettingsPane> = toSignal(
     inject(ActivatedRoute).paramMap.pipe(map((params) => toSection(params.get('id')))),

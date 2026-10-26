@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppSettings } from '@dreamer/shared/models/settings';
 import { CheckOutcome } from '@dreamer/shared/models/diagnostics';
+import { LlmCliStatus } from '@dreamer/shared/models/llm';
 import { AppDataManager } from './app/app-data-manager';
 import { AppDataSession } from './app/app-data-session';
 import { resolveAppDataRoot } from './app/dialogs/app-data-dialog';
@@ -17,6 +18,7 @@ import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerDiagnosticsIpc } from './ipc/diagnostics-ipc';
 import { registerLibraryIpc } from './ipc/library-ipc';
+import { registerLlmIpc } from './ipc/llm-ipc';
 import { registerLogIpc } from './ipc/log-ipc';
 import { registerPipelineIpc } from './ipc/pipeline-ipc';
 import { registerSettingsIpc } from './ipc/settings-ipc';
@@ -25,6 +27,8 @@ import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
+import { registerLlmChecks } from './features/llm/llm-checks';
+import { LlmService } from './features/llm/llm-service';
 import { handleLibraryProtocol } from './features/library/library-protocol';
 import { novelExportPipeline } from './features/library/novel/novel-export-pipeline';
 import { novelImportPipeline } from './features/library/novel/novel-import-pipeline';
@@ -79,6 +83,7 @@ const manager: AppDataManager = new AppDataManager(settings, {
   onReopenFailed: showDataFailure,
 });
 settings.onChange((): void => manager.current()?.executor.limitChanged());
+const llm: LlmService = new LlmService(settings, () => manager.paths());
 
 const diagnostics: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
   const session: AppDataSession = manager.session();
@@ -88,10 +93,12 @@ const diagnostics: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
     settings: settingsLoad,
     backend: getBackendStatus().state,
     pingBackend: (): Promise<boolean> => pingBackend(backendPingTimeoutMs),
+    llmStatus: (): Promise<LlmCliStatus[]> => llm.status(),
   };
 });
 
 function onBeforeQuit(): void {
+  llm.abortTests();
   manager.current()?.executor.cancelAll('appClosed');
   stopBackend();
 }
@@ -144,16 +151,20 @@ async function onReady(): Promise<void> {
   registerAppIpc(manager);
   registerPipelineIpc(() => manager.session().executor);
   registerLibraryIpc(() => manager.session());
+  registerLlmIpc(llm);
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);
   registerLibraryChecks(diagnostics);
+  registerLlmChecks(diagnostics);
   registerDiagnosticsIpc(diagnostics);
   registerLogIpc();
   registerDevIpc();
   handleAppProtocol();
   handleLibraryProtocol(() => manager.session());
   mainWindow = createWindow(settings.get().theme);
+  mainWindow.on('closed', (): void => llm.abortTests());
+  llm.startDetection();
   void startBackend(manager.paths());
 }
 

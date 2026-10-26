@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackendState } from '@dreamer/shared/ipc/backend';
 import { CheckOutcome, CheckResult, CheckStatus, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
+import { LlmCliStatus } from '@dreamer/shared/models/llm';
 import { checkDatabase, Database } from '@storage/database';
 import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { SettingsLoadResult } from '../settings/settings-store';
@@ -74,6 +75,7 @@ beforeEach(() => {
     settings: { notice: 'none', invalid: [] },
     backend: 'running',
     pingBackend: (): Promise<boolean> => Promise.resolve(true),
+    llmStatus: (): Promise<LlmCliStatus[]> => Promise.resolve([]),
   };
   folderProbe.free = 10 * gigabyte;
   engine = new SelfCheckEngine((): CheckContext => context);

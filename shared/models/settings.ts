@@ -1,4 +1,8 @@
 import { DEFAULT_LANGUAGE, isLanguage, Language } from '../i18n/translate';
+import { DEFAULT_LLM_SETTINGS, LlmSettings, sanitizeLlmSettings } from './llm';
+import { isAbsolutePath, isPlainObject } from './validation';
+
+export { isAbsolutePath, isPlainObject } from './validation';
 
 export type Theme = 'light' | 'dark';
 
@@ -40,6 +44,7 @@ export interface AppSettings {
   appDataDir: string;
   pipelines: PipelineSettings;
   reading: ReadingSettings;
+  llm: LlmSettings;
 }
 
 export interface SettingsPatch {
@@ -72,6 +77,7 @@ export function defaultSettings(appDataDir: string): AppSettings {
     appDataDir,
     pipelines: { maxConcurrent: MAX_CONCURRENT_MIN },
     reading: { ...DEFAULT_READING_SETTINGS },
+    llm: { paths: { ...DEFAULT_LLM_SETTINGS.paths } },
   };
 }
 
@@ -79,16 +85,6 @@ const THEMES: Theme[] = ['light', 'dark'];
 
 const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines', 'reading'];
 const READING_KEYS: (keyof ReadingSettings)[] = ['font', 'size', 'leading', 'width'];
-
-const ABSOLUTE_PATH: RegExp = /^([a-zA-Z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+|\/)/;
-
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function isAbsolutePath(value: unknown): value is string {
-  return typeof value === 'string' && ABSOLUTE_PATH.test(value);
-}
 
 function isTheme(value: unknown): value is Theme {
   return THEMES.includes(value as Theme);
@@ -162,6 +158,7 @@ export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSet
       maxConcurrent: pick('pipelines.maxConcurrent', pipelines, isMaxConcurrent, defaults.pipelines.maxConcurrent),
     },
     reading,
+    llm: 'llm' in raw ? sanitizeLlmSettings(raw.llm, invalid) : { paths: {} },
   };
   return { settings, invalid };
 }

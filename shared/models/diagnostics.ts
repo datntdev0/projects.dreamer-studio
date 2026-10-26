@@ -1,8 +1,8 @@
 export type CheckStatus = 'ok' | 'warning' | 'error';
 
-export type CheckCategory = 'storage' | 'database' | 'backend' | 'settings';
+export type CheckCategory = 'storage' | 'database' | 'backend' | 'llm' | 'settings';
 
-export const CHECK_CATEGORIES: CheckCategory[] = ['storage', 'database', 'backend', 'settings'];
+export const CHECK_CATEGORIES: CheckCategory[] = ['storage', 'database', 'backend', 'llm', 'settings'];
 
 export type CheckParams = Record<string, string | number>;
 

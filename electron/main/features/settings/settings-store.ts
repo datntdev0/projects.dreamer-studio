@@ -1,6 +1,7 @@
 import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { LlmCliId } from '@dreamer/shared/models/llm';
 import { AppSettings, defaultSettings, isPlainObject, sanitizeSettings } from '@dreamer/shared/models/settings';
 import { SettingsNotice, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { validateSettingsPatch } from '@dreamer/shared/models/settings';
@@ -81,6 +82,16 @@ export class SettingsStore {
       throw new CodedError(ErrorCode.SettingsInvalid, `Invalid settings patch: ${field}`, field);
     }
     return this.commit({ ...this.settings, ...patch });
+  }
+
+  setLlmPath(cli: LlmCliId, path: string | null): AppSettings {
+    const paths: AppSettings['llm']['paths'] = { ...this.settings.llm.paths };
+    if (path === null) {
+      delete paths[cli];
+    } else {
+      paths[cli] = path;
+    }
+    return this.commit({ ...this.settings, llm: { paths } });
   }
 
   reset(section: SettingsSection): AppSettings {

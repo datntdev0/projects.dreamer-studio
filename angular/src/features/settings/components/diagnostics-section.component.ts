@@ -31,6 +31,7 @@ const CATEGORY_KEYS: Record<CheckCategory, string> = {
   storage: 'diagnostics.category.storage',
   database: 'diagnostics.category.database',
   backend: 'diagnostics.category.backend',
+  llm: 'diagnostics.category.llm',
   settings: 'diagnostics.category.settings',
 };
 

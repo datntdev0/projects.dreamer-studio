@@ -13,6 +13,7 @@ export interface AppPaths {
   logs: string;
   pipelineLogs: string;
   cache: string;
+  llmCache: string;
 }
 
 export function defaultAppDataRoot(): string {
@@ -34,6 +35,7 @@ export function resolveAppPaths(root: string): AppPaths {
     logs,
     pipelineLogs: join(logs, 'pipelines'),
     cache: join(root, 'cache'),
+    llmCache: join(root, 'cache', 'llm'),
   };
 }
 

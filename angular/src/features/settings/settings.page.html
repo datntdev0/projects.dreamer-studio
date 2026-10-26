@@ -18,20 +18,6 @@
         <span class="label">{{ item.label | t }}</span>
       </a>
     }
-    @for (item of upcoming; track item.id) {
-      <span
-        class="settings-nav-item"
-        aria-disabled="true"
-        tabindex="0"
-        data-testid="settings-nav-upcoming"
-        [dsTooltip]="'settings.page.plannedFor' | t: { release: item.release }"
-        [attr.data-section]="item.id"
-      >
-        <ds-icon [name]="item.icon" />
-        <span class="label">{{ item.label | t }}</span>
-        <ds-pill>{{ 'settings.page.comingLater' | t }}</ds-pill>
-      </span>
-    }
   </nav>
   <div class="settings-main" data-testid="settings-main">
     @if (!ready()) {
@@ -52,6 +38,11 @@
           />
         }
         @switch (section()) {
+          @case ('llm') {
+            <div data-testid="settings-llm-pane">
+              <ds-settings-llm-providers />
+            </div>
+          }
           @case ('diagnostics') {
             <div class="settings-cols" data-testid="settings-diagnostics-pane">
               <div class="settings-col">

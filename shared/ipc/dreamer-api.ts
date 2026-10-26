@@ -5,6 +5,7 @@ import { DevCrashKind } from './dev';
 import { LogEntry } from './log';
 import { AboutLink } from '../models/about';
 import { DiagnosticsRun } from '../models/diagnostics';
+import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '../models/llm';
 import { PipelineListQuery, PipelineLogChunk, PipelinePage } from '../models/pipeline';
 import { PipelineRun, PipelineStartRequest, PipelineTypeInfo } from '../models/pipeline';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '../models/novel-package';
@@ -68,6 +69,14 @@ export interface DreamerApi {
     update(patch: SettingsPatch): Promise<AppSettings>;
     reset(section: SettingsSection): Promise<AppSettings>;
     onChanged(listener: (settings: AppSettings) => void): () => void;
+  };
+  llm: {
+    status(): Promise<LlmCliStatus[]>;
+    detect(): Promise<LlmCliStatus[]>;
+    test(cli: LlmCliId): Promise<LlmTestResult>;
+    pickPath(cli: LlmCliId): Promise<string | null>;
+    setPath(request: LlmPathRequest): Promise<LlmCliStatus>;
+    onChanged(listener: (statuses: LlmCliStatus[]) => void): () => void;
   };
   appData: {
     pickFolder(): Promise<string | null>;

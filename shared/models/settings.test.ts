@@ -13,6 +13,7 @@ describe('sanitizeSettings', () => {
       appDataDir: 'D:\\studio',
       pipelines: { maxConcurrent: 3 },
       reading: { font: 'sans', size: 22, leading: 1.8, width: 80 },
+      llm: { paths: {} },
     };
     expect(sanitizeSettings(valid, defaultDir)).toEqual({ settings: valid, invalid: [] });
   });

@@ -1,0 +1,275 @@
+ds-glossary-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--color-background);
+  container-type: inline-size;
+
+  .glossary-toolbar {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: var(--sp-sm);
+    align-items: center;
+    padding: var(--sp-sm) var(--sp-lg);
+    border-bottom: var(--gutter) solid var(--color-border);
+  }
+
+  .glossary-search {
+    position: relative;
+    width: calc(var(--right-w) * 0.75);
+    max-width: 100%;
+    ds-icon {
+      position: absolute;
+      top: 50%;
+      left: var(--sp-sm);
+      color: var(--color-text-tertiary);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    input {
+      padding-left: var(--sp-xl);
+    }
+  }
+
+  .glossary-summary {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    padding: var(--sp-xs) var(--sp-lg);
+    border-bottom: var(--gutter) solid var(--color-border);
+    > span {
+      display: inline-flex;
+      gap: var(--sp-xs);
+      align-items: center;
+    }
+  }
+
+  .glossary-pending {
+    margin: var(--sp-sm) var(--sp-lg);
+  }
+  .glossary-area {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    place-items: center;
+    padding: var(--sp-lg);
+  }
+  .glossary-table {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  .glossary-head-wrap {
+    flex: none;
+    overflow-y: hidden;
+    scrollbar-gutter: stable;
+  }
+  .glossary-head-wrap table,
+  .glossary-table table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .type-column {
+    width: 14%;
+  }
+  .translation-column {
+    width: 30%;
+  }
+  .chapters-column {
+    width: 7%;
+  }
+  .status-column {
+    width: 16%;
+  }
+  .clear-column {
+    width: calc(var(--control-h-sm) + var(--sp-lg) + var(--sp-sm));
+  }
+  .ds-table.dense td.status-cell,
+  .ds-table.dense td.clear-cell {
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .clear-cell .is-hidden {
+    visibility: hidden;
+  }
+  .glossary-name {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+  tr.is-alias .glossary-name {
+    padding-left: var(--sp-xl);
+    color: var(--color-text-secondary);
+  }
+  .glossary-name .meta {
+    margin-left: var(--sp-xs);
+  }
+  .ds-world-type-label {
+    display: inline-flex;
+    gap: var(--sp-xs);
+    align-items: center;
+    max-width: 100%;
+  }
+  .glossary-input {
+    width: 100%;
+    border-color: transparent;
+    background: transparent;
+  }
+  .glossary-input-wrap {
+    display: block;
+    width: 100%;
+  }
+  .glossary-input:hover {
+    border-color: var(--color-border);
+  }
+  .glossary-input:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset-inset);
+  }
+  .glossary-input.is-invalid {
+    border-color: var(--color-danger);
+  }
+  .glossary-input[readonly] {
+    background: var(--color-surface);
+    cursor: default;
+  }
+
+  @container (max-width: 760px) {
+    .chapters-column {
+      width: 0;
+    }
+    .type-column,
+    .status-column {
+      width: 10%;
+    }
+    .ds-table.dense .chapters-cell {
+      width: 0;
+      min-width: 0;
+      max-width: 0;
+      padding: 0;
+      visibility: hidden;
+      overflow: hidden;
+    }
+    .type-label,
+    .status-label {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
+
+ds-instruction-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+
+  .ds-panel-head {
+    flex: none;
+    gap: var(--sp-sm);
+  }
+  .ds-panel-head h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .instruction-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-sm);
+    padding: var(--sp-md);
+  }
+  .instruction-body p {
+    margin: 0;
+  }
+  textarea.ds-input {
+    flex: 1;
+    min-height: calc(var(--control-h) * 8);
+    padding: var(--sp-sm);
+    font-family: var(--font-sans);
+    resize: vertical;
+  }
+  .instruction-note,
+  .instruction-lock {
+    display: flex;
+    gap: var(--sp-xs);
+    align-items: flex-start;
+  }
+  .instruction-note {
+    color: var(--color-text-secondary);
+  }
+  .instruction-error {
+    color: var(--color-danger);
+  }
+  .instruction-actions {
+    display: flex;
+    gap: var(--sp-xs);
+    align-items: center;
+    padding: var(--sp-sm) var(--sp-md);
+    border-top: var(--gutter) solid var(--color-border);
+  }
+
+  &.is-dialog {
+    display: block;
+    height: auto;
+  }
+  .instruction-block {
+    padding: var(--sp-sm) var(--sp-md);
+    border: var(--gutter) solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .instruction-block-head,
+  .instruction-hint-row {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    min-width: 0;
+  }
+  .instruction-block-head ds-pill,
+  .instruction-block-head button {
+    flex: none;
+  }
+  .instruction-summary {
+    display: -webkit-box;
+    margin-top: var(--sp-xs);
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+  .instruction-hint-row {
+    align-items: flex-start;
+  }
+  .instruction-hint-row .meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .instruction-hint-row button {
+    flex: none;
+  }
+  .instruction-expanded {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-xs);
+    margin-top: var(--sp-sm);
+    padding-top: var(--sp-sm);
+    border-top: var(--gutter) solid var(--color-border);
+  }
+  .instruction-expanded textarea.ds-input {
+    flex: none;
+    min-height: calc(var(--control-h) * 6);
+  }
+}

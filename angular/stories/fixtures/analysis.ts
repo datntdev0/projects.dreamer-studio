@@ -83,66 +83,100 @@ export const ONTOLOGY_PROBLEMS: OntologyProblem[] = [
   { line: 23, reason: 'The predicate "sworn to" has no object types.' },
 ];
 
-export const JADE_RIVER_NOVEL: LibraryNovel = {
-  ...NOVELS[6],
-  id: 'n-jade-river',
-  originalTitle: 'The Jade River',
-  title: 'The Jade River',
-  author: 'Mara Vale',
-  description: 'A ferryman’s daughter follows a stolen seal into the rival courts of the Jade River.',
-  descriptionVi: 'Con gái người lái đò lần theo một ấn tín bị đánh cắp vào những triều đình đối địch bên sông Ngọc.',
-  language: 'en',
-  tags: ['Fantasy', 'Mystery'],
-  chapterCount: 40,
-  characterCount: '0.2M',
-  analysedCount: 30,
-  translatedCount: 0,
-  taskStatus: 'completed',
-  appTags: ['analysed'],
-  source: 'the-jade-river.epub',
-  folder: 'sources\\novels\\n-jade-river\\',
-};
+export type JadeRiverEdition = 'en' | 'zh';
+
+export function jadeRiverNovel(edition: JadeRiverEdition = 'en'): LibraryNovel {
+  return {
+    ...NOVELS[6],
+    id: 'n-jade-river',
+    originalTitle: edition === 'zh' ? '玉河' : 'The Jade River',
+    title: 'The Jade River',
+    author: 'Mara Vale',
+    description: 'A ferryman’s daughter follows a stolen seal into the rival courts of the Jade River.',
+    descriptionVi: 'Con gái người lái đò lần theo một ấn tín bị đánh cắp vào những triều đình đối địch bên sông Ngọc.',
+    language: edition,
+    tags: ['Fantasy', 'Mystery'],
+    chapterCount: 40,
+    characterCount: '0.2M',
+    analysedCount: 30,
+    translatedCount: 0,
+    taskStatus: 'completed',
+    appTags: ['analysed'],
+    source: 'the-jade-river.epub',
+    folder: 'sources\\novels\\n-jade-river\\',
+  };
+}
+
+export const JADE_RIVER_NOVEL: LibraryNovel = jadeRiverNovel('en');
 
 export const UNANALYSED_NOVEL: LibraryNovel = NOVELS[6];
 
 export const ANALYSIS_NOVELS: LibraryNovel[] = [JADE_RIVER_NOVEL, UNANALYSED_NOVEL];
 
-const ENTITY_SEEDS: { id: string; type: EntityType; name: string; aliases: string[] }[] = [
-  { id: 'lin-yue', type: 'character', name: 'Lin Yue', aliases: ['Yue'] },
-  { id: 'mei-ren', type: 'character', name: 'Mei Ren', aliases: ['Mei'] },
-  { id: 'master-qiao', type: 'character', name: 'Master Qiao', aliases: ['Qiao'] },
-  { id: 'shen-wu', type: 'character', name: 'Shen Wu', aliases: [] },
-  { id: 'lady-bai', type: 'character', name: 'Lady Bai', aliases: [] },
-  { id: 'captain-wei', type: 'character', name: 'Captain Wei', aliases: ['Wei'] },
-  { id: 'prince-jian', type: 'character', name: 'Prince Jian', aliases: ['Jian'] },
-  { id: 'old-fen', type: 'character', name: 'Old Fen', aliases: [] },
-  { id: 'nian', type: 'character', name: 'Nian', aliases: [] },
-  { id: 'tao', type: 'character', name: 'Tao', aliases: [] },
-  { id: 'zhao-lei', type: 'character', name: 'Zhao Lei', aliases: [] },
-  { id: 'hu-dan', type: 'character', name: 'Hu Dan', aliases: [] },
-  { id: 'sister-lian', type: 'character', name: 'Sister Lian', aliases: ['Lian'] },
-  { id: 'elder-su', type: 'character', name: 'Elder Su', aliases: [] },
-  { id: 'han-qi', type: 'character', name: 'Han Qi', aliases: [] },
-  { id: 'yu-ning', type: 'character', name: 'Yu Ning', aliases: [] },
-  { id: 'river-ghost', type: 'persona', name: 'River Ghost', aliases: ['the Ghost'] },
-  { id: 'jade-river-place', type: 'location', name: 'Jade River', aliases: ['the river'] },
-  { id: 'east-ferry', type: 'location', name: 'East Ferry', aliases: [] },
-  { id: 'mistwatch', type: 'location', name: 'Mistwatch', aliases: [] },
-  { id: 'lotus-house', type: 'location', name: 'Lotus House', aliases: [] },
-  { id: 'white-crane-hall', type: 'location', name: 'White Crane Hall', aliases: [] },
-  { id: 'moon-gate', type: 'location', name: 'Moon Gate', aliases: [] },
-  { id: 'deep-archive', type: 'location', name: 'Deep Archive', aliases: [] },
-  { id: 'stone-market', type: 'location', name: 'Stone Market', aliases: [] },
-  { id: 'river-wardens', type: 'organization', name: 'River Wardens', aliases: ['Wardens'] },
-  { id: 'white-crane-sect', type: 'organization', name: 'White Crane Sect', aliases: [] },
-  { id: 'ash-court', type: 'organization', name: 'Ash Court', aliases: [] },
-  { id: 'ferry-guild', type: 'organization', name: 'Ferry Guild', aliases: [] },
-  { id: 'night-lanterns', type: 'organization', name: 'Night Lanterns', aliases: [] },
-  { id: 'jade-seal', type: 'glossary', name: 'jade seal', aliases: ['seal'] },
-  { id: 'moon-script', type: 'glossary', name: 'moon script', aliases: [] },
-  { id: 'spirit-root', type: 'glossary', name: 'spirit root', aliases: [] },
-  { id: 'river-oath', type: 'glossary', name: 'river oath', aliases: [] },
-  { id: 'jade-river-term', type: 'glossary', name: 'Jade River', aliases: ['jade current'] },
+export const ENTITY_SEEDS: {
+  id: string;
+  type: EntityType;
+  name: string;
+  aliases: string[];
+  zh: string;
+  zhAliases: string[];
+}[] = [
+  { id: 'lin-yue', type: 'character', name: 'Lin Yue', aliases: ['Yue'], zh: '林月', zhAliases: ['月儿'] },
+  { id: 'mei-ren', type: 'character', name: 'Mei Ren', aliases: ['Mei'], zh: '梅仁', zhAliases: ['阿梅'] },
+  { id: 'master-qiao', type: 'character', name: 'Master Qiao', aliases: ['Qiao'], zh: '乔师父', zhAliases: ['乔'] },
+  { id: 'shen-wu', type: 'character', name: 'Shen Wu', aliases: [], zh: '沈武', zhAliases: [] },
+  { id: 'lady-bai', type: 'character', name: 'Lady Bai', aliases: [], zh: '白夫人', zhAliases: [] },
+  { id: 'captain-wei', type: 'character', name: 'Captain Wei', aliases: ['Wei'], zh: '魏队长', zhAliases: ['魏'] },
+  { id: 'prince-jian', type: 'character', name: 'Prince Jian', aliases: ['Jian'], zh: '简王爷', zhAliases: ['简'] },
+  { id: 'old-fen', type: 'character', name: 'Old Fen', aliases: [], zh: '芬老', zhAliases: [] },
+  { id: 'nian', type: 'character', name: 'Nian', aliases: [], zh: '年宁', zhAliases: [] },
+  { id: 'tao', type: 'character', name: 'Tao', aliases: [], zh: '陶然', zhAliases: [] },
+  { id: 'zhao-lei', type: 'character', name: 'Zhao Lei', aliases: [], zh: '赵雷', zhAliases: [] },
+  { id: 'hu-dan', type: 'character', name: 'Hu Dan', aliases: [], zh: '胡丹', zhAliases: [] },
+  { id: 'sister-lian', type: 'character', name: 'Sister Lian', aliases: ['Lian'], zh: '莲姐', zhAliases: ['阿莲'] },
+  { id: 'elder-su', type: 'character', name: 'Elder Su', aliases: [], zh: '苏长老', zhAliases: [] },
+  { id: 'han-qi', type: 'character', name: 'Han Qi', aliases: [], zh: '韩祁', zhAliases: [] },
+  { id: 'yu-ning', type: 'character', name: 'Yu Ning', aliases: [], zh: '余宁', zhAliases: [] },
+  { id: 'river-ghost', type: 'persona', name: 'River Ghost', aliases: ['the Ghost'], zh: '河鬼', zhAliases: ['鬼影'] },
+  {
+    id: 'jade-river-place',
+    type: 'location',
+    name: 'Jade River',
+    aliases: ['the river'],
+    zh: '玉河',
+    zhAliases: ['河'],
+  },
+  { id: 'east-ferry', type: 'location', name: 'East Ferry', aliases: [], zh: '东渡', zhAliases: [] },
+  { id: 'mistwatch', type: 'location', name: 'Mistwatch', aliases: [], zh: '望雾', zhAliases: [] },
+  { id: 'lotus-house', type: 'location', name: 'Lotus House', aliases: [], zh: '莲花楼', zhAliases: [] },
+  { id: 'white-crane-hall', type: 'location', name: 'White Crane Hall', aliases: [], zh: '白鹤堂', zhAliases: [] },
+  { id: 'moon-gate', type: 'location', name: 'Moon Gate', aliases: [], zh: '月门', zhAliases: [] },
+  { id: 'deep-archive', type: 'location', name: 'Deep Archive', aliases: [], zh: '深藏阁', zhAliases: [] },
+  { id: 'stone-market', type: 'location', name: 'Stone Market', aliases: [], zh: '石市', zhAliases: [] },
+  {
+    id: 'river-wardens',
+    type: 'organization',
+    name: 'River Wardens',
+    aliases: ['Wardens'],
+    zh: '护河卫',
+    zhAliases: ['河卫'],
+  },
+  { id: 'white-crane-sect', type: 'organization', name: 'White Crane Sect', aliases: [], zh: '白鹤门', zhAliases: [] },
+  { id: 'ash-court', type: 'organization', name: 'Ash Court', aliases: [], zh: '灰烬廷', zhAliases: [] },
+  { id: 'ferry-guild', type: 'organization', name: 'Ferry Guild', aliases: [], zh: '渡船行会', zhAliases: [] },
+  { id: 'night-lanterns', type: 'organization', name: 'Night Lanterns', aliases: [], zh: '夜灯会', zhAliases: [] },
+  { id: 'jade-seal', type: 'glossary', name: 'jade seal', aliases: ['seal'], zh: '玉印', zhAliases: ['印信'] },
+  { id: 'moon-script', type: 'glossary', name: 'moon script', aliases: [], zh: '月文', zhAliases: [] },
+  { id: 'spirit-root', type: 'glossary', name: 'spirit root', aliases: [], zh: '灵根', zhAliases: [] },
+  { id: 'river-oath', type: 'glossary', name: 'river oath', aliases: [], zh: '河誓', zhAliases: [] },
+  {
+    id: 'jade-river-term',
+    type: 'glossary',
+    name: 'Jade River',
+    aliases: ['jade current'],
+    zh: '玉河',
+    zhAliases: ['玉流'],
+  },
 ];
 
 const BY_ID = new Map(ENTITY_SEEDS.map((entity) => [entity.id, entity]));
@@ -341,13 +375,116 @@ const OPENING_SCENES: Scene[] = [
   },
 ];
 
-function nameOf(id: string): string {
-  return BY_ID.get(id)?.name ?? id;
+const OPENING_ZH: { title: string; paragraphs: string[]; linkQuotes: string[]; scalarQuotes: string[] }[] = [
+  {
+    title: '黎明渡口',
+    paragraphs: [
+      '晨雾低垂在玉河上，把渡船的缆绳染成银色。林月在晨钟前清点船只，发现少了一艘。',
+      '芬老站在东渡的台阶上，把湿透的账簿藏在外衣里。芬老是林月的父亲。他不肯说是哪艘船离开了，可空荡的泊位已经说明一切。',
+      '梅仁带来用布包着的面包。梅仁答应帮助林月，哪怕护河卫封锁所有渡口。',
+      '林月在黄昏前走进东渡。潮水已把一串浅色芦苇从码头卷走。',
+      '芬老把玉印交给林月。印面刻着一道河纹，比任何渡船执照都古老。',
+      '魏队长搜查船只，手下则盘问渔民。林月把印信藏在一块松动的木板下。',
+      '那年春天，林月十七岁。她几乎一生都在水上度过，却从未见过这条河如此平静。',
+      '集市钟声响起时，梅仁把魏队长引向北岸。芬老默默看着。',
+      '入夜后，失踪的船空荡荡地漂了回来。一根白羽卡在桨架上。',
+    ],
+    linkQuotes: [
+      '梅仁答应帮助林月，哪怕护河卫封锁所有渡口。',
+      '林月在黄昏前走进东渡。',
+      '芬老把玉印交给林月。',
+      '芬老是林月的父亲。',
+    ],
+    scalarQuotes: ['那年春天，林月十七岁。'],
+  },
+  {
+    title: '白鹤来信',
+    paragraphs: [
+      '雨扫过白鹤堂，淋湿了林月手中的信。信背的封印与失窃的印记形状相同。',
+      '乔师父在雕花屋檐下迎接林月。他语气温和，一只手却始终按着门闩。',
+      '乔师父教梅仁辨读月文。油灯渐暗，她仍逐笔念出那些弯曲的字迹。',
+      '莲姐是白鹤门弟子。梅仁是莲姐的妹妹。她认出了笔迹，请求独自看那一页。',
+      '梅仁冒雨带着月文前行。纸张藏在袖中，始终没有沾湿。',
+      '堂内弥漫着松烟和旧墨的气味。有人刮掉了信末的一个名字。',
+      '梅仁只能维持吐息境片刻。乔师父告诉她，耐心比速度更重要。',
+      '院上方的钟响了两声。莲姐在末句念出之前折起了信。',
+      '到了傍晚，通往东渡的路已淹没在洪水中。他们睡在藏书室里，身旁是消失河岸的旧地图。',
+    ],
+    linkQuotes: ['乔师父教梅仁辨读月文。', '莲姐是白鹤门弟子。', '梅仁冒雨带着月文前行。', '梅仁是莲姐的妹妹。'],
+    scalarQuotes: ['梅仁只能维持吐息境片刻。'],
+  },
+  {
+    title: '月门鬼影',
+    paragraphs: [
+      '月门只在最后一声更鼓后开启。林月站在门洞下等待，把玉印藏在袖中。',
+      '河鬼就是戴着借来面具的林月。她编出这个名号，好让灰烬廷追逐传闻，而不是追查一个女儿。',
+      '河鬼在黎明前穿过月门。守卫没看见她从灯笼之间溜过。',
+      '沈武在门楼上的房间里统领灰烬廷。他记下了那夜每一个获准入内的人。',
+      '白夫人发誓反对沈武。她的警告化作一条撕破的红绸，送到了林月手中。',
+      '拱门下的旧石沁出河雾。林月听见墙外某处传来船夫的歌声。',
+      '守卫转过拐角时，她屏住呼吸。林月依然爱着梅仁。面具带着淡淡的雪松和新漆气味。',
+      '日出时，城门再次封闭。沈武只在门槛上找到一根白羽。',
+      '林月头也不回地离开。河鬼第一次显得比她自己的名字还真实。',
+    ],
+    linkQuotes: [
+      '河鬼就是戴着借来面具的林月。',
+      '河鬼在黎明前穿过月门。',
+      '沈武在门楼上的房间里统领灰烬廷。',
+      '白夫人发誓反对沈武。',
+      '林月依然爱着梅仁。',
+    ],
+    scalarQuotes: ['林月头也不回地离开。'],
+  },
+  {
+    title: '地下藏阁',
+    paragraphs: [
+      '深藏阁坐落在旧河墙之下。石阶一路向下，直到空气里也有了湿石的味道。',
+      '白夫人带林月从一扇锁着的侧门进入深藏阁。身后，河水轻轻拍打砖墙。',
+      '简王爷宣誓效忠护河卫。简王爷是乔师父的弟子。他的签名占满了登记簿的一整行。',
+      '白夫人答应帮助林月。那承诺轻得只有书架听得见。',
+      '洪水涨到藏阁时，林月已经十八岁。她打开禁用的抽屉前，不再等谁的许可。',
+      '里面有一张玉河地图，还有一份把暗渠也称作玉河的文书。同一个名字既指地点，也指古代领航人的术语。',
+      '芬老用炭笔标出一条狭路。林月用手指沿着它，找到月门下方的通道。',
+      '黑暗中传来石块挪动的声音。简王爷拿起灯，白夫人合上书。',
+      '水漫到最下面的台阶前，他们离开了。地面上无人知道藏阁曾被打开。',
+    ],
+    linkQuotes: [
+      '白夫人答应帮助林月。',
+      '简王爷宣誓效忠护河卫。',
+      '白夫人带林月从一扇锁着的侧门进入深藏阁。',
+      '简王爷是乔师父的弟子。',
+    ],
+    scalarQuotes: ['洪水涨到藏阁时，林月已经十八岁。'],
+  },
+];
+
+function openingScene(index: number, edition: JadeRiverEdition): Scene {
+  const scene = OPENING_SCENES[index - 1];
+  if (edition === 'en') return scene;
+  const zh = OPENING_ZH[index - 1];
+  return {
+    title: zh.title,
+    paragraphs: zh.paragraphs,
+    links: scene.links.map((link, position) => ({ ...link, quote: zh.linkQuotes[position] })),
+    scalars: scene.scalars.map((scalar, position) => ({ ...scalar, quote: zh.scalarQuotes[position] })),
+  };
 }
 
-function genericQuote(subjectId: string, predicate: string, objectId: string): string {
-  const subject = nameOf(subjectId);
-  const object = nameOf(objectId);
+function nameOf(id: string, edition: JadeRiverEdition): string {
+  const seed = BY_ID.get(id);
+  return (edition === 'zh' ? seed?.zh : seed?.name) ?? id;
+}
+
+function genericQuote(subjectId: string, predicate: string, objectId: string, edition: JadeRiverEdition): string {
+  const subject = nameOf(subjectId, edition);
+  const object = nameOf(objectId, edition);
+  if (edition === 'zh') {
+    if (predicate === 'located in') return `${subject}在黄昏前走进${object}。`;
+    if (predicate === 'member of') return `${subject}宣誓效忠${object}。`;
+    if (predicate === 'owns') return `${subject}冒雨带着${object}前行。`;
+    if (predicate === 'enemy of') return `${subject}发誓反对${object}。`;
+    return `${subject}答应帮助${object}。`;
+  }
   if (predicate === 'located in') return `${subject} crossed into ${object} before dusk.`;
   if (predicate === 'member of') return `${subject} pledged service to ${object}.`;
   if (predicate === 'owns') return `${subject} carried ${object} through the rain.`;
@@ -355,7 +492,7 @@ function genericQuote(subjectId: string, predicate: string, objectId: string): s
   return `${subject} promised to aid ${object}.`;
 }
 
-function genericScene(index: number): Scene {
+function genericScene(index: number, edition: JadeRiverEdition): Scene {
   const lead = CHARACTERS[(index - 5) % CHARACTERS.length];
   const partner = CHARACTERS[(index * 3 + 1) % CHARACTERS.length];
   const rival = CHARACTERS[(index * 5 + 3) % CHARACTERS.length];
@@ -372,8 +509,25 @@ function genericScene(index: number): Scene {
     subjectId,
     predicate,
     objectId,
-    quote: genericQuote(subjectId, predicate, objectId),
+    quote: genericQuote(subjectId, predicate, objectId, edition),
   }));
+  const leadName = nameOf(lead.id, edition);
+  const partnerName = nameOf(partner.id, edition);
+  const rivalName = nameOf(rival.id, edition);
+  if (edition === 'zh')
+    return {
+      title: `第${index}章：河畔长路`,
+      paragraphs: [
+        `河边的路向东弯去，${leadName}顺着晨潮前行。一只红鸢在浅滩上盘旋。`,
+        `船夫说起玉河，可风一起，他的说法就变了。${partnerName}站在岸边听着。`,
+        ...links.map((link) => `${link.quote}这个决定在渡河之后仍被人记起。`),
+        `正午，${rivalName}发现芦苇旁有新的脚印。没人承认是自己留下的。`,
+        `最后一艘船在灰色天空下离岸。${leadName}一直守望，直到灯光消失。`,
+        '入夜后，旅人们找到了住处。紧闭的窗外，河水仍在流动。',
+      ],
+      links,
+      scalars: [],
+    };
   return {
     title: `Chapter ${index}: The River Road`,
     paragraphs: [
@@ -401,8 +555,8 @@ function countsFor(entities: AnalysisEntity[], facts: AnalysisFact[]): ChapterAn
   };
 }
 
-function makeAnalysisChapter(index: number): ChapterAnalysis {
-  const scene = index <= 4 ? OPENING_SCENES[index - 1] : genericScene(index);
+function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterAnalysis {
+  const scene = index <= 4 ? openingScene(index, edition) : genericScene(index, edition);
   const status: ChapterAnalysisStatus =
     index <= 25
       ? 'clean'
@@ -433,9 +587,9 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       return {
         id,
         type: 'artifact',
-        name: 'bronze crown',
+        name: edition === 'zh' ? '青铜冠' : 'bronze crown',
         aliases: [],
-        wordsFound: ['bronze crown'],
+        wordsFound: [edition === 'zh' ? '青铜冠' : 'bronze crown'],
         status: 'failed',
         reason: 'type-not-in-ontology',
       };
@@ -444,7 +598,7 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       return {
         id,
         type: 'character',
-        name: 'Silent Oracle',
+        name: edition === 'zh' ? '无声先知' : 'Silent Oracle',
         aliases: [],
         wordsFound: [],
         status: 'failed',
@@ -452,7 +606,9 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       };
     }
     const seed = BY_ID.get(id)!;
-    return { ...seed, wordsFound: [seed.name], status: 'verified' };
+    const name = nameOf(id, edition);
+    const aliases = edition === 'zh' ? seed.zhAliases : seed.aliases;
+    return { id: seed.id, type: seed.type, name, aliases, wordsFound: [name], status: 'verified' };
   });
   const facts: AnalysisFact[] = hasResult
     ? [
@@ -483,7 +639,10 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       predicate: 'ally of',
       subjectId: scene.links[0].subjectId,
       objectId: scene.links[2].objectId,
-      quote: 'A silver dragon rose from the river and named them allies.',
+      quote:
+        edition === 'zh'
+          ? '一条银龙从河中升起，称他们为盟友。'
+          : 'A silver dragon rose from the river and named them allies.',
       status: 'failed',
       reason: 'quote-not-found',
     });
@@ -493,7 +652,7 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       predicate: 'ally of',
       subjectId: scene.links[1].subjectId,
       objectId: scene.links[0].subjectId,
-      quote: 'They sealed their pact beneath a falling star.',
+      quote: edition === 'zh' ? '他们在流星下缔结盟约。' : 'They sealed their pact beneath a falling star.',
       status: 'failed',
       reason: 'quote-not-found',
     });
@@ -517,14 +676,27 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
       predicate: 'cultivation rank',
       subjectId: scene.links[0].subjectId,
       value: 'star sovereign',
-      quote: `${nameOf(scene.links[0].subjectId)} called the new rank star sovereign.`,
+      quote:
+        edition === 'zh'
+          ? `${nameOf(scene.links[0].subjectId, edition)}称新境界为星君。`
+          : `${nameOf(scene.links[0].subjectId, edition)} called the new rank star sovereign.`,
       status: 'failed',
       reason: 'value-not-allowed',
     });
   }
   const paragraphs = [...scene.paragraphs];
-  if (index === 27) paragraphs.push('A bronze crown lay in a locked box, but no one knew who had placed it there.');
-  if (index === 28) paragraphs.push(`${nameOf(scene.links[0].subjectId)} called the new rank star sovereign.`);
+  if (index === 27)
+    paragraphs.push(
+      edition === 'zh'
+        ? '一顶青铜冠锁在箱中，没人知道是谁放进去的。'
+        : 'A bronze crown lay in a locked box, but no one knew who had placed it there.',
+    );
+  if (index === 28)
+    paragraphs.push(
+      edition === 'zh'
+        ? `${nameOf(scene.links[0].subjectId, edition)}称新境界为星君。`
+        : `${nameOf(scene.links[0].subjectId, edition)} called the new rank star sovereign.`,
+    );
   const file = index.toString(16).padStart(64, '0');
   return {
     index,
@@ -548,9 +720,11 @@ function makeAnalysisChapter(index: number): ChapterAnalysis {
   };
 }
 
-export const JADE_RIVER_CHAPTERS: ChapterAnalysis[] = Array.from({ length: 40 }, (_, index) =>
-  makeAnalysisChapter(index + 1),
-);
+export function jadeRiverChapters(edition: JadeRiverEdition = 'en'): ChapterAnalysis[] {
+  return Array.from({ length: 40 }, (_, index) => makeAnalysisChapter(index + 1, edition));
+}
+
+export const JADE_RIVER_CHAPTERS: ChapterAnalysis[] = jadeRiverChapters('en');
 
 export const UNANALYSED_CHAPTERS: ChapterAnalysis[] = makeChapters(UNANALYSED_NOVEL).map((chapter) => ({
   index: chapter.position,
@@ -579,20 +753,24 @@ export const JADE_RIVER_REVIEW_EDITS: ReviewEdit[] = [
   },
 ];
 
-export const JADE_RIVER_OVERLAY: OverlayEdit[] = [
-  { kind: 'entity-add-alias', entityId: 'lin-yue', alias: 'Little Yue' },
-  {
-    kind: 'fact-add',
-    chapterIndex: 4,
-    fact: {
-      id: 'c4-user-alliance',
-      kind: 'relationship',
-      predicate: 'ally of',
-      subjectId: 'lin-yue',
-      objectId: 'lady-bai',
-      quote: null,
-      status: 'verified',
-      addedByUser: true,
+export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): OverlayEdit[] {
+  return [
+    { kind: 'entity-add-alias', entityId: 'lin-yue', alias: edition === 'zh' ? '小月' : 'Little Yue' },
+    {
+      kind: 'fact-add',
+      chapterIndex: 4,
+      fact: {
+        id: 'c4-user-alliance',
+        kind: 'relationship',
+        predicate: 'ally of',
+        subjectId: 'lin-yue',
+        objectId: 'lady-bai',
+        quote: null,
+        status: 'verified',
+        addedByUser: true,
+      },
     },
-  },
-];
+  ];
+}
+
+export const JADE_RIVER_OVERLAY: OverlayEdit[] = jadeRiverOverlay('en');

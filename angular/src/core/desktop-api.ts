@@ -31,6 +31,22 @@ import type {
   World,
   WorldQuery,
 } from '@dreamer/shared/models/analysis';
+import type { ChapterTranslation } from '@dreamer/shared/models/translation';
+import type { ContentRunPlan } from '@dreamer/shared/models/translation';
+import type { ContentRunRequest } from '@dreamer/shared/models/translation';
+import type { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import type { GlossaryPage } from '@dreamer/shared/models/translation';
+import type { GlossaryRunPlan } from '@dreamer/shared/models/translation';
+import type { GlossaryRunRequest } from '@dreamer/shared/models/translation';
+import type { InstructionRequest } from '@dreamer/shared/models/translation';
+import type { InstructionSaveRequest } from '@dreamer/shared/models/translation';
+import type { TranslationChanged } from '@dreamer/shared/models/translation';
+import type { TranslationChapterRequest } from '@dreamer/shared/models/translation';
+import type { TranslationInstruction } from '@dreamer/shared/models/translation';
+import type { TranslationProgress } from '@dreamer/shared/models/translation';
+import type { TranslationSaveRequest } from '@dreamer/shared/models/translation';
+import type { TranslationStatus } from '@dreamer/shared/models/translation';
+import type { TranslationStatusQuery } from '@dreamer/shared/models/translation';
 
 const EMPTY_PAGE: PipelinePage = { runs: [], total: 0, next: null };
 
@@ -286,5 +302,65 @@ export class DesktopApi {
 
   onAnalysisChanged(listener: (event: AnalysisChanged) => void): () => void {
     return window.dreamer ? window.dreamer.analysis.onChanged(listener) : () => undefined;
+  }
+
+  async translationStatus(query: TranslationStatusQuery): Promise<TranslationStatus | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.status(query) : null;
+  }
+
+  async translationChapter(request: TranslationChapterRequest): Promise<ChapterTranslation | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.chapter(request) : null;
+  }
+
+  async translationGlossary(query: InstructionRequest): Promise<GlossaryPage | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.glossary(query) : null;
+  }
+
+  async translationEditGlossary(request: GlossaryEditRequest): Promise<void> {
+    if (window.dreamer?.translation) await window.dreamer.translation.editGlossary(request);
+  }
+
+  async translationInstruction(request: InstructionRequest): Promise<TranslationInstruction | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.instruction(request) : null;
+  }
+
+  async translationSaveInstruction(request: InstructionSaveRequest): Promise<TranslationInstruction | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.saveInstruction(request) : null;
+  }
+
+  async translationResetInstruction(request: InstructionRequest): Promise<TranslationInstruction | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.resetInstruction(request) : null;
+  }
+
+  async translationPlanContent(request: ContentRunRequest): Promise<ContentRunPlan | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.planContent(request) : null;
+  }
+
+  async translationStartContent(request: ContentRunRequest): Promise<void> {
+    if (window.dreamer?.translation) await window.dreamer.translation.startContent(request);
+  }
+
+  async translationPlanGlossary(request: GlossaryRunRequest): Promise<GlossaryRunPlan | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.planGlossary(request) : null;
+  }
+
+  async translationStartGlossary(request: GlossaryRunRequest): Promise<void> {
+    if (window.dreamer?.translation) await window.dreamer.translation.startGlossary(request);
+  }
+
+  async translationCancel(novelId: string): Promise<void> {
+    if (window.dreamer?.translation) await window.dreamer.translation.cancel(novelId);
+  }
+
+  async translationSave(request: TranslationSaveRequest): Promise<ChapterTranslation | null> {
+    return window.dreamer?.translation ? window.dreamer.translation.save(request) : null;
+  }
+
+  onTranslationProgress(listener: (progress: TranslationProgress) => void): () => void {
+    return window.dreamer?.translation ? window.dreamer.translation.onProgress(listener) : () => undefined;
+  }
+
+  onTranslationChanged(listener: (event: TranslationChanged) => void): () => void {
+    return window.dreamer?.translation ? window.dreamer.translation.onChanged(listener) : () => undefined;
   }
 }

@@ -81,7 +81,7 @@ export class LibraryStoryHostComponent implements OnInit {
   }
 }
 
-const routes: Routes = [
+export const libraryStoryRoutes: Routes = [
   { path: 'library', component: LibraryPage, data: { module: 'library' } },
   { path: 'library/import', component: ComingSoonPage, data: { module: 'library' } },
   {
@@ -98,7 +98,7 @@ export const libraryStoryDecorators: Decorator<LibraryStoryArgs>[] = [
   (story, context) => {
     const result = story();
     const providers = [
-      provideRouter(routes, withHashLocation()),
+      provideRouter(libraryStoryRoutes, withHashLocation()),
       provideReaderDesktopApi({
         missingChapter: context.args.missingChapter ?? null,
         lock: context.args.lock ?? false,

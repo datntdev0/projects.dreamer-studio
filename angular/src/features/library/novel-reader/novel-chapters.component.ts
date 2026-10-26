@@ -17,12 +17,17 @@ import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { CheckboxComponent } from '@components/form/checkbox.component';
 import { IconComponent } from '@components/icon/icon.component';
+import { DotComponent } from '@components/status/dot.component';
+import { PillComponent } from '@components/status/pill.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CHAPTER_TITLE_MAX } from '@dreamer/shared/models/novel';
+import type { ChapterTranslationSummary } from '@dreamer/shared/models/translation';
+import type { ChapterTranslationStatus } from '@dreamer/shared/models/translation';
+import type { TargetLanguage } from '@dreamer/shared/models/translation';
 import { isConsecutive } from '../library-format';
 import { chapterRef } from '../library-format';
 import { CHAPTER_ERROR_KEYS } from '../library-format';
@@ -36,6 +41,7 @@ import type { MenuState } from '../library.models';
 import type { RenameState } from '../library.models';
 import type { TextParts } from '../library.models';
 import { NovelStore } from '../novel.store';
+import { TranslationStore } from '../translation.store';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
 import type { NovelLock as DetailLock } from '@dreamer/shared/models/novel';
 import { chapterNumber } from '../library-format';
@@ -60,8 +66,10 @@ const SAVED_MS = 2000;
     CdkFixedSizeVirtualScroll,
     CdkVirtualForOf,
     CdkVirtualScrollViewport,
+    DotComponent,
     IconComponent,
     NgTemplateOutlet,
+    PillComponent,
     TooltipDirective,
     TranslatePipe,
   ],
@@ -81,6 +89,7 @@ export class NovelChaptersComponent {
   readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
   private readonly store: NovelStore = inject(NovelStore);
+  private readonly translation: TranslationStore | null = inject(TranslationStore, { optional: true });
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -92,6 +101,9 @@ export class NovelChaptersComponent {
   protected readonly menu = signal<MenuState | null>(null);
   protected readonly dialog = signal<ChapterDialogState | null>(null);
   protected readonly saved = signal<boolean>(false);
+  protected readonly translationLanguage: Signal<TargetLanguage | null> = computed(() =>
+    this.translation?.status() ? this.translation.language() : null,
+  );
   protected readonly titleMax: number = CHAPTER_TITLE_MAX;
   protected readonly announcement = signal<string>('');
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
@@ -221,11 +233,41 @@ export class NovelChaptersComponent {
   protected formatCount(value: number): string {
     return this.numberFormat().format(value);
   }
+  protected translationCountLabel(language: TargetLanguage): string {
+    const item = this.translation?.status()?.languages.find((entry) => entry.language === language);
+    return this.i18n.t('library.translation.status.language', {
+      language: this.translation?.languageLabel(language) ?? language.toUpperCase(),
+      translated: this.formatCount(item?.translated ?? 0),
+      total: this.formatCount(item?.total ?? this.chapters().length),
+    });
+  }
+  protected chapterStatus(position: number): ChapterTranslationSummary | null {
+    return this.translation?.chapterStatus(position) ?? null;
+  }
+  protected chapterRunning(position: number): boolean {
+    const run = this.translation?.run();
+    return run?.kind === 'content' && run.runningChapter === position;
+  }
+  protected statusLabel(summary: ChapterTranslationSummary, running: boolean): string {
+    const keys: Record<ChapterTranslationStatus, string> = {
+      'not-translated': 'notTranslated',
+      translated: 'translated',
+      'has-issues': summary.issues === 1 ? 'issuesOne' : 'issuesMany',
+      stale: summary.staleReason === 'glossary' ? 'staleGlossary' : 'staleSource',
+      failed: summary.error ? 'failedWith' : 'failed',
+    };
+    const key: string = running ? 'running' : keys[summary.status];
+    const label: string = this.i18n.t(`library.translation.status.${key}`, {
+      count: this.formatCount(summary.issues),
+      error: summary.error ?? '',
+    });
+    return summary.edited ? `${label}, ${this.i18n.t('library.translation.status.edited')}` : label;
+  }
   protected numberLabel(chapter: LibraryChapter): string {
     return chapterNumber(chapter);
   }
   private lockKey(lock: DetailLock): string {
-    return lockKind(lock) === 'export' ? 'library.chapters.locked.export' : 'library.chapters.locked.import';
+    return `library.chapters.locked.${lockKind(lock)}`;
   }
   protected mark(text: string, kind: 'number' | 'title'): TextParts {
     const query: string = this.query().trim();

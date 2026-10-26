@@ -96,6 +96,25 @@
           </div>
         }
       </div>
+      @if (hasTranslations()) {
+        <div class="library-filter-section" data-testid="translation-status-filter">
+          <h3>{{ 'library.translation.status.filter.heading' | t }}</h3>
+          @for (group of translationGroups(); track group.language) {
+            <p class="translation-status-filter-group">{{ group.label }}</p>
+            @for (level of translationLevels; track level) {
+              <div class="library-filter-check">
+                <ds-checkbox
+                  [checked]="translationFilters().includes(group.language + ':' + level)"
+                  [attr.data-testid]="'translation-status-filter-' + group.language + '-' + level"
+                  (checkedChange)="toggleTranslation(group.language + ':' + level)"
+                  >{{ translationFilterKey(level) | t }}</ds-checkbox
+                >
+                <span class="library-filter-count">{{ count(group[level]) }}</span>
+              </div>
+            }
+          }
+        </div>
+      }
       @if (genreRows().length) {
         <div class="library-filter-section">
           <h3>{{ 'library.browse.genre' | t }}</h3>

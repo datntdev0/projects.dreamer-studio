@@ -10,7 +10,7 @@ const THEME_OPTIONS: SegmentedOption[] = [
 const ICON_OPTIONS: SegmentedOption[] = [
   { value: 'list', label: 'List view', icon: 'list' },
   { value: 'grid', label: 'Grid view', icon: 'grid' },
-  { value: 'columns', label: 'Column view', icon: 'columns' },
+  { value: 'columns', label: 'Column view', icon: 'columns', disabled: true, tooltip: 'Unavailable' },
 ];
 const TEXT_OPTIONS: SegmentedOption[] = [
   { value: 'one', label: 'Bản dịch tự động' },

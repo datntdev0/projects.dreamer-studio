@@ -259,6 +259,16 @@ export function toNovelSummary(novel: LibraryNovel): NovelSummary {
     importedAt: novel.importedAt,
     updatedAt: novel.updatedAt,
     hasCover: false,
+    translations:
+      novel.translatedCount > 0
+        ? [
+            {
+              language: novel.language === 'vi' ? 'en' : 'vi',
+              translated: novel.translatedCount,
+              total: novel.chapterCount,
+            },
+          ]
+        : [],
     lock: null,
   };
 }

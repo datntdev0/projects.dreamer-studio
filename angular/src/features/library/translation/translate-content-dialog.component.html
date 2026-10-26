@@ -1,0 +1,178 @@
+<ds-dialog
+  class="ds-world-run-dialog ds-translate-dialog"
+  data-testid="translate-dialog-content"
+  icon="languages"
+  [open]="open()"
+  [heading]="'library.translation.dialog.contentHeading' | t"
+  [closeLabel]="'library.translation.dialog.close' | t"
+  (closed)="close()"
+>
+  <div class="ds-world-run-columns">
+    <fieldset class="ds-world-run-modes">
+      <legend class="ds-world-run-heading">{{ 'library.translation.dialog.mode' | t }}</legend>
+      @for (item of modes; track item.mode) {
+        <div class="ds-world-run-mode" [class.is-selected]="mode() === item.mode">
+          <label>
+            <input
+              type="radio"
+              name="translate-content-mode"
+              [value]="item.mode"
+              [checked]="mode() === item.mode"
+              [attr.data-testid]="'translate-dialog-mode-' + item.mode"
+              (change)="setMode(item.mode)"
+            />
+            <span class="ds-world-run-mode-text">
+              <strong>{{ item.title | t }}</strong>
+              <span>{{ item.hint | t }}</span>
+            </span>
+          </label>
+          @if (item.mode === 'range' && mode() === 'range') {
+            <div class="ds-world-run-range">
+              <label>
+                <span>{{ 'library.translation.dialog.from' | t }}</span>
+                <input
+                  class="ds-input num"
+                  type="number"
+                  min="1"
+                  [max]="total()"
+                  [attr.aria-invalid]="invalidRange() || null"
+                  [value]="from()"
+                  data-testid="translate-dialog-from"
+                  (input)="setNumber('from', $event)"
+                />
+              </label>
+              <span class="ds-world-run-range-sep" aria-hidden="true">–</span>
+              <label>
+                <span>{{ 'library.translation.dialog.to' | t }}</span>
+                <input
+                  class="ds-input num"
+                  type="number"
+                  min="1"
+                  [max]="total()"
+                  [attr.aria-invalid]="invalidRange() || null"
+                  [value]="to()"
+                  data-testid="translate-dialog-to"
+                  (input)="setNumber('to', $event)"
+                />
+              </label>
+            </div>
+          }
+        </div>
+      }
+    </fieldset>
+    <div class="ds-world-run-settings">
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.language' | t }}</h3>
+        <div data-testid="translate-dialog-language">
+          <ds-segmented
+            [options]="languageOptions()"
+            [value]="language() ?? ''"
+            [label]="'library.translation.dialog.language' | t"
+            (valueChange)="setLanguage($event)"
+          />
+        </div>
+      </section>
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.overwriteHeading' | t }}</h3>
+        <label class="ds-checkbox-label ds-world-run-overwrite" [class.is-disabled]="mode() === 'missing'">
+          <input
+            type="checkbox"
+            data-testid="translate-dialog-overwrite"
+            [checked]="options().overwrite"
+            [disabled]="mode() === 'missing'"
+            (change)="setOverwrite($event)"
+          />
+          <span>{{ 'library.translation.dialog.overwrite' | t }}</span>
+        </label>
+        <p class="ds-world-run-hint ds-world-run-hint-indent">
+          {{
+            (mode() === 'missing'
+              ? 'library.translation.dialog.overwriteMissing'
+              : 'library.translation.dialog.overwriteHint'
+            ) | t
+          }}
+        </p>
+        @if (mode() !== 'missing' && options().overwrite && (plan()?.userEdited ?? 0) > 0) {
+          <p class="ds-translate-dialog-warning ds-world-run-hint-indent" data-testid="translate-dialog-edited-warning">
+            <ds-icon name="alert-triangle" size="sm" />{{
+              'library.translation.dialog.editedWarning' | t: { count: plan()!.userEdited }
+            }}
+          </p>
+        }
+        @if (mode() === 'missing' && (plan()?.userEdited ?? 0) > 0) {
+          <p class="ds-world-run-hint ds-world-run-hint-indent" data-testid="translate-dialog-edited-note">
+            <ds-icon name="info" size="sm" />{{
+              'library.translation.dialog.editedStaleNote' | t: { count: plan()!.userEdited }
+            }}
+          </p>
+        }
+      </section>
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.instructionHeading' | t }}</h3>
+        @if (open() && language(); as selectedLanguage) {
+          <ds-instruction-editor mode="dialog" [language]="selectedLanguage" (draftChange)="setInstruction($event)" />
+        }
+      </section>
+    </div>
+  </div>
+  @let current = plan();
+  <div class="ds-world-run-summary" role="status" data-testid="translate-dialog-summary">
+    <p class="ds-world-run-summary-line num" [class.is-pending]="planning()">
+      <span>{{ 'library.translation.dialog.summaryChapters' | t: { count: current?.count ?? 0 } }}</span>
+      @if (current && current.from !== null && current.to !== null) {
+        @if (current.from === current.to) {
+          <span>{{ 'library.translation.dialog.summaryChapter' | t: { from: current.from } }}</span>
+        } @else {
+          <span>{{ 'library.translation.dialog.summaryRange' | t: { from: current.from, to: current.to } }}</span>
+        }
+      }
+      <span>{{ 'library.translation.dialog.summaryLlm' | t: { llm: llmLabel() } }}</span>
+    </p>
+    <p class="ds-world-run-hint">
+      <ds-icon name="save" size="sm" />{{
+        (planning() ? 'library.translation.dialog.planning' : 'library.translation.dialog.savedPerChapter') | t
+      }}
+    </p>
+    @if (current && current.untranslatedNames > 0) {
+      <div class="ds-translate-dialog-glossary" data-testid="translate-dialog-glossary-warning">
+        <ds-icon name="alert-triangle" size="sm" />
+        <span>{{ 'library.translation.dialog.glossaryWarning' | t: { count: current.untranslatedNames } }}</span>
+        <button dsBtn size="sm" type="button" data-testid="translate-dialog-open-glossary" (click)="openGlossary()">
+          <ds-icon name="book" size="sm" />{{ 'library.translation.dialog.openGlossary' | t }}
+        </button>
+      </div>
+    }
+  </div>
+  @if (reason()) {
+    <p class="ds-world-run-reason" role="alert" data-testid="translate-dialog-reason">
+      <ds-icon name="alert-circle" size="sm" />{{ reason() }}
+      @if (!startError() && !invalidRange() && plan()?.blockedReason === 'LLM_UNAVAILABLE') {
+        <a
+          dsBtn
+          size="sm"
+          variant="ghost"
+          routerLink="/settings/llm"
+          data-testid="translate-dialog-settings-llm"
+          (click)="close()"
+          >{{ 'library.translation.dialog.settingsLlm' | t }}</a
+        >
+      }
+    </p>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="translate-dialog-cancel" (click)="close()">
+      {{ 'library.translation.dialog.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="translate-dialog-start"
+      [loading]="store.busy()"
+      [disabled]="!canStart()"
+      (click)="start()"
+    >
+      <ds-icon name="play" size="sm" />{{ 'library.translation.dialog.start' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

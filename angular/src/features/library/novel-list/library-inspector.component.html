@@ -97,8 +97,24 @@
   <div class="library-inspector-soon" tabindex="0" [dsTooltip]="'common.soon' | t">
     <strong class="meta">&mdash;</strong><span>{{ 'library.inspector.analysed' | t }}</span>
   </div>
-  <div class="library-inspector-soon" tabindex="0" [dsTooltip]="'common.soon' | t">
-    <strong class="meta">&mdash;</strong><span>{{ 'library.inspector.translated' | t }}</span>
+  <div class="translation-status-insp" data-testid="translation-status-insp">
+    @for (item of novel().translations; track item.language) {
+      <span
+        class="translation-status-insp-line"
+        [attr.data-testid]="'translation-status-insp-' + item.language"
+        [attr.aria-label]="translationLine(item)"
+      >
+        <span class="translation-status-code">{{ item.language.toUpperCase() }}</span>
+        <strong class="num">{{ count(item.translated) }}</strong>
+        <span class="translation-status-total num">/ {{ count(item.total) }}</span>
+        @if (translationLevel(item) === 'full') {
+          <ds-icon name="check" size="sm" class="translation-status-done" aria-hidden="true" />
+        }
+      </span>
+    } @empty {
+      <strong class="meta">&mdash;</strong>
+    }
+    <span>{{ 'library.inspector.translated' | t }}</span>
   </div>
 </div>
 <section class="library-inspector-section library-inspector-metadata">

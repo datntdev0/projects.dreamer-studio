@@ -19,6 +19,22 @@ import {
   AnalysisChapterRequest,
   AnalysisEditRequest,
 } from '../models/analysis';
+import type { ChapterTranslation } from '../models/translation';
+import type { ContentRunPlan } from '../models/translation';
+import type { ContentRunRequest } from '../models/translation';
+import type { GlossaryEditRequest } from '../models/translation';
+import type { GlossaryPage } from '../models/translation';
+import type { GlossaryRunPlan } from '../models/translation';
+import type { GlossaryRunRequest } from '../models/translation';
+import type { InstructionRequest } from '../models/translation';
+import type { InstructionSaveRequest } from '../models/translation';
+import type { TranslationChanged } from '../models/translation';
+import type { TranslationChapterRequest } from '../models/translation';
+import type { TranslationInstruction } from '../models/translation';
+import type { TranslationProgress } from '../models/translation';
+import type { TranslationSaveRequest } from '../models/translation';
+import type { TranslationStatus } from '../models/translation';
+import type { TranslationStatusQuery } from '../models/translation';
 import { AnalysisPlan, AnalysisProgress, AnalysisRunRequest, AnalysisStatus } from '../models/analysis';
 import {
   Occurrence,
@@ -113,6 +129,23 @@ export interface DreamerApi {
     ontologyCheck(novelId: string): Promise<OntologyProblem[]>;
     onProgress(listener: (progress: AnalysisProgress) => void): () => void;
     onChanged(listener: (event: AnalysisChanged) => void): () => void;
+  };
+  translation?: {
+    status(query: TranslationStatusQuery): Promise<TranslationStatus>;
+    chapter(request: TranslationChapterRequest): Promise<ChapterTranslation>;
+    glossary(query: InstructionRequest): Promise<GlossaryPage>;
+    editGlossary(request: GlossaryEditRequest): Promise<void>;
+    instruction(request: InstructionRequest): Promise<TranslationInstruction>;
+    saveInstruction(request: InstructionSaveRequest): Promise<TranslationInstruction>;
+    resetInstruction(request: InstructionRequest): Promise<TranslationInstruction>;
+    planContent(request: ContentRunRequest): Promise<ContentRunPlan>;
+    startContent(request: ContentRunRequest): Promise<void>;
+    planGlossary(request: GlossaryRunRequest): Promise<GlossaryRunPlan>;
+    startGlossary(request: GlossaryRunRequest): Promise<void>;
+    cancel(novelId: string): Promise<void>;
+    save(request: TranslationSaveRequest): Promise<ChapterTranslation>;
+    onProgress(listener: (progress: TranslationProgress) => void): () => void;
+    onChanged(listener: (event: TranslationChanged) => void): () => void;
   };
   dev: {
     crash(kind: DevCrashKind): Promise<void>;

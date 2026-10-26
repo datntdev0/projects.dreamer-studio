@@ -1,0 +1,112 @@
+<ds-dialog
+  class="ds-world-run-dialog ds-translate-dialog"
+  data-testid="translate-dialog-glossary"
+  icon="languages"
+  [open]="open()"
+  [heading]="'library.translation.dialog.glossaryHeading' | t"
+  [closeLabel]="'library.translation.dialog.close' | t"
+  (closed)="close()"
+>
+  <div class="ds-world-run-columns">
+    <div>
+      <fieldset class="ds-world-run-modes">
+        <legend class="ds-world-run-heading">{{ 'library.translation.dialog.scope' | t }}</legend>
+        @for (item of scopes; track item.scope) {
+          <div class="ds-world-run-mode" [class.is-selected]="scope() === item.scope">
+            <label>
+              <input
+                type="radio"
+                name="translate-glossary-scope"
+                [value]="item.scope"
+                [checked]="scope() === item.scope"
+                [attr.data-testid]="'translate-dialog-scope-' + item.scope"
+                (change)="setScope(item.scope)"
+              />
+              <span class="ds-world-run-mode-text">
+                <strong>{{ item.title | t }}</strong>
+                <span>{{ item.hint | t }}</span>
+              </span>
+            </label>
+          </div>
+        }
+      </fieldset>
+      <p class="ds-world-run-hint" data-testid="translate-dialog-user-note">
+        <ds-icon name="lock" size="sm" />{{ 'library.translation.dialog.userNote' | t }}
+      </p>
+    </div>
+    <div class="ds-world-run-settings">
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.language' | t }}</h3>
+        <div data-testid="translate-dialog-language">
+          <ds-segmented
+            [options]="languageOptions()"
+            [value]="language() ?? ''"
+            [label]="'library.translation.dialog.language' | t"
+            (valueChange)="setLanguage($event)"
+          />
+        </div>
+      </section>
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.batchSize' | t }}</h3>
+        <ds-segmented
+          [options]="batchOptions"
+          [value]="'' + batchSize()"
+          [label]="'library.translation.dialog.batchSize' | t"
+          (valueChange)="setBatchSize($event)"
+        />
+        <p class="ds-world-run-hint">{{ 'library.translation.dialog.batchHint' | t }}</p>
+      </section>
+      <section>
+        <h3 class="ds-world-run-heading">{{ 'library.translation.dialog.instructionHeading' | t }}</h3>
+        @if (open() && language(); as selectedLanguage) {
+          <ds-instruction-editor mode="dialog" [language]="selectedLanguage" (draftChange)="setInstruction($event)" />
+        }
+      </section>
+    </div>
+  </div>
+  @let current = plan();
+  <div class="ds-world-run-summary" role="status" data-testid="translate-dialog-summary">
+    <p class="ds-world-run-summary-line num" [class.is-pending]="planning()">
+      <span>{{ 'library.translation.dialog.summaryNames' | t: { count: current?.count ?? 0 } }}</span>
+      <span>{{ 'library.translation.dialog.summaryCalls' | t: { count: current?.batches ?? 0 } }}</span>
+      <span>{{ 'library.translation.dialog.summaryLlm' | t: { llm: llmLabel() } }}</span>
+    </p>
+    <p class="ds-world-run-hint">
+      <ds-icon name="save" size="sm" />{{
+        (planning() ? 'library.translation.dialog.planning' : 'library.translation.dialog.savedPerName') | t
+      }}
+    </p>
+  </div>
+  @if (reason()) {
+    <p class="ds-world-run-reason" role="alert" data-testid="translate-dialog-reason">
+      <ds-icon name="alert-circle" size="sm" />{{ reason() }}
+      @if (!startError() && plan()?.blockedReason === 'LLM_UNAVAILABLE') {
+        <a
+          dsBtn
+          size="sm"
+          variant="ghost"
+          routerLink="/settings/llm"
+          data-testid="translate-dialog-settings-llm"
+          (click)="close()"
+          >{{ 'library.translation.dialog.settingsLlm' | t }}</a
+        >
+      }
+    </p>
+  }
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="translate-dialog-cancel" (click)="close()">
+      {{ 'library.translation.dialog.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="translate-dialog-start"
+      [loading]="store.busy()"
+      [disabled]="!canStart()"
+      (click)="start()"
+    >
+      <ds-icon name="play" size="sm" />{{ 'library.translation.dialog.start' | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

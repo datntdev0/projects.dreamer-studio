@@ -1,15 +1,19 @@
 import { Component, input, model, booleanAttribute } from '@angular/core';
 import { IconComponent } from '@components/icon/icon.component';
+import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 
 export interface SegmentedOption {
   value: string;
   label: string;
   icon?: string;
+  disabled?: boolean;
+  tooltip?: string;
+  testId?: string;
 }
 
 @Component({
   selector: 'ds-segmented',
-  imports: [IconComponent],
+  imports: [IconComponent, TooltipDirective],
   templateUrl: './segmented.component.html',
   host: { class: 'ds-segmented', role: 'radiogroup', '[attr.aria-label]': 'label() || null' },
 })
@@ -21,7 +25,17 @@ export class SegmentedComponent {
 
   protected isTabbable(option: SegmentedOption, index: number): boolean {
     const hasSelection: boolean = this.options().some((item: SegmentedOption): boolean => item.value === this.value());
-    return hasSelection ? option.value === this.value() : index === 0;
+    return hasSelection
+      ? option.value === this.value()
+      : index ===
+          Math.max(
+            0,
+            this.options().findIndex((item: SegmentedOption): boolean => !item.disabled),
+          );
+  }
+
+  protected select(option: SegmentedOption): void {
+    if (!option.disabled) this.value.set(option.value);
   }
 
   protected onKeydown(event: KeyboardEvent, index: number): void {
@@ -31,7 +45,11 @@ export class SegmentedComponent {
     }
     event.preventDefault();
     const options: SegmentedOption[] = this.options();
-    const next: number = (index + step + options.length) % options.length;
+    let next: number = index;
+    do {
+      next = (next + step + options.length) % options.length;
+    } while (next !== index && options[next].disabled);
+    if (options[next].disabled) return;
     this.value.set(options[next].value);
     const group: HTMLElement = (event.currentTarget as HTMLElement).parentElement as HTMLElement;
     group.querySelectorAll('button')[next].focus();

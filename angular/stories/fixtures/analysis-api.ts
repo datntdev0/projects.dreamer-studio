@@ -38,17 +38,18 @@ import type {
 import { DesktopApi } from '@core/desktop-api';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import {
-  ANALYSIS_NOVELS,
   DEFAULT_ONTOLOGY,
-  JADE_RIVER_CHAPTERS,
   JADE_RIVER_NOVEL,
-  JADE_RIVER_OVERLAY,
   JADE_RIVER_PENDING,
   JADE_RIVER_REVIEW_EDITS,
   ONTOLOGY_PROBLEMS,
   UNANALYSED_CHAPTERS,
   UNANALYSED_NOVEL,
+  jadeRiverChapters,
+  jadeRiverNovel,
+  jadeRiverOverlay,
 } from './analysis';
+import type { JadeRiverEdition } from './analysis';
 import { toNovelSummary } from './library';
 import { FakePipelinesApi } from './pipelines-api';
 
@@ -81,13 +82,14 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   constructor(
     private readonly scenario: AnalysisScenario,
     destroyRef: DestroyRef,
+    private readonly edition: JadeRiverEdition = 'en',
   ) {
     super({ runs: [] }, destroyRef);
     this.invalidOntology = scenario === 'invalidOntology';
     const novelId = JADE_RIVER_NOVEL.id;
     this.chapters.set(
       novelId,
-      JADE_RIVER_CHAPTERS.map((chapter) => ({ ...chapter })),
+      jadeRiverChapters(edition).map((chapter) => ({ ...chapter })),
     );
     this.chapters.set(
       UNANALYSED_NOVEL.id,
@@ -97,7 +99,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       ...JADE_RIVER_REVIEW_EDITS,
       ...(scenario === 'readyToMerge' ? READY_TO_MERGE_EDITS : []),
     ]);
-    this.overlay.set(novelId, [...JADE_RIVER_OVERLAY]);
+    this.overlay.set(novelId, jadeRiverOverlay(edition));
     this.pending.set(novelId, new Set(JADE_RIVER_PENDING));
     this.merged.set(novelId, this.snapshot(novelId));
     this.mergedAt.set(novelId, '2026-10-24T09:15:00.000Z');
@@ -113,7 +115,8 @@ export class FakeAnalysisApi extends FakePipelinesApi {
 
   override async listNovels(): Promise<NovelSummary[]> {
     if (this.scenario === 'emptyLibrary') return [];
-    const novels = this.scenario === 'notAnalysed' ? [UNANALYSED_NOVEL] : ANALYSIS_NOVELS;
+    const novels =
+      this.scenario === 'notAnalysed' ? [UNANALYSED_NOVEL] : [jadeRiverNovel(this.edition), UNANALYSED_NOVEL];
     return novels.map((novel) => ({
       ...toNovelSummary(novel),
       lock:
@@ -124,7 +127,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   }
 
   override async getNovel(id: string): Promise<NovelDetail | null> {
-    const novel = ANALYSIS_NOVELS.find((item) => item.id === id);
+    const novel = [jadeRiverNovel(this.edition), UNANALYSED_NOVEL].find((item) => item.id === id);
     if (!novel) throw new CodedError(ErrorCode.NovelNotFound, `Novel ${id} was not found`);
     const summary = (await this.listNovels()).find((item) => item.id === id) ?? toNovelSummary(novel);
     return {

@@ -1,0 +1,145 @@
+@if (mode() === 'panel') {
+  <div class="ds-panel-head">
+    <h2 data-testid="instruction-heading">
+      {{ 'library.translation.glossary.instruction.heading' | t: { language: store.languageLabel(language()) } }}
+    </h2>
+    <span class="ds-spacer"></span>
+    <ds-pill
+      data-testid="instruction-state"
+      [kind]="instruction()?.isDefault ? 'neutral' : 'info'"
+      [icon]="instruction()?.isDefault ? null : 'pencil'"
+      >{{
+        (instruction()?.isDefault
+          ? 'library.translation.glossary.instruction.default'
+          : 'library.translation.glossary.instruction.edited'
+        ) | t
+      }}</ds-pill
+    >
+  </div>
+  <div class="ds-panel-body instruction-body">
+    <p class="meta">
+      {{ 'library.translation.glossary.instruction.guide' | t: { language: store.languageLabel(language()) } }}
+    </p>
+    <textarea
+      class="ds-input"
+      data-testid="instruction-text"
+      [attr.lang]="language()"
+      [attr.aria-label]="'library.translation.glossary.instruction.textLabel' | t"
+      [value]="draft()"
+      [readOnly]="locked()"
+      [attr.aria-readonly]="locked()"
+      spellcheck="false"
+      (input)="setDraft($event)"
+      (keydown)="onKey($event)"
+    ></textarea>
+    <p class="meta" data-testid="instruction-updated">{{ updated() }}</p>
+    <p class="instruction-note" data-testid="instruction-note">
+      <ds-icon name="info" size="sm" />{{ 'library.translation.glossary.instruction.note' | t }}
+    </p>
+    @if (locked()) {
+      <p class="meta instruction-lock"><ds-icon name="lock" size="sm" />{{ lockReason() }}</p>
+    }
+    @if (error()) {
+      <p role="alert" class="instruction-error" data-testid="instruction-error">{{ error() }}</p>
+    }
+    <span class="visually-hidden" aria-live="polite">{{ announcement() }}</span>
+  </div>
+  <div class="instruction-actions">
+    <button
+      dsBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      data-testid="instruction-reset"
+      [disabled]="(instruction()?.isDefault && !dirty()) || locked() || busy() || store.busy()"
+      (click)="reset()"
+    >
+      <ds-icon name="undo" size="sm" />{{ 'library.translation.glossary.instruction.resetDefault' | t }}
+    </button>
+    <span class="ds-spacer"></span>
+    @if (dirty()) {
+      <button dsBtn variant="ghost" size="sm" type="button" data-testid="instruction-discard" (click)="discard()">
+        {{ 'library.translation.glossary.instruction.discard' | t }}
+      </button>
+    }
+    <button
+      dsBtn
+      variant="primary"
+      size="sm"
+      type="button"
+      data-testid="instruction-save"
+      [loading]="busy()"
+      [disabled]="!canSave()"
+      (click)="save()"
+    >
+      <ds-icon name="save" size="sm" />{{ 'library.translation.glossary.instruction.save' | t }}
+    </button>
+  </div>
+} @else {
+  <div
+    class="instruction-block"
+    role="group"
+    [attr.aria-label]="'library.translation.glossary.instruction.textLabel' | t"
+  >
+    <div class="instruction-block-head">
+      <ds-pill
+        data-testid="instruction-state"
+        [kind]="dirty() ? 'warning' : instruction()?.isDefault ? 'neutral' : 'info'"
+        [icon]="dirty() || !instruction()?.isDefault ? 'pencil' : null"
+        >{{
+          (dirty()
+            ? 'library.translation.glossary.instruction.changed'
+            : instruction()?.isDefault
+              ? 'library.translation.glossary.instruction.default'
+              : 'library.translation.glossary.instruction.edited'
+          ) | t
+        }}</ds-pill
+      >
+      <span class="ds-spacer"></span>
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="instruction-toggle"
+        [attr.aria-expanded]="expanded()"
+        [attr.aria-controls]="expandedId"
+        (click)="expanded.set(!expanded())"
+      >
+        <ds-icon [name]="expanded() ? 'chevron-up' : 'pencil'" size="sm" />{{
+          (expanded()
+            ? 'library.translation.glossary.instruction.hide'
+            : 'library.translation.glossary.instruction.edit'
+          ) | t
+        }}
+      </button>
+    </div>
+    @if (!expanded()) {
+      <span class="meta instruction-summary" data-testid="instruction-summary" [title]="draft()">{{ draft() }}</span>
+    }
+    @if (expanded()) {
+      <div [id]="expandedId" class="instruction-expanded">
+        <textarea
+          class="ds-input"
+          rows="6"
+          data-testid="instruction-text"
+          [attr.lang]="language()"
+          [attr.aria-label]="'library.translation.glossary.instruction.textLabel' | t"
+          [value]="draft()"
+          spellcheck="false"
+          (input)="setDraft($event)"
+        ></textarea>
+        <div class="instruction-hint-row">
+          <span class="meta" data-testid="instruction-hint">{{
+            'library.translation.glossary.instruction.hint' | t: { language: store.languageLabel(language()) }
+          }}</span>
+          @if (dirty()) {
+            <button dsBtn variant="ghost" size="sm" type="button" data-testid="instruction-undo" (click)="discard()">
+              {{ 'library.translation.glossary.instruction.undo' | t }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

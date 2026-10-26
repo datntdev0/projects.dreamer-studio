@@ -1,0 +1,78 @@
+@if (store.run(); as run) {
+  <button
+    type="button"
+    class="ds-world-run-pill"
+    data-testid="translation-pill"
+    aria-haspopup="dialog"
+    aria-controls="translation-pill-menu"
+    [attr.aria-expanded]="menuOpen()"
+    (click)="menuOpen.set(!menuOpen())"
+  >
+    <ds-dot kind="primary" pulse />
+    <span>{{
+      (run.kind === 'content' ? 'library.translation.page.pill.content' : 'library.translation.page.pill.glossary') | t
+    }}</span>
+    <span class="ds-world-run-pill-sep" aria-hidden="true">&middot;</span>
+    <span class="num">{{ run.language.toUpperCase() }}</span>
+    <span class="ds-world-run-pill-sep" aria-hidden="true">&middot;</span>
+    <span class="num">{{ run.done }} / {{ run.total }}</span>
+    @if (run.failed > 0) {
+      <span class="ds-world-run-pill-failed num" data-testid="translation-pill-failed"
+        ><ds-icon name="alert-circle" size="sm" />{{
+          'library.translation.page.pill.failed' | t: { count: run.failed }
+        }}</span
+      >
+    }
+    <ds-icon name="chevron-down" size="sm" />
+  </button>
+  @if (menuOpen()) {
+    <div
+      id="translation-pill-menu"
+      class="ds-world-run-menu"
+      role="dialog"
+      data-testid="translation-pill-menu"
+      [attr.aria-label]="'library.translation.page.pill.menuLabel' | t"
+    >
+      <div class="ds-world-run-menu-head">
+        <strong
+          >{{
+            (run.kind === 'content'
+              ? 'library.translation.page.pill.content'
+              : 'library.translation.page.pill.glossary'
+            ) | t
+          }}
+          &middot; {{ store.languageLabel(run.language) }}</strong
+        >
+        <span class="num meta">{{ run.done }} / {{ run.total }}</span>
+      </div>
+      <ds-progress [value]="percent()" data-testid="translation-pill-progress" />
+      @if (run.kind === 'content' && run.runningChapter) {
+        <p class="meta">{{ 'library.translation.page.pill.current' | t: { chapter: run.runningChapter } }}</p>
+      }
+      <p class="meta">
+        {{
+          (run.kind === 'content'
+            ? 'library.translation.page.pill.noteContent'
+            : 'library.translation.page.pill.noteGlossary'
+          ) | t
+        }}
+      </p>
+      <div class="ds-world-run-menu-actions">
+        <a dsBtn size="sm" variant="ghost" routerLink="/pipelines" data-testid="translation-pill-pipelines"
+          ><ds-icon name="external" size="sm" />{{ 'library.translation.page.pill.openPipelines' | t }}</a
+        >
+        <button
+          dsBtn
+          size="sm"
+          variant="danger"
+          type="button"
+          data-testid="translation-pill-cancel"
+          [loading]="store.busy()"
+          (click)="cancel()"
+        >
+          <ds-icon name="stop" size="sm" />{{ 'library.translation.page.pill.cancel' | t }}
+        </button>
+      </div>
+    </div>
+  }
+}

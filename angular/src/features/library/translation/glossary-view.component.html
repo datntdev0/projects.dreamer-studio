@@ -1,0 +1,333 @@
+<div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+@if (!page()) {
+  <ds-area-state
+    kind="loading"
+    [heading]="'library.translation.glossary.state.loading' | t"
+    data-testid="glossary-loading"
+  />
+} @else if (page()!.analysed === false) {
+  <div class="glossary-area" data-testid="glossary-not-analysed">
+    <ds-area-state
+      kind="empty"
+      icon="network"
+      [heading]="'library.translation.glossary.state.notAnalysed' | t"
+      [description]="'library.translation.glossary.state.notAnalysedDescription' | t"
+    >
+      <a dsBtn variant="primary" routerLink="/omniscient" data-testid="glossary-open-omniscient">{{
+        'library.translation.glossary.openOmniscient' | t
+      }}</a>
+    </ds-area-state>
+  </div>
+} @else {
+  <div class="glossary-toolbar">
+    <div class="glossary-search" role="search">
+      <ds-icon name="search" size="sm" />
+      <input
+        class="ds-input"
+        type="search"
+        data-testid="glossary-search"
+        [attr.aria-label]="'library.translation.glossary.toolbar.search' | t"
+        [placeholder]="'library.translation.glossary.toolbar.search' | t"
+        [value]="query()"
+        (input)="setQuery($event)"
+      />
+    </div>
+    <span class="ds-select">
+      <select
+        class="ds-input"
+        data-testid="glossary-type"
+        [attr.aria-label]="'library.translation.glossary.toolbar.entityType' | t"
+        [value]="type()"
+        (change)="setType($event)"
+      >
+        <option value="all">{{ 'library.translation.glossary.toolbar.allTypes' | t }}</option>
+        @for (kind of entityTypes; track kind) {
+          <option [value]="kind" [selected]="kind === type()">{{ typeKeys[kind] | t }}</option>
+        }
+      </select>
+      <ds-icon name="chevron-down" size="sm" />
+    </span>
+    <ds-segmented
+      data-testid="glossary-status"
+      [label]="'library.translation.glossary.toolbar.translationStatus' | t"
+      [options]="statusOptions()"
+      [value]="status()"
+      (valueChange)="setStatus($event)"
+    />
+    <span class="ds-select">
+      <select
+        class="ds-input"
+        data-testid="glossary-language"
+        [attr.aria-label]="'library.translation.glossary.toolbar.language' | t"
+        [value]="store.language()"
+        (change)="setLanguage($event)"
+      >
+        @for (language of store.targets(); track language) {
+          <option [value]="language" [selected]="language === store.language()">
+            {{ store.languageLabel(language) }}
+          </option>
+        }
+      </select>
+      <ds-icon name="chevron-down" size="sm" />
+    </span>
+    <span class="ds-spacer"></span>
+    <span [dsTooltip]="translateReason()">
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="button"
+        data-testid="glossary-translate"
+        [disabled]="!!translateReason()"
+        [attr.aria-describedby]="translateReason() ? 'glossary-translate-reason' : null"
+        (click)="store.openGlossaryDialog()"
+      >
+        <ds-icon name="sparkles" size="sm" />{{ 'library.translation.glossary.toolbar.translate' | t }}
+      </button>
+    </span>
+    <span id="glossary-translate-reason" class="visually-hidden">{{ translateReason() }}</span>
+  </div>
+  <div class="glossary-summary meta" data-testid="glossary-summary">
+    @if (rows().length && !untranslated()) {
+      <span data-testid="glossary-all-translated"
+        ><ds-icon name="check" size="sm" />{{
+          'library.translation.glossary.summary.allTranslated' | t: { total: number(rows().length) }
+        }}</span
+      >
+    } @else {
+      <span class="num">{{
+        'library.translation.glossary.summary.count'
+          | t: { total: number(rows().length), untranslated: number(untranslated()) }
+      }}</span>
+    }
+    <span class="ds-spacer"></span>
+    @if (locked()) {
+      <span data-testid="glossary-locked"><ds-icon name="lock" size="sm" />{{ lockReason() }}</span>
+    }
+  </div>
+  @if (page()!.pendingMerge > 0) {
+    <div class="glossary-pending" data-testid="glossary-pending-merge">
+      <ds-banner
+        variant="warning"
+        [dismissible]="false"
+        [dismissLabel]="'library.translation.glossary.dismiss' | t"
+        [heading]="'library.translation.glossary.pending.heading' | t: { count: number(page()!.pendingMerge) }"
+        [message]="'library.translation.glossary.pending.message' | t"
+      >
+        <a dsBtn variant="ghost" size="sm" routerLink="/omniscient" data-testid="glossary-open-omniscient">{{
+          'library.translation.glossary.openOmniscient' | t
+        }}</a>
+      </ds-banner>
+    </div>
+  }
+  @if (!rows().length) {
+    <div class="glossary-area" data-testid="glossary-empty">
+      <ds-area-state
+        kind="empty"
+        icon="tag"
+        [heading]="'library.translation.glossary.state.empty' | t"
+        [description]="'library.translation.glossary.state.emptyDescription' | t"
+      />
+    </div>
+  } @else if (!visible().length) {
+    <div class="glossary-area" data-testid="glossary-no-match">
+      <ds-area-state kind="empty" [compact]="true" [heading]="'library.translation.glossary.state.noMatch' | t"
+        ><button
+          dsBtn
+          variant="ghost"
+          size="sm"
+          type="button"
+          data-testid="glossary-clear-filters"
+          (click)="clearFilters()"
+        >
+          {{ 'library.translation.glossary.state.clearFilters' | t }}
+        </button></ds-area-state
+      >
+    </div>
+  } @else {
+    <p id="glossary-input-hint" class="visually-hidden">{{ 'library.translation.glossary.table.keyboardHint' | t }}</p>
+    <div class="glossary-head-wrap">
+      <table class="ds-table dense glossary-head" aria-hidden="true">
+        <colgroup>
+          <col class="name-column" />
+          <col class="type-column" />
+          <col class="translation-column" />
+          <col class="chapters-column" />
+          <col class="status-column" />
+          <col class="clear-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'library.translation.glossary.table.name' | t }}</th>
+            <th scope="col">{{ 'library.translation.glossary.table.type' | t }}</th>
+            <th scope="col">
+              {{
+                'library.translation.glossary.table.translation'
+                  | t: { language: store.language() ? store.languageLabel(store.language()!) : '' }
+              }}
+            </th>
+            <th
+              scope="col"
+              class="num chapters-cell"
+              [dsTooltip]="'library.translation.glossary.table.chapters' | t"
+              [attr.aria-label]="'library.translation.glossary.table.chapters' | t"
+            >
+              {{ 'library.translation.glossary.table.chAbbr' | t }}
+            </th>
+            <th scope="col">{{ 'library.translation.glossary.table.status' | t }}</th>
+            <th scope="col">
+              <span class="visually-hidden">{{ 'library.translation.glossary.table.actions' | t }}</span>
+            </th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+    <cdk-virtual-scroll-viewport
+      class="glossary-table"
+      data-testid="glossary-table"
+      [itemSize]="rowHeight"
+      [minBufferPx]="rowHeight * 4"
+      [maxBufferPx]="rowHeight * 8"
+    >
+      <table class="ds-table dense">
+        <caption class="visually-hidden">
+          {{
+            'library.translation.glossary.table.caption' | t
+          }}
+        </caption>
+        <colgroup>
+          <col class="name-column" />
+          <col class="type-column" />
+          <col class="translation-column" />
+          <col class="chapters-column" />
+          <col class="status-column" />
+          <col class="clear-column" />
+        </colgroup>
+        <thead class="visually-hidden">
+          <tr>
+            <th scope="col">{{ 'library.translation.glossary.table.name' | t }}</th>
+            <th scope="col">{{ 'library.translation.glossary.table.type' | t }}</th>
+            <th scope="col">
+              {{
+                'library.translation.glossary.table.translation'
+                  | t: { language: store.language() ? store.languageLabel(store.language()!) : '' }
+              }}
+            </th>
+            <th
+              scope="col"
+              class="num chapters-cell"
+              [attr.aria-label]="'library.translation.glossary.table.chapters' | t"
+            >
+              {{ 'library.translation.glossary.table.chAbbr' | t }}
+            </th>
+            <th scope="col">{{ 'library.translation.glossary.table.status' | t }}</th>
+            <th scope="col">
+              <span class="visually-hidden">{{ 'library.translation.glossary.table.actions' | t }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *cdkVirtualFor="let row of visible(); let index = index; trackBy: trackRow"
+            [attr.data-testid]="'glossary-row-' + testKey(row)"
+            [attr.data-status]="row.status"
+            [class.is-alias]="row.alias !== null"
+          >
+            <td [attr.lang]="novelStore.novel()?.language">
+              <span class="glossary-name" [dsTooltip]="rowName(row)" dsTooltipWhenTruncated>
+                @if (row.alias === null) {
+                  <strong>{{ row.entityName }}</strong>
+                } @else {
+                  {{ row.alias }}
+                  <span class="meta" data-testid="glossary-alias-of">{{
+                    'library.translation.glossary.table.aliasOf' | t: { name: row.entityName }
+                  }}</span>
+                }
+              </span>
+            </td>
+            <td>
+              <span class="ds-world-type-label"
+                ><span
+                  class="ds-world-type"
+                  [attr.data-type]="row.entityType"
+                  [dsTooltip]="typeKeys[row.entityType] | t"
+                  ><ds-icon size="sm" [name]="typeIcons[row.entityType]" /></span
+                ><span class="type-label">{{ typeKeys[row.entityType] | t }}</span></span
+              >
+            </td>
+            <td>
+              <span class="glossary-input-wrap" [dsTooltip]="locked() ? lockReason() : ''">
+                <input
+                  class="ds-input glossary-input"
+                  [class.is-invalid]="errors().has(rowKey(row))"
+                  [attr.lang]="store.language()"
+                  [attr.data-testid]="'glossary-input-' + testKey(row)"
+                  [value]="value(row)"
+                  [placeholder]="'library.translation.glossary.table.notTranslated' | t"
+                  [attr.aria-label]="'library.translation.glossary.table.translationOf' | t: { name: rowName(row) }"
+                  aria-describedby="glossary-input-hint"
+                  [readOnly]="locked()"
+                  [attr.aria-readonly]="locked()"
+                  (input)="setDraft(row, $event)"
+                  (keydown)="onKey($event, row, index)"
+                  (blur)="commit(row)"
+                />
+              </span>
+            </td>
+            <td class="num chapters-cell">{{ number(row.chapters) }}</td>
+            <td class="status-cell">
+              @if (saving().has(rowKey(row))) {
+                <span class="meta" [attr.data-testid]="'glossary-saving-' + testKey(row)">{{
+                  'library.translation.glossary.table.saving' | t
+                }}</span>
+              } @else if (errors().has(rowKey(row))) {
+                <ds-pill
+                  kind="danger"
+                  icon="alert-circle"
+                  [dsTooltip]="errors().get(rowKey(row)) ?? ''"
+                  [attr.data-testid]="'glossary-error-' + testKey(row)"
+                  ><span class="status-label">{{ 'library.translation.glossary.table.notSaved' | t }}</span></ds-pill
+                >
+              } @else if (row.status === 'untranslated') {
+                <ds-pill
+                  kind="warning"
+                  icon="minus"
+                  [dsTooltip]="'library.translation.glossary.status.untranslated' | t"
+                  ><span class="status-label">{{
+                    'library.translation.glossary.status.untranslated' | t
+                  }}</span></ds-pill
+                >
+              } @else if (row.status === 'llm') {
+                <ds-pill kind="info" icon="sparkles" [dsTooltip]="'library.translation.glossary.status.llm' | t"
+                  ><span class="status-label">{{ 'library.translation.glossary.status.llm' | t }}</span></ds-pill
+                >
+              } @else {
+                <ds-pill kind="success" icon="pencil" [dsTooltip]="'library.translation.glossary.status.user' | t"
+                  ><span class="status-label">{{ 'library.translation.glossary.status.user' | t }}</span></ds-pill
+                >
+              }
+            </td>
+            <td class="clear-cell">
+              <button
+                dsBtn
+                variant="ghost"
+                size="sm"
+                iconOnly
+                type="button"
+                tabindex="-1"
+                [attr.data-testid]="'glossary-clear-' + testKey(row)"
+                [attr.aria-label]="'library.translation.glossary.table.clearTranslation' | t: { name: rowName(row) }"
+                [dsTooltip]="'library.translation.glossary.table.clearTranslation' | t: { name: rowName(row) }"
+                [disabled]="locked()"
+                [class.is-hidden]="row.status === 'untranslated'"
+                (click)="commit(row, null)"
+              >
+                <ds-icon name="x" size="sm" />
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </cdk-virtual-scroll-viewport>
+  }
+}

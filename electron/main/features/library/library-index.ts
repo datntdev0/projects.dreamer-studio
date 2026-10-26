@@ -25,6 +25,7 @@ function toSummary(metadata: NovelStore.NovelMetadata): NovelSummary {
     importedAt: metadata.importedAt,
     updatedAt: metadata.updatedAt,
     hasCover: metadata.cover !== null,
+    translations: [],
     lock: null,
   };
 }

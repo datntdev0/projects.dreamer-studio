@@ -1,5 +1,6 @@
 import { Publication } from './novel-package';
 import { PipelineRunStatus, PipelineType } from './pipeline';
+import type { TranslationLanguageSummary } from './translation';
 
 export interface NovelLock {
   runId: string;
@@ -21,6 +22,7 @@ export interface NovelSummary {
   importedAt: string;
   updatedAt: string;
   hasCover: boolean;
+  translations: TranslationLanguageSummary[];
   lock: NovelLock | null;
 }
 

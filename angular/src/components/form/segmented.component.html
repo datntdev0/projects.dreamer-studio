@@ -3,18 +3,20 @@
     type="button"
     role="radio"
     [attr.aria-checked]="option.value === value()"
+    [attr.aria-disabled]="option.disabled ? 'true' : null"
     [attr.aria-label]="iconOnly() ? option.label : null"
     [attr.title]="iconOnly() ? option.label : null"
+    [dsTooltip]="option.tooltip ?? ''"
     [attr.tabindex]="isTabbable(option, index) ? 0 : -1"
-    [attr.data-testid]="'segmented-' + option.value"
-    (click)="value.set(option.value)"
+    [attr.data-testid]="option.testId ?? 'segmented-' + option.value"
+    (click)="select(option)"
     (keydown)="onKeydown($event, index)"
   >
     @if (option.icon) {
       <ds-icon [name]="option.icon" size="sm" />
     }
     @if (!iconOnly()) {
-      {{ option.label }}
+      <span class="ds-segmented-label">{{ option.label }}</span>
     }
   </button>
 }

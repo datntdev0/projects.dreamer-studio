@@ -130,6 +130,16 @@
   box-shadow: var(--shadow-1);
 }
 
+.ds-segmented button[aria-disabled='true'] {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  &:hover {
+    color: var(--color-text-tertiary);
+  }
+}
+
 .ds-checkbox-label {
   display: inline-flex;
   gap: var(--sp-sm);

@@ -1,6 +1,7 @@
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelLock } from '@dreamer/shared/models/novel';
 import type { ChapterRef } from '@dreamer/shared/models/novel';
+import type { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
 import type { I18nService, Language } from '@core/i18n/i18n.service';
 import type { ChapterChangeError } from './library.models';
 import type { LibraryChapter } from './library.models';
@@ -13,6 +14,13 @@ export interface LanguageOption {
 export type RequiredField = 'originalTitle' | 'title' | 'language';
 
 export type TextField = RequiredField | 'author' | 'description';
+
+export type TranslationLevel = 'full' | 'partial';
+
+export function translationLevel(item: TranslationLanguageSummary): TranslationLevel | null {
+  if (item.translated >= item.total && item.total > 0) return 'full';
+  return item.translated > 0 && item.translated < item.total ? 'partial' : null;
+}
 
 const LANGUAGE_CODES: string[] = ['zh', 'ja', 'ko', 'en', 'vi'];
 
@@ -33,7 +41,8 @@ export function chapterNumber(chapter: LibraryChapter): string {
   return String(chapter.position).padStart(4, '0');
 }
 
-export function lockKind(lock: NovelLock): 'export' | 'import' {
+export function lockKind(lock: NovelLock): 'export' | 'import' | 'translation' {
+  if (lock.type === 'glossary-translation' || lock.type === 'content-translation') return 'translation';
   return lock.type === 'novel-export' ? 'export' : 'import';
 }
 

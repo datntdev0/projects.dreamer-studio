@@ -1,0 +1,84 @@
+.library-chapters {
+  .translation-status-language {
+    display: inline-flex;
+    margin-left: var(--sp-sm);
+  }
+
+  .translation-status-row {
+    display: inline-flex;
+    flex: none;
+    gap: var(--sp-xs);
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .translation-status-edited {
+    color: var(--color-text-tertiary);
+  }
+
+  .translation-status-icon {
+    display: inline-flex;
+    gap: var(--sp-xxs);
+    align-items: center;
+  }
+
+  .translation-status-icon[data-status='translated'] {
+    color: var(--color-success);
+  }
+
+  .translation-status-icon[data-status='has-issues'] {
+    color: var(--color-warning);
+  }
+
+  .translation-status-icon[data-status='stale'] {
+    color: var(--color-link);
+  }
+
+  .translation-status-icon[data-status='failed'] {
+    color: var(--color-danger);
+  }
+
+  .translation-status-icon .num {
+    font-size: var(--font-size-small);
+  }
+}
+
+.library-inspector-stats > .translation-status-insp {
+  .translation-status-insp-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--sp-xs);
+    align-items: baseline;
+  }
+
+  .translation-status-insp-line > * {
+    white-space: nowrap;
+  }
+
+  .translation-status-total {
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-small);
+  }
+
+  .translation-status-code {
+    padding: 0 var(--sp-xs);
+    color: var(--color-text-secondary);
+    background: var(--color-surface-muted);
+    border-radius: var(--radius-xs);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    line-height: var(--badge-h);
+  }
+
+  .translation-status-done {
+    align-self: center;
+    color: var(--color-success);
+  }
+}
+
+.library-browse-filters .translation-status-filter-group {
+  margin: var(--sp-xs) 0 0;
+  padding: 0 var(--sp-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}

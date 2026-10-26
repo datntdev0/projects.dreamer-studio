@@ -7,10 +7,15 @@ import { effect } from '@angular/core';
 import { inject } from '@angular/core';
 import { input } from '@angular/core';
 import { model } from '@angular/core';
+import { output } from '@angular/core';
 import { untracked } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
+import { BannerComponent } from '@components/banner/banner.component';
 import { IconComponent } from '@components/icon/icon.component';
+import { PillComponent } from '@components/status/pill.component';
+import { SegmentedComponent } from '@components/form/segmented.component';
+import type { SegmentedOption } from '@components/form/segmented.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
@@ -19,6 +24,12 @@ import { findTextMatches } from '@dreamer/shared/core/text-match';
 import type { TextMatch } from '@dreamer/shared/core/text-match';
 import { chapterNumber } from '../library-format';
 import { isTypingTarget } from '../library-format';
+import { languageName } from '../library-format';
+import { TranslationStore } from '../translation.store';
+import type { ChapterTranslation } from '@dreamer/shared/models/translation';
+import type { TargetLanguage } from '@dreamer/shared/models/translation';
+import type { TranslationDisplay } from '@dreamer/shared/models/translation';
+import type { TranslationIssue } from '@dreamer/shared/models/translation';
 import type { LibraryChapter } from '../library.models';
 import type { ReaderHighlight } from '../library.models';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
@@ -29,13 +40,23 @@ interface ReaderTextPart {
   text: string;
   highlighted: boolean;
   current: boolean;
+  issue: boolean;
 }
 
 type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
 
 @Component({
   selector: 'ds-novel-reader',
-  imports: [AreaStateComponent, ButtonDirective, IconComponent, NgTemplateOutlet, TranslatePipe],
+  imports: [
+    AreaStateComponent,
+    BannerComponent,
+    ButtonDirective,
+    IconComponent,
+    NgTemplateOutlet,
+    PillComponent,
+    SegmentedComponent,
+    TranslatePipe,
+  ],
   host: {
     class: 'library-reader',
     'data-testid': 'novel-reader',
@@ -48,12 +69,75 @@ export class NovelReaderComponent {
   readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
   readonly highlight = input<ReaderHighlight | null>(null);
+  readonly showIssues = output<void>();
+  readonly editTranslation = output<void>();
 
   private readonly settingsStore: SettingsStore = inject(SettingsStore);
   private readonly novelStore: NovelStore = inject(NovelStore);
+  protected readonly store: TranslationStore = inject(TranslationStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly host: HTMLElement = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private scrollFrame: number = 0;
+  private issueFrame: number = 0;
+
+  protected readonly display = this.store.display;
+  protected readonly displayOptions = computed<SegmentedOption[]>(() =>
+    (['original', 'translation', 'side'] as TranslationDisplay[]).map(
+      (display: TranslationDisplay): SegmentedOption => ({
+        value: display,
+        label: this.label(display),
+        icon: display === 'original' ? 'book' : display === 'translation' ? 'languages' : 'columns',
+        testId: `translation-reader-display-${display}`,
+      }),
+    ),
+  );
+  protected readonly translation = computed<ChapterTranslation | null>(() => {
+    const selected: LibraryChapter | null = this.chapter();
+    const translation: ChapterTranslation | null = this.store.chapter();
+    if (
+      selected &&
+      translation?.file === selected.file &&
+      this.store.chapterFile() === selected.file &&
+      translation.language === this.store.language()
+    )
+      return translation;
+    const language = this.store.language();
+    const summary = selected ? this.store.chapterStatus(selected.position) : null;
+    if (
+      !selected ||
+      !language ||
+      !summary ||
+      summary.file !== selected.file ||
+      !['not-translated', 'failed'].includes(summary.status)
+    )
+      return null;
+    return { ...summary, language, title: '', paragraphs: [], issueList: [], translatedAt: null };
+  });
+  protected readonly issue = computed<TranslationIssue | null>(() =>
+    this.translation()
+      ? (this.store.issues().find((item: TranslationIssue): boolean => item.id === this.store.selectedIssue()) ?? null)
+      : null,
+  );
+  protected readonly sourceLanguage = computed(() => languageName(this.novel().language, this.i18n.language()));
+  protected readonly pairIndexes = computed(() => {
+    const text: ChapterTextState | null = this.text();
+    return Array.from(
+      {
+        length: Math.max(
+          text?.status === 'ready' ? text.paragraphs.length : 0,
+          this.translation()?.paragraphs.length ?? 0,
+        ),
+      },
+      (_: unknown, index: number): number => index,
+    );
+  });
+  protected readonly staleMessage = computed(() => {
+    const translation: ChapterTranslation | null = this.translation();
+    const reason: string = this.i18n.t(
+      `library.translation.reader.stale.${translation?.staleReason === 'glossary' ? 'glossary' : 'source'}`,
+    );
+    return translation?.edited ? `${reason} ${this.i18n.t('library.translation.reader.stale.edited')}` : reason;
+  });
 
   protected readonly skeletonLines: number[] = Array.from({ length: 8 }, (_, index: number): number => index);
   protected readonly chapter: Signal<LibraryChapter | null> = computed(
@@ -77,18 +161,30 @@ export class NovelReaderComponent {
   protected readonly readerMeasure = computed(() => `${this.settingsStore.reading().width}ch`);
   protected readonly titleParts: Signal<ReaderTextPart[]> = computed(() => {
     const chapter: LibraryChapter | null = this.chapter();
-    return chapter ? this.textParts(chapter.title, null) : [];
+    return chapter ? this.textParts(chapter.title, null, 'source') : [];
   });
   protected readonly paragraphParts: Signal<ReaderTextPart[][]> = computed(() => {
     const text: ChapterTextState | null = this.text();
     if (text?.status !== 'ready') return [];
     return text.paragraphs.map((paragraph: string, index: number): ReaderTextPart[] =>
-      this.textParts(paragraph, index),
+      this.textParts(paragraph, index, 'source'),
     );
   });
+  protected readonly translatedParts = computed<ReaderTextPart[][]>(
+    () =>
+      this.translation()?.paragraphs.map((paragraph: string, index: number): ReaderTextPart[] =>
+        this.textParts(paragraph, index, 'translation'),
+      ) ?? [],
+  );
+  protected readonly translatedTitleParts = computed<ReaderTextPart[]>(() =>
+    this.textParts(this.translation()?.title ?? '', null, 'translation'),
+  );
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => cancelAnimationFrame(this.scrollFrame));
+    inject(DestroyRef).onDestroy(() => {
+      cancelAnimationFrame(this.scrollFrame);
+      cancelAnimationFrame(this.issueFrame);
+    });
     effect(() => {
       const chapter: LibraryChapter | null = this.chapter();
       const highlight: ReaderHighlight | null = this.highlight();
@@ -99,12 +195,61 @@ export class NovelReaderComponent {
         highlight?.chapterId === chapter.id && highlight.paragraph !== null && !!highlight.query.trim(),
       );
     });
+    effect(() => {
+      const id: string | null = this.store.selectedIssue();
+      this.display();
+      this.translation();
+      cancelAnimationFrame(this.issueFrame);
+      if (id)
+        this.issueFrame = requestAnimationFrame(() =>
+          this.host.querySelector<HTMLElement>('.translation-reader-issue')?.scrollIntoView({ block: 'center' }),
+        );
+    });
   }
 
   protected readonly chapterNumber = chapterNumber;
 
   protected count(value: number): string {
     return new Intl.NumberFormat(this.i18n.language()).format(value);
+  }
+
+  protected label(display: TranslationDisplay): string {
+    return this.i18n.t(`library.translation.reader.display.${display}`);
+  }
+  protected setDisplay(display: string): void {
+    this.store.display.set(display as TranslationDisplay);
+  }
+  protected setLanguage(event: Event): void {
+    this.store.setLanguage((event.target as HTMLSelectElement).value as TargetLanguage);
+  }
+  protected translate(overwrite: boolean): void {
+    const chapter: LibraryChapter | null = this.chapter();
+    if (chapter) this.store.openChapterDialog(chapter.position, overwrite);
+  }
+  protected sourceIssue(index: number | null): boolean {
+    const issue = this.issue();
+    return (
+      !!issue && issue.kind !== 'paragraph-count' && (index === null ? issue.inTitle : issue.sourceParagraph === index)
+    );
+  }
+  protected translatedIssue(index: number | null): boolean {
+    const issue = this.issue();
+    return (
+      !!issue &&
+      issue.kind !== 'paragraph-count' &&
+      (index === null ? issue.inTitle : issue.translatedParagraph === index)
+    );
+  }
+  protected pairIssue(index: number): boolean {
+    const issue: TranslationIssue | null = this.issue();
+    return (
+      !!issue &&
+      issue.kind !== 'paragraph-count' &&
+      (issue.sourceParagraph === index || issue.translatedParagraph === index)
+    );
+  }
+  protected missingIssue(): boolean {
+    return this.issue()?.kind === 'paragraph-count';
   }
 
   protected open(chapter: LibraryChapter | null): void {
@@ -135,28 +280,40 @@ export class NovelReaderComponent {
     return index < 0 ? null : (this.chapters()[index + direction] ?? null);
   }
 
-  private textParts(text: string, paragraph: number | null): ReaderTextPart[] {
+  private textParts(text: string, paragraph: number | null, side: 'source' | 'translation'): ReaderTextPart[] {
     const highlight: ReaderHighlight | null = this.highlight();
     const chapter: LibraryChapter | null = this.chapter();
-    const query: string = highlight && highlight.chapterId === chapter?.id ? highlight.query.trim() : '';
-    if (!query) return [{ text, highlighted: false, current: false }];
+    const issue: TranslationIssue | null = this.issue();
+    const marked: boolean = side === 'source' ? this.sourceIssue(paragraph) : this.translatedIssue(paragraph);
+    const issueQuery: string =
+      marked && issue?.name && (side === 'source' || issue.kind === 'untranslated-name') ? issue.name : '';
+    const query: string =
+      issueQuery ||
+      (side === 'source' && highlight && highlight.chapterId === chapter?.id ? highlight.query.trim() : '');
+    if (!query) return [{ text, highlighted: false, current: false, issue: false }];
     const characters: string[] = Array.from(text);
     const matches: TextMatch[] = findTextMatches(text, query);
     const parts: ReaderTextPart[] = [];
     let from: number = 0;
     for (const [index, match] of matches.entries()) {
       if (match.start > from)
-        parts.push({ text: characters.slice(from, match.start).join(''), highlighted: false, current: false });
+        parts.push({
+          text: characters.slice(from, match.start).join(''),
+          highlighted: false,
+          current: false,
+          issue: false,
+        });
       parts.push({
         text: characters.slice(match.start, match.end).join(''),
         highlighted: true,
-        current: highlight?.paragraph === paragraph && highlight.occurrence === index,
+        current: !issueQuery && highlight?.paragraph === paragraph && highlight.occurrence === index,
+        issue: !!issueQuery,
       });
       from = match.end;
     }
-    if (!parts.length) return [{ text, highlighted: false, current: false }];
+    if (!parts.length) return [{ text, highlighted: false, current: false, issue: false }];
     if (from < characters.length)
-      parts.push({ text: characters.slice(from).join(''), highlighted: false, current: false });
+      parts.push({ text: characters.slice(from).join(''), highlighted: false, current: false, issue: false });
     return parts;
   }
 

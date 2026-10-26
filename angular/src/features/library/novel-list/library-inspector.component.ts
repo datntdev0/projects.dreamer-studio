@@ -10,12 +10,13 @@ import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
+import type { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
 import { formatCompact, formatCount, formatDateTime } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LibraryStore } from '@core/stores/library-store';
 import { PipelineStore } from '@core/stores/pipeline-store';
-import { coverPalette, coverUrl, languageName } from '../library-format';
+import { coverPalette, coverUrl, languageName, translationLevel } from '../library-format';
 import { LibraryCoverComponent } from './library-cover.component';
 import { NovelMetadataFormComponent } from './novel-metadata-form.component';
 
@@ -91,6 +92,16 @@ export class LibraryInspectorComponent {
   protected language(code: string): string {
     return languageName(code, this.i18n.language());
   }
+
+  protected translationLine(item: TranslationLanguageSummary): string {
+    return this.i18n.t('library.translation.status.inspLine', {
+      language: this.language(item.language),
+      translated: this.count(item.translated),
+      total: this.count(item.total),
+    });
+  }
+
+  protected readonly translationLevel = translationLevel;
 
   protected date(iso: string): string {
     return formatDateTime(iso, this.i18n.language());

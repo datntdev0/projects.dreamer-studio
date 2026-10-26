@@ -12,6 +12,7 @@ import { TabsComponent } from '@components/tabs/tabs.component';
 import type { TabItem } from '@components/tabs/tabs.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import type { NovelSummary } from '@dreamer/shared/models/novel';
+import type { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
@@ -20,7 +21,8 @@ import type { LibrarySortKey, LibraryView, SortDirection } from '@core/stores/li
 import { LayoutService } from '@shell/layout/layout.service';
 import { PanelDirective } from '@shell/layout/panel.directive';
 import { formatCount } from '@core/format';
-import { fold, isTypingTarget, languageName, matches, toggled } from './library-format';
+import { fold, isTypingTarget, languageName, matches, toggled, translationLevel } from './library-format';
+import type { TranslationLevel } from './library-format';
 import { LibraryInspectorComponent } from './novel-list/library-inspector.component';
 import { LibraryItemsComponent } from './novel-list/library-items.component';
 import { NovelDeleteDialogComponent } from './novel-list/novel-delete-dialog.component';
@@ -30,6 +32,13 @@ interface FilterRow {
   value: string;
   label: string;
   count: number;
+}
+
+interface TranslationGroup {
+  language: string;
+  label: string;
+  full: number;
+  partial: number;
 }
 
 @Component({
@@ -73,10 +82,12 @@ export class LibraryPage implements OnInit {
   protected readonly languageFilter = signal<string | null>(null);
   protected readonly genreFilters = signal<string[]>([]);
   protected readonly publicationFilters = signal<string[]>([]);
+  protected readonly translationFilters = signal<string[]>([]);
   protected readonly selected = signal<string[]>([]);
   protected readonly leaveOpen = signal<boolean>(false);
   protected readonly deleteTargets = signal<NovelSummary[]>([]);
   protected readonly publications: ('ongoing' | 'completed')[] = ['ongoing', 'completed'];
+  protected readonly translationLevels: TranslationLevel[] = ['full', 'partial'];
   protected readonly sortKeys: LibrarySortKey[] = ['updatedAt', 'importedAt', 'title', 'author', 'chapterCount'];
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
     { id: 'novels', label: this.i18n.t('library.browse.novels') },
@@ -102,11 +113,35 @@ export class LibraryPage implements OnInit {
   protected readonly publicationCounts: Signal<Map<string, number>> = computed(() =>
     this.countBy(this.store.novels().map((novel: NovelSummary) => novel.publication)),
   );
+  protected readonly hasTranslations: Signal<boolean> = computed(() =>
+    this.store.novels().some((novel: NovelSummary) => novel.translations.length > 0),
+  );
+  protected readonly translationGroups: Signal<TranslationGroup[]> = computed(() => {
+    const counts: Map<string, TranslationGroup> = new Map();
+    for (const novel of this.store.novels()) {
+      for (const item of novel.translations) {
+        const level: TranslationLevel | null = translationLevel(item);
+        if (!level) continue;
+        const group: TranslationGroup = counts.get(item.language) ?? {
+          language: item.language,
+          label: languageName(item.language, this.i18n.language()),
+          full: 0,
+          partial: 0,
+        };
+        group[level] += 1;
+        counts.set(item.language, group);
+      }
+    }
+    return [...counts.values()].sort((a: TranslationGroup, b: TranslationGroup) =>
+      a.label.localeCompare(b.label, this.i18n.language()),
+    );
+  });
   protected readonly results: Signal<NovelSummary[]> = computed(() => {
     const query: string = fold(this.query().trim());
     const language: string | null = this.languageFilter();
     const genres: string[] = this.genreFilters();
     const publications: string[] = this.publicationFilters();
+    const translations: string[] = this.translationFilters();
     const key: LibrarySortKey = this.store.sortKey();
     const direction: number = this.store.sortDirection() === 'asc' ? 1 : -1;
     const collator: Intl.Collator = new Intl.Collator(this.i18n.language(), { numeric: true });
@@ -117,6 +152,11 @@ export class LibraryPage implements OnInit {
           (!language || novel.language === language) &&
           genres.every((genre: string) => novel.tags.includes(genre)) &&
           (!publications.length || publications.includes(novel.publication)) &&
+          (!translations.length ||
+            novel.translations.some((item: TranslationLanguageSummary) => {
+              const level: TranslationLevel | null = translationLevel(item);
+              return level !== null && translations.includes(`${item.language}:${level}`);
+            })) &&
           (!query || matches(novel, query)),
       )
       .sort(
@@ -161,6 +201,14 @@ export class LibraryPage implements OnInit {
     this.publicationFilters.update((current: string[]) => toggled(current, value));
   }
 
+  protected toggleTranslation(value: string): void {
+    this.translationFilters.update((current: string[]) => toggled(current, value));
+  }
+
+  protected translationFilterKey(level: TranslationLevel): string {
+    return `library.translation.status.filter.${level}`;
+  }
+
   protected toggleGenre(value: string): void {
     this.genreFilters.update((current: string[]) => toggled(current, value));
   }
@@ -170,6 +218,7 @@ export class LibraryPage implements OnInit {
     this.languageFilter.set(null);
     this.genreFilters.set([]);
     this.publicationFilters.set([]);
+    this.translationFilters.set([]);
   }
 
   protected setSortKey(value: LibrarySortKey): void {

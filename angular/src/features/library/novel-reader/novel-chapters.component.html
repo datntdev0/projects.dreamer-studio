@@ -5,6 +5,19 @@
       'library.chapters.count' | t: { count: formatCount(chapters().length) }
     }}</span>
   </h2>
+  @if (translationLanguage(); as language) {
+    @if (!organizing()) {
+      <span
+        class="translation-status-language"
+        role="img"
+        tabindex="0"
+        [dsTooltip]="translationCountLabel(language)"
+        [attr.aria-label]="translationCountLabel(language)"
+      >
+        <ds-pill icon="languages" data-testid="translation-status-language">{{ language.toUpperCase() }}</ds-pill>
+      </span>
+    }
+  }
   @if (saved()) {
     <span class="library-chapters-saved" aria-hidden="true" data-testid="novel-chapters-saved"
       ><ds-icon name="check" size="sm" />{{ 'library.chapters.saved' | t }}</span
@@ -261,6 +274,52 @@
             (click)="openChapter(chapter)"
           >
             <ng-container *ngTemplateOutlet="label; context: { $implicit: chapter }" />
+            @if (translationLanguage() && chapterStatus(chapter.position); as summary) {
+              <span
+                class="translation-status-row"
+                data-testid="translation-status-row"
+                [attr.data-status]="chapterRunning(chapter.position) ? 'running' : summary.status"
+                [dsTooltip]="statusLabel(summary, chapterRunning(chapter.position))"
+              >
+                @if (summary.edited) {
+                  <ds-icon
+                    name="pencil"
+                    size="sm"
+                    class="translation-status-edited"
+                    data-testid="translation-status-edited"
+                    aria-hidden="true"
+                  />
+                }
+                <span
+                  class="translation-status-icon"
+                  data-testid="translation-status-icon"
+                  [attr.data-status]="chapterRunning(chapter.position) ? 'running' : summary.status"
+                  aria-hidden="true"
+                >
+                  @if (chapterRunning(chapter.position)) {
+                    <ds-dot kind="primary" pulse />
+                  } @else {
+                    @switch (summary.status) {
+                      @case ('translated') {
+                        <ds-icon name="check" size="sm" />
+                      }
+                      @case ('has-issues') {
+                        <ds-icon name="alert-triangle" size="sm" /><span class="num">{{
+                          formatCount(summary.issues)
+                        }}</span>
+                      }
+                      @case ('stale') {
+                        <ds-icon name="clock" size="sm" />
+                      }
+                      @case ('failed') {
+                        <ds-icon name="alert-circle" size="sm" />
+                      }
+                    }
+                  }
+                </span>
+                <span class="visually-hidden">{{ statusLabel(summary, chapterRunning(chapter.position)) }}</span>
+              </span>
+            }
           </button>
         }
       </div>

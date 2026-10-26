@@ -1,0 +1,253 @@
+// Translation slice styles.
+ds-novel-reader {
+  container: translation-reader / inline-size;
+}
+
+ds-chapter-editor {
+  container: translation-editor / inline-size;
+}
+
+ds-novel-reader .translation-reader-bar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: var(--sp-sm) var(--sp-xl);
+  border-bottom: var(--gutter) solid var(--color-border);
+  background: var(--color-background);
+  font-family: var(--font-sans);
+
+  .translation-reader-language {
+    display: inline-block;
+    width: auto;
+
+    select {
+      width: auto;
+    }
+  }
+
+  [data-testid='translation-reader-issues'] {
+    ds-icon,
+    .num {
+      color: var(--color-warning);
+    }
+  }
+}
+
+ds-novel-reader .library-reader-article {
+  &[data-display='side'] > * {
+    width: min(100%, calc(var(--reader-measure) * 2 + var(--sp-xl)));
+  }
+
+  &[data-display='side'] > .library-reader-pager {
+    font-family: var(--reader-font);
+  }
+
+  > .translation-reader-notes {
+    display: grid;
+    gap: var(--sp-sm);
+    margin-bottom: var(--sp-lg);
+  }
+
+  .translation-reader-notes ds-banner,
+  .translation-reader-state .ds-area-state {
+    font: var(--font-size-base) / var(--line-height-base) var(--font-sans);
+  }
+
+  .translation-reader-columns,
+  .translation-reader-pair {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--sp-xl);
+  }
+
+  .translation-reader-columns {
+    margin-bottom: var(--sp-md);
+    color: var(--color-text-tertiary);
+    font: var(--font-size-meta) var(--font-sans);
+  }
+
+  .translation-reader-pair {
+    align-items: start;
+    margin-bottom: var(--sp-lg);
+
+    p {
+      margin: 0;
+      text-indent: 0;
+    }
+  }
+
+  .translation-reader-title-row {
+    border-bottom: var(--gutter) solid var(--color-border);
+    padding-bottom: var(--sp-md);
+  }
+  .translation-reader-title {
+    font: 600 var(--font-size-h2) / var(--line-height-base) var(--font-serif);
+  }
+  .translation-reader-cell-label {
+    display: none;
+  }
+
+  .translation-reader-missing {
+    display: flex;
+    gap: var(--sp-xs);
+    align-items: center;
+    padding: var(--sp-sm) var(--sp-md);
+    border: var(--gutter) dashed var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-tertiary);
+    font: var(--font-size-meta) var(--font-sans);
+
+    ds-icon {
+      color: var(--color-warning);
+    }
+  }
+
+  .translation-reader-issue {
+    padding: var(--sp-xs) var(--sp-sm);
+    border-left: var(--focus-width) solid var(--color-warning);
+    border-radius: var(--radius-xs);
+    background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  }
+
+  .translation-reader-issue-icon {
+    margin-right: var(--sp-xs);
+    color: var(--color-warning);
+    vertical-align: middle;
+  }
+}
+
+ds-chapter-editor .translation-editor-form {
+  .translation-editor-heading {
+    display: flex;
+    gap: var(--sp-sm);
+    align-items: center;
+    margin: 0;
+    font: 600 var(--font-size-h3) var(--font-sans);
+  }
+
+  .translation-editor-rows-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-sm);
+    align-items: center;
+    font-family: var(--font-sans);
+
+    strong {
+      font-size: var(--font-size-h4);
+    }
+    .meta {
+      color: var(--color-text-tertiary);
+      font-size: var(--font-size-meta);
+    }
+  }
+
+  .translation-editor-required {
+    color: var(--color-danger);
+    font: var(--font-size-meta) var(--font-sans);
+  }
+
+  .translation-editor-rows {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border: var(--gutter) solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .translation-editor-row {
+    display: grid;
+    grid-template-columns: var(--sp-xl) minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--sp-md);
+    padding: var(--sp-sm) var(--sp-md);
+    border-bottom: var(--gutter) solid var(--color-border);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  .translation-editor-number {
+    padding-top: var(--sp-sm);
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-meta);
+    text-align: right;
+  }
+
+  .translation-editor-source {
+    margin: 0;
+    padding: var(--sp-sm) var(--sp-md);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font: var(--font-size-base) / var(--line-height-base) var(--font-serif);
+  }
+
+  .translation-editor-no-source {
+    color: var(--color-text-tertiary);
+    font: var(--font-size-meta) var(--font-sans);
+  }
+
+  .translation-editor-paragraph.ds-input {
+    min-height: var(--control-h);
+    height: auto;
+    padding: var(--sp-sm) var(--sp-md);
+    font: var(--font-size-base) / var(--line-height-base) var(--font-serif);
+    field-sizing: content;
+    resize: none;
+  }
+
+  @container translation-editor (max-width: 720px) {
+    .translation-editor-row {
+      grid-template-columns: var(--sp-xl) minmax(0, 1fr);
+      row-gap: var(--sp-sm);
+    }
+
+    .translation-editor-source {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .translation-editor-paragraph.ds-input {
+      grid-column: 2;
+      grid-row: 2;
+    }
+  }
+}
+
+@container translation-reader (max-width: 760px) {
+  ds-novel-reader .translation-reader-bar .translation-reader-label,
+  ds-novel-reader .translation-reader-bar .ds-segmented-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@container translation-reader (max-width: 720px) {
+  ds-novel-reader .library-reader-article {
+    .translation-reader-columns {
+      display: none;
+    }
+    .translation-reader-pair {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: var(--sp-xs);
+      margin-bottom: var(--sp-xl);
+    }
+    .translation-reader-cell-label {
+      display: block;
+      color: var(--color-text-tertiary);
+      font: var(--font-size-meta) var(--font-sans);
+    }
+    .translation-reader-translation-cell {
+      padding-left: var(--sp-md);
+      border-left: var(--focus-width) solid var(--color-border);
+    }
+  }
+}

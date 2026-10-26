@@ -1,0 +1,176 @@
+@if (state() === 'no-language') {
+  <ds-area-state
+    kind="empty"
+    icon="languages"
+    [compact]="true"
+    [description]="'library.translation.page.noTarget' | t"
+  />
+} @else if (state() === 'loading') {
+  <div class="library-translation-issues-loading" role="status">
+    <span class="visually-hidden">{{ 'library.translation.page.issues.loading' | t }}</span>
+    <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
+  </div>
+} @else if (store.language(); as language) {
+  @if (state() === 'not-translated') {
+    <ds-area-state
+      kind="empty"
+      icon="languages"
+      [compact]="true"
+      [heading]="'library.translation.page.issues.notTranslated' | t: { language: store.languageLabel(language) }"
+      [description]="'library.translation.page.issues.notTranslatedHint' | t"
+    />
+    <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'primary' }" />
+  } @else {
+    <div class="library-translation-issues-head">
+      <strong>{{ store.languageLabel(language) }}</strong>
+      <ds-pill data-testid="translation-issues-status" [kind]="statusKind()" [icon]="statusIcon()">{{
+        statusKey() | t
+      }}</ds-pill>
+      @if (store.chapter()?.edited) {
+        <ds-pill kind="neutral" icon="pencil" data-testid="translation-issues-edited">{{
+          'library.translation.page.issues.edited' | t
+        }}</ds-pill>
+      }
+      <span class="ds-spacer"></span>
+      @if (store.issues().length) {
+        <span class="meta num" data-testid="translation-issues-count">{{
+          (store.issues().length === 1
+            ? 'library.translation.page.issues.countOne'
+            : 'library.translation.page.issues.countMany'
+          ) | t: { count: store.issues().length }
+        }}</span>
+      }
+    </div>
+    @if (store.chapter(); as chapter) {
+      @if (state() === 'failed') {
+        <div
+          class="library-translation-issues-note"
+          data-kind="danger"
+          role="alert"
+          data-testid="translation-issues-failed"
+        >
+          <div>
+            <ds-icon name="alert-circle" size="sm" /><strong>{{ 'library.translation.page.issues.failed' | t }}</strong>
+          </div>
+          <p>{{ chapter.error }}</p>
+          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'secondary' }" />
+        </div>
+      }
+      @if (state() === 'stale') {
+        <div
+          class="library-translation-issues-note"
+          data-kind="warning"
+          role="status"
+          data-testid="translation-issues-stale"
+        >
+          <div>
+            <ds-icon name="clock" size="sm" /><strong>{{ 'library.translation.page.issues.staleHeading' | t }}</strong>
+          </div>
+          <p>
+            {{
+              (chapter.staleReason === 'source'
+                ? 'library.translation.page.issues.staleSource'
+                : 'library.translation.page.issues.staleGlossary'
+              ) | t
+            }}
+          </p>
+          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'secondary' }" />
+        </div>
+      }
+      @if (chapter.instructionChanged && state() !== 'failed') {
+        <div
+          class="library-translation-issues-note"
+          data-kind="info"
+          role="status"
+          data-testid="translation-issues-instruction"
+        >
+          <div>
+            <ds-icon name="info" size="sm" /><strong>{{
+              'library.translation.page.issues.instructionHeading' | t
+            }}</strong>
+          </div>
+          <p>{{ 'library.translation.page.issues.instructionChanged' | t }}</p>
+          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'ghost' }" />
+        </div>
+      }
+    }
+    @if (state() !== 'failed' && store.issues().length) {
+      <ul
+        class="library-translation-issues-list"
+        role="list"
+        [attr.aria-label]="'library.translation.page.issues.label' | t"
+      >
+        @for (issue of store.issues(); track issue.id; let index = $index) {
+          <li>
+            <button
+              type="button"
+              class="library-translation-issue"
+              [attr.aria-pressed]="store.selectedIssue() === issue.id"
+              data-testid="translation-issues-item"
+              [attr.data-issue-id]="issue.id"
+              [attr.data-kind]="issue.kind"
+              (click)="select(issue)"
+              (keydown)="onIssueKeydown($event, index)"
+            >
+              <ds-icon [name]="issueIcon(issue)" size="sm" />
+              <span>
+                <span class="library-translation-issue-text">
+                  @if (issue.kind === 'paragraph-count') {
+                    {{
+                      'library.translation.page.issues.paragraphCount'
+                        | t: { source: issue.sourceCount ?? 0, translated: issue.translatedCount ?? 0 }
+                    }}
+                  } @else {
+                    <span [attr.lang]="sourceLanguage()">{{ issue.name }}</span>
+                    @if (issue.translation) {
+                      <span aria-hidden="true"> → </span><span [attr.lang]="language">{{ issue.translation }}</span>
+                    }
+                  }
+                </span>
+                <span class="meta"
+                  >{{ issueKindKey(issue) | t }}
+                  @if (issue.inTitle) {
+                    &middot; {{ 'library.translation.page.issues.title' | t }}
+                  } @else if (issue.sourceParagraph !== null) {
+                    &middot; {{ 'library.translation.page.issues.paragraph' | t: { n: issue.sourceParagraph + 1 } }}
+                  }
+                </span>
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+      <p class="meta library-translation-issues-hint">{{ 'library.translation.page.issues.hint' | t }}</p>
+    } @else if (state() !== 'failed') {
+      <ds-area-state
+        kind="empty"
+        icon="check"
+        [compact]="true"
+        data-testid="translation-issues-empty"
+        [heading]="'library.translation.page.issues.empty' | t"
+        [description]="'library.translation.page.issues.emptyHint' | t"
+      />
+    }
+  }
+}
+
+<ng-template #translateButton let-variant="variant">
+  <span
+    class="library-novel-action"
+    [class.library-translation-issues-action]="state() === 'not-translated'"
+    [dsTooltip]="blockedReason()"
+    [attr.tabindex]="blockedReason() ? 0 : null"
+  >
+    <button
+      dsBtn
+      [variant]="variant"
+      size="sm"
+      type="button"
+      data-testid="translation-issues-translate"
+      [disabled]="!!blockedReason()"
+      (click)="translateChapter()"
+    >
+      <ds-icon name="languages" size="sm" />{{ 'library.translation.page.issues.translateChapter' | t }}
+    </button>
+  </span>
+</ng-template>

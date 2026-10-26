@@ -1,89 +1,214 @@
-<form class="library-chapter-editor-form" novalidate data-testid="chapter-editor-form" (submit)="save($event)">
-  @if (error() === 'locked') {
-    <ds-banner
-      variant="danger"
-      data-testid="chapter-editor-refused"
-      [heading]="'library.novel.form.refusedHeading' | t"
-      [message]="'library.novel.form.refusedMessage' | t: { run: novel().lock?.label ?? novel().title }"
-      [dismissLabel]="'common.dismiss' | t"
-      (dismiss)="error.set(null)"
-    />
-  }
-  @if (error() === 'stale' || error() === 'missing' || error() === 'failed') {
-    <ds-banner
-      variant="danger"
-      data-testid="chapter-editor-error"
-      [heading]="'library.chapterEditor.notSaved' | t"
-      [message]="errorKey() | t"
-      [dismissLabel]="'common.dismiss' | t"
-      (dismiss)="error.set(null)"
-    />
-  }
-  @if (!editable() && text().status === 'loading') {
-    <p data-testid="chapter-editor-loading">{{ 'library.reader.loading' | t }}</p>
-  } @else if (!editable() && text().status === 'missing') {
-    <p data-testid="chapter-editor-missing">{{ 'library.reader.error.description' | t }}</p>
-  } @else {
-    <ds-field
-      required
-      controlId="chapter-editor-title"
-      [label]="'library.chapterEditor.title' | t"
-      [error]="titleRequired() ? ('library.novel.form.required' | t) : ''"
-    >
-      <input
-        id="chapter-editor-title"
-        class="ds-input"
-        data-testid="chapter-editor-title"
-        [attr.lang]="novel().language"
-        [value]="title()"
-        [attr.maxlength]="titleMax"
-        (input)="setTitle($event)"
+@if (mode() === 'translation') {
+  <form
+    class="library-chapter-editor-form translation-editor-form"
+    novalidate
+    data-testid="translation-editor"
+    (submit)="save($event)"
+  >
+    @if (translationError()) {
+      <ds-banner
+        variant="danger"
+        data-testid="translation-editor-error"
+        [heading]="'library.translation.reader.editor.notSaved' | t"
+        [message]="translationErrorMessage()"
+        [dismissLabel]="'common.dismiss' | t"
+        (dismiss)="translationError.set('')"
       />
-    </ds-field>
-    <ds-field
-      required
-      class="library-chapter-editor-content"
-      controlId="chapter-editor-content"
-      [label]="'library.chapterEditor.content' | t"
-      [hint]="'library.chapterEditor.contentHint' | t: { count: count(paragraphCount()) }"
-      [error]="contentRequired() ? ('library.novel.form.required' | t) : ''"
-    >
-      <textarea
-        id="chapter-editor-content"
-        class="ds-input"
-        data-testid="chapter-editor-content"
-        [attr.lang]="novel().language"
-        [value]="content()"
-        (input)="setContent($event)"
-      ></textarea>
-    </ds-field>
-  }
-  <div class="library-chapter-editor-actions">
-    @if (dirty()) {
-      <ds-pill kind="warning" icon="pencil" data-testid="chapter-editor-unsaved">{{
-        'library.novel.form.unsaved' | t
-      }}</ds-pill>
     }
-    <span class="ds-spacer"></span>
-    <button
-      dsBtn
-      variant="ghost"
-      size="sm"
-      type="button"
-      data-testid="chapter-editor-cancel"
-      (click)="cancelled.emit()"
-    >
-      {{ 'common.cancel' | t }}
-    </button>
-    <button
-      dsBtn
-      variant="primary"
-      size="sm"
-      type="submit"
-      data-testid="chapter-editor-save"
-      [disabled]="!dirty() || changing()"
-    >
-      <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
-    </button>
-  </div>
-</form>
+    @if (!translationReady() || text().status !== 'ready') {
+      <p data-testid="translation-editor-loading">{{ 'library.translation.reader.loading' | t }}</p>
+    } @else {
+      <p class="translation-editor-heading" data-testid="translation-editor-heading">
+        <ds-icon name="languages" />{{
+          (manualTranslation()
+            ? 'library.translation.reader.editor.manualHeading'
+            : 'library.translation.reader.editor.heading'
+          ) | t: { language: language() ? translationStore.languageLabel(language()!) : '' }
+        }}
+      </p>
+      <ds-field
+        required
+        controlId="translation-editor-title"
+        [label]="'library.translation.reader.editor.title' | t"
+        [hint]="'library.translation.reader.editor.sourceTitle' | t: { title: chapter().title }"
+        [error]="titleRequired() ? ('library.novel.form.required' | t) : ''"
+      >
+        <input
+          id="translation-editor-title"
+          class="ds-input"
+          data-testid="translation-editor-title"
+          [attr.lang]="language()"
+          [value]="title()"
+          [placeholder]="chapter().title"
+          [attr.maxlength]="titleMax"
+          (input)="setTitle($event)"
+        />
+      </ds-field>
+      <div class="translation-editor-rows-head">
+        <strong>{{ 'library.translation.reader.editor.paragraphs' | t }}</strong>
+        <span class="meta num" data-testid="translation-editor-hint">{{
+          'library.translation.reader.editor.hint'
+            | t: { count: count(translationParagraphs().length), source: count(sourceParagraphs().length) }
+        }}</span>
+        @if (translationParagraphs().length !== sourceParagraphs().length) {
+          <ds-pill kind="warning" icon="alert-triangle" data-testid="translation-editor-mismatch">{{
+            'library.translation.reader.editor.mismatch' | t
+          }}</ds-pill>
+        }
+      </div>
+      @if (contentRequired()) {
+        <p class="translation-editor-required" data-testid="translation-editor-required">
+          {{ 'library.novel.form.required' | t }}
+        </p>
+      }
+      <div class="translation-editor-rows">
+        @for (index of rows(); track index) {
+          <div class="translation-editor-row" data-testid="translation-editor-row">
+            <span class="translation-editor-number num">{{ count(index + 1) }}</span>
+            @if (sourceParagraphs()[index]; as source) {
+              <p
+                class="translation-editor-source"
+                data-testid="translation-editor-source"
+                [attr.lang]="novel().language"
+              >
+                {{ source }}
+              </p>
+            } @else {
+              <p class="translation-editor-source translation-editor-no-source" data-testid="translation-editor-source">
+                {{ 'library.translation.reader.noSource' | t }}
+              </p>
+            }
+            <textarea
+              class="ds-input translation-editor-paragraph"
+              data-testid="translation-editor-paragraph"
+              rows="1"
+              [attr.lang]="language()"
+              [attr.aria-label]="'library.translation.reader.editor.paragraphLabel' | t: { number: count(index + 1) }"
+              [placeholder]="'library.translation.reader.editor.placeholder' | t"
+              [value]="translationValues()[index] ?? ''"
+              (input)="setTranslationParagraph(index, $event)"
+            ></textarea>
+          </div>
+        }
+      </div>
+    }
+    <div class="library-chapter-editor-actions">
+      @if (dirty()) {
+        <ds-pill kind="warning" icon="pencil" data-testid="translation-editor-unsaved">{{
+          'library.novel.form.unsaved' | t
+        }}</ds-pill>
+      }
+      <span class="ds-spacer"></span>
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="translation-editor-cancel"
+        (click)="cancelled.emit()"
+      >
+        {{ 'common.cancel' | t }}
+      </button>
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="submit"
+        data-testid="translation-editor-save"
+        [disabled]="!dirty() || !hasTranslationContent() || translationStore.busy()"
+      >
+        <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
+      </button>
+    </div>
+  </form>
+} @else {
+  <form class="library-chapter-editor-form" novalidate data-testid="chapter-editor-form" (submit)="save($event)">
+    @if (error() === 'locked') {
+      <ds-banner
+        variant="danger"
+        data-testid="chapter-editor-refused"
+        [heading]="'library.novel.form.refusedHeading' | t"
+        [message]="'library.novel.form.refusedMessage' | t: { run: novel().lock?.label ?? novel().title }"
+        [dismissLabel]="'common.dismiss' | t"
+        (dismiss)="error.set(null)"
+      />
+    }
+    @if (error() === 'stale' || error() === 'missing' || error() === 'failed') {
+      <ds-banner
+        variant="danger"
+        data-testid="chapter-editor-error"
+        [heading]="'library.chapterEditor.notSaved' | t"
+        [message]="errorKey() | t"
+        [dismissLabel]="'common.dismiss' | t"
+        (dismiss)="error.set(null)"
+      />
+    }
+    @if (!editable() && text().status === 'loading') {
+      <p data-testid="chapter-editor-loading">{{ 'library.reader.loading' | t }}</p>
+    } @else if (!editable() && text().status === 'missing') {
+      <p data-testid="chapter-editor-missing">{{ 'library.reader.error.description' | t }}</p>
+    } @else {
+      <ds-field
+        required
+        controlId="chapter-editor-title"
+        [label]="'library.chapterEditor.title' | t"
+        [error]="titleRequired() ? ('library.novel.form.required' | t) : ''"
+      >
+        <input
+          id="chapter-editor-title"
+          class="ds-input"
+          data-testid="chapter-editor-title"
+          [attr.lang]="novel().language"
+          [value]="title()"
+          [attr.maxlength]="titleMax"
+          (input)="setTitle($event)"
+        />
+      </ds-field>
+      <ds-field
+        required
+        class="library-chapter-editor-content"
+        controlId="chapter-editor-content"
+        [label]="'library.chapterEditor.content' | t"
+        [hint]="'library.chapterEditor.contentHint' | t: { count: count(paragraphCount()) }"
+        [error]="contentRequired() ? ('library.novel.form.required' | t) : ''"
+      >
+        <textarea
+          id="chapter-editor-content"
+          class="ds-input"
+          data-testid="chapter-editor-content"
+          [attr.lang]="novel().language"
+          [value]="content()"
+          (input)="setContent($event)"
+        ></textarea>
+      </ds-field>
+    }
+    <div class="library-chapter-editor-actions">
+      @if (dirty()) {
+        <ds-pill kind="warning" icon="pencil" data-testid="chapter-editor-unsaved">{{
+          'library.novel.form.unsaved' | t
+        }}</ds-pill>
+      }
+      <span class="ds-spacer"></span>
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="chapter-editor-cancel"
+        (click)="cancelled.emit()"
+      >
+        {{ 'common.cancel' | t }}
+      </button>
+      <button
+        dsBtn
+        variant="primary"
+        size="sm"
+        type="submit"
+        data-testid="chapter-editor-save"
+        [disabled]="!dirty() || changing()"
+      >
+        <ds-icon name="save" size="sm" />{{ 'library.novel.form.save' | t }}
+      </button>
+    </div>
+  </form>
+}

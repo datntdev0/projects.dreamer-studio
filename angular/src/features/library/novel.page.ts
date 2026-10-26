@@ -14,9 +14,12 @@ import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
+import { BadgeComponent } from '@components/status/badge.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
+import type { ChapterTranslationStatus } from '@dreamer/shared/models/translation';
+import type { TranslationView } from '@dreamer/shared/models/translation';
 import type { SplitterEdge } from '@components/splitter/splitter.directive';
 import { TabsComponent } from '@components/tabs/tabs.component';
 import type { TabItem } from '@components/tabs/tabs.component';
@@ -32,7 +35,6 @@ import type { NovelLock } from '@dreamer/shared/models/novel';
 import { map } from 'rxjs';
 import { chapterNumber } from './library-format';
 import { isTypingTarget } from './library-format';
-import { lockKind } from './library-format';
 import type { LibraryChapter } from './library.models';
 import type { PageState } from './library.models';
 import type { NovelTab } from './library.models';
@@ -46,20 +48,50 @@ import { ReadingSettingsComponent } from './novel-reader/reading-settings.compon
 import { UnsavedChangesDialogComponent } from './novel-list/unsaved-changes-dialog.component';
 import { NovelSearchStore } from './novel-search.store';
 import { NovelStore } from './novel.store';
+import { TranslationStore } from './translation.store';
+import { GlossaryViewComponent } from './translation/glossary-view.component';
+import { InstructionEditorComponent } from './translation/instruction-editor.component';
+import { TranslateContentDialogComponent } from './translation/translate-content-dialog.component';
+import { TranslateGlossaryDialogComponent } from './translation/translate-glossary-dialog.component';
+import { TranslationIssuesComponent } from './translation/translation-issues.component';
+import { TranslationPillComponent } from './translation/translation-pill.component';
 
-const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }> = {
-  export: { heading: 'library.novel.lock.export', reason: 'library.novel.lock.reasonExport' },
-  import: { heading: 'library.novel.lock.import', reason: 'library.novel.lock.reasonImport' },
+type PageTab = NovelTab | 'translation';
+
+const LOCK_KEYS: Record<string, { heading: string; reason: string; message: string }> = {
+  'novel-export': {
+    heading: 'library.novel.lock.export',
+    reason: 'library.novel.lock.reasonExport',
+    message: 'library.novel.lock.message',
+  },
+  'novel-import': {
+    heading: 'library.novel.lock.import',
+    reason: 'library.novel.lock.reasonImport',
+    message: 'library.novel.lock.message',
+  },
+  'glossary-translation': {
+    heading: 'library.translation.page.lockGlossary',
+    reason: 'library.translation.page.lockReasonGlossary',
+    message: 'library.translation.page.lockMessage',
+  },
+  'content-translation': {
+    heading: 'library.translation.page.lockContent',
+    reason: 'library.translation.page.lockReasonContent',
+    message: 'library.translation.page.lockMessage',
+  },
 };
 
 @Component({
   selector: 'ds-novel-page',
   imports: [
     AreaStateComponent,
+    BadgeComponent,
     BannerComponent,
     ButtonDirective,
     ChapterEditorComponent,
     IconComponent,
+    GlossaryViewComponent,
+    InstructionEditorComponent,
     NovelChaptersComponent,
     NovelReaderComponent,
     NovelSearchComponent,
@@ -69,11 +101,15 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
     RouterLink,
     ReadingSettingsComponent,
     TabsComponent,
+    TranslateContentDialogComponent,
+    TranslateGlossaryDialogComponent,
     TooltipDirective,
     TranslatePipe,
+    TranslationIssuesComponent,
+    TranslationPillComponent,
     UnsavedChangesDialogComponent,
   ],
-  providers: [NovelStore, NovelSearchStore],
+  providers: [NovelStore, NovelSearchStore, TranslationStore],
   host: {
     class: 'ds-page library-novel',
     'data-testid': 'novel-page',
@@ -86,6 +122,7 @@ const LOCK_KEYS: Record<'export' | 'import', { heading: string; reason: string }
 export class NovelPage {
   protected readonly store: NovelStore = inject(NovelStore);
   private readonly searchStore: NovelSearchStore = inject(NovelSearchStore);
+  protected readonly translationStore: TranslationStore = inject(TranslationStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly layout: LayoutService = inject(LayoutService);
   private readonly crumb: PageCrumbService = inject(PageCrumbService);
@@ -112,7 +149,7 @@ export class NovelPage {
   protected readonly novel: Signal<NovelDetail | null> = this.store.novel;
   protected readonly state: Signal<PageState> = this.store.state;
   protected readonly chapters: Signal<LibraryChapter[]> = this.store.chapters;
-  protected readonly tab: WritableSignal<NovelTab> = signal<NovelTab>('reading');
+  protected readonly tab: WritableSignal<PageTab> = signal<PageTab>('reading');
   protected readonly focusMode: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly editing: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly leaveOpen: WritableSignal<boolean> = signal<boolean>(false);
@@ -121,23 +158,77 @@ export class NovelPage {
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
     { id: 'reading', label: this.i18n.t('library.novel.tabs.reading') },
     { id: 'search', label: this.i18n.t('library.novel.tabs.search') },
+    {
+      id: 'translation',
+      label: this.i18n.t('library.translation.page.tab'),
+      count:
+        this.translationStore.chapter() && this.translationStore.issues().length
+          ? this.translationStore.issues().length
+          : null,
+    },
   ]);
+  protected readonly views: TranslationView[] = ['reader', 'glossary'];
+  protected readonly viewIcons: Record<TranslationView, string> = { reader: 'book', glossary: 'tag' };
+  protected readonly status = this.translationStore.status;
+  protected readonly translateReason: Signal<string> = computed(() => {
+    if (this.lockReason()) return this.lockReason();
+    if (!this.chapters().length) return this.i18n.t('library.novel.page.noChapters');
+    if (!this.translationStore.language()) return this.i18n.t('library.translation.page.noTarget');
+    if (this.status()?.llm.content.available === false) return this.i18n.t('library.translation.page.noLlm');
+    return '';
+  });
+  protected readonly editLabel: Signal<string> = computed(() =>
+    this.translationStore.display() === 'original'
+      ? this.i18n.t('library.novel.page.edit')
+      : this.i18n.t('library.translation.page.editTranslation'),
+  );
   protected readonly chapter: Signal<LibraryChapter | null> = computed(
     () => this.chapters().find((item: LibraryChapter): boolean => item.id === this.current()) ?? null,
   );
   protected readonly lockHeading: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'heading'));
   protected readonly lockReason: Signal<string> = computed(() => this.lockText(this.novel()?.lock, 'reason'));
+  protected readonly lockMessage: Signal<string> = computed(() => {
+    const type = this.novel()?.lock?.type;
+    return type && LOCK_KEYS[type] ? this.i18n.t(LOCK_KEYS[type].message) : '';
+  });
   protected readonly editReason: Signal<string> = computed(() => {
+    if (this.translationStore.view() === 'glossary') return this.i18n.t('library.translation.page.editGlossaryView');
     if (this.lockReason()) return this.lockReason();
     if (!this.chapters().length) return this.i18n.t('library.novel.page.noChapters');
     const chapter: LibraryChapter | null = this.chapter();
-    return chapter && this.store.text(chapter).status === 'missing'
-      ? this.i18n.t('library.novel.page.chapterMissing')
-      : '';
+    if (chapter && this.store.text(chapter).status === 'missing')
+      return this.i18n.t('library.novel.page.chapterMissing');
+    if (this.translationStore.display() !== 'original' && !this.translationStore.language())
+      return this.i18n.t('library.translation.page.noTarget');
+    return '';
   });
+  protected startEdit(): void {
+    if (!this.editReason() && !this.editing()) this.editing.set(true);
+  }
+  private readonly translatedHeading: Signal<boolean> = computed(() => {
+    const translated = this.translationStore.chapter();
+    const status: ChapterTranslationStatus | undefined = translated?.status;
+    return (
+      this.translationStore.view() === 'reader' &&
+      this.translationStore.display() !== 'original' &&
+      !!translated?.title.trim() &&
+      status !== 'not-translated' &&
+      status !== 'failed'
+    );
+  });
+  protected readonly headingLanguage: Signal<string | null> = computed(() =>
+    this.translatedHeading()
+      ? this.translationStore.language()
+      : this.chapter()
+        ? (this.novel()?.language ?? null)
+        : null,
+  );
   protected readonly heading: Signal<string> = computed(() => {
+    if (this.translationStore.view() === 'glossary') return this.novel()?.title ?? '';
     const chapter: LibraryChapter | null = this.chapter();
-    return chapter ? `${chapterNumber(chapter)} · ${chapter.title}` : (this.novel()?.title ?? '');
+    return chapter
+      ? `${chapterNumber(chapter)} · ${this.translatedHeading() ? this.translationStore.chapter()?.title : chapter.title}`
+      : (this.novel()?.title ?? '');
   });
 
   constructor() {
@@ -145,6 +236,14 @@ export class NovelPage {
       const novelId: string = this.novel()?.id ?? '';
       const chapters: LibraryChapter[] = this.chapters();
       untracked(() => this.searchStore.setContext(novelId, chapters));
+    });
+    effect(() => {
+      const novelId: string = this.novel()?.id ?? '';
+      untracked(() => void this.translationStore.open(novelId));
+    });
+    effect(() => {
+      const file: string | null = this.chapter()?.file ?? null;
+      untracked(() => this.translationStore.setChapter(file));
     });
     effect(() => {
       const id: string = this.id();
@@ -236,6 +335,7 @@ export class NovelPage {
   }
 
   protected selectChapter(id: string | null): void {
+    if (this.translationStore.view() === 'glossary') this.translationStore.setView('reader');
     if (this.editing() || !id || id === this.current()) return;
     this.current.set(id);
     this.highlight.set(null);
@@ -244,6 +344,19 @@ export class NovelPage {
 
   protected toggleFocusMode(): void {
     this.focusMode.update((enabled: boolean): boolean => !enabled);
+  }
+
+  protected showIssues(): void {
+    const wasFocused = this.focusMode();
+    if (wasFocused) this.focusMode.set(false);
+    this.tab.set('translation');
+    if (wasFocused) {
+      requestAnimationFrame(() => {
+        if (!this.layout.isOpen('right')) this.layout.toggle('right');
+      });
+    } else if (!this.layout.isOpen('right')) {
+      this.layout.toggle('right');
+    }
   }
 
   protected onSearchSelected(selection: NovelSearchSelection): void {
@@ -263,6 +376,7 @@ export class NovelPage {
     const isF: boolean = event.key.toLocaleLowerCase() === 'f';
     if (event.ctrlKey && event.shiftKey && isF) {
       event.preventDefault();
+      this.translationStore.setView('reader');
       this.tab.set('search');
       if (!this.layout.isOpen('right')) this.layout.toggle('right');
       requestAnimationFrame(() => this.search()?.focus());
@@ -276,8 +390,8 @@ export class NovelPage {
   }
 
   private lockText(lock: NovelLock | null | undefined, kind: 'heading' | 'reason'): string {
-    if (!lock || (lock.type !== 'novel-export' && lock.type !== 'novel-import')) return '';
-    return this.i18n.t(LOCK_KEYS[lockKind(lock)][kind], { run: lock.label ?? this.novel()?.title ?? '' });
+    if (!lock || !LOCK_KEYS[lock.type]) return '';
+    return this.i18n.t(LOCK_KEYS[lock.type][kind], { run: lock.label ?? this.novel()?.title ?? '' });
   }
 
   private syncFocusMode(enabled: boolean): void {

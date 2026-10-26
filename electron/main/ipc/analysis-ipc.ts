@@ -1,5 +1,6 @@
 import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
-import { AnalysisStatus, ReviewPage, ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
+import { AnalysisStatus, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
+import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { AnalysisService } from '../features/analysis/analysis-service';
 import { handleValidated } from './handle';
@@ -40,5 +41,14 @@ export function registerAnalysisIpc(service: AnalysisService): void {
   handleValidated(AnalysisChannel.World, isWorldQuery, (query: WorldQuery): Promise<World> => service.world(query));
   handleValidated(AnalysisChannel.Review, isReviewQuery, (query: ReviewQuery): Promise<ReviewPage> =>
     service.review(query),
+  );
+  handleValidated(AnalysisChannel.OntologyOpen, isNovelIdValue, (novelId: string): Promise<void> =>
+    service.ontologyOpen(novelId),
+  );
+  handleValidated(AnalysisChannel.OntologyReset, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
+    service.ontologyReset(novelId),
+  );
+  handleValidated(AnalysisChannel.OntologyCheck, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
+    service.ontologyCheck(novelId),
   );
 }

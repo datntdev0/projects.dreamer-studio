@@ -1,4 +1,5 @@
 import type { ChapterAnalysisStatus, EntityType, FailReason, ItemStatus } from '@dreamer/shared/models/analysis';
+import type { OntologyProblemCode } from '@dreamer/shared/models/analysis';
 
 export const ENTITY_TYPES: EntityType[] = ['character', 'persona', 'location', 'organization', 'glossary'];
 
@@ -63,4 +64,30 @@ export const reasonKeys: Record<FailReason, string> = {
   'type-not-in-ontology': 'analysis.pipeline.reason.typeNotInOntology',
   'predicate-not-in-ontology': 'analysis.pipeline.reason.predicateNotInOntology',
   'value-not-allowed': 'analysis.pipeline.reason.valueNotAllowed',
+};
+
+export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {
+  'yaml-syntax': 'analysis.ontology.problem.yamlSyntax',
+  'file-unreadable': 'analysis.ontology.problem.fileUnreadable',
+  'root-not-map': 'analysis.ontology.problem.rootNotMap',
+  'version-unsupported': 'analysis.ontology.problem.versionUnsupported',
+  'section-missing': 'analysis.ontology.problem.sectionMissing',
+  'section-not-map': 'analysis.ontology.problem.sectionNotMap',
+  'unknown-key': 'analysis.ontology.problem.unknownKey',
+  'entity-type-unknown': 'analysis.ontology.problem.entityTypeUnknown',
+  'entity-type-not-listed': 'analysis.ontology.problem.entityTypeNotListed',
+  'description-not-text': 'analysis.ontology.problem.descriptionNotText',
+  'predicate-name-empty': 'analysis.ontology.problem.predicateNameEmpty',
+  'predicate-not-map': 'analysis.ontology.problem.predicateNotMap',
+  'kind-invalid': 'analysis.ontology.problem.kindInvalid',
+  'type-list-invalid': 'analysis.ontology.problem.typeListInvalid',
+  'object-missing': 'analysis.ontology.problem.objectMissing',
+  'object-not-allowed': 'analysis.ontology.problem.objectNotAllowed',
+  'values-not-allowed': 'analysis.ontology.problem.valuesNotAllowed',
+  'values-invalid': 'analysis.ontology.problem.valuesInvalid',
+  'value-duplicate': 'analysis.ontology.problem.valueDuplicate',
+  'character-outside-persona-of': 'analysis.ontology.problem.characterOutsidePersonaOf',
+  'persona-of-invalid': 'analysis.ontology.problem.personaOfInvalid',
+  'persona-of-missing': 'analysis.ontology.problem.personaOfMissing',
+  'persona-missing': 'analysis.ontology.problem.personaMissing',
 };

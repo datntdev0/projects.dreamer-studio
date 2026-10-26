@@ -6,6 +6,7 @@ import { IconComponent } from '@components/icon/icon.component';
 import { ToastService } from '@components/toast/toast.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ontologyProblemKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
 @Component({
@@ -21,6 +22,7 @@ export class OntologyProblemsDialogComponent {
 
   protected readonly open = computed(() => this.store.dialog()?.kind === 'ontology');
   protected readonly problems = this.store.ontologyProblems;
+  protected readonly problemKeys = ontologyProblemKeys;
 
   protected close(): void {
     if (this.open()) this.store.dialog.set(null);

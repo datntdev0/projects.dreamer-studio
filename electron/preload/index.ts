@@ -16,7 +16,8 @@ import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
-import { AnalysisStatus, ReviewPage, ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
+import { AnalysisStatus, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
+import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
@@ -141,9 +142,9 @@ const api: DreamerApi = {
     edit: analysisUnavailable,
     merge: analysisUnavailable,
     findQuote: analysisUnavailable,
-    ontologyOpen: analysisUnavailable,
-    ontologyReset: analysisUnavailable,
-    ontologyCheck: analysisUnavailable,
+    ontologyOpen: (novelId: string): Promise<void> => call(AnalysisChannel.OntologyOpen, novelId),
+    ontologyReset: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyReset, novelId),
+    ontologyCheck: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyCheck, novelId),
     onProgress: (): (() => void) => () => undefined,
     onChanged: (): (() => void) => () => undefined,
   },

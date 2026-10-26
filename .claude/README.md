@@ -62,6 +62,8 @@ _docs/
   0.requirements-analysis.html   view-only viewer of the requirement sheets
   0.architecture-decision.html   viewer of the Open Decisions sheet; human picks and exports
   1.architecture-overview.html   architecture
+  2.dreamer-package-format.html  Dreamer package (.zip) format
+  3.ontology-format.html         ontology.yml format (World Analysis)
   <ID>.solution.html             solution per capacity / requirement
 ```
 

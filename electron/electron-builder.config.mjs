@@ -12,6 +12,7 @@ export default {
     { from: '../angular/dist/browser', to: 'renderer' },
     { from: '../backend/dist/dreamer-backend', to: 'backend' },
     { from: 'main/storage/migrations', to: 'migrations' },
+    { from: 'resources/ontology.default.yml', to: 'ontology.default.yml' },
   ],
   win: {
     icon: 'resources/icon.ico',

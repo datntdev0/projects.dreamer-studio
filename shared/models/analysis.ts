@@ -72,16 +72,49 @@ export interface OntologyPredicate {
   subjectTypes: EntityType[];
   objectTypes?: EntityType[];
   allowedValues?: string[];
+  description?: string;
 }
 
 export interface Ontology {
   entityTypes: EntityType[];
+  entityTypeDescriptions: Partial<Record<EntityType, string>>;
   predicates: OntologyPredicate[];
 }
 
+export type OntologyProblemCode =
+  | 'yaml-syntax'
+  | 'file-unreadable'
+  | 'root-not-map'
+  | 'version-unsupported'
+  | 'section-missing'
+  | 'section-not-map'
+  | 'unknown-key'
+  | 'entity-type-unknown'
+  | 'entity-type-not-listed'
+  | 'description-not-text'
+  | 'predicate-name-empty'
+  | 'predicate-not-map'
+  | 'kind-invalid'
+  | 'type-list-invalid'
+  | 'object-missing'
+  | 'object-not-allowed'
+  | 'values-not-allowed'
+  | 'values-invalid'
+  | 'value-duplicate'
+  | 'character-outside-persona-of'
+  | 'persona-of-invalid'
+  | 'persona-of-missing'
+  | 'persona-missing';
+
 export interface OntologyProblem {
   line: number;
-  reason: string;
+  code: OntologyProblemCode;
+  params: Record<string, string>;
+}
+
+export interface OntologyParseResult {
+  ontology: Ontology;
+  problems: OntologyProblem[];
 }
 
 export interface WorldScalar {

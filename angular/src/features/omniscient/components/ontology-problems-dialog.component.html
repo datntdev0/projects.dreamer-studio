@@ -16,10 +16,12 @@
           }}
         </p>
         <ul class="ds-world-ontology-problems" data-testid="world-ontology-problems">
-          @for (problem of problems(); track problem.line) {
+          @for (problem of problems(); track problem.code + ':' + $index) {
             <li>
-              <span class="ds-world-ontology-line num">{{ 'analysis.pipeline.line' | t }} {{ problem.line }}</span>
-              <span>{{ problem.reason }}</span>
+              @if (problem.line) {
+                <span class="ds-world-ontology-line num">{{ 'analysis.pipeline.line' | t }} {{ problem.line }}</span>
+              }
+              <span>{{ problemKeys[problem.code] | t: problem.params }}</span>
             </li>
           }
         </ul>

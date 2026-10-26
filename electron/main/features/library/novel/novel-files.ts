@@ -16,7 +16,7 @@ export interface WrittenChapter {
   chars: number;
 }
 
-async function writeFileAtomic(file: string, data: string | Uint8Array): Promise<void> {
+export async function writeFileAtomic(file: string, data: string | Uint8Array): Promise<void> {
   const temp: string = `${file}.tmp`;
   let handle: Awaited<ReturnType<typeof fs.open>> | null = null;
   try {

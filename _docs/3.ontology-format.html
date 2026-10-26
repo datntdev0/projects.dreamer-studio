@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ontology Format</title>
+  <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
+  <script src="../.claude/templates/assets/doc.js"></script>
+</head>
+<body>
+  <header class="doc-header">
+    <span class="brand">Dreamer Studio</span>
+    <span class="muted">Ontology Format</span>
+    <span class="spacer"></span>
+    <button class="btn" data-action="toggle-theme">Theme</button>
+  </header>
+
+  <div class="doc-layout">
+    <nav class="doc-toc"></nav>
+    <main class="doc-main">
+      <h1>Ontology Format</h1>
+      <div class="doc-meta"><span>Updated 2026-10-26</span><span>Owner: architect</span><span>Req: REQ-030</span><span>Format version 1</span></div>
+
+      <h2>Overview</h2>
+      <p><code>ontology.yml</code> tells World Analysis (TH04-01) which entity types and facts to extract from a novel. It is a UTF-8 YAML file at <code>library/&lt;novel-id&gt;/analysis/ontology.yml</code>.</p>
+
+      <h2>Lifecycle</h2>
+      <ol>
+        <li>The app ships a default ontology at <code>resources/ontology.default.yml</code>. The Omniscient page shows this default until the novel has its own file.</li>
+        <li>The app copies the default to the novel on its first analysis or when the user first clicks <strong>Open in system editor</strong>. The file must exist before the editor opens.</li>
+        <li>Later analyses use the novel's copy. The user edits it in the system editor, then clicks <strong>Re-check</strong>.</li>
+        <li><strong>Reset to default</strong> replaces the novel's copy after confirmation. Reset is blocked while the novel is locked.</li>
+      </ol>
+      <ul>
+        <li>The app checks the file when the Omniscient page opens, on Re-check, and before a run. There is no file watcher.</li>
+        <li>An invalid file blocks analysis. The page lists every problem with its line and reason.</li>
+        <li>Changes apply from the next analysis. Existing results do not change.</li>
+      </ul>
+
+      <h2>Layout</h2>
+      <pre class="tree">library/&lt;novel-id&gt;/
+└── analysis/
+    └── ontology.yml              <span class="note"># the novel's copy</span></pre>
+      <p>The YAML root is a map with only these keys:</p>
+      <table>
+        <thead><tr><th>Key</th><th>Required</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>version</code></td><td><span class="pill danger">Yes</span></td><td>Must be <code>1</code>.</td></tr>
+          <tr><td><code>entityTypes</code></td><td><span class="pill danger">Yes</span></td><td>Map of allowed entity type names to one-line descriptions.</td></tr>
+          <tr><td><code>predicates</code></td><td><span class="pill danger">Yes</span></td><td>Map of unique predicate names to their fields.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Entity types</h2>
+      <p>A novel may list fewer than the five allowed types. Each listed type has a one-line text description. The description is optional and may be empty; use <code>""</code> for an empty value.</p>
+      <table>
+        <thead><tr><th>Type</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>character</code></td><td>An abstract person, linked to its identities by <code>persona of</code>.</td></tr>
+          <tr><td><code>persona</code></td><td>One identity of a character; carries the character's other facts.</td></tr>
+          <tr><td><code>location</code></td><td>A place in the world.</td></tr>
+          <tr><td><code>organization</code></td><td>A sect, clan, company, or other group.</td></tr>
+          <tr><td><code>glossary</code></td><td>A named thing of the world, such as a technique, item, title, or term.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Predicates</h2>
+      <p>Each predicate name is unique. Its value is a map with these fields:</p>
+      <table>
+        <thead><tr><th>Field</th><th>Required</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>kind</code></td><td><span class="pill danger">Yes</span></td><td><code>relationship</code> links two entities; <code>scalar</code> gives one entity a value.</td></tr>
+          <tr><td><code>subject</code></td><td><span class="pill danger">Yes</span></td><td>Non-empty list of entity types that may have this fact.</td></tr>
+          <tr><td><code>object</code></td><td>Relationship only</td><td>Non-empty list of entity types that may be targets. Required for a relationship; not allowed for a scalar.</td></tr>
+          <tr><td><code>values</code></td><td>No</td><td>Scalar only. Non-empty list of unique allowed text values. Omit it to allow any text.</td></tr>
+          <tr><td><code>description</code></td><td>No</td><td>Text that guides the LLM.</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Every type in <code>subject</code> and <code>object</code> must appear in <code>entityTypes</code>.</li>
+        <li>No other predicate fields are allowed.</li>
+      </ul>
+
+      <h2>Persona rule</h2>
+      <ul>
+        <li>A <code>character</code> is an abstract entity. Its only predicate is <code>persona of</code>, with <code>subject: [persona]</code> and <code>object: [character]</code>.</li>
+        <li>Every other fact belongs to a persona, location, organization, or glossary term.</li>
+        <li>If <code>character</code> is listed, <code>persona</code> and the <code>persona of</code> relationship are required.</li>
+      </ul>
+      <p>For example, the character Peter Parker has the personas "Peter Parker" and "Spider-Man". "Spider-Man member of Avengers" is a persona fact.</p>
+
+      <h2>Example</h2>
+      <pre><code>version: 1
+entityTypes:
+  character: An abstract person. Linked to its personas only by "persona of".
+  persona: One identity of a character. Carries every other fact of the character.
+  organization: A sect, clan, company, or other group.
+predicates:
+  persona of:
+    kind: relationship
+    subject: [persona]
+    object: [character]
+    description: The persona is an identity of the character.
+  member of:
+    kind: relationship
+    subject: [persona]
+    object: [organization]
+  gender:
+    kind: scalar
+    subject: [persona]
+    values: [female, male, unknown]</code></pre>
+
+      <h2>Problems</h2>
+      <p>Each problem shows the line of the offending key or value and a plain reason. An invalid file blocks analysis.</p>
+      <table>
+        <thead><tr><th>Problem</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>YAML syntax error</td><td>An unclosed <code>[persona</code> list.</td></tr>
+          <tr><td>File cannot be read</td><td>The novel's <code>ontology.yml</code> is locked or not readable.</td></tr>
+          <tr><td>Root is not a map</td><td>The file starts with <code>- version: 1</code>.</td></tr>
+          <tr><td>Unsupported version</td><td><code>version: 2</code>.</td></tr>
+          <tr><td>Missing section</td><td><code>entityTypes</code> or <code>predicates</code> is absent.</td></tr>
+          <tr><td>Section is not a map</td><td><code>predicates: []</code>.</td></tr>
+          <tr><td>Unknown key</td><td><code>settings</code> at the root or <code>target</code> in a predicate.</td></tr>
+          <tr><td>Unknown entity type</td><td><code>species</code> under <code>entityTypes</code>.</td></tr>
+          <tr><td>Type used but not listed in <code>entityTypes</code></td><td><code>subject: [persona]</code> without a <code>persona</code> entry.</td></tr>
+          <tr><td>Description is not text</td><td><code>persona: 42</code> or <code>description: [identity]</code>.</td></tr>
+          <tr><td>Empty predicate name</td><td>An empty key under <code>predicates</code>.</td></tr>
+          <tr><td>Predicate is not a map</td><td><code>gender: scalar</code>.</td></tr>
+          <tr><td>Invalid kind</td><td><code>kind: number</code>.</td></tr>
+          <tr><td><code>subject</code> or <code>object</code> is not a non-empty list of types</td><td><code>subject: []</code> or <code>object: persona</code>.</td></tr>
+          <tr><td>Relationship without <code>object</code></td><td><code>kind: relationship</code> with no <code>object</code>.</td></tr>
+          <tr><td>Scalar with <code>object</code></td><td><code>kind: scalar</code> with <code>object: [persona]</code>.</td></tr>
+          <tr><td><code>values</code> on a relationship</td><td><code>kind: relationship</code> with <code>values: [ally]</code>.</td></tr>
+          <tr><td><code>values</code> is not a non-empty list of unique text</td><td><code>values: []</code> or <code>values: [1]</code>.</td></tr>
+          <tr><td>Duplicate value</td><td><code>values: [alive, alive]</code>.</td></tr>
+          <tr><td>Duplicate name (YAML duplicate key)</td><td>Two <code>gender:</code> entries under <code>predicates</code>.</td></tr>
+          <tr><td><code>character</code> used outside <code>persona of</code></td><td><code>member of</code> has <code>subject: [character]</code>.</td></tr>
+          <tr><td><code>persona of</code> is not a persona → character relationship</td><td><code>persona of</code> has <code>kind: scalar</code> or <code>object: [persona]</code>.</td></tr>
+          <tr><td><code>persona</code> or <code>persona of</code> missing while <code>character</code> is listed</td><td><code>entityTypes</code> lists <code>character</code> without <code>persona</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Default ontology</h2>
+      <p>The full default file is <code>electron/resources/ontology.default.yml</code>. It lists all five entity types: <code>character</code>, <code>persona</code>, <code>location</code>, <code>organization</code>, and <code>glossary</code>.</p>
+      <table>
+        <thead><tr><th>Relationship predicates</th><th>Subject → object</th></tr></thead>
+        <tbody>
+          <tr><td><code>persona of</code></td><td><code>persona</code> → <code>character</code></td></tr>
+          <tr><td><code>parent of</code>, <code>child of</code>, <code>sibling of</code>, <code>spouse of</code>, <code>loves</code>, <code>master of</code>, <code>disciple of</code></td><td><code>persona</code> → <code>persona</code></td></tr>
+          <tr><td><code>ally of</code>, <code>enemy of</code></td><td><code>persona</code>, <code>organization</code> → <code>persona</code>, <code>organization</code></td></tr>
+          <tr><td><code>member of</code>, <code>leader of</code></td><td><code>persona</code> → <code>organization</code></td></tr>
+          <tr><td><code>located in</code></td><td><code>persona</code>, <code>organization</code>, <code>location</code> → <code>location</code></td></tr>
+          <tr><td><code>born in</code></td><td><code>persona</code> → <code>location</code></td></tr>
+          <tr><td><code>owns</code></td><td><code>persona</code>, <code>organization</code> → <code>glossary</code></td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Scalar predicate</th><th>Subject</th><th>Allowed values</th></tr></thead>
+        <tbody>
+          <tr><td><code>gender</code></td><td><code>persona</code></td><td><code>female</code>, <code>male</code>, <code>unknown</code></td></tr>
+          <tr><td><code>age</code></td><td><code>persona</code></td><td>Any text.</td></tr>
+          <tr><td><code>status</code></td><td><code>persona</code></td><td><code>alive</code>, <code>dead</code>, <code>unknown</code></td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>

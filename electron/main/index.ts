@@ -154,7 +154,7 @@ async function onReady(): Promise<void> {
   registerPipelineIpc(() => manager.session().executor);
   registerLibraryIpc(() => manager.session());
   registerLlmIpc(llm);
-  registerAnalysisIpc(new AnalysisService((): AppPaths => manager.paths()));
+  registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session()));
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);

@@ -17,6 +17,7 @@ import type {
 
 export const DEFAULT_ONTOLOGY: Ontology = {
   entityTypes: ['character', 'persona', 'location', 'organization', 'glossary'],
+  entityTypeDescriptions: {},
   predicates: [
     { name: 'parent of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
     { name: 'sibling of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
@@ -78,9 +79,9 @@ export const DEFAULT_ONTOLOGY: Ontology = {
 };
 
 export const ONTOLOGY_PROBLEMS: OntologyProblem[] = [
-  { line: 8, reason: 'Unknown entity type "artifact" in the owns predicate.' },
-  { line: 17, reason: 'The cultivation rank predicate repeats the value "core".' },
-  { line: 23, reason: 'The predicate "sworn to" has no object types.' },
+  { line: 8, code: 'entity-type-unknown', params: { type: 'artifact', predicate: 'owns', key: 'object' } },
+  { line: 17, code: 'value-duplicate', params: { predicate: 'cultivation rank', value: 'core' } },
+  { line: 23, code: 'object-missing', params: { predicate: 'sworn to' } },
 ];
 
 export type JadeRiverEdition = 'en' | 'zh';

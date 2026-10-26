@@ -1,0 +1,99 @@
+# Default novel ontology for Dreamer Studio.
+# Format and editing guide: _docs/3.ontology-format.html
+version: 1
+entityTypes:
+  character: An abstract person linked to its identities only by persona of.
+  persona: One identity or name of a character; carries all other facts about that character.
+  location: A named place in the story world.
+  organization: A named group, institution, or faction.
+  glossary: A named thing of the world, such as a technique, item, title, or term.
+predicates:
+  persona of:
+    kind: relationship
+    subject: [persona]
+    object: [character]
+    description: The persona is an identity of the character.
+  parent of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject is a parent of the object.
+  child of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject is a child of the object.
+  sibling of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The two personas are siblings.
+  spouse of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject is married to the object.
+  loves:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject loves the object.
+  master of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject teaches or mentors the object.
+  disciple of:
+    kind: relationship
+    subject: [persona]
+    object: [persona]
+    description: The subject studies under the object.
+  ally of:
+    kind: relationship
+    subject: [persona, organization]
+    object: [persona, organization]
+    description: The subject cooperates with the object as an ally.
+  enemy of:
+    kind: relationship
+    subject: [persona, organization]
+    object: [persona, organization]
+    description: The subject is opposed to the object.
+  member of:
+    kind: relationship
+    subject: [persona]
+    object: [organization]
+    description: The persona belongs to the organization.
+  leader of:
+    kind: relationship
+    subject: [persona]
+    object: [organization]
+    description: The persona leads the organization.
+  located in:
+    kind: relationship
+    subject: [persona, organization, location]
+    object: [location]
+    description: The subject is situated in the location.
+  born in:
+    kind: relationship
+    subject: [persona]
+    object: [location]
+    description: The persona was born in the location.
+  owns:
+    kind: relationship
+    subject: [persona, organization]
+    object: [glossary]
+    description: The subject owns or possesses the named thing.
+  gender:
+    kind: scalar
+    subject: [persona]
+    values: [female, male, unknown]
+    description: The persona's gender, when stated or clearly established.
+  age:
+    kind: scalar
+    subject: [persona]
+    description: The persona's age as expressed in the story.
+  status:
+    kind: scalar
+    subject: [persona]
+    values: [alive, dead, unknown]
+    description: Whether the persona is alive, dead, or unknown.

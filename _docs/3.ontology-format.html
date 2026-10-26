@@ -22,7 +22,7 @@
       <div class="doc-meta"><span>Updated 2026-10-26</span><span>Owner: architect</span><span>Req: REQ-030</span><span>Format version 1</span></div>
 
       <h2>Overview</h2>
-      <p><code>ontology.yml</code> tells World Analysis (TH04-01) which entity types and facts to extract from a novel. It is a UTF-8 YAML file at <code>library/&lt;novel-id&gt;/analysis/ontology.yml</code>.</p>
+      <p><code>ontology.yml</code> tells World Analysis (TH04-01) what to do, which entity types and which facts to extract from a novel. It is a UTF-8 YAML file at <code>library/&lt;novel-id&gt;/analysis/ontology.yml</code>.</p>
 
       <h2>Lifecycle</h2>
       <ol>
@@ -45,122 +45,175 @@
       <table>
         <thead><tr><th>Key</th><th>Required</th><th>Rule</th></tr></thead>
         <tbody>
+          <tr><td><code>name</code></td><td><span class="pill">No</span></td><td>Text label of the ontology.</td></tr>
           <tr><td><code>version</code></td><td><span class="pill danger">Yes</span></td><td>Must be <code>1</code>.</td></tr>
-          <tr><td><code>entityTypes</code></td><td><span class="pill danger">Yes</span></td><td>Map of allowed entity type names to one-line descriptions.</td></tr>
-          <tr><td><code>predicates</code></td><td><span class="pill danger">Yes</span></td><td>Map of unique predicate names to their fields.</td></tr>
+          <tr><td><code>task</code></td><td><span class="pill danger">Yes</span></td><td>Text that tells the LLM what to do. Sent at the top of every prompt.</td></tr>
+          <tr><td><code>rules</code></td><td><span class="pill">No</span></td><td>List of text rules, sent in every prompt.</td></tr>
+          <tr><td><code>entity_types</code></td><td><span class="pill danger">Yes</span></td><td>List of entity types.</td></tr>
+          <tr><td><code>scalar_predicates</code></td><td><span class="pill danger">Yes</span></td><td>List of attributes of one entity. May be <code>[]</code>.</td></tr>
+          <tr><td><code>connection_predicates</code></td><td><span class="pill danger">Yes</span></td><td>List of relations between two entities. May be <code>[]</code>.</td></tr>
         </tbody>
       </table>
 
       <h2>Entity types</h2>
-      <p>A novel may list fewer than the five allowed types. Each listed type has a one-line text description. The description is optional and may be empty; use <code>""</code> for an empty value.</p>
+      <p>A novel may list fewer than the six known types. Each item has these keys:</p>
+      <table>
+        <thead><tr><th>Key</th><th>Required</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>type</code></td><td><span class="pill danger">Yes</span></td><td>One of the known types below, listed once.</td></tr>
+          <tr><td><code>description</code></td><td><span class="pill">No</span></td><td>Text that guides the LLM.</td></tr>
+          <tr><td><code>examples</code></td><td><span class="pill">No</span></td><td>List of example names, sent to the LLM.</td></tr>
+        </tbody>
+      </table>
       <table>
         <thead><tr><th>Type</th><th>Meaning</th></tr></thead>
         <tbody>
-          <tr><td><code>character</code></td><td>An abstract person, linked to its identities by <code>persona of</code>.</td></tr>
-          <tr><td><code>persona</code></td><td>One identity of a character; carries the character's other facts.</td></tr>
-          <tr><td><code>location</code></td><td>A place in the world.</td></tr>
-          <tr><td><code>organization</code></td><td>A sect, clan, company, or other group.</td></tr>
-          <tr><td><code>glossary</code></td><td>A named thing of the world, such as a technique, item, title, or term.</td></tr>
+          <tr><td><code>Character</code></td><td>An abstract person. Has only a name; linked to its identities by <code>has_persona</code>.</td></tr>
+          <tr><td><code>Persona</code></td><td>One identity of a character; carries the character's other facts.</td></tr>
+          <tr><td><code>Location</code></td><td>A named place or structure.</td></tr>
+          <tr><td><code>Organization</code></td><td>A family, sect, kingdom, guild or faction.</td></tr>
+          <tr><td><code>Item</code></td><td>A named object, weapon, treasure, pill or material.</td></tr>
+          <tr><td><code>Glossary</code></td><td>Any other named thing of the world: a concept, technique, cultivation level, title or term.</td></tr>
         </tbody>
       </table>
 
-      <h2>Predicates</h2>
-      <p>Each predicate name is unique. Its value is a map with these fields:</p>
+      <h2>Scalar predicates</h2>
+      <p>Each item has these keys. Predicate names are unique across both lists.</p>
       <table>
-        <thead><tr><th>Field</th><th>Required</th><th>Rule</th></tr></thead>
+        <thead><tr><th>Key</th><th>Required</th><th>Rule</th></tr></thead>
         <tbody>
-          <tr><td><code>kind</code></td><td><span class="pill danger">Yes</span></td><td><code>relationship</code> links two entities; <code>scalar</code> gives one entity a value.</td></tr>
-          <tr><td><code>subject</code></td><td><span class="pill danger">Yes</span></td><td>Non-empty list of entity types that may have this fact.</td></tr>
-          <tr><td><code>object</code></td><td>Relationship only</td><td>Non-empty list of entity types that may be targets. Required for a relationship; not allowed for a scalar.</td></tr>
-          <tr><td><code>values</code></td><td>No</td><td>Scalar only. Non-empty list of unique allowed text values. Omit it to allow any text.</td></tr>
-          <tr><td><code>description</code></td><td>No</td><td>Text that guides the LLM.</td></tr>
+          <tr><td><code>predicate</code></td><td><span class="pill danger">Yes</span></td><td>Unique name.</td></tr>
+          <tr><td><code>domain</code></td><td><span class="pill danger">Yes</span></td><td>Non-empty list of entity types that may have this value.</td></tr>
+          <tr><td><code>value_type</code></td><td><span class="pill danger">Yes</span></td><td><code>string</code> (any text) or <code>enum</code> (one of <code>values</code>).</td></tr>
+          <tr><td><code>values</code></td><td><span class="pill">enum only</span></td><td>Non-empty list of unique text values. Required for <code>enum</code>; not allowed for <code>string</code>.</td></tr>
+          <tr><td><code>multiple</code></td><td><span class="pill">No</span></td><td><code>true</code> when an entity may have many values. Default <code>false</code>; a hint to the LLM only.</td></tr>
+          <tr><td><code>description</code></td><td><span class="pill">No</span></td><td>Text that guides the LLM.</td></tr>
         </tbody>
       </table>
       <ul>
-        <li>Every type in <code>subject</code> and <code>object</code> must appear in <code>entityTypes</code>.</li>
-        <li>No other predicate fields are allowed.</li>
+        <li>A scalar value may be in the LLM's own words, but the fact needs a quote copied from the chapter.</li>
+        <li><code>name</code> and <code>alias</code> are the entity's own name and aliases, not facts. The <code>alias</code> domain sets which types may have aliases; aliases of other types are dropped.</li>
+      </ul>
+
+      <h2>Connection predicates</h2>
+      <table>
+        <thead><tr><th>Key</th><th>Required</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><code>predicate</code></td><td><span class="pill danger">Yes</span></td><td>Unique name.</td></tr>
+          <tr><td><code>subject</code></td><td><span class="pill danger">Yes</span></td><td>Non-empty list of entity types.</td></tr>
+          <tr><td><code>object</code></td><td><span class="pill danger">Yes</span></td><td>Non-empty list of entity types.</td></tr>
+          <tr><td><code>symmetric</code></td><td><span class="pill">No</span></td><td><code>true</code> when A→B also means B→A. Subject and object must list the same types. The app keeps one link per pair.</td></tr>
+          <tr><td><code>labeled</code></td><td><span class="pill">No</span></td><td><code>true</code> when each fact needs a <code>label</code> that names the relation. The graph shows the label.</td></tr>
+          <tr><td><code>description</code></td><td><span class="pill">No</span></td><td>Text that guides the LLM.</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Every type in <code>domain</code>, <code>subject</code> and <code>object</code> must appear in <code>entity_types</code>.</li>
+        <li>No other keys are allowed in any item.</li>
       </ul>
 
       <h2>Persona rule</h2>
       <ul>
-        <li>A <code>character</code> is an abstract entity. Its only predicate is <code>persona of</code>, with <code>subject: [persona]</code> and <code>object: [character]</code>.</li>
-        <li>Every other fact belongs to a persona, location, organization, or glossary term.</li>
-        <li>If <code>character</code> is listed, <code>persona</code> and the <code>persona of</code> relationship are required.</li>
+        <li>A character is an abstract entity. It may appear only in the <code>name</code> scalar and in <code>has_persona</code>, which must be <code>subject: [Character]</code>, <code>object: [Persona]</code> and not symmetric.</li>
+        <li>Every other fact belongs to a persona or another type.</li>
+        <li>If <code>Character</code> is listed, <code>Persona</code> and <code>has_persona</code> are required.</li>
       </ul>
-      <p>For example, the character Peter Parker has the personas "Peter Parker" and "Spider-Man". "Spider-Man member of Avengers" is a persona fact.</p>
+      <p>For example, the character Peter Parker has the personas "Peter Parker" and "Spider-Man". "Spider-Man member_of Avengers" is a persona fact.</p>
 
       <h2>Example</h2>
-      <pre><code>version: 1
-entityTypes:
-  character: An abstract person. Linked to its personas only by "persona of".
-  persona: One identity of a character. Carries every other fact of the character.
-  organization: A sect, clan, company, or other group.
-predicates:
-  persona of:
-    kind: relationship
-    subject: [persona]
-    object: [character]
-    description: The persona is an identity of the character.
-  member of:
-    kind: relationship
-    subject: [persona]
-    object: [organization]
-  gender:
-    kind: scalar
-    subject: [persona]
-    values: [female, male, unknown]</code></pre>
+      <pre><code>name: small-ontology
+version: 1
+task: Extract the entities and facts from the chapters.
+rules:
+  - Extract only facts stated explicitly in the text.
+entity_types:
+  - type: Character
+  - type: Persona
+    examples: [Spider-Man]
+  - type: Organization
+scalar_predicates:
+  - predicate: alias
+    domain: [Persona, Organization]
+    value_type: string
+    multiple: true
+  - predicate: gender
+    domain: [Persona]
+    value_type: enum
+    values: [female, male, unknown]
+connection_predicates:
+  - predicate: has_persona
+    subject: [Character]
+    object: [Persona]
+  - predicate: member_of
+    subject: [Persona]
+    object: [Organization]
+  - predicate: other_relation
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    labeled: true</code></pre>
 
       <h2>Problems</h2>
       <p>Each problem shows the line of the offending key or value and a plain reason. An invalid file blocks analysis.</p>
       <table>
         <thead><tr><th>Problem</th><th>Example</th></tr></thead>
         <tbody>
-          <tr><td>YAML syntax error</td><td>An unclosed <code>[persona</code> list.</td></tr>
+          <tr><td>YAML syntax error</td><td>An unclosed <code>[Persona</code> list.</td></tr>
           <tr><td>File cannot be read</td><td>The novel's <code>ontology.yml</code> is locked or not readable.</td></tr>
           <tr><td>Root is not a map</td><td>The file starts with <code>- version: 1</code>.</td></tr>
           <tr><td>Unsupported version</td><td><code>version: 2</code>.</td></tr>
-          <tr><td>Missing section</td><td><code>entityTypes</code> or <code>predicates</code> is absent.</td></tr>
-          <tr><td>Section is not a map</td><td><code>predicates: []</code>.</td></tr>
+          <tr><td>Missing key</td><td><code>task</code> or <code>entity_types</code> is absent.</td></tr>
+          <tr><td>Section is not a list</td><td><code>scalar_predicates: {}</code>.</td></tr>
+          <tr><td>Item is not a map</td><td><code>- gender</code> under <code>scalar_predicates</code>.</td></tr>
           <tr><td>Unknown key</td><td><code>settings</code> at the root or <code>target</code> in a predicate.</td></tr>
-          <tr><td>Unknown entity type</td><td><code>species</code> under <code>entityTypes</code>.</td></tr>
-          <tr><td>Type used but not listed in <code>entityTypes</code></td><td><code>subject: [persona]</code> without a <code>persona</code> entry.</td></tr>
-          <tr><td>Description is not text</td><td><code>persona: 42</code> or <code>description: [identity]</code>.</td></tr>
-          <tr><td>Empty predicate name</td><td>An empty key under <code>predicates</code>.</td></tr>
-          <tr><td>Predicate is not a map</td><td><code>gender: scalar</code>.</td></tr>
-          <tr><td>Invalid kind</td><td><code>kind: number</code>.</td></tr>
-          <tr><td><code>subject</code> or <code>object</code> is not a non-empty list of types</td><td><code>subject: []</code> or <code>object: persona</code>.</td></tr>
-          <tr><td>Relationship without <code>object</code></td><td><code>kind: relationship</code> with no <code>object</code>.</td></tr>
-          <tr><td>Scalar with <code>object</code></td><td><code>kind: scalar</code> with <code>object: [persona]</code>.</td></tr>
-          <tr><td><code>values</code> on a relationship</td><td><code>kind: relationship</code> with <code>values: [ally]</code>.</td></tr>
-          <tr><td><code>values</code> is not a non-empty list of unique text</td><td><code>values: []</code> or <code>values: [1]</code>.</td></tr>
+          <tr><td>Text is not valid</td><td><code>task: 42</code> or <code>rules: [1]</code>.</td></tr>
+          <tr><td>Flag is not true or false</td><td><code>symmetric: yes</code>.</td></tr>
+          <tr><td>Unknown entity type</td><td><code>type: Species</code>.</td></tr>
+          <tr><td>Duplicate entity type</td><td>Two <code>type: Persona</code> items.</td></tr>
+          <tr><td>Type used but not listed</td><td><code>domain: [Item]</code> without an <code>Item</code> entry.</td></tr>
+          <tr><td>Missing predicate name</td><td>An item with no <code>predicate</code>.</td></tr>
+          <tr><td>Duplicate predicate</td><td>Two <code>predicate: gender</code> items.</td></tr>
+          <tr><td>Type list is not a non-empty list</td><td><code>subject: []</code> or <code>object: Persona</code>.</td></tr>
+          <tr><td>Invalid value type</td><td><code>value_type: number</code>.</td></tr>
+          <tr><td>Enum without values</td><td><code>value_type: enum</code> with no <code>values</code>.</td></tr>
+          <tr><td><code>values</code> on a string</td><td><code>value_type: string</code> with <code>values: [a]</code>.</td></tr>
+          <tr><td><code>values</code> is not a non-empty list of text</td><td><code>values: []</code> or <code>values: [1]</code>.</td></tr>
           <tr><td>Duplicate value</td><td><code>values: [alive, alive]</code>.</td></tr>
-          <tr><td>Duplicate name (YAML duplicate key)</td><td>Two <code>gender:</code> entries under <code>predicates</code>.</td></tr>
-          <tr><td><code>character</code> used outside <code>persona of</code></td><td><code>member of</code> has <code>subject: [character]</code>.</td></tr>
-          <tr><td><code>persona of</code> is not a persona → character relationship</td><td><code>persona of</code> has <code>kind: scalar</code> or <code>object: [persona]</code>.</td></tr>
-          <tr><td><code>persona</code> or <code>persona of</code> missing while <code>character</code> is listed</td><td><code>entityTypes</code> lists <code>character</code> without <code>persona</code>.</td></tr>
+          <tr><td>Symmetric with different types</td><td><code>symmetric: true</code> with subject <code>[Persona]</code> and object <code>[Location]</code>.</td></tr>
+          <tr><td>Character outside <code>name</code> and <code>has_persona</code></td><td><code>member_of</code> has <code>subject: [Character]</code>.</td></tr>
+          <tr><td><code>has_persona</code> is not Character → Persona</td><td><code>subject: [Persona]</code>, <code>object: [Character]</code>.</td></tr>
+          <tr><td><code>Persona</code> or <code>has_persona</code> missing while <code>Character</code> is listed</td><td><code>entity_types</code> lists <code>Character</code> without <code>Persona</code>.</td></tr>
         </tbody>
       </table>
 
       <h2>Default ontology</h2>
-      <p>The full default file is <code>electron/resources/ontology.default.yml</code>. It lists all five entity types: <code>character</code>, <code>persona</code>, <code>location</code>, <code>organization</code>, and <code>glossary</code>.</p>
+      <p>The full default file is <code>electron/resources/ontology.default.yml</code>. It lists all six entity types.</p>
       <table>
-        <thead><tr><th>Relationship predicates</th><th>Subject → object</th></tr></thead>
+        <thead><tr><th>Connection</th><th>Subject → object</th></tr></thead>
         <tbody>
-          <tr><td><code>persona of</code></td><td><code>persona</code> → <code>character</code></td></tr>
-          <tr><td><code>parent of</code>, <code>child of</code>, <code>sibling of</code>, <code>spouse of</code>, <code>loves</code>, <code>master of</code>, <code>disciple of</code></td><td><code>persona</code> → <code>persona</code></td></tr>
-          <tr><td><code>ally of</code>, <code>enemy of</code></td><td><code>persona</code>, <code>organization</code> → <code>persona</code>, <code>organization</code></td></tr>
-          <tr><td><code>member of</code>, <code>leader of</code></td><td><code>persona</code> → <code>organization</code></td></tr>
-          <tr><td><code>located in</code></td><td><code>persona</code>, <code>organization</code>, <code>location</code> → <code>location</code></td></tr>
-          <tr><td><code>born in</code></td><td><code>persona</code> → <code>location</code></td></tr>
-          <tr><td><code>owns</code></td><td><code>persona</code>, <code>organization</code> → <code>glossary</code></td></tr>
+          <tr><td><code>has_persona</code></td><td>Character → Persona</td></tr>
+          <tr><td><code>parent_of</code>, <code>master_of</code></td><td>Persona → Persona</td></tr>
+          <tr><td><code>sibling_of</code>, <code>spouse_of</code>, <code>lover_of</code>, <code>friend_of</code> (symmetric)</td><td>Persona ↔ Persona</td></tr>
+          <tr><td><code>other_relation</code> (symmetric, labeled)</td><td>Persona ↔ Persona</td></tr>
+          <tr><td><code>ally_of</code>, <code>enemy_of</code> (symmetric)</td><td>Persona, Organization ↔ Persona, Organization</td></tr>
+          <tr><td><code>member_of</code>, <code>leads</code></td><td>Persona → Organization</td></tr>
+          <tr><td><code>serves</code></td><td>Persona → Persona, Organization</td></tr>
+          <tr><td><code>located_in</code></td><td>Persona, Organization, Location → Location</td></tr>
+          <tr><td><code>born_in</code></td><td>Persona → Location</td></tr>
+          <tr><td><code>owns</code></td><td>Persona, Organization → Item</td></tr>
         </tbody>
       </table>
       <table>
-        <thead><tr><th>Scalar predicate</th><th>Subject</th><th>Allowed values</th></tr></thead>
+        <thead><tr><th>Scalar</th><th>Domain</th><th>Values</th></tr></thead>
         <tbody>
-          <tr><td><code>gender</code></td><td><code>persona</code></td><td><code>female</code>, <code>male</code>, <code>unknown</code></td></tr>
-          <tr><td><code>age</code></td><td><code>persona</code></td><td>Any text.</td></tr>
-          <tr><td><code>status</code></td><td><code>persona</code></td><td><code>alive</code>, <code>dead</code>, <code>unknown</code></td></tr>
+          <tr><td><code>name</code></td><td>All types</td><td>Entity field.</td></tr>
+          <tr><td><code>alias</code></td><td>All types except Character</td><td>Entity field, many.</td></tr>
+          <tr><td><code>description</code></td><td>All types except Character</td><td>Any text.</td></tr>
+          <tr><td><code>gender</code></td><td>Persona</td><td><code>male</code>, <code>female</code>, <code>other</code>, <code>unknown</code></td></tr>
+          <tr><td><code>age</code>, <code>appearance</code>, <code>personality</code></td><td>Persona</td><td>Any text.</td></tr>
+          <tr><td><code>title</code></td><td>Persona</td><td>Any text, many.</td></tr>
+          <tr><td><code>status</code></td><td>Persona</td><td><code>alive</code>, <code>dead</code>, <code>missing</code>, <code>unknown</code></td></tr>
+          <tr><td><code>category</code></td><td>Location, Organization, Item, Glossary</td><td>Any text.</td></tr>
         </tbody>
       </table>
     </main>

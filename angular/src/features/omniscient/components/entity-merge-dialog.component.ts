@@ -27,7 +27,7 @@ export class EntityMergeDialogComponent {
   protected readonly typeIcons = entityTypeIcons;
   protected readonly ids = signal<string[]>([]);
   protected readonly keepId = signal('');
-  protected readonly type = signal<EntityType>('character');
+  protected readonly type = signal<EntityType>('Character');
   protected readonly query = signal('');
   protected readonly error = signal('');
 
@@ -90,7 +90,7 @@ export class EntityMergeDialogComponent {
 
   protected setKeep(id: string): void {
     this.keepId.set(id);
-    this.type.set(this.store.entities().find((item) => item.id === id)?.type ?? 'character');
+    this.type.set(this.store.entities().find((item) => item.id === id)?.type ?? 'Character');
   }
 
   protected add(entity: WorldEntity): void {

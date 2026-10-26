@@ -16,72 +16,75 @@ import type {
 } from '@dreamer/shared/models/analysis';
 
 export const DEFAULT_ONTOLOGY: Ontology = {
-  entityTypes: ['character', 'persona', 'location', 'organization', 'glossary'],
+  name: 'novel-ontology',
+  task: 'Extract the entities and predicates from the chapters.',
+  rules: ['Extract only facts stated explicitly in the text.'],
+  entityTypes: ['Character', 'Persona', 'Location', 'Organization', 'Item', 'Glossary'],
   entityTypeDescriptions: {},
+  entityTypeExamples: {},
   predicates: [
-    { name: 'parent of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
-    { name: 'sibling of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
-    { name: 'master of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
-    { name: 'disciple of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['character'] },
-    { name: 'member of', kind: 'relationship', subjectTypes: ['character', 'persona'], objectTypes: ['organization'] },
-    { name: 'leader of', kind: 'relationship', subjectTypes: ['character'], objectTypes: ['organization'] },
+    { name: 'parent_of', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Character'] },
+    { name: 'sibling_of', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Character'] },
+    { name: 'master_of', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Character'] },
+    { name: 'member_of', kind: 'relationship', subjectTypes: ['Character', 'Persona'], objectTypes: ['Organization'] },
+    { name: 'leads', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Organization'] },
     {
-      name: 'located in',
+      name: 'located_in',
       kind: 'relationship',
-      subjectTypes: ['character', 'persona', 'organization', 'location'],
-      objectTypes: ['location'],
+      subjectTypes: ['Character', 'Persona', 'Organization', 'Location'],
+      objectTypes: ['Location'],
     },
     {
-      name: 'enemy of',
+      name: 'enemy_of',
       kind: 'relationship',
-      subjectTypes: ['character', 'persona', 'organization'],
-      objectTypes: ['character', 'persona', 'organization'],
+      subjectTypes: ['Character', 'Persona', 'Organization'],
+      objectTypes: ['Character', 'Persona', 'Organization'],
     },
     {
-      name: 'ally of',
+      name: 'ally_of',
       kind: 'relationship',
-      subjectTypes: ['character', 'persona', 'organization'],
-      objectTypes: ['character', 'persona', 'organization'],
+      subjectTypes: ['Character', 'Persona', 'Organization'],
+      objectTypes: ['Character', 'Persona', 'Organization'],
     },
     {
-      name: 'loves',
+      name: 'lover_of',
       kind: 'relationship',
-      subjectTypes: ['character', 'persona'],
-      objectTypes: ['character', 'persona'],
+      subjectTypes: ['Character', 'Persona'],
+      objectTypes: ['Character', 'Persona'],
     },
-    { name: 'persona of', kind: 'relationship', subjectTypes: ['persona'], objectTypes: ['character'] },
+    { name: 'has_persona', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Persona'] },
     {
       name: 'owns',
       kind: 'relationship',
-      subjectTypes: ['character', 'persona', 'organization'],
-      objectTypes: ['glossary'],
+      subjectTypes: ['Character', 'Persona', 'Organization'],
+      objectTypes: ['Item', 'Glossary'],
     },
     {
       name: 'age',
       kind: 'scalar',
-      subjectTypes: ['character'],
+      subjectTypes: ['Character'],
       allowedValues: Array.from({ length: 100 }, (_, age) => String(age + 1)),
     },
     {
       name: 'gender',
       kind: 'scalar',
-      subjectTypes: ['character'],
+      subjectTypes: ['Character'],
       allowedValues: ['female', 'male', 'nonbinary', 'unknown'],
     },
     {
       name: 'cultivation rank',
       kind: 'scalar',
-      subjectTypes: ['character'],
+      subjectTypes: ['Character'],
       allowedValues: ['mortal', 'breath', 'foundation', 'core', 'nascent'],
     },
-    { name: 'status', kind: 'scalar', subjectTypes: ['character', 'persona'], allowedValues: ['alive', 'dead'] },
+    { name: 'status', kind: 'scalar', subjectTypes: ['Character', 'Persona'], allowedValues: ['alive', 'dead'] },
   ],
 };
 
 export const ONTOLOGY_PROBLEMS: OntologyProblem[] = [
   { line: 8, code: 'entity-type-unknown', params: { type: 'artifact', predicate: 'owns', key: 'object' } },
   { line: 17, code: 'value-duplicate', params: { predicate: 'cultivation rank', value: 'core' } },
-  { line: 23, code: 'object-missing', params: { predicate: 'sworn to' } },
+  { line: 23, code: 'type-list-invalid', params: { predicate: 'sworn to', key: 'object' } },
 ];
 
 export type JadeRiverEdition = 'en' | 'zh';
@@ -122,57 +125,57 @@ export const ENTITY_SEEDS: {
   zh: string;
   zhAliases: string[];
 }[] = [
-  { id: 'lin-yue', type: 'character', name: 'Lin Yue', aliases: ['Yue'], zh: '林月', zhAliases: ['月儿'] },
-  { id: 'mei-ren', type: 'character', name: 'Mei Ren', aliases: ['Mei'], zh: '梅仁', zhAliases: ['阿梅'] },
-  { id: 'master-qiao', type: 'character', name: 'Master Qiao', aliases: ['Qiao'], zh: '乔师父', zhAliases: ['乔'] },
-  { id: 'shen-wu', type: 'character', name: 'Shen Wu', aliases: [], zh: '沈武', zhAliases: [] },
-  { id: 'lady-bai', type: 'character', name: 'Lady Bai', aliases: [], zh: '白夫人', zhAliases: [] },
-  { id: 'captain-wei', type: 'character', name: 'Captain Wei', aliases: ['Wei'], zh: '魏队长', zhAliases: ['魏'] },
-  { id: 'prince-jian', type: 'character', name: 'Prince Jian', aliases: ['Jian'], zh: '简王爷', zhAliases: ['简'] },
-  { id: 'old-fen', type: 'character', name: 'Old Fen', aliases: [], zh: '芬老', zhAliases: [] },
-  { id: 'nian', type: 'character', name: 'Nian', aliases: [], zh: '年宁', zhAliases: [] },
-  { id: 'tao', type: 'character', name: 'Tao', aliases: [], zh: '陶然', zhAliases: [] },
-  { id: 'zhao-lei', type: 'character', name: 'Zhao Lei', aliases: [], zh: '赵雷', zhAliases: [] },
-  { id: 'hu-dan', type: 'character', name: 'Hu Dan', aliases: [], zh: '胡丹', zhAliases: [] },
-  { id: 'sister-lian', type: 'character', name: 'Sister Lian', aliases: ['Lian'], zh: '莲姐', zhAliases: ['阿莲'] },
-  { id: 'elder-su', type: 'character', name: 'Elder Su', aliases: [], zh: '苏长老', zhAliases: [] },
-  { id: 'han-qi', type: 'character', name: 'Han Qi', aliases: [], zh: '韩祁', zhAliases: [] },
-  { id: 'yu-ning', type: 'character', name: 'Yu Ning', aliases: [], zh: '余宁', zhAliases: [] },
-  { id: 'river-ghost', type: 'persona', name: 'River Ghost', aliases: ['the Ghost'], zh: '河鬼', zhAliases: ['鬼影'] },
+  { id: 'lin-yue', type: 'Character', name: 'Lin Yue', aliases: ['Yue'], zh: '林月', zhAliases: ['月儿'] },
+  { id: 'mei-ren', type: 'Character', name: 'Mei Ren', aliases: ['Mei'], zh: '梅仁', zhAliases: ['阿梅'] },
+  { id: 'master-qiao', type: 'Character', name: 'Master Qiao', aliases: ['Qiao'], zh: '乔师父', zhAliases: ['乔'] },
+  { id: 'shen-wu', type: 'Character', name: 'Shen Wu', aliases: [], zh: '沈武', zhAliases: [] },
+  { id: 'lady-bai', type: 'Character', name: 'Lady Bai', aliases: [], zh: '白夫人', zhAliases: [] },
+  { id: 'captain-wei', type: 'Character', name: 'Captain Wei', aliases: ['Wei'], zh: '魏队长', zhAliases: ['魏'] },
+  { id: 'prince-jian', type: 'Character', name: 'Prince Jian', aliases: ['Jian'], zh: '简王爷', zhAliases: ['简'] },
+  { id: 'old-fen', type: 'Character', name: 'Old Fen', aliases: [], zh: '芬老', zhAliases: [] },
+  { id: 'nian', type: 'Character', name: 'Nian', aliases: [], zh: '年宁', zhAliases: [] },
+  { id: 'tao', type: 'Character', name: 'Tao', aliases: [], zh: '陶然', zhAliases: [] },
+  { id: 'zhao-lei', type: 'Character', name: 'Zhao Lei', aliases: [], zh: '赵雷', zhAliases: [] },
+  { id: 'hu-dan', type: 'Character', name: 'Hu Dan', aliases: [], zh: '胡丹', zhAliases: [] },
+  { id: 'sister-lian', type: 'Character', name: 'Sister Lian', aliases: ['Lian'], zh: '莲姐', zhAliases: ['阿莲'] },
+  { id: 'elder-su', type: 'Character', name: 'Elder Su', aliases: [], zh: '苏长老', zhAliases: [] },
+  { id: 'han-qi', type: 'Character', name: 'Han Qi', aliases: [], zh: '韩祁', zhAliases: [] },
+  { id: 'yu-ning', type: 'Character', name: 'Yu Ning', aliases: [], zh: '余宁', zhAliases: [] },
+  { id: 'river-ghost', type: 'Persona', name: 'River Ghost', aliases: ['the Ghost'], zh: '河鬼', zhAliases: ['鬼影'] },
   {
     id: 'jade-river-place',
-    type: 'location',
+    type: 'Location',
     name: 'Jade River',
     aliases: ['the river'],
     zh: '玉河',
     zhAliases: ['河'],
   },
-  { id: 'east-ferry', type: 'location', name: 'East Ferry', aliases: [], zh: '东渡', zhAliases: [] },
-  { id: 'mistwatch', type: 'location', name: 'Mistwatch', aliases: [], zh: '望雾', zhAliases: [] },
-  { id: 'lotus-house', type: 'location', name: 'Lotus House', aliases: [], zh: '莲花楼', zhAliases: [] },
-  { id: 'white-crane-hall', type: 'location', name: 'White Crane Hall', aliases: [], zh: '白鹤堂', zhAliases: [] },
-  { id: 'moon-gate', type: 'location', name: 'Moon Gate', aliases: [], zh: '月门', zhAliases: [] },
-  { id: 'deep-archive', type: 'location', name: 'Deep Archive', aliases: [], zh: '深藏阁', zhAliases: [] },
-  { id: 'stone-market', type: 'location', name: 'Stone Market', aliases: [], zh: '石市', zhAliases: [] },
+  { id: 'east-ferry', type: 'Location', name: 'East Ferry', aliases: [], zh: '东渡', zhAliases: [] },
+  { id: 'mistwatch', type: 'Location', name: 'Mistwatch', aliases: [], zh: '望雾', zhAliases: [] },
+  { id: 'lotus-house', type: 'Location', name: 'Lotus House', aliases: [], zh: '莲花楼', zhAliases: [] },
+  { id: 'white-crane-hall', type: 'Location', name: 'White Crane Hall', aliases: [], zh: '白鹤堂', zhAliases: [] },
+  { id: 'moon-gate', type: 'Location', name: 'Moon Gate', aliases: [], zh: '月门', zhAliases: [] },
+  { id: 'deep-archive', type: 'Location', name: 'Deep Archive', aliases: [], zh: '深藏阁', zhAliases: [] },
+  { id: 'stone-market', type: 'Location', name: 'Stone Market', aliases: [], zh: '石市', zhAliases: [] },
   {
     id: 'river-wardens',
-    type: 'organization',
+    type: 'Organization',
     name: 'River Wardens',
     aliases: ['Wardens'],
     zh: '护河卫',
     zhAliases: ['河卫'],
   },
-  { id: 'white-crane-sect', type: 'organization', name: 'White Crane Sect', aliases: [], zh: '白鹤门', zhAliases: [] },
-  { id: 'ash-court', type: 'organization', name: 'Ash Court', aliases: [], zh: '灰烬廷', zhAliases: [] },
-  { id: 'ferry-guild', type: 'organization', name: 'Ferry Guild', aliases: [], zh: '渡船行会', zhAliases: [] },
-  { id: 'night-lanterns', type: 'organization', name: 'Night Lanterns', aliases: [], zh: '夜灯会', zhAliases: [] },
-  { id: 'jade-seal', type: 'glossary', name: 'jade seal', aliases: ['seal'], zh: '玉印', zhAliases: ['印信'] },
-  { id: 'moon-script', type: 'glossary', name: 'moon script', aliases: [], zh: '月文', zhAliases: [] },
-  { id: 'spirit-root', type: 'glossary', name: 'spirit root', aliases: [], zh: '灵根', zhAliases: [] },
-  { id: 'river-oath', type: 'glossary', name: 'river oath', aliases: [], zh: '河誓', zhAliases: [] },
+  { id: 'white-crane-sect', type: 'Organization', name: 'White Crane Sect', aliases: [], zh: '白鹤门', zhAliases: [] },
+  { id: 'ash-court', type: 'Organization', name: 'Ash Court', aliases: [], zh: '灰烬廷', zhAliases: [] },
+  { id: 'ferry-guild', type: 'Organization', name: 'Ferry Guild', aliases: [], zh: '渡船行会', zhAliases: [] },
+  { id: 'night-lanterns', type: 'Organization', name: 'Night Lanterns', aliases: [], zh: '夜灯会', zhAliases: [] },
+  { id: 'jade-seal', type: 'Item', name: 'jade seal', aliases: ['seal'], zh: '玉印', zhAliases: ['印信'] },
+  { id: 'moon-script', type: 'Glossary', name: 'moon script', aliases: [], zh: '月文', zhAliases: [] },
+  { id: 'spirit-root', type: 'Glossary', name: 'spirit root', aliases: [], zh: '灵根', zhAliases: [] },
+  { id: 'river-oath', type: 'Glossary', name: 'river oath', aliases: [], zh: '河誓', zhAliases: [] },
   {
     id: 'jade-river-term',
-    type: 'glossary',
+    type: 'Glossary',
     name: 'Jade River',
     aliases: ['jade current'],
     zh: '玉河',
@@ -181,10 +184,10 @@ export const ENTITY_SEEDS: {
 ];
 
 const BY_ID = new Map(ENTITY_SEEDS.map((entity) => [entity.id, entity]));
-const CHARACTERS = ENTITY_SEEDS.filter((entity) => entity.type === 'character');
-const LOCATIONS = ENTITY_SEEDS.filter((entity) => entity.type === 'location');
-const ORGANIZATIONS = ENTITY_SEEDS.filter((entity) => entity.type === 'organization');
-const TERMS = ENTITY_SEEDS.filter((entity) => entity.type === 'glossary');
+const CHARACTERS = ENTITY_SEEDS.filter((entity) => entity.type === 'Character');
+const LOCATIONS = ENTITY_SEEDS.filter((entity) => entity.type === 'Location');
+const ORGANIZATIONS = ENTITY_SEEDS.filter((entity) => entity.type === 'Organization');
+const TERMS = ENTITY_SEEDS.filter((entity) => entity.type === 'Glossary');
 
 interface LinkSeed {
   subjectId: string;
@@ -224,13 +227,13 @@ const OPENING_SCENES: Scene[] = [
     links: [
       {
         subjectId: 'mei-ren',
-        predicate: 'ally of',
+        predicate: 'ally_of',
         objectId: 'lin-yue',
         quote: 'Mei Ren promised to aid Lin Yue, even if the River Wardens closed every crossing.',
       },
       {
         subjectId: 'lin-yue',
-        predicate: 'located in',
+        predicate: 'located_in',
         objectId: 'east-ferry',
         quote: 'Lin Yue crossed into East Ferry before dusk.',
       },
@@ -240,7 +243,7 @@ const OPENING_SCENES: Scene[] = [
         objectId: 'jade-seal',
         quote: 'Old Fen handed the jade seal to Lin Yue.',
       },
-      { subjectId: 'old-fen', predicate: 'parent of', objectId: 'lin-yue', quote: 'Old Fen was Lin Yue’s father.' },
+      { subjectId: 'old-fen', predicate: 'parent_of', objectId: 'lin-yue', quote: 'Old Fen was Lin Yue’s father.' },
     ],
     scalars: [{ subjectId: 'lin-yue', predicate: 'age', value: '17', quote: 'Lin Yue was seventeen that spring.' }],
   },
@@ -260,13 +263,13 @@ const OPENING_SCENES: Scene[] = [
     links: [
       {
         subjectId: 'master-qiao',
-        predicate: 'master of',
+        predicate: 'master_of',
         objectId: 'mei-ren',
         quote: 'Master Qiao taught Mei Ren to read the moon script.',
       },
       {
         subjectId: 'sister-lian',
-        predicate: 'member of',
+        predicate: 'member_of',
         objectId: 'white-crane-sect',
         quote: 'Sister Lian belonged to the White Crane Sect.',
       },
@@ -278,7 +281,7 @@ const OPENING_SCENES: Scene[] = [
       },
       {
         subjectId: 'mei-ren',
-        predicate: 'sibling of',
+        predicate: 'sibling_of',
         objectId: 'sister-lian',
         quote: 'Mei Ren was Sister Lian’s younger sister.',
       },
@@ -307,25 +310,25 @@ const OPENING_SCENES: Scene[] = [
     ],
     links: [
       {
-        subjectId: 'river-ghost',
-        predicate: 'persona of',
-        objectId: 'lin-yue',
+        subjectId: 'lin-yue',
+        predicate: 'has_persona',
+        objectId: 'river-ghost',
         quote: 'The River Ghost was Lin Yue in a borrowed mask.',
       },
       {
         subjectId: 'river-ghost',
-        predicate: 'located in',
+        predicate: 'located_in',
         objectId: 'moon-gate',
         quote: 'The River Ghost crossed into Moon Gate before dawn.',
       },
       {
         subjectId: 'shen-wu',
-        predicate: 'leader of',
+        predicate: 'leads',
         objectId: 'ash-court',
         quote: 'Shen Wu led the Ash Court from a room above the gate.',
       },
-      { subjectId: 'lady-bai', predicate: 'enemy of', objectId: 'shen-wu', quote: 'Lady Bai vowed to oppose Shen Wu.' },
-      { subjectId: 'lin-yue', predicate: 'loves', objectId: 'mei-ren', quote: 'Lin Yue still loved Mei Ren.' },
+      { subjectId: 'lady-bai', predicate: 'enemy_of', objectId: 'shen-wu', quote: 'Lady Bai vowed to oppose Shen Wu.' },
+      { subjectId: 'lin-yue', predicate: 'lover_of', objectId: 'mei-ren', quote: 'Lin Yue still loved Mei Ren.' },
     ],
     scalars: [
       { subjectId: 'lin-yue', predicate: 'status', value: 'alive', quote: 'Lin Yue walked away without looking back.' },
@@ -345,23 +348,23 @@ const OPENING_SCENES: Scene[] = [
       'They left before the water reached the bottom stair. On the surface, no one knew the archive had been opened.',
     ],
     links: [
-      { subjectId: 'lady-bai', predicate: 'ally of', objectId: 'lin-yue', quote: 'Lady Bai promised to aid Lin Yue.' },
+      { subjectId: 'lady-bai', predicate: 'ally_of', objectId: 'lin-yue', quote: 'Lady Bai promised to aid Lin Yue.' },
       {
         subjectId: 'prince-jian',
-        predicate: 'member of',
+        predicate: 'member_of',
         objectId: 'river-wardens',
         quote: 'Prince Jian pledged service to the River Wardens.',
       },
       {
         subjectId: 'lin-yue',
-        predicate: 'located in',
+        predicate: 'located_in',
         objectId: 'deep-archive',
         quote: 'Lady Bai brought Lin Yue into Deep Archive through a locked service door.',
       },
       {
-        subjectId: 'prince-jian',
-        predicate: 'disciple of',
-        objectId: 'master-qiao',
+        subjectId: 'master-qiao',
+        predicate: 'master_of',
+        objectId: 'prince-jian',
         quote: 'Prince Jian was a disciple of Master Qiao.',
       },
     ],
@@ -480,16 +483,16 @@ function genericQuote(subjectId: string, predicate: string, objectId: string, ed
   const subject = nameOf(subjectId, edition);
   const object = nameOf(objectId, edition);
   if (edition === 'zh') {
-    if (predicate === 'located in') return `${subject}在黄昏前走进${object}。`;
-    if (predicate === 'member of') return `${subject}宣誓效忠${object}。`;
+    if (predicate === 'located_in') return `${subject}在黄昏前走进${object}。`;
+    if (predicate === 'member_of') return `${subject}宣誓效忠${object}。`;
     if (predicate === 'owns') return `${subject}冒雨带着${object}前行。`;
-    if (predicate === 'enemy of') return `${subject}发誓反对${object}。`;
+    if (predicate === 'enemy_of') return `${subject}发誓反对${object}。`;
     return `${subject}答应帮助${object}。`;
   }
-  if (predicate === 'located in') return `${subject} crossed into ${object} before dusk.`;
-  if (predicate === 'member of') return `${subject} pledged service to ${object}.`;
+  if (predicate === 'located_in') return `${subject} crossed into ${object} before dusk.`;
+  if (predicate === 'member_of') return `${subject} pledged service to ${object}.`;
   if (predicate === 'owns') return `${subject} carried ${object} through the rain.`;
-  if (predicate === 'enemy of') return `${subject} vowed to oppose ${object}.`;
+  if (predicate === 'enemy_of') return `${subject} vowed to oppose ${object}.`;
   return `${subject} promised to aid ${object}.`;
 }
 
@@ -501,9 +504,9 @@ function genericScene(index: number, edition: JadeRiverEdition): Scene {
   const group = ORGANIZATIONS[(index * 2) % ORGANIZATIONS.length];
   const term = TERMS[index % TERMS.length];
   const relations: [string, string, string][] = [
-    [lead.id, 'located in', location.id],
-    [partner.id, 'member of', group.id],
-    [lead.id, index % 2 === 0 ? 'ally of' : 'enemy of', rival.id],
+    [lead.id, 'located_in', location.id],
+    [partner.id, 'member_of', group.id],
+    [lead.id, index % 2 === 0 ? 'ally_of' : 'enemy_of', rival.id],
     [partner.id, 'owns', term.id],
   ];
   const links = relations.map(([subjectId, predicate, objectId]) => ({
@@ -598,7 +601,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     if (id === 'silent-oracle') {
       return {
         id,
-        type: 'character',
+        type: 'Character',
         name: edition === 'zh' ? '无声先知' : 'Silent Oracle',
         aliases: [],
         wordsFound: [],
@@ -637,7 +640,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     facts.push({
       id: 'c26-missing-quote',
       kind: 'relationship',
-      predicate: 'ally of',
+      predicate: 'ally_of',
       subjectId: scene.links[0].subjectId,
       objectId: scene.links[2].objectId,
       quote:
@@ -650,7 +653,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     facts.push({
       id: 'c26-accepted-quote',
       kind: 'relationship',
-      predicate: 'ally of',
+      predicate: 'ally_of',
       subjectId: scene.links[1].subjectId,
       objectId: scene.links[0].subjectId,
       quote: edition === 'zh' ? '他们在流星下缔结盟约。' : 'They sealed their pact beneath a falling star.',
@@ -760,7 +763,7 @@ export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): OverlayEdit[
       fact: {
         id: 'c4-user-alliance',
         kind: 'relationship',
-        predicate: 'ally of',
+        predicate: 'ally_of',
         subjectId: 'lin-yue',
         objectId: 'lady-bai',
         quote: null,

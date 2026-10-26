@@ -4,12 +4,33 @@ import type { Ontology, PredicateOutput } from '../models/analysis';
 import { chapterCounts, checkCandidates, checkPredicates, hasIssues, mergeStageEntities } from './analysis-checks';
 
 const ONTOLOGY: Ontology = {
-  entityTypes: ['character', 'persona', 'location'],
+  name: 'test',
+  task: 'Extract facts.',
+  rules: [],
+  entityTypes: ['Character', 'Persona', 'Location'],
   entityTypeDescriptions: {},
+  entityTypeExamples: {},
   predicates: [
-    { name: 'persona of', kind: 'relationship', subjectTypes: ['persona'], objectTypes: ['character'] },
-    { name: 'enemy of', kind: 'relationship', subjectTypes: ['persona'], objectTypes: ['persona'] },
-    { name: 'gender', kind: 'scalar', subjectTypes: ['persona'], allowedValues: ['female', 'male', 'unknown'] },
+    { name: 'name', kind: 'scalar', subjectTypes: ['Character', 'Persona', 'Location'] },
+    { name: 'alias', kind: 'scalar', subjectTypes: ['Persona', 'Location'], multiple: true },
+    { name: 'has_persona', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Persona'] },
+    { name: 'enemy_of', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Persona'] },
+    {
+      name: 'friend_of',
+      kind: 'relationship',
+      subjectTypes: ['Persona'],
+      objectTypes: ['Persona'],
+      symmetric: true,
+    },
+    {
+      name: 'other_relation',
+      kind: 'relationship',
+      subjectTypes: ['Persona'],
+      objectTypes: ['Persona'],
+      symmetric: true,
+      labeled: true,
+    },
+    { name: 'gender', kind: 'scalar', subjectTypes: ['Persona'], allowedValues: ['female', 'male', 'unknown'] },
   ],
 };
 
@@ -27,20 +48,28 @@ function candidates(...items: CandidateOutput['entities']): CandidateOutput {
   return { entities: items };
 }
 
-function runCandidates(output: CandidateOutput, stage: 'all' | 'persona' = 'all') {
+function runCandidates(output: CandidateOutput, stage: 'all' | 'Persona' = 'all') {
   return checkCandidates({ chapters: CHAPTERS, output, ontology: ONTOLOGY, stage });
 }
 
 const ENTITIES: AnalysisEntity[] = [
-  entity('persona', 'Mai', ['Mai Linh']),
-  entity('persona', 'Lan'),
-  entity('character', 'Hung'),
-  entity('location', 'Hanoi'),
+  entity('Persona', 'Mai', ['Mai Linh']),
+  entity('Persona', 'Lan'),
+  entity('Character', 'Hung'),
+  entity('Location', 'Hanoi'),
 ];
 const TEXT = { index: 1, paragraphs: ['Mai Linh hated Lan. She is a woman.', 'Hung was her real self.'] };
 
 function fact(over: Partial<PredicateOutput['facts'][number]>): PredicateOutput['facts'][number] {
-  return { predicate: 'enemy of', subject: 'Mai', object: 'Lan', value: null, quote: 'Mai Linh hated Lan', ...over };
+  return {
+    predicate: 'enemy_of',
+    subject: 'Mai',
+    object: 'Lan',
+    value: null,
+    label: null,
+    quote: 'Mai Linh hated Lan',
+    ...over,
+  };
 }
 
 function runPredicates(entities: AnalysisEntity[], ...facts: PredicateOutput['facts']) {
@@ -49,34 +78,34 @@ function runPredicates(entities: AnalysisEntity[], ...facts: PredicateOutput['fa
 
 describe('checkCandidates', () => {
   it('verifies an entity found by name', () => {
-    const { entities, errors } = runCandidates(candidates({ type: 'location', name: 'Hanoi', aliases: [] }));
+    const { entities, errors } = runCandidates(candidates({ type: 'Location', name: 'Hanoi', aliases: [] }));
     expect(errors).toEqual([]);
     expect(entities.get(1)).toEqual([
-      { id: 'location:hanoi', type: 'location', name: 'Hanoi', aliases: [], wordsFound: ['Hanoi'], status: 'verified' },
+      { id: 'Location:hanoi', type: 'Location', name: 'Hanoi', aliases: [], wordsFound: ['Hanoi'], status: 'verified' },
     ]);
   });
 
   it('counts an alias-only match', () => {
-    const { entities } = runCandidates(candidates({ type: 'persona', name: 'Linh Mai', aliases: ['Lan'] }));
+    const { entities } = runCandidates(candidates({ type: 'Persona', name: 'Linh Mai', aliases: ['Lan'] }));
     expect(entities.get(1)![0]).toMatchObject({ status: 'verified', wordsFound: ['Lan'] });
   });
 
   it('matches case-insensitively and in NFC', () => {
     const chapters = [{ index: 1, paragraphs: ['Café is open.'] }];
-    const output = candidates({ type: 'location', name: 'CAFÉ', aliases: [] });
+    const output = candidates({ type: 'Location', name: 'CAFÉ', aliases: [] });
     const { entities } = checkCandidates({ chapters, output, ontology: ONTOLOGY, stage: 'all' });
     expect(entities.get(1)![0].status).toBe('verified');
   });
 
   it('assigns the entity to every chapter containing it and to no other', () => {
-    const { entities } = runCandidates(candidates({ type: 'persona', name: 'Mai', aliases: [] }));
+    const { entities } = runCandidates(candidates({ type: 'Persona', name: 'Mai', aliases: [] }));
     expect(entities.get(1)).toHaveLength(1);
     expect(entities.get(2)).toHaveLength(0);
     expect(entities.get(3)).toHaveLength(1);
   });
 
   it('fails an entity found nowhere in the first chapter with an error line', () => {
-    const { entities, errors } = runCandidates(candidates({ type: 'persona', name: 'Ghost', aliases: [] }));
+    const { entities, errors } = runCandidates(candidates({ type: 'Persona', name: 'Ghost', aliases: [] }));
     expect(entities.get(1)).toEqual([
       expect.objectContaining({ name: 'Ghost', status: 'failed', reason: 'words-not-found', wordsFound: [] }),
     ]);
@@ -86,7 +115,7 @@ describe('checkCandidates', () => {
   });
 
   it('fails a type that is not in the ontology', () => {
-    const { entities, errors } = runCandidates(candidates({ type: 'organization', name: 'Hanoi', aliases: [] }));
+    const { entities, errors } = runCandidates(candidates({ type: 'Organization', name: 'Hanoi', aliases: [] }));
     expect(entities.get(1)).toEqual([expect.objectContaining({ status: 'failed', reason: 'type-not-in-ontology' })]);
     expect(entities.get(3)).toHaveLength(0);
     expect(errors).toHaveLength(1);
@@ -94,10 +123,10 @@ describe('checkCandidates', () => {
 
   it('fails a candidate whose type differs from a single-type stage', () => {
     const output = candidates(
-      { type: 'location', name: 'Hanoi', aliases: [] },
-      { type: 'persona', name: 'Lan', aliases: [] },
+      { type: 'Location', name: 'Hanoi', aliases: [] },
+      { type: 'Persona', name: 'Lan', aliases: [] },
     );
-    const { entities, errors } = runCandidates(output, 'persona');
+    const { entities, errors } = runCandidates(output, 'Persona');
     expect(entities.get(1)).toEqual([
       expect.objectContaining({ name: 'Hanoi', status: 'failed', reason: 'type-not-in-ontology' }),
       expect.objectContaining({ name: 'Lan', status: 'verified' }),
@@ -107,8 +136,8 @@ describe('checkCandidates', () => {
 
   it('merges duplicates with different case and joins their aliases', () => {
     const output = candidates(
-      { type: 'persona', name: 'Mai', aliases: ['Mai Linh'] },
-      { type: 'persona', name: 'MAI', aliases: ['mai linh', 'Lan'] },
+      { type: 'Persona', name: 'Mai', aliases: ['Mai Linh'] },
+      { type: 'Persona', name: 'MAI', aliases: ['mai linh', 'Lan'] },
     );
     const { entities } = runCandidates(output);
     expect(entities.get(1)).toHaveLength(1);
@@ -116,7 +145,7 @@ describe('checkCandidates', () => {
   });
 
   it('drops empty names', () => {
-    const { entities, errors } = runCandidates(candidates({ type: 'persona', name: '   ', aliases: [] }));
+    const { entities, errors } = runCandidates(candidates({ type: 'Persona', name: '   ', aliases: [] }));
     expect([...entities.values()].flat()).toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -135,9 +164,9 @@ describe('checkPredicates', () => {
       {
         id: 'f-1',
         kind: 'relationship',
-        predicate: 'enemy of',
-        subjectId: 'persona:mai',
-        objectId: 'persona:lan',
+        predicate: 'enemy_of',
+        subjectId: 'Persona:mai',
+        objectId: 'Persona:lan',
         subjectName: 'Mai',
         objectName: 'Lan',
         quote: 'Mai Linh hated Lan',
@@ -156,7 +185,7 @@ describe('checkPredicates', () => {
 
   it('resolves subject and object by alias', () => {
     const { facts } = runPredicates(ENTITIES, fact({ subject: 'mai linh' }));
-    expect(facts[0]).toMatchObject({ subjectId: 'persona:mai', subjectName: 'Mai', status: 'verified' });
+    expect(facts[0]).toMatchObject({ subjectId: 'Persona:mai', subjectName: 'Mai', status: 'verified' });
   });
 
   it('fails an unknown subject and keeps subjectName', () => {
@@ -181,14 +210,53 @@ describe('checkPredicates', () => {
     expect(errors).toHaveLength(1);
   });
 
+  it('drops aliases for a type outside the alias domain', () => {
+    const { entities } = runCandidates(candidates({ type: 'Character', name: 'Mai', aliases: ['Mai Linh'] }));
+    expect(entities.get(1)?.[0]).toMatchObject({ name: 'Mai', aliases: [], status: 'verified' });
+  });
+
+  it('does not accept name or alias as a fact predicate', () => {
+    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'alias', object: null, value: 'Linh' }));
+    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'predicate-not-in-ontology' });
+  });
+
+  it('orders a symmetric connection by entity id', () => {
+    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'friend_of', subject: 'Mai', object: 'Lan' }));
+    expect(facts[0]).toMatchObject({ subjectId: 'Persona:lan', objectId: 'Persona:mai', status: 'verified' });
+  });
+
+  it('stores the label of a labeled connection', () => {
+    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'other_relation', label: 'rival' }));
+    expect(facts[0]).toMatchObject({ label: 'rival', status: 'verified' });
+  });
+
+  it('fails a labeled connection without a label', () => {
+    const { facts, errors } = runPredicates(ENTITIES, fact({ predicate: 'other_relation' }));
+    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'label-missing' });
+    expect(errors[0]).toContain('label');
+  });
+
   it('fails a wrong subject type', () => {
-    const { facts } = runPredicates(ENTITIES, fact({ subject: 'Hung', predicate: 'persona of', object: 'Hung' }));
+    const { facts } = runPredicates(ENTITIES, fact({ subject: 'Hung', predicate: 'has_persona', object: 'Hung' }));
     expect(facts[0]).toMatchObject({ status: 'failed', reason: 'type-not-allowed' });
   });
 
   it('fails a wrong object type', () => {
-    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'persona of', object: 'Lan' }));
+    const { facts, errors } = runPredicates(ENTITIES, fact({ predicate: 'has_persona', object: 'Lan' }));
     expect(facts[0]).toMatchObject({ status: 'failed', reason: 'type-not-allowed' });
+    expect(errors[0]).toBe('Fact "Mai / has_persona": "Mai" is a Persona; has_persona subjects must be: Character.');
+  });
+
+  it('picks the entity whose type fits when a character and a persona share a name', () => {
+    const shared = [entity('Character', 'Mai'), entity('Persona', 'Mai'), entity('Persona', 'Lan')];
+    const { facts, errors } = runPredicates(
+      shared,
+      fact({ predicate: 'gender', object: null, value: 'female', quote: 'She is a woman' }),
+      fact({ predicate: 'has_persona', object: 'Mai', quote: 'Hung was her real self' }),
+    );
+    expect(errors).toEqual([]);
+    expect(facts[0]).toMatchObject({ subjectId: 'Persona:mai', status: 'verified' });
+    expect(facts[1]).toMatchObject({ subjectId: 'Character:mai', objectId: 'Persona:mai', status: 'verified' });
   });
 
   it('fails a scalar value that is not allowed', () => {
@@ -243,23 +311,23 @@ describe('checkPredicates', () => {
 });
 
 describe('mergeStageEntities', () => {
-  const previous = [entity('persona', 'Mai'), entity('location', 'Hanoi')];
-  const next = [entity('persona', 'Lan')];
+  const previous = [entity('Persona', 'Mai'), entity('Location', 'Hanoi')];
+  const next = [entity('Persona', 'Lan')];
 
   it('replaces all entities for stage all', () => {
     expect(mergeStageEntities(previous, next, 'all')).toEqual(next);
   });
 
   it('keeps previous entities of other types for one type', () => {
-    expect(mergeStageEntities(previous, next, 'persona')).toEqual([previous[1], ...next]);
+    expect(mergeStageEntities(previous, next, 'Persona')).toEqual([previous[1], ...next]);
   });
 });
 
 describe('chapterCounts and hasIssues', () => {
   const entities: AnalysisEntity[] = [
-    { ...entity('persona', 'A'), status: 'verified' },
-    { ...entity('persona', 'B'), status: 'failed' },
-    { ...entity('persona', 'C'), status: 'accepted' },
+    { ...entity('Persona', 'A'), status: 'verified' },
+    { ...entity('Persona', 'B'), status: 'failed' },
+    { ...entity('Persona', 'C'), status: 'accepted' },
   ];
   const facts: AnalysisFact[] = [
     { id: 'f-1', kind: 'scalar', predicate: 'gender', subjectId: 'x', quote: null, status: 'rejected' },

@@ -69,23 +69,23 @@ let promptFiles: Array<string | undefined>;
 
 function defaultCandidates(chapters: number[]): Reply {
   const all: { type: string; name: string; aliases: string[] }[] = [
-    { type: 'persona', name: 'Mai Linh', aliases: [] },
-    { type: 'persona', name: 'Lan', aliases: [] },
-    { type: 'location', name: 'Hanoi', aliases: [] },
+    { type: 'Persona', name: 'Mai Linh', aliases: [] },
+    { type: 'Persona', name: 'Lan', aliases: [] },
+    { type: 'Location', name: 'Hanoi', aliases: [] },
   ];
   const text: string = chapters.map((chapter: number): string => texts[chapter - 1]).join(' ');
   return { entities: all.filter((item): boolean => text.includes(item.name)) };
 }
 
 function fact(predicate: string, subject: string, object: string, quote: string): object {
-  return { predicate, subject, object, value: null, quote };
+  return { predicate, subject, object, value: null, label: null, quote };
 }
 
 function defaultPredicates(chapter: number): Reply {
   const facts: object[] = [
-    fact('located in', 'Mai Linh', 'Hanoi', quotes[0]),
-    fact('located in', 'Lan', 'Hanoi', quotes[1]),
-    fact('enemy of', 'Mai Linh', 'Lan', quotes[2]),
+    fact('located_in', 'Mai Linh', 'Hanoi', quotes[0]),
+    fact('located_in', 'Lan', 'Hanoi', quotes[1]),
+    fact('enemy_of', 'Mai Linh', 'Lan', quotes[2]),
   ];
   return { facts: [facts[chapter - 1]] };
 }
@@ -266,7 +266,7 @@ describe('precondition', () => {
     const file: string = novelOntologyFile(folder);
     await runStep(0);
     expect(existsSync(file)).toBe(true);
-    expect(readFileSync(file, 'utf8')).toContain('persona of');
+    expect(readFileSync(file, 'utf8')).toContain('has_persona');
   });
 
   it('keeps an existing ontology', async () => {
@@ -319,7 +319,7 @@ describe('analyse', () => {
 
   it('marks a chapter with failed items as has-issues and counts it', async () => {
     script.predicates = (chapter: number): Reply =>
-      chapter === 3 ? { facts: [fact('located in', 'Mai Linh', 'Hanoi', 'Never said.')] } : defaultPredicates(chapter);
+      chapter === 3 ? { facts: [fact('located_in', 'Mai Linh', 'Hanoi', 'Never said.')] } : defaultPredicates(chapter);
     await runAll();
     expect(entry(3).status).toBe('has-issues');
     expect(entry(3).counts.failed).toBe(1);
@@ -392,12 +392,12 @@ describe('analyse', () => {
   it('keeps the other types when the stage is one type', async () => {
     await runAll(request({ mode: 'range', from: 1, to: 1 }));
     calls = [];
-    script.candidates = (): Reply => ({ entities: [{ type: 'location', name: 'Hanoi', aliases: [] }] });
-    await runAll(request({ mode: 'range', from: 1, to: 1, overwrite: true, stage: 'location' }));
+    script.candidates = (): Reply => ({ entities: [{ type: 'Location', name: 'Hanoi', aliases: [] }] });
+    await runAll(request({ mode: 'range', from: 1, to: 1, overwrite: true, stage: 'Location' }));
     const saved = readChapterResult(folder, entry(1).file)!;
     expect(saved.entities.map((item) => item.name).sort()).toEqual(['Hanoi', 'Lan', 'Mai Linh']);
-    expect(callsOf('candidates')[0].prompt).not.toContain('- persona:');
-    expect(callsOf('predicates')[0].prompt).toContain('persona: Mai Linh');
+    expect(callsOf('candidates')[0].prompt).not.toContain('- Persona:');
+    expect(callsOf('predicates')[0].prompt).toContain('Persona: Mai Linh');
   });
 
   it('broadcasts progress for candidates, predicates and verification', async () => {

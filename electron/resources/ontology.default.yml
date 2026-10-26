@@ -1,99 +1,174 @@
 # Default novel ontology for Dreamer Studio.
 # Format and editing guide: _docs/3.ontology-format.html
+name: novel-ontology
 version: 1
-entityTypes:
-  character: An abstract person linked to its identities only by persona of.
-  persona: One identity or name of a character; carries all other facts about that character.
-  location: A named place in the story world.
-  organization: A named group, institution, or faction.
-  glossary: A named thing of the world, such as a technique, item, title, or term.
-predicates:
-  persona of:
-    kind: relationship
-    subject: [persona]
-    object: [character]
-    description: The persona is an identity of the character.
-  parent of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
+
+task: >
+  You receive chapters from one novel. Extract the entities that appear in the chapters and their
+  predicates. There are two kinds of predicates: scalars (attributes of one entity) and connections
+  (relations between two entities). Use only the entity types and predicates defined in this
+  ontology. Return the result in the JSON format given in the request.
+
+rules:
+  - Extract only facts stated explicitly in the text. Do not infer or guess.
+  - Copy every name exactly as it is written in the text.
+  - Use one entry per entity. Put its other names in aliases instead of creating new entities.
+  - Every Character has at least one Persona. Its true self is a Persona with the same name as the Character.
+  - A character's attributes and relations belong to its personas, never to the character itself.
+  - Every fact needs a quote that is a sentence copied exactly from the chapter and states the fact.
+  - A scalar value may be written in your own words, but the quote must support it.
+
+entity_types:
+  - type: Character
+    description: >
+      The abstract person or sentient being behind one or more personas. Its name is the proper name
+      the narrator introduces. It has no scalars except name and no connections except has_persona.
+    examples: [Tiêu Viêm, Dược Lão]
+  - type: Persona
+    description: >
+      One identity under which a character appears in the story, such as the true self, a disguise,
+      an alias identity or a reincarnation. All attributes and relations of a character belong to its personas.
+    examples: [Tiêu Viêm, Nham Kiêu]
+  - type: Location
+    description: A named place or structure such as a country, city, mountain or building.
+    examples: [Ô Thản Thành]
+  - type: Organization
+    description: A family, sect, kingdom, guild or faction.
+    examples: [Tiêu gia]
+  - type: Item
+    description: A named object, weapon, treasure, pill or material.
+    examples: [Huyền Trọng Xích]
+  - type: Glossary
+    description: >
+      A named thing of the novel world that is not covered by other types, such as a concept,
+      technique, cultivation level, title or term.
+    examples: [Đấu Khí, Phần Quyết, Đấu Giả]
+
+scalar_predicates:
+  - predicate: name
+    domain: [Character, Persona, Location, Organization, Item, Glossary]
+    value_type: string
+    description: The canonical name of the entity.
+  - predicate: alias
+    domain: [Persona, Location, Organization, Item, Glossary]
+    value_type: string
+    multiple: true
+    description: Another name, nickname or title used to refer to the entity.
+  - predicate: description
+    domain: [Persona, Location, Organization, Item, Glossary]
+    value_type: string
+    description: A short description of the entity.
+  - predicate: gender
+    domain: [Persona]
+    value_type: enum
+    values: [male, female, other, unknown]
+    description: The persona's gender, when stated.
+  - predicate: age
+    domain: [Persona]
+    value_type: string
+    description: Age as stated in the text (e.g. "16", "middle-aged").
+  - predicate: title
+    domain: [Persona]
+    value_type: string
+    multiple: true
+    description: Position or honorific title.
+  - predicate: status
+    domain: [Persona]
+    value_type: enum
+    values: [alive, dead, missing, unknown]
+    description: Whether the persona is alive, dead or missing.
+  - predicate: appearance
+    domain: [Persona]
+    value_type: string
+    description: A short description of how the persona looks.
+  - predicate: personality
+    domain: [Persona]
+    value_type: string
+    description: A short description of the persona's character traits.
+  - predicate: category
+    domain: [Location, Organization, Item, Glossary]
+    value_type: string
+    description: The sub-kind of the entity (e.g. city, sect, weapon, pill, technique).
+
+connection_predicates:
+  - predicate: has_persona
+    subject: [Character]
+    object: [Persona]
+    symmetric: false
+    description: The persona is one identity of the character.
+  - predicate: parent_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: false
     description: The subject is a parent of the object.
-  child of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
-    description: The subject is a child of the object.
-  sibling of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
+  - predicate: sibling_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
     description: The two personas are siblings.
-  spouse of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
-    description: The subject is married to the object.
-  loves:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
-    description: The subject loves the object.
-  master of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
+  - predicate: spouse_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas are married.
+  - predicate: master_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: false
     description: The subject teaches or mentors the object.
-  disciple of:
-    kind: relationship
-    subject: [persona]
-    object: [persona]
-    description: The subject studies under the object.
-  ally of:
-    kind: relationship
-    subject: [persona, organization]
-    object: [persona, organization]
-    description: The subject cooperates with the object as an ally.
-  enemy of:
-    kind: relationship
-    subject: [persona, organization]
-    object: [persona, organization]
-    description: The subject is opposed to the object.
-  member of:
-    kind: relationship
-    subject: [persona]
-    object: [organization]
+  - predicate: lover_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas love each other.
+  - predicate: friend_of
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas are friends.
+  - predicate: ally_of
+    subject: [Persona, Organization]
+    object: [Persona, Organization]
+    symmetric: true
+    description: The two sides cooperate as allies.
+  - predicate: enemy_of
+    subject: [Persona, Organization]
+    object: [Persona, Organization]
+    symmetric: true
+    description: The two sides are opposed to each other.
+  - predicate: other_relation
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    labeled: true
+    description: Any other relation between two personas. The label names the relation.
+  - predicate: member_of
+    subject: [Persona]
+    object: [Organization]
+    symmetric: false
     description: The persona belongs to the organization.
-  leader of:
-    kind: relationship
-    subject: [persona]
-    object: [organization]
+  - predicate: leads
+    subject: [Persona]
+    object: [Organization]
+    symmetric: false
     description: The persona leads the organization.
-  located in:
-    kind: relationship
-    subject: [persona, organization, location]
-    object: [location]
+  - predicate: serves
+    subject: [Persona]
+    object: [Persona, Organization]
+    symmetric: false
+    description: The persona works for or obeys the object without being a member.
+  - predicate: located_in
+    subject: [Persona, Organization, Location]
+    object: [Location]
+    symmetric: false
     description: The subject is situated in the location.
-  born in:
-    kind: relationship
-    subject: [persona]
-    object: [location]
+  - predicate: born_in
+    subject: [Persona]
+    object: [Location]
+    symmetric: false
     description: The persona was born in the location.
-  owns:
-    kind: relationship
-    subject: [persona, organization]
-    object: [glossary]
-    description: The subject owns or possesses the named thing.
-  gender:
-    kind: scalar
-    subject: [persona]
-    values: [female, male, unknown]
-    description: The persona's gender, when stated or clearly established.
-  age:
-    kind: scalar
-    subject: [persona]
-    description: The persona's age as expressed in the story.
-  status:
-    kind: scalar
-    subject: [persona]
-    values: [alive, dead, unknown]
-    description: Whether the persona is alive, dead, or unknown.
+  - predicate: owns
+    subject: [Persona, Organization]
+    object: [Item]
+    symmetric: false
+    description: The subject owns or carries the item.

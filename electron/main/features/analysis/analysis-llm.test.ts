@@ -10,29 +10,45 @@ vi.mock('../../logging/logger', () => ({
 }));
 
 const ontology: Ontology = {
-  entityTypes: ['persona', 'location'],
-  entityTypeDescriptions: { persona: 'A named identity', location: 'A named place' },
-  predicates: [{ name: 'located in', kind: 'relationship', subjectTypes: ['persona'], objectTypes: ['location'] }],
+  name: 'test',
+  task: 'Extract the world.',
+  rules: ['Only stated facts.'],
+  entityTypes: ['Persona', 'Location'],
+  entityTypeDescriptions: { Persona: 'A named identity', Location: 'A named place' },
+  entityTypeExamples: { Persona: ['Mai'] },
+  predicates: [
+    { name: 'alias', kind: 'scalar', subjectTypes: ['Persona'], multiple: true },
+    { name: 'located_in', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Location'] },
+  ],
 };
 const chapter: LlmChapter = { index: 1, title: 'One', paragraphs: ['Mai walked into Hanoi.'] };
 const log: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as Logger;
 
-const goodCandidates: unknown = { entities: [{ type: 'persona', name: 'Mai', aliases: [] }] };
+const goodCandidates: unknown = { entities: [{ type: 'Persona', name: 'Mai', aliases: [] }] };
 const badCandidates: unknown = { entities: [{ type: 'dragon', name: 'Mai', aliases: [] }] };
 const mai: AnalysisEntity = {
-  id: 'persona:mai',
-  type: 'persona',
+  id: 'Persona:mai',
+  type: 'Persona',
   name: 'Mai',
   aliases: [],
   wordsFound: ['Mai'],
   status: 'verified',
 };
-const hanoi: AnalysisEntity = { ...mai, id: 'location:hanoi', type: 'location', name: 'Hanoi', wordsFound: ['Hanoi'] };
+const hanoi: AnalysisEntity = { ...mai, id: 'Location:hanoi', type: 'Location', name: 'Hanoi', wordsFound: ['Hanoi'] };
 const goodFacts: unknown = {
-  facts: [{ predicate: 'located in', subject: 'Mai', object: 'Hanoi', value: null, quote: 'Mai walked into Hanoi.' }],
+  facts: [
+    {
+      predicate: 'located_in',
+      subject: 'Mai',
+      object: 'Hanoi',
+      value: null,
+      label: null,
+      quote: 'Mai walked into Hanoi.',
+    },
+  ],
 };
 const badFacts: unknown = {
-  facts: [{ predicate: 'located in', subject: 'Mai', object: 'Hanoi', value: null, quote: 'Never said.' }],
+  facts: [{ predicate: 'located_in', subject: 'Mai', object: 'Hanoi', value: null, label: null, quote: 'Never said.' }],
 };
 
 type Reply = unknown;
@@ -54,7 +70,7 @@ function badOutput(): CodedError {
   return new CodedError(ErrorCode.LlmBadOutput, 'bad json');
 }
 
-function candidates(ask: AskLlm, stage: 'all' | 'location' = 'all'): Promise<Map<number, AnalysisEntity[]>> {
+function candidates(ask: AskLlm, stage: 'all' | 'Location' = 'all'): Promise<Map<number, AnalysisEntity[]>> {
   return askCandidates({ chapters: [chapter], ontology, stage, ask, log });
 }
 
@@ -122,15 +138,24 @@ describe('askCandidates', () => {
   it('lists all entity types when stage is all', async () => {
     const { ask, prompts } = scripted([goodCandidates]);
     await candidates(ask, 'all');
-    expect(prompts[0]).toContain('- persona:');
-    expect(prompts[0]).toContain('- location:');
+    expect(prompts[0]).toContain('- Persona:');
+    expect(prompts[0]).toContain('- Location:');
+  });
+
+  it('adds the task, rules, examples and alias limits from the ontology', async () => {
+    const { ask, prompts } = scripted([goodCandidates]);
+    await candidates(ask);
+    expect(prompts[0]).toContain('Extract the world.');
+    expect(prompts[0]).toContain('- Only stated facts.');
+    expect(prompts[0]).toContain('- Persona: A named identity Examples: Mai.');
+    expect(prompts[0]).toContain('- Location: A named place No aliases.');
   });
 
   it('lists only the stage type when stage is one type', async () => {
     const { ask, prompts } = scripted([{ entities: [] }]);
-    await candidates(ask, 'location');
-    expect(prompts[0]).toContain('- location:');
-    expect(prompts[0]).not.toContain('- persona:');
+    await candidates(ask, 'Location');
+    expect(prompts[0]).toContain('- Location:');
+    expect(prompts[0]).not.toContain('- Persona:');
   });
 });
 

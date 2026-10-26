@@ -1,4 +1,6 @@
-$world-types: character, persona, location, organization, glossary;
+@use 'sass:string';
+
+$world-types: Character, Persona, Location, Organization, Item, Glossary;
 
 ds-world-graph {
   --world-hostile: var(--color-danger);
@@ -30,7 +32,7 @@ ds-world-graph {
 
   @each $type in $world-types {
     &[data-type='#{$type}'] {
-      background: var(--color-entity-#{$type});
+      background: var(--color-entity-#{string.to-lower-case($type)});
     }
   }
 }

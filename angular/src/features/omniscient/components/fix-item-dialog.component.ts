@@ -18,7 +18,7 @@ export class FixItemDialogComponent {
   protected readonly store = inject(OmniscientStore);
   private readonly i18n = inject(I18nService);
   protected readonly types = computed(() => this.store.ontology()?.entityTypes ?? ENTITY_TYPES);
-  protected readonly type = signal<EntityType>('character');
+  protected readonly type = signal<EntityType>('Character');
   protected readonly predicate = signal('');
   protected readonly value = signal('');
 

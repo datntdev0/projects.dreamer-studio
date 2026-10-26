@@ -1,7 +1,7 @@
 import { shell } from 'electron';
 import { promises as fs, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ONTOLOGY_FILE, parseOntology } from '@dreamer/shared/core/ontology';
+import { emptyOntology, ONTOLOGY_FILE, parseOntology } from '@dreamer/shared/core/ontology';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { OntologyParseResult, OntologyProblem } from '@dreamer/shared/models/analysis';
 import { ontologyDefaultFile } from '@storage/paths';
@@ -20,7 +20,7 @@ export function loadOntology(folder: NovelFolder): OntologyParseResult {
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       return {
-        ontology: { entityTypes: [], entityTypeDescriptions: {}, predicates: [] },
+        ontology: emptyOntology(),
         problems: [{ line: 0, code: 'file-unreadable', params: { detail: errorMessage(error) } }],
       };
     }

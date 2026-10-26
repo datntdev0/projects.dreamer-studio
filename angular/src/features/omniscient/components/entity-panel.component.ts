@@ -112,7 +112,7 @@ export class EntityPanelComponent {
   }
 
   protected linkKey(link: WorldLink): string {
-    return `${link.source}|${link.predicate}|${link.target}`;
+    return `${link.source}|${link.predicate}|${link.label ?? ''}|${link.target}`;
   }
 
   protected toggleQuote(link: WorldLink): void {

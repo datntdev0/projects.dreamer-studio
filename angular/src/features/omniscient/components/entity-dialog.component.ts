@@ -31,7 +31,7 @@ export class EntityDialogComponent {
   protected readonly typeKeys = entityTypeKeys;
   protected readonly icons = ICONS;
   protected readonly name = signal('');
-  protected readonly type = signal<EntityType>('character');
+  protected readonly type = signal<EntityType>('Character');
   protected readonly error = signal('');
 
   protected readonly request = computed(() => {
@@ -71,7 +71,7 @@ export class EntityDialogComponent {
         const entity = this.entity();
         const filter = this.store.typeFilter();
         this.name.set(request?.mode === 'add' ? '' : (entity?.name ?? ''));
-        this.type.set(entity?.type ?? (filter === 'all' ? 'character' : filter));
+        this.type.set(entity?.type ?? (filter === 'all' ? 'Character' : filter));
         this.error.set('');
       });
     });

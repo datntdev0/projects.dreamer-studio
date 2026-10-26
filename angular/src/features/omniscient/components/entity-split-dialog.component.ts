@@ -22,7 +22,7 @@ export class EntitySplitDialogComponent {
   protected readonly types = ENTITY_TYPES;
   protected readonly typeKeys = entityTypeKeys;
   protected readonly name = signal('');
-  protected readonly type = signal<EntityType>('character');
+  protected readonly type = signal<EntityType>('Character');
   protected readonly aliases = signal<string[]>([]);
   protected readonly facts = signal<string[]>([]);
   protected readonly error = signal('');
@@ -76,7 +76,7 @@ export class EntitySplitDialogComponent {
       this.request();
       untracked(() => {
         this.name.set('');
-        this.type.set(this.entity()?.type ?? 'character');
+        this.type.set(this.entity()?.type ?? 'Character');
         this.aliases.set([]);
         this.facts.set([]);
         this.error.set('');

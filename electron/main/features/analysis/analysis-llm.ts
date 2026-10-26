@@ -1,4 +1,5 @@
 import { checkCandidates, checkPredicates } from '@dreamer/shared/core/analysis-checks';
+import { aliasTypes, factPredicates } from '@dreamer/shared/core/ontology';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { AnalysisEntity, AnalysisFact, CandidateOutput, EntityType } from '@dreamer/shared/models/analysis';
 import type { Ontology, OntologyPredicate, PredicateOutput } from '@dreamer/shared/models/analysis';
@@ -46,9 +47,10 @@ const predicateSchema: Record<string, unknown> = {
           subject: { type: 'string' },
           object: { type: ['string', 'null'] },
           value: { type: ['string', 'null'] },
+          label: { type: ['string', 'null'] },
           quote: { type: 'string' },
         },
-        required: ['predicate', 'subject', 'object', 'value', 'quote'],
+        required: ['predicate', 'subject', 'object', 'value', 'label', 'quote'],
         additionalProperties: false,
       },
     },
@@ -61,29 +63,52 @@ function chapterText(chapter: LlmChapter): string {
   return `## Chapter ${chapter.index}: ${chapter.title}\n${chapter.paragraphs.join('\n\n')}`;
 }
 
+function ontologyRules(ontology: Ontology): string[] {
+  return ontology.rules.map((rule: string): string => `- ${rule}`);
+}
+
+function entityTypeLine(ontology: Ontology, type: EntityType): string {
+  const examples: string[] = ontology.entityTypeExamples[type] ?? [];
+  return [
+    `- ${type}: ${ontology.entityTypeDescriptions[type] ?? ''}`,
+    examples.length > 0 ? ` Examples: ${examples.join(', ')}.` : '',
+    aliasTypes(ontology).includes(type) ? '' : ' No aliases.',
+  ].join('');
+}
+
 function candidatePrompt(chapters: LlmChapter[], ontology: Ontology, stage: EntityType | 'all'): string {
   const types: EntityType[] =
     stage === 'all' ? ontology.entityTypes : ontology.entityTypes.filter((type) => type === stage);
-  const descriptions: string = types
-    .map((type: EntityType): string => `- ${type}: ${ontology.entityTypeDescriptions[type] ?? ''}`)
-    .join('\n');
   return [
     'Extract named entities from these chapters. Return JSON: {"entities":[{"type":"...","name":"...","aliases":[]}]}',
+    '## Task',
+    ontology.task,
     '## Entity types to use',
-    descriptions,
+    types.map((type: EntityType): string => entityTypeLine(ontology, type)).join('\n'),
     '## Rules',
-    '- Copy each name exactly as written in the text.',
-    '- Aliases are other names the text uses for the same entity.',
-    '- Include no entity that is not in the text.',
-    '- Use one entry per entity across these chapters.',
+    [
+      ...ontologyRules(ontology),
+      '- Aliases are other names the text uses for the same entity.',
+      '- Include no entity that is not in the text.',
+    ].join('\n'),
     ...chapters.map(chapterText),
   ].join('\n\n');
 }
 
 function predicateLine(predicate: OntologyPredicate): string {
-  const objectTypes: string = predicate.objectTypes?.join(', ') ?? 'none';
-  const values: string = predicate.allowedValues?.join(', ') ?? 'any';
-  return `- ${predicate.name}: ${predicate.kind}; subjects: ${predicate.subjectTypes.join(', ')}; objects: ${objectTypes}; allowed values: ${values}; ${predicate.description ?? ''}`;
+  const subjects: string = `subjects: ${predicate.subjectTypes.join(', ')}`;
+  const description: string = predicate.description ?? '';
+  if (predicate.kind === 'relationship') {
+    const objects: string = `objects: ${predicate.objectTypes?.join(', ') ?? 'none'}`;
+    const traits: string[] = [
+      ...(predicate.symmetric ? ['symmetric'] : []),
+      ...(predicate.labeled ? ['needs a label'] : []),
+    ];
+    return `- ${predicate.name}: connection; ${subjects}; ${objects}; ${[...traits, description].join('; ')}`;
+  }
+  const values: string = `values: ${predicate.allowedValues?.join(', ') ?? 'any text'}`;
+  const count: string = predicate.multiple ? 'many values' : 'one value';
+  return `- ${predicate.name}: scalar; ${subjects}; ${values}; ${count}; ${description}`;
 }
 
 function predicatePrompt(chapter: LlmChapter, entities: AnalysisEntity[], ontology: Ontology): string {
@@ -95,16 +120,20 @@ function predicatePrompt(chapter: LlmChapter, entities: AnalysisEntity[], ontolo
     )
     .join('\n');
   return [
-    'Extract facts from this chapter. Return JSON: {"facts":[{"predicate":"...","subject":"...","object":null,"value":null,"quote":"..."}]}',
+    'Extract facts from this chapter. Return JSON: {"facts":[{"predicate":"...","subject":"...","object":null,"value":null,"label":null,"quote":"..."}]}',
+    '## Task',
+    ontology.task,
     '## Entities',
     names || 'None',
     '## Predicates',
-    ontology.predicates.map(predicateLine).join('\n') || 'None',
+    factPredicates(ontology).map(predicateLine).join('\n') || 'None',
     '## Rules',
-    '- Subject and object must be names from the entity list.',
-    '- Quote must be a sentence copied exactly from the chapter that states the fact.',
-    '- For a relationship, set value to null.',
-    '- For a scalar, set object to null and use an allowed value when listed.',
+    [
+      ...ontologyRules(ontology),
+      '- Subject and object must be names from the entity list.',
+      '- For a connection, set value to null. Set label only when the predicate needs a label; otherwise null.',
+      '- For a scalar, set object and label to null and use an allowed value when listed.',
+    ].join('\n'),
     chapterText(chapter),
   ].join('\n\n');
 }

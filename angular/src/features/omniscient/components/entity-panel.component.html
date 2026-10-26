@@ -264,7 +264,7 @@
                 <span class="visually-hidden">{{
                   (link.source === entity.id ? 'analysis.entity.outgoing' : 'analysis.entity.incoming') | t
                 }}</span>
-                <span class="ds-world-detail-predicate">{{ link.predicate }}</span>
+                <span class="ds-world-detail-predicate">{{ link.label ?? link.predicate }}</span>
                 <button
                   type="button"
                   class="ds-world-detail-link"

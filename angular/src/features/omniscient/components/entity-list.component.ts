@@ -36,7 +36,7 @@ export class EntityListComponent {
     { value: 'all', label: this.i18n.t('analysis.world.allTypes'), icon: 'layers' },
     ...ENTITY_TYPE_FILTERS.map((type) => ({
       value: type,
-      label: this.i18n.t(type === 'character' ? 'analysis.world.charactersAndPersonas' : entityTypeKeys[type]),
+      label: this.i18n.t(type === 'Character' ? 'analysis.world.charactersAndPersonas' : entityTypeKeys[type]),
       icon: entityTypeIcons[type],
     })),
   ]);

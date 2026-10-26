@@ -1,3 +1,5 @@
+@use 'sass:string';
+
 .ds-world-type {
   --world-type-color: var(--color-text-tertiary);
 
@@ -12,9 +14,9 @@
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--world-type-color) 14%, transparent);
 
-  @each $type in character, persona, location, organization, glossary {
+  @each $type in Character, Persona, Location, Organization, Item, Glossary {
     &[data-type='#{$type}'] {
-      --world-type-color: var(--color-entity-#{$type});
+      --world-type-color: var(--color-entity-#{string.to-lower-case($type)});
     }
   }
 }

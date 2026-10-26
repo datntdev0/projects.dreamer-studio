@@ -36,7 +36,7 @@ const ZOOM_MS = 250;
 const FIT_MS = 350;
 const FIT_PADDING = 48;
 const FIT_MAX_ZOOM = 1.6;
-const HOSTILE_PREDICATES = new Set(['enemy of', 'rival of']);
+const HOSTILE_PREDICATES = new Set(['enemy_of']);
 const HOSTILE_DASH = [3, 2];
 const LABEL_POSITION = 0.6;
 
@@ -51,6 +51,7 @@ interface GraphLink {
   source: string | GraphNode;
   target: string | GraphNode;
   predicate: string;
+  text: string;
 }
 
 interface GravityForce {
@@ -109,13 +110,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     labelMuted: 'GrayText',
     focus: 'Highlight',
     hostile: 'CanvasText',
-    types: {
-      character: 'CanvasText',
-      persona: 'CanvasText',
-      location: 'CanvasText',
-      organization: 'CanvasText',
-      glossary: 'CanvasText',
-    },
+    types: Object.fromEntries(ENTITY_TYPES.map((type) => [type, 'CanvasText'])) as Record<EntityType, string>,
   };
   private nodes: GraphNode[] = [];
   private links: GraphLink[] = [];
@@ -230,7 +225,12 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     this.links = world.links
       .filter((link) => visibleIds.has(link.source) && visibleIds.has(link.target))
       .filter((link) => !predicateFilter.size || predicateFilter.has(link.predicate))
-      .map((link) => ({ source: link.source, target: link.target, predicate: link.predicate }));
+      .map((link) => ({
+        source: link.source,
+        target: link.target,
+        predicate: link.predicate,
+        text: link.label ?? link.predicate,
+      }));
     this.neighbours = new Map(this.nodes.map((node) => [node.id, new Set<string>()]));
     this.degrees = new Map(this.nodes.map((node) => [node.id, 0]));
     for (const link of this.links) {
@@ -310,13 +310,9 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
       labelMuted: token('--color-text-secondary', 'GrayText'),
       focus: token('--color-focus', 'Highlight'),
       hostile: token('--world-hostile', label),
-      types: {
-        character: token('--color-entity-character', label),
-        persona: token('--color-entity-persona', label),
-        location: token('--color-entity-location', label),
-        organization: token('--color-entity-organization', label),
-        glossary: token('--color-entity-glossary', label),
-      },
+      types: Object.fromEntries(
+        ENTITY_TYPES.map((type) => [type, token(`--color-entity-${type.toLowerCase()}`, label)]),
+      ) as Record<EntityType, string>,
     };
     this.fontFamily = token('--font-sans', 'sans-serif');
     this.graph?.backgroundColor(this.colors.background);
@@ -390,11 +386,11 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     context.font = `${size}px ${this.fontFamily}`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    const width = context.measureText(link.predicate).width;
+    const width = context.measureText(link.text).width;
     context.fillStyle = this.alphaColor(this.colors.background, 0.85);
     context.fillRect(x - width / 2 - padding, y - size / 2 - padding, width + padding * 2, size + padding * 2);
     context.fillStyle = this.isHostile(link) ? this.colors.hostile : this.colors.labelMuted;
-    context.fillText(link.predicate, x, y);
+    context.fillText(link.text, x, y);
     context.restore();
   }
 

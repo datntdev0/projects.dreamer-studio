@@ -147,6 +147,7 @@ function addUserFact(world: World, edit: Extract<OverlayEdit, { kind: 'fact-add'
       source: subject.id,
       target: fact.objectId!,
       predicate: fact.predicate,
+      ...(fact.label ? { label: fact.label } : {}),
       chapters: [edit.chapterIndex],
       quotes: fact.quote ? [fact.quote] : [],
       staleChapters: [],
@@ -250,7 +251,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
       }
       const objectKey = fact.objectId ? idToKey.get(fact.objectId) : undefined;
       if (!objectKey) continue;
-      const key = `${subjectKey}|${fact.predicate.toLocaleLowerCase()}|${objectKey}`;
+      const key = `${subjectKey}|${fact.predicate.toLocaleLowerCase()}|${fact.label?.toLocaleLowerCase() ?? ''}|${objectKey}`;
       let link = links.get(key);
       if (!link) {
         link = {
@@ -258,6 +259,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
           source: entities.get(subjectKey)!.id,
           target: entities.get(objectKey)!.id,
           predicate: fact.predicate,
+          ...(fact.label ? { label: fact.label } : {}),
           chapters: [],
           quotes: [],
           staleChapters: [],

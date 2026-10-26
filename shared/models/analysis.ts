@@ -1,4 +1,5 @@
-export type EntityType = 'character' | 'persona' | 'location' | 'organization' | 'glossary';
+export const ENTITY_TYPES = ['Character', 'Persona', 'Location', 'Organization', 'Item', 'Glossary'] as const;
+export type EntityType = (typeof ENTITY_TYPES)[number];
 export type ChapterAnalysisStatus = 'not-analysed' | 'clean' | 'has-issues' | 'reviewed' | 'stale' | 'failed';
 export type ItemStatus = 'verified' | 'failed' | 'accepted' | 'rejected';
 export type FailReason =
@@ -8,7 +9,8 @@ export type FailReason =
   | 'predicate-not-in-ontology'
   | 'value-not-allowed'
   | 'entity-not-found'
-  | 'type-not-allowed';
+  | 'type-not-allowed'
+  | 'label-missing';
 
 export interface AnalysisEntity {
   id: string;
@@ -30,6 +32,7 @@ export interface AnalysisFact {
   subjectName?: string;
   objectName?: string;
   value?: string;
+  label?: string;
   quote: string | null;
   status: ItemStatus;
   reason?: FailReason;
@@ -80,12 +83,19 @@ export interface OntologyPredicate {
   subjectTypes: EntityType[];
   objectTypes?: EntityType[];
   allowedValues?: string[];
+  multiple?: boolean;
+  symmetric?: boolean;
+  labeled?: boolean;
   description?: string;
 }
 
 export interface Ontology {
+  name: string;
+  task: string;
+  rules: string[];
   entityTypes: EntityType[];
   entityTypeDescriptions: Partial<Record<EntityType, string>>;
+  entityTypeExamples: Partial<Record<EntityType, string[]>>;
   predicates: OntologyPredicate[];
 }
 
@@ -95,23 +105,26 @@ export type OntologyProblemCode =
   | 'root-not-map'
   | 'version-unsupported'
   | 'section-missing'
-  | 'section-not-map'
+  | 'section-not-list'
+  | 'item-not-map'
   | 'unknown-key'
+  | 'text-invalid'
+  | 'flag-invalid'
   | 'entity-type-unknown'
+  | 'entity-type-duplicate'
   | 'entity-type-not-listed'
-  | 'description-not-text'
-  | 'predicate-name-empty'
-  | 'predicate-not-map'
-  | 'kind-invalid'
+  | 'predicate-name-invalid'
+  | 'predicate-duplicate'
   | 'type-list-invalid'
-  | 'object-missing'
-  | 'object-not-allowed'
+  | 'value-type-invalid'
+  | 'values-missing'
   | 'values-not-allowed'
   | 'values-invalid'
   | 'value-duplicate'
-  | 'character-outside-persona-of'
-  | 'persona-of-invalid'
-  | 'persona-of-missing'
+  | 'symmetric-types-differ'
+  | 'character-outside-has-persona'
+  | 'has-persona-invalid'
+  | 'has-persona-missing'
   | 'persona-missing';
 
 export interface OntologyProblem {
@@ -153,6 +166,7 @@ export interface WorldLink {
   source: string;
   target: string;
   predicate: string;
+  label?: string;
   chapters: number[];
   quotes: string[];
   overlay?: boolean;
@@ -222,7 +236,14 @@ export interface CandidateOutput {
 }
 
 export interface PredicateOutput {
-  facts: { predicate: string; subject: string; object: string | null; value: string | null; quote: string }[];
+  facts: {
+    predicate: string;
+    subject: string;
+    object: string | null;
+    value: string | null;
+    label: string | null;
+    quote: string;
+  }[];
 }
 
 export interface AnalysisChapterRequest {

@@ -64,6 +64,8 @@ export const reasonKeys: Record<FailReason, string> = {
   'type-not-in-ontology': 'analysis.pipeline.reason.typeNotInOntology',
   'predicate-not-in-ontology': 'analysis.pipeline.reason.predicateNotInOntology',
   'value-not-allowed': 'analysis.pipeline.reason.valueNotAllowed',
+  'entity-not-found': 'analysis.pipeline.reason.entityNotFound',
+  'type-not-allowed': 'analysis.pipeline.reason.typeNotAllowed',
 };
 
 export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {

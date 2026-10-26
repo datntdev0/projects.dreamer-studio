@@ -22,6 +22,10 @@ export function runLogFile(paths: AppPaths, id: string): string {
   return join(paths.pipelineLogs, `${id}.log`);
 }
 
+export function promptLogDir(paths: AppPaths, runId: string): string {
+  return join(paths.promptLogs, runId);
+}
+
 export function readRunLog(file: string): string[] {
   if (!existsSync(file)) {
     return [];

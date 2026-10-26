@@ -25,9 +25,9 @@ interface ReviewGroup {
 const STATUS_FILTERS: ReviewStatusFilter[] = ['open', 'all', 'verified', 'failed', 'accepted', 'rejected'];
 const KIND_FILTERS: ReviewKind[] = ['all', 'entity', 'fact'];
 const ACCEPTABLE: FailReason[] = ['words-not-found', 'quote-not-found'];
-const PIPELINE_ERRORS: Record<string, string> = {
-  'The analysis process timed out during verification.': 'analysis.pipeline.error.timeout',
-  'The model returned an incomplete result file.': 'analysis.pipeline.error.incomplete',
+const CHAPTER_ERROR_KEYS: Record<string, string> = {
+  LLM_TIMEOUT: 'analysis.pipeline.error.timeout',
+  ANALYSIS_LLM_OUTPUT_INVALID: 'analysis.pipeline.error.incomplete',
 };
 
 @Component({
@@ -151,7 +151,7 @@ export class ReviewViewComponent {
 
   protected pipelineError(error?: string): string {
     if (!error) return this.i18n.t('analysis.pipeline.status.failed');
-    return PIPELINE_ERRORS[error] ? this.i18n.t(PIPELINE_ERRORS[error]) : error;
+    return CHAPTER_ERROR_KEYS[error] ? this.i18n.t(CHAPTER_ERROR_KEYS[error]) : error;
   }
 
   protected setStatus(event: Event): void {

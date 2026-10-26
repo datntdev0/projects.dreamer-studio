@@ -172,6 +172,23 @@
         <dd class="num">{{ date(novel().importedAt) }}</dd>
         <dt>{{ 'library.inspector.lastUpdated' | t }}</dt>
         <dd class="num">{{ date(novel().updatedAt) }}</dd>
+        <dt>{{ 'library.novel.info.id' | t }}</dt>
+        <dd class="pipeline-id">
+          <code data-testid="library-inspector-id" [dsTooltip]="novel().id">{{ shortId(novel().id) }}</code>
+          <button
+            dsBtn
+            variant="ghost"
+            size="sm"
+            iconOnly
+            type="button"
+            data-testid="library-inspector-copy-id"
+            [attr.aria-label]="'library.novel.info.copyId' | t"
+            [dsTooltip]="'library.novel.info.copyId' | t"
+            (click)="actions.copy(novel().id, 'toast.novelIdCopied')"
+          >
+            <ds-icon name="copy" size="sm" />
+          </button>
+        </dd>
       </dl>
     </div>
   }

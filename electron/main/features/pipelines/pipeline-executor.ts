@@ -1,18 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { PipelineChannel } from '@dreamer/shared/ipc/channels';
 import { PipelineCancelReason, PipelineListQuery, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineRunStatus, PipelineStartRequest } from '@dreamer/shared/models/pipeline';
-import { PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
+import { PipelineStepDetail, PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
 import { PipelineRunRepository, RecoveredRun } from '@storage/repositories/pipeline-run-repository';
 import { AppPaths } from '@storage/paths';
 import { abortError, PipelineDefinition, PipelineStep, StepContext } from './pipeline-definition';
 import { PipelineRegistry } from './pipeline-registry';
-import { appendRunLogSync, deleteRunLog, readRunLog, RunLog, runLogFile } from './run-log';
+import { appendRunLogSync, deleteRunLog, promptLogDir, readRunLog, RunLog, runLogFile } from './run-log';
 
 interface RunState {
   run: PipelineRun;
@@ -171,6 +171,7 @@ export class PipelineExecutor {
       stepIndex: 0,
       stepCount: definition.steps.length,
       stepName: null,
+      stepDetail: null,
       errorCode: null,
       error: null,
       label,
@@ -220,6 +221,7 @@ export class PipelineExecutor {
       params: state.params,
       signal: state.controller.signal,
       progress: (percent: number): void => this.reportProgress(state, percent),
+      enterStep: (key: string, detail: PipelineStepDetail | null): void => this.enterStep(state, key, detail),
       log: runLog.logger,
       checkpoint: (): void => {
         if (state.controller.signal.aborted) {
@@ -236,6 +238,7 @@ export class PipelineExecutor {
   private async runSteps(state: RunState, ctx: StepContext): Promise<void> {
     const { run, definition } = state;
     for (const [index, step] of definition.steps.entries()) {
+      if (!step.run) continue;
       ctx.checkpoint();
       this.beginStep(state, index, step);
       ctx.log.info(`Step ${run.stepIndex}/${run.stepCount} started: ${step.key}`);
@@ -246,7 +249,17 @@ export class PipelineExecutor {
   private beginStep(state: RunState, index: number, step: PipelineStep): void {
     state.run.stepIndex = index + 1;
     state.run.stepName = step.key;
-    state.run.progress = overallProgress(state.run, 0);
+    state.run.stepDetail = null;
+    if (!state.definition.overallProgress) state.run.progress = overallProgress(state.run, 0);
+    this.save(state);
+  }
+
+  private enterStep(state: RunState, key: string, detail: PipelineStepDetail | null): void {
+    const index: number = state.definition.steps.findIndex((step: PipelineStep): boolean => step.key === key);
+    if (index < 0) throw new Error(`Unknown pipeline step: ${key}`);
+    state.run.stepIndex = index + 1;
+    state.run.stepName = key;
+    state.run.stepDetail = detail;
     this.save(state);
   }
 
@@ -315,7 +328,8 @@ export class PipelineExecutor {
     if (state.run.status !== 'running' || this.closed) {
       return;
     }
-    state.run.progress = overallProgress(state.run, Math.min(100, Math.max(0, percent)));
+    const clamped: number = Math.min(100, Math.max(0, percent));
+    state.run.progress = state.definition.overallProgress ? Math.round(clamped) : overallProgress(state.run, clamped);
     if (state.progressTimer) {
       return;
     }
@@ -365,6 +379,11 @@ export class PipelineExecutor {
       deleteRunLog(runLogFile(this.paths, id));
     } catch (error) {
       this.logger.warn(`could not delete the log of run ${id}: ${errorMessage(error)}`);
+    }
+    try {
+      rmSync(promptLogDir(this.paths, id), { recursive: true, force: true });
+    } catch (error) {
+      this.logger.warn(`could not delete the prompts of run ${id}: ${errorMessage(error)}`);
     }
   }
 }

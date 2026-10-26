@@ -32,6 +32,7 @@ function makeContext(): StepContext {
     params: {},
     signal: controller.signal,
     progress: progress as unknown as StepContext['progress'],
+    enterStep: vi.fn(),
     log: log as unknown as StepContext['log'],
     checkpoint: vi.fn(),
     setNovelId: vi.fn(),

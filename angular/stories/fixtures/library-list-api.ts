@@ -106,6 +106,7 @@ class FakeLibraryListApi extends FakePipelinesApi {
       stepIndex: 0,
       stepCount: 3,
       stepName: null,
+      stepDetail: null,
       errorCode: null,
       error: null,
       createdAt: new Date().toISOString(),

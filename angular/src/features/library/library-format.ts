@@ -41,8 +41,9 @@ export function chapterNumber(chapter: LibraryChapter): string {
   return String(chapter.position).padStart(4, '0');
 }
 
-export function lockKind(lock: NovelLock): 'export' | 'import' | 'translation' {
+export function lockKind(lock: NovelLock): 'analysis' | 'export' | 'import' | 'translation' {
   if (lock.type === 'glossary-translation' || lock.type === 'content-translation') return 'translation';
+  if (lock.type === 'world-analysis') return 'analysis';
   return lock.type === 'novel-export' ? 'export' : 'import';
 }
 

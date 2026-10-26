@@ -110,6 +110,7 @@ function makeRun(request: NovelImportRequest, checkpoint?: () => void, suppliedC
     params: importParams(request),
     signal: controller.signal,
     progress: vi.fn(),
+    enterStep: vi.fn(),
     checkpoint:
       checkpoint ??
       ((): void => {
@@ -135,7 +136,7 @@ function pipelineSteps(): [PipelineStep, PipelineStep, PipelineStep] {
 async function execute(request: NovelImportRequest): Promise<TestRun> {
   const run: TestRun = makeRun(request);
   for (const step of pipelineSteps()) {
-    await step.run(run.ctx);
+    await step.run!(run.ctx);
   }
   return run;
 }
@@ -229,7 +230,7 @@ describe('novel import pipeline', () => {
       change(packagePath);
       const run: TestRun = makeRun(request);
 
-      await expect(pipelineSteps()[0].run(run.ctx)).rejects.toSatisfy((error: unknown): boolean => {
+      await expect(pipelineSteps()[0].run!(run.ctx)).rejects.toSatisfy((error: unknown): boolean => {
         expectCode(error, ErrorCode.PackageChanged);
         return true;
       });
@@ -252,8 +253,8 @@ describe('novel import pipeline', () => {
     );
     const [check, extract] = pipelineSteps();
 
-    await check.run(run.ctx);
-    await expect(extract.run(run.ctx)).rejects.toMatchObject({ name: 'AbortError' });
+    await check.run!(run.ctx);
+    await expect(extract.run!(run.ctx)).rejects.toMatchObject({ name: 'AbortError' });
     expect(checkpoints).toBe(1);
     expect(existsSync(importStagingDir(paths, run.ctx.runId))).toBe(true);
     expect(readdirSync(join(importStagingDir(paths, run.ctx.runId), 'chapters'))).toHaveLength(1);
@@ -265,13 +266,13 @@ describe('novel import pipeline', () => {
   it('AC-7: reports a library write failure and cleanup removes staging', async () => {
     const run: TestRun = makeRun(requestFor());
     const [check, extract, save] = pipelineSteps();
-    await check.run(run.ctx);
-    await extract.run(run.ctx);
+    await check.run!(run.ctx);
+    await extract.run!(run.ctx);
     await fs.mkdir(join(paths.library, '..'), { recursive: true });
     writeFileSync(paths.library, 'blocks the library directory');
 
     try {
-      await save.run(run.ctx);
+      await save.run!(run.ctx);
       throw new Error('Expected the save step to fail');
     } catch (error) {
       expectCode(error, ErrorCode.LibraryWriteFailed);
@@ -312,10 +313,10 @@ describe('novel import pipeline', () => {
     writeFileSync(coverPath, bytes);
     const run: TestRun = makeRun(requestFor({ kind: 'file', path: coverPath }));
     const [check, extract] = pipelineSteps();
-    await check.run(run.ctx);
+    await check.run!(run.ctx);
 
     try {
-      await extract.run(run.ctx);
+      await extract.run!(run.ctx);
       throw new Error('Expected cover extraction to fail');
     } catch (error) {
       expectCode(error, ErrorCode.CoverInvalid);

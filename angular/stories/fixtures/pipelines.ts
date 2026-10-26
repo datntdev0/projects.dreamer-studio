@@ -35,6 +35,7 @@ function makeRun(seed: RunSeed): PipelineRun {
     stepIndex: 0,
     stepCount: DEMO_STEPS.length,
     stepName: null,
+    stepDetail: null,
     errorCode: null,
     error: null,
     createdAt: minutesAgo(0),

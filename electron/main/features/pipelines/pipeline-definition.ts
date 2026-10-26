@@ -1,4 +1,4 @@
-import { PipelineType } from '@dreamer/shared/models/pipeline';
+import { PipelineStepDetail, PipelineType } from '@dreamer/shared/models/pipeline';
 import { Logger } from '../../logging/logger';
 import { AppPaths } from '@storage/paths';
 
@@ -8,6 +8,7 @@ export interface StepContext {
   params: Record<string, unknown>;
   signal: AbortSignal;
   progress(percent: number): void;
+  enterStep(key: string, detail: PipelineStepDetail | null): void;
   log: Logger;
   checkpoint(): void;
   setNovelId(id: string): void;
@@ -16,12 +17,13 @@ export interface StepContext {
 export interface PipelineStep {
   key: string;
   backend: boolean;
-  run(ctx: StepContext): Promise<void>;
+  run?(ctx: StepContext): Promise<void>;
 }
 
 export interface PipelineDefinition {
   type: PipelineType;
   steps: PipelineStep[];
+  overallProgress?: boolean;
   cleanup?(ctx: StepContext): Promise<void>;
   discard?(params: Record<string, unknown>): void;
 }

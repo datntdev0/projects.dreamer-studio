@@ -66,7 +66,7 @@ function checkKeys(context: Context, map: YAMLMap, allowed: readonly string[], p
   }
 }
 
-function entityType(value: string): value is EntityType {
+export function isEntityType(value: unknown): value is EntityType {
   return ENTITY_TYPES.includes(value as EntityType);
 }
 
@@ -77,7 +77,7 @@ function validateEntityTypes(context: Context, node: Node | null | undefined): v
   }
   for (const item of node.items) {
     const type: string | undefined = textValue(item.key);
-    if (type === undefined || !entityType(type)) {
+    if (type === undefined || !isEntityType(type)) {
       problem(context, 'entity-type-unknown', item.key as Node, {
         type: keyText(item.key),
       });
@@ -109,7 +109,7 @@ function validateTypeList(
     const type: string | undefined = textValue(item);
     if (type === undefined) {
       problem(context, 'type-list-invalid', item as Node, { key, predicate });
-    } else if (!entityType(type)) {
+    } else if (!isEntityType(type)) {
       problem(context, 'entity-type-unknown', item as Node, { type, key, predicate });
     } else {
       if (type === 'character' && predicate !== 'persona of') {

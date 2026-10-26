@@ -3,9 +3,14 @@ import type { Language } from './i18n/i18n.service';
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 3600;
 const DAY_SECONDS = 86400;
+const SHORT_ID_LENGTH = 8;
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
+}
+
+export function shortId(id: string): string {
+  return id.slice(0, SHORT_ID_LENGTH);
 }
 
 export function formatDuration(seconds: number): string {

@@ -26,6 +26,9 @@ import { registerSettingsIpc } from './ipc/settings-ipc';
 import { createLogger, Logger } from './logging/logger';
 import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { AnalysisService } from './features/analysis/analysis-service';
+import { AnalysisRuns } from './features/analysis/analysis-runs';
+import { worldAnalysisPipeline, WorldAnalysisDeps } from './features/analysis/world-analysis-pipeline';
+import { PipelineDefinition } from './features/pipelines/pipeline-definition';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
@@ -72,12 +75,15 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
   await showFatalError(code, paths.database, paths, note);
 }
 
+const llm: LlmService = new LlmService(settings, () => manager.paths());
+const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns() };
+const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
   registry: new PipelineRegistry(
     app.isPackaged
-      ? [novelImportPipeline, novelExportPipeline]
-      : [demoPipeline, novelImportPipeline, novelExportPipeline],
+      ? [novelImportPipeline, novelExportPipeline, worldAnalysis]
+      : [demoPipeline, novelImportPipeline, novelExportPipeline, worldAnalysis],
   ),
   limit: (): number => settings.get().pipelines.maxConcurrent,
   startBackend,
@@ -85,7 +91,6 @@ const manager: AppDataManager = new AppDataManager(settings, {
   onReopenFailed: showDataFailure,
 });
 settings.onChange((): void => manager.current()?.executor.limitChanged());
-const llm: LlmService = new LlmService(settings, () => manager.paths());
 
 const diagnostics: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
   const session: AppDataSession = manager.session();
@@ -154,7 +159,7 @@ async function onReady(): Promise<void> {
   registerPipelineIpc(() => manager.session().executor);
   registerLibraryIpc(() => manager.session());
   registerLlmIpc(llm);
-  registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session()));
+  registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session(), analysisDeps));
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);

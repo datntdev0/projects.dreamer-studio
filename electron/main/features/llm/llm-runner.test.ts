@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -137,5 +137,59 @@ describe('runLlm with a fake CLI', () => {
   it('classifies a signed-out CLI', async () => {
     vi.stubEnv('DREAMER_FAKE_MODE', 'signed-out');
     await expect(run()).rejects.toMatchObject({ code: ErrorCode.LlmNotSignedIn });
+  });
+});
+
+describe('runLlm prompt file', () => {
+  const warn = vi.fn();
+  const logged = { ...log, warn };
+
+  function runWithFile(promptFile: string): Promise<unknown> {
+    return runLlm({ adapter, path: launcher, request: request(), cacheDir, log: logged, promptFile });
+  }
+
+  it('writes the header, prompt and answer', async () => {
+    vi.stubEnv('DREAMER_FAKE_MODE', 'ok');
+    const file: string = join(testDir, 'prompts', 'run', '001-candidates-ch001-003-a1.md');
+    await runWithFile(file);
+    const text: string = await readFile(file, 'utf8');
+    expect(text).toContain('# candidates-ch001-003-a1');
+    expect(text).toContain('CLI: claude');
+    expect(text).toContain('Model: default');
+    expect(text).toMatch(/Time: \d{4}-\d{2}-\d{2}T/);
+    expect(text).toContain('## Prompt\n\nReply with JSON');
+    expect(text).toContain('## Answer');
+    expect(text).toContain('"ok": true');
+    expect(text).not.toContain('## Error');
+  });
+
+  it('writes the error code, message and stdout head when the answer is bad', async () => {
+    vi.stubEnv('DREAMER_FAKE_MODE', 'bad-json');
+    const file: string = join(testDir, 'prompts', 'run', '002-predicates-ch001-a2.md');
+    await expect(runWithFile(file)).rejects.toMatchObject({ code: ErrorCode.LlmBadOutput });
+    const text: string = await readFile(file, 'utf8');
+    expect(text).toContain('## Prompt');
+    expect(text).toContain(`Code: ${ErrorCode.LlmBadOutput}`);
+    expect(text).toContain('Message: ');
+    expect(text).toContain('### Stdout head');
+    expect(text).toContain('not json');
+    expect(text).not.toContain('## Answer');
+  });
+
+  it('only warns when the prompt file cannot be written', async () => {
+    vi.stubEnv('DREAMER_FAKE_MODE', 'ok');
+    const blocker: string = join(testDir, 'blocker');
+    await writeFile(blocker, 'a file, not a folder', 'utf8');
+    warn.mockClear();
+    await expect(runWithFile(join(blocker, '001-x-a1.md'))).resolves.toMatchObject({ value: { ok: true } });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('could not write prompt log'));
+  });
+
+  it('writes no file without a prompt file', async () => {
+    vi.stubEnv('DREAMER_FAKE_MODE', 'ok');
+    const folder: string = join(testDir, 'none');
+    await mkdir(folder, { recursive: true });
+    await run();
+    expect(await readdir(folder)).toEqual([]);
   });
 });

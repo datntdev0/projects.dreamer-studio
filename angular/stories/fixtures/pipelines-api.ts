@@ -124,6 +124,7 @@ export class FakePipelinesApi extends DesktopApi {
       stepIndex: 0,
       stepCount: DEMO_STEPS.length,
       stepName: null,
+      stepDetail: null,
       errorCode: null,
       error: null,
       createdAt: new Date().toISOString(),

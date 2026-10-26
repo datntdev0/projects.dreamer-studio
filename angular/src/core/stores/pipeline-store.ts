@@ -1,6 +1,7 @@
-import { computed, inject, Injectable, type Signal, signal, type WritableSignal } from '@angular/core';
+import { computed, inject, Injectable, Injector, type Signal, signal, type WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastService } from '@components/toast/toast.service';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type {
   PipelineListQuery,
@@ -31,6 +32,7 @@ function newestFirst(a: PipelineRun, b: PipelineRun): number {
 export class PipelineStore {
   private readonly desktopApi: DesktopApi = inject(DesktopApi);
   private readonly toast: ToastService = inject(ToastService);
+  private readonly injector: Injector = inject(Injector);
   private readonly router: Router = inject(Router);
   private readonly i18n: I18nService = inject(I18nService);
 
@@ -142,6 +144,10 @@ export class PipelineStore {
       this.notifyExportFinished(run);
       return;
     }
+    if (run.type === 'world-analysis') {
+      void this.notifyAnalysisFinished(run);
+      return;
+    }
     if (run.status === 'succeeded') {
       this.toast.show({
         kind: 'success',
@@ -199,6 +205,45 @@ export class PipelineStore {
         kind: 'danger',
         title: this.i18n.t('toast.export.failed', { title }),
         message: this.i18n.t('toast.export.failedMsg'),
+        action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
+      });
+    }
+  }
+
+  private async notifyAnalysisFinished(run: PipelineRun): Promise<void> {
+    const title: string = this.runTitle(run);
+    if (run.status === 'succeeded') {
+      const novelId: string | null = run.novelId;
+      const lastRun = novelId
+        ? await this.desktopApi
+            .analysisStatus(novelId)
+            .then((status) => status?.lastRun)
+            .catch(() => null)
+        : null;
+      const counts = lastRun?.runId === run.id ? lastRun : null;
+      this.toast.show({
+        kind: 'success',
+        title: this.i18n.t('toast.analysis.succeeded'),
+        message: counts
+          ? this.i18n.t('toast.analysis.succeededMsg', {
+              title,
+              analysed: counts.analysed,
+              failed: counts.failed,
+              issues: counts.issues,
+            })
+          : undefined,
+        action: novelId
+          ? {
+              label: this.i18n.t('toast.analysis.open'),
+              run: () => this.injector.get(CurrentNovelStore).analyse(novelId),
+            }
+          : undefined,
+      });
+    } else if (run.status === 'failed') {
+      this.toast.show({
+        kind: 'danger',
+        title: this.i18n.t('toast.analysis.failed'),
+        message: this.i18n.t('toast.analysis.failedMsg', { title, error: runError(run, this.i18n) }),
         action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
       });
     }

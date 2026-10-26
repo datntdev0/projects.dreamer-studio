@@ -12,6 +12,7 @@ export interface AppPaths {
   library: string;
   logs: string;
   pipelineLogs: string;
+  promptLogs: string;
   cache: string;
   llmCache: string;
 }
@@ -34,6 +35,7 @@ export function resolveAppPaths(root: string): AppPaths {
     library: join(root, 'library'),
     logs,
     pipelineLogs: join(logs, 'pipelines'),
+    promptLogs: join(logs, 'prompts'),
     cache: join(root, 'cache'),
     llmCache: join(root, 'cache', 'llm'),
   };

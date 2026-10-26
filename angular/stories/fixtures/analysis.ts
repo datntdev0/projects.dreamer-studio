@@ -709,10 +709,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     pending: false,
     ...(status === 'failed'
       ? {
-          error:
-            index === 31
-              ? 'The analysis process timed out during verification.'
-              : 'The model returned an incomplete result file.',
+          error: index === 31 ? 'LLM_TIMEOUT' : 'ANALYSIS_LLM_OUTPUT_INVALID',
         }
       : {}),
     paragraphs,

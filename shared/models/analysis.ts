@@ -2,7 +2,13 @@ export type EntityType = 'character' | 'persona' | 'location' | 'organization' |
 export type ChapterAnalysisStatus = 'not-analysed' | 'clean' | 'has-issues' | 'reviewed' | 'stale' | 'failed';
 export type ItemStatus = 'verified' | 'failed' | 'accepted' | 'rejected';
 export type FailReason =
-  'words-not-found' | 'quote-not-found' | 'type-not-in-ontology' | 'predicate-not-in-ontology' | 'value-not-allowed';
+  | 'words-not-found'
+  | 'quote-not-found'
+  | 'type-not-in-ontology'
+  | 'predicate-not-in-ontology'
+  | 'value-not-allowed'
+  | 'entity-not-found'
+  | 'type-not-allowed';
 
 export interface AnalysisEntity {
   id: string;
@@ -21,6 +27,8 @@ export interface AnalysisFact {
   predicate: string;
   subjectId: string;
   objectId?: string;
+  subjectName?: string;
+  objectName?: string;
   value?: string;
   quote: string | null;
   status: ItemStatus;
@@ -164,6 +172,14 @@ export interface AnalysisMergeState {
   mergedAt: string | null;
 }
 
+export interface AnalysisLastRun {
+  runId: string;
+  analysed: number;
+  failed: number;
+  issues: number;
+  finishedAt: string;
+}
+
 export interface AnalysisStatus {
   novelId: string;
   chapters: ChapterAnalysisSummary[];
@@ -171,6 +187,42 @@ export interface AnalysisStatus {
   merge: AnalysisMergeState;
   ontology: Ontology;
   ontologyProblems: OntologyProblem[];
+  lastRun: AnalysisLastRun | null;
+}
+
+export interface ChapterResult {
+  version: 1;
+  file: string;
+  index: number;
+  title: string;
+  analysedAt: string;
+  llm: string;
+  entities: AnalysisEntity[];
+  facts: AnalysisFact[];
+}
+
+export interface AnalysisIndexEntry {
+  index: number;
+  file: string;
+  status: 'clean' | 'has-issues' | 'reviewed' | 'failed';
+  counts: ChapterAnalysisCounts;
+  error?: string;
+  analysedAt: string;
+}
+
+export interface AnalysisIndexFile {
+  version: 1;
+  chapters: AnalysisIndexEntry[];
+  lastRun: AnalysisLastRun | null;
+  mergedAt: string | null;
+}
+
+export interface CandidateOutput {
+  entities: { type: string; name: string; aliases: string[] }[];
+}
+
+export interface PredicateOutput {
+  facts: { predicate: string; subject: string; object: string | null; value: string | null; quote: string }[];
 }
 
 export interface AnalysisChapterRequest {

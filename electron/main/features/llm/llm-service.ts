@@ -19,6 +19,12 @@ const testSchema: Record<string, unknown> = {
   additionalProperties: false,
 };
 
+export interface LlmRunOptions {
+  signal?: AbortSignal;
+  log?: Logger;
+  promptFile?: string;
+}
+
 interface RunningTest {
   controller: AbortController;
   promise: Promise<LlmTestResult>;
@@ -113,7 +119,7 @@ export class LlmService {
     return status;
   }
 
-  async run(request: LlmRunRequest, options: { signal?: AbortSignal; log?: Logger } = {}): Promise<LlmRunResult> {
+  async run(request: LlmRunRequest, options: LlmRunOptions = {}): Promise<LlmRunResult> {
     const statuses: LlmCliStatus[] = await this.status();
     const status: LlmCliStatus | undefined = statuses.find((item: LlmCliStatus): boolean => item.id === request.cli);
     if (status?.state !== 'installed' || status.path === null) {
@@ -126,13 +132,14 @@ export class LlmService {
       cacheDir: this.paths().llmCache,
       signal: options.signal,
       log: options.log,
+      promptFile: options.promptFile,
     });
   }
 
   async runForFeature(
     feature: LlmFeatureId,
     request: LlmFeatureRunRequest,
-    options: { signal?: AbortSignal; log?: Logger } = {},
+    options: LlmRunOptions = {},
   ): Promise<LlmRunResult> {
     const resolution: LlmResolution = resolveLlm(this.settings.get().llm, feature, await this.status());
     if (resolution.problem !== null || resolution.choice === null) {

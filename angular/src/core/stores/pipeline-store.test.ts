@@ -16,6 +16,7 @@ function run(id: string, status: PipelineRun['status'], seed: Partial<PipelineRu
     stepIndex: 1,
     stepCount: 5,
     stepName: null,
+    stepDetail: null,
     errorCode: null,
     error: null,
     createdAt: `2026-10-20T10:00:0${id.length % 10}.000Z`,

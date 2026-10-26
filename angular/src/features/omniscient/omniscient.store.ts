@@ -99,6 +99,14 @@ export class OmniscientStore {
 
   readonly run = computed(() => this.progressValue() ?? this.status()?.run ?? null);
   readonly locked = computed(() => !!this.novel()?.lock || !!this.run());
+  readonly editLockKey = computed(() => {
+    if (this.run()) return 'analysis.world.lockedRun';
+    return this.novel()?.lock ? 'analysis.world.lockedNovel' : '';
+  });
+  readonly otherLock = computed(() => {
+    const lock = this.novel()?.lock;
+    return !!lock && lock.type !== 'world-analysis';
+  });
   readonly ontology = computed(() => this.status()?.ontology ?? null);
   readonly ontologyProblems = computed<OntologyProblem[]>(() => this.status()?.ontologyProblems ?? []);
   readonly llm = computed<OmniscientLlm | null>(() => {

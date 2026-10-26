@@ -2,13 +2,19 @@ import { ErrorCode } from '../errors/app-error';
 
 export type PipelineRunStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
-export type PipelineType = 'demo' | 'novel-import' | 'novel-export' | 'glossary-translation' | 'content-translation';
+export type PipelineType =
+  'demo' | 'novel-import' | 'novel-export' | 'world-analysis' | 'glossary-translation' | 'content-translation';
 
 export type PipelineCancelReason = 'user' | 'appClosed';
 
 export const pipelineRunStatuses: PipelineRunStatus[] = ['queued', 'running', 'succeeded', 'failed', 'cancelled'];
 
 export const finishedStatuses: PipelineRunStatus[] = ['succeeded', 'failed', 'cancelled'];
+
+export interface PipelineStepDetail {
+  key: string;
+  params: Record<string, string | number>;
+}
 
 export interface PipelineRun {
   id: string;
@@ -19,6 +25,7 @@ export interface PipelineRun {
   stepIndex: number;
   stepCount: number;
   stepName: string | null;
+  stepDetail: PipelineStepDetail | null;
   errorCode: ErrorCode | null;
   error: string | null;
   createdAt: string;

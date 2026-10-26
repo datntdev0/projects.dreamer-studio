@@ -35,6 +35,7 @@ function run(id: string, status: PipelineRun['status']): PipelineRun {
     stepIndex: 3,
     stepCount: 5,
     stepName: 'pipeline.step.3',
+    stepDetail: null,
     errorCode: null,
     error: null,
     createdAt: '2026-10-20T10:00:00.000Z',

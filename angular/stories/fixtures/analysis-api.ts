@@ -186,6 +186,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       },
       ontology: DEFAULT_ONTOLOGY,
       ontologyProblems: this.invalidOntology ? ONTOLOGY_PROBLEMS : [],
+      lastRun: null,
     };
   }
 

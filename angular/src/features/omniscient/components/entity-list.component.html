@@ -16,7 +16,7 @@
       type="button"
       data-testid="world-add-entity"
       [attr.aria-label]="'analysis.world.addEntity' | t"
-      [dsTooltip]="'analysis.world.addEntity' | t"
+      [dsTooltip]="store.editLockKey() || 'analysis.world.addEntity' | t"
       [disabled]="store.locked()"
       (click)="store.dialog.set({ kind: 'entity', mode: 'add', entityId: null })"
     >

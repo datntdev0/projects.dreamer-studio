@@ -1,6 +1,7 @@
 import { isAppError, type ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
+import { shortId } from '@core/format';
 import type { I18nService } from '@core/i18n/i18n.service';
 
 export interface RunStatusView {
@@ -16,14 +17,8 @@ export const RUN_STATUS_VIEWS: Record<PipelineRunStatus, RunStatusView> = {
   cancelled: { label: 'run.cancelled', icon: 'stop' },
 };
 
-const SHORT_ID_LENGTH = 8;
-
 export function isActiveRun(run: PipelineRun): boolean {
   return run.status === 'running' || run.status === 'queued';
-}
-
-export function shortId(id: string): string {
-  return id.slice(0, SHORT_ID_LENGTH);
 }
 
 export function runName(run: PipelineRun, i18n: I18nService): string {
@@ -31,7 +26,13 @@ export function runName(run: PipelineRun, i18n: I18nService): string {
 }
 
 export function runStepName(run: PipelineRun, i18n: I18nService): string {
-  return run.stepName ? i18n.t(run.stepName) : '';
+  if (!run.stepName) return '';
+  const detail: string = runStepDetail(run, i18n);
+  return detail ? `${i18n.t(run.stepName)} · ${detail}` : i18n.t(run.stepName);
+}
+
+export function runStepDetail(run: PipelineRun, i18n: I18nService): string {
+  return run.stepDetail ? i18n.t(run.stepDetail.key, run.stepDetail.params) : '';
 }
 
 function errorTitle(code: ErrorCode | null | undefined, fallback: string, i18n: I18nService): string {

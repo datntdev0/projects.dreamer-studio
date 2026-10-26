@@ -62,6 +62,11 @@ import { TranslationPillComponent } from './translation/translation-pill.compone
 type PageTab = NovelTab | 'translation';
 
 const LOCK_KEYS: Record<string, { heading: string; reason: string; message: string }> = {
+  'world-analysis': {
+    heading: 'library.novel.lock.analysis',
+    reason: 'library.novel.lock.reasonAnalysis',
+    message: 'library.novel.lock.message',
+  },
   'novel-export': {
     heading: 'library.novel.lock.export',
     reason: 'library.novel.lock.reasonExport',

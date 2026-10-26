@@ -16,6 +16,7 @@ function run(id: string, status: PipelineRun['status'], type: PipelineRun['type'
     stepIndex: 5,
     stepCount: 5,
     stepName: null,
+    stepDetail: null,
     errorCode: null,
     error: null,
     createdAt: '2026-10-20T10:00:00.000Z',

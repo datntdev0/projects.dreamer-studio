@@ -29,6 +29,9 @@ export const ErrorCode = {
   CoverInvalid: 'COVER_INVALID',
   ChapterFileMissing: 'CHAPTER_FILE_MISSING',
   ChapterChangeInvalid: 'CHAPTER_CHANGE_INVALID',
+  OntologyInvalid: 'ONTOLOGY_INVALID',
+  AnalysisNothingToRun: 'ANALYSIS_NOTHING_TO_RUN',
+  AnalysisLlmOutputInvalid: 'ANALYSIS_LLM_OUTPUT_INVALID',
   NotImplemented: 'NOT_IMPLEMENTED',
   AnalysisOpenIssues: 'ANALYSIS_OPEN_ISSUES',
 } as const;

@@ -6,7 +6,7 @@ import { ProgressComponent } from '@components/status/progress.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { isAppError } from '@dreamer/shared/errors/app-error';
 import type { PipelineRun, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { formatDateTime, formatDuration } from '@core/format';
+import { formatDateTime, formatDuration, shortId } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { PipelineStore } from '@core/stores/pipeline-store';
@@ -18,8 +18,8 @@ import {
   runError,
   runName,
   runSeconds,
+  runStepDetail,
   runStepName,
-  shortId,
   STEP_STATE_VIEWS,
   stepState,
   type StepState,
@@ -34,6 +34,7 @@ interface StepView {
   icon: string;
   label: string;
   backend: boolean;
+  detail: string;
 }
 
 const EMPTY_VALUE = '—';
@@ -102,7 +103,8 @@ export class RunDetailsComponent {
     if (!run || !info) return [];
     return info.steps.map((step, index) => {
       const state: StepState = stepState(run, index + 1);
-      return { index: index + 1, key: step.key, state, backend: step.backend, ...STEP_STATE_VIEWS[state] };
+      const detail: string = state === 'running' ? runStepDetail(run, this.i18n) : '';
+      return { index: index + 1, key: step.key, state, backend: step.backend, detail, ...STEP_STATE_VIEWS[state] };
     });
   });
   protected readonly shortId: Signal<string> = computed(() => shortId(this.run()?.id ?? ''));

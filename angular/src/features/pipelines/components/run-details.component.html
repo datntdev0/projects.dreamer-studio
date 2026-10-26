@@ -94,6 +94,9 @@
           <span class="pipeline-step-index num">{{ step.index }}</span>
           <span class="pipeline-step-name"
             >{{ step.key | t }}
+            @if (step.detail) {
+              <span class="pipeline-muted" data-testid="pipeline-details-step-detail">· {{ step.detail }}</span>
+            }
             @if (step.backend) {
               <span class="pipeline-tag" data-testid="pipeline-details-backend-tag"
                 ><ds-icon name="cpu" size="sm" />{{ 'run.tag.backend' | t }}</span

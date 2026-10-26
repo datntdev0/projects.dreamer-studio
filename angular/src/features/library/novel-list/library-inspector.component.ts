@@ -11,12 +11,13 @@ import type { NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/mode
 import type { PickedImage } from '@dreamer/shared/models/novel-package';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import type { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
-import { formatCompact, formatCount, formatDateTime } from '@core/format';
+import { formatCompact, formatCount, formatDateTime, shortId } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LibraryStore } from '@core/stores/library-store';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { PipelineStore } from '@core/stores/pipeline-store';
+import { PipelineActions } from '../../pipelines/pipeline-actions';
 import { coverPalette, coverUrl, languageName, translationLevel } from '../library-format';
 import { LibraryCoverComponent } from './library-cover.component';
 import { NovelMetadataFormComponent } from './novel-metadata-form.component';
@@ -45,6 +46,7 @@ export class LibraryInspectorComponent {
   private readonly pipelines: PipelineStore = inject(PipelineStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);
+  protected readonly actions: PipelineActions = inject(PipelineActions);
   protected readonly detail: WritableSignal<NovelDetail | null> = signal(null);
   protected readonly coverBusy = signal<boolean>(false);
   protected readonly exportBusy = signal<boolean>(false);
@@ -104,6 +106,7 @@ export class LibraryInspectorComponent {
   }
 
   protected readonly translationLevel = translationLevel;
+  protected readonly shortId = shortId;
 
   protected date(iso: string): string {
     return formatDateTime(iso, this.i18n.language());

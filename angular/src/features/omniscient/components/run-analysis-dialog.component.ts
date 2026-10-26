@@ -15,7 +15,7 @@ const DEFAULT_BATCH_SIZE = 5;
 const BLOCKED_REASON_KEYS: Record<string, string> = {
   NOVEL_LOCKED: 'errors.NOVEL_LOCKED.message',
   ONTOLOGY_INVALID: 'analysis.pipeline.reasonInvalidOntology',
-  LLM_UNAVAILABLE: 'analysis.pipeline.reasonNoLlm',
+  LLM_NOT_AVAILABLE: 'analysis.pipeline.reasonNoLlm',
   ANALYSIS_NOTHING_TO_RUN: 'analysis.pipeline.reasonNothingToRun',
 };
 

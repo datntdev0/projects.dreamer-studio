@@ -27,6 +27,7 @@ function makeRun(id: string, overrides: Partial<PipelineRun> = {}): PipelineRun 
     stepIndex: 0,
     stepCount: 3,
     stepName: null,
+    stepDetail: null,
     errorCode: null,
     error: null,
     label: null,
@@ -72,6 +73,7 @@ describe('PipelineRunRepository', () => {
       progress: 40,
       stepIndex: 1,
       stepName: 'prepare',
+      stepDetail: { key: 'analysis.run.detail.chapters', params: { batch: 1, batches: 2, from: 1, to: 3 } },
       errorCode: ErrorCode.PipelineUnknownType,
       error: 'boom',
       label: 'Imported novel',
@@ -92,6 +94,7 @@ describe('PipelineRunRepository', () => {
       progress: 55,
       stepIndex: 2,
       stepName: 'render',
+      stepDetail: { key: 'analysis.run.detail.chapter', params: { batch: 2, batches: 2, chapter: 4 } },
       errorCode: ErrorCode.DbQueryFailed,
       error: 'failed',
       novelId: 'novel-a',
@@ -100,6 +103,12 @@ describe('PipelineRunRepository', () => {
     };
     repository.update(updated);
     expect(repository.get('a')).toEqual(updated);
+  });
+
+  it('returns null for invalid step detail JSON', () => {
+    seed('a', 'running', '2026-01-01T00:00:00.000Z');
+    db.run('UPDATE pipeline_run SET step_detail = ? WHERE id = ?', ['{invalid', 'a']);
+    expect(repository.get('a')?.stepDetail).toBeNull();
   });
 
   it('filters by finished, statuses and types', () => {

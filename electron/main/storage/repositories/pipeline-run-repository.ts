@@ -1,6 +1,7 @@
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { finishedStatuses, PipelineCancelReason, PipelineListQuery } from '@dreamer/shared/models/pipeline';
-import { PipelinePage, PipelineRun, PipelineRunStatus, PipelineType } from '@dreamer/shared/models/pipeline';
+import { PipelinePage, PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
+import { PipelineStepDetail, PipelineType } from '@dreamer/shared/models/pipeline';
 import { Database, SqlParam } from '../database';
 
 interface PipelineRunRow {
@@ -12,6 +13,7 @@ interface PipelineRunRow {
   step_index: number;
   step_count: number;
   step_name: string | null;
+  step_detail: string | null;
   error_code: string | null;
   error: string | null;
   label: string | null;
@@ -39,6 +41,23 @@ function where(conditions: string[]): string {
   return conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 }
 
+function parseStepDetail(value: string | null): PipelineStepDetail | null {
+  if (value === null) return null;
+  try {
+    const detail: unknown = JSON.parse(value);
+    if (typeof detail !== 'object' || detail === null || Array.isArray(detail)) return null;
+    const candidate: Record<string, unknown> = detail as Record<string, unknown>;
+    const params: unknown = candidate.params;
+    if (typeof candidate.key !== 'string' || typeof params !== 'object' || params === null || Array.isArray(params))
+      return null;
+    if (!Object.values(params).every((item: unknown): boolean => typeof item === 'string' || typeof item === 'number'))
+      return null;
+    return candidate as unknown as PipelineStepDetail;
+  } catch {
+    return null;
+  }
+}
+
 function toRun(row: PipelineRunRow): PipelineRun {
   return {
     id: row.id,
@@ -49,6 +68,7 @@ function toRun(row: PipelineRunRow): PipelineRun {
     stepIndex: row.step_index,
     stepCount: row.step_count,
     stepName: row.step_name,
+    stepDetail: parseStepDetail(row.step_detail),
     errorCode: row.error_code as ErrorCode | null,
     error: row.error,
     label: row.label,
@@ -65,8 +85,8 @@ export class PipelineRunRepository {
   insert(run: PipelineRun, params: Record<string, unknown>): void {
     this.db.run(
       `INSERT INTO pipeline_run (id, type, status, cancel_reason, params, progress, step_index, step_count, step_name,
-        error_code, error, label, novel_id, created_at, started_at, finished_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        step_detail, error_code, error, label, novel_id, created_at, started_at, finished_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         run.id,
         run.type,
@@ -77,6 +97,7 @@ export class PipelineRunRepository {
         run.stepIndex,
         run.stepCount,
         run.stepName,
+        run.stepDetail === null ? null : JSON.stringify(run.stepDetail),
         run.errorCode,
         run.error,
         run.label,
@@ -90,7 +111,7 @@ export class PipelineRunRepository {
 
   update(run: PipelineRun): void {
     this.db.run(
-      `UPDATE pipeline_run SET status = ?, cancel_reason = ?, progress = ?, step_index = ?, step_name = ?,
+      `UPDATE pipeline_run SET status = ?, cancel_reason = ?, progress = ?, step_index = ?, step_name = ?, step_detail = ?,
         error_code = ?, error = ?, novel_id = ?, started_at = ?, finished_at = ?
       WHERE id = ?`,
       [
@@ -99,6 +120,7 @@ export class PipelineRunRepository {
         run.progress,
         run.stepIndex,
         run.stepName,
+        run.stepDetail === null ? null : JSON.stringify(run.stepDetail),
         run.errorCode,
         run.error,
         run.novelId,

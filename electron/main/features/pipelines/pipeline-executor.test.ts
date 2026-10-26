@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +11,7 @@ import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { PipelineDefinition, StepContext, sleep } from './pipeline-definition';
 import { PipelineExecutor } from './pipeline-executor';
 import { PipelineRegistry } from './pipeline-registry';
-import { runLogFile } from './run-log';
+import { promptLogDir, runLogFile } from './run-log';
 
 vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));
 vi.mock('../../logging/logger', () => ({
@@ -60,6 +60,7 @@ function makeRun(id: string, status: PipelineRunStatus): PipelineRun {
     stepIndex: 0,
     stepCount: 2,
     stepName: null,
+    stepDetail: null,
     errorCode: null,
     error: null,
     label: null,
@@ -194,6 +195,130 @@ describe('PipelineExecutor', () => {
     expect(log).toContain('Run started');
     expect(log).toContain('Step 1/2 started: first');
     expect(log).toContain('Step 2/2 started: second');
+  });
+
+  it('saves an entered display step immediately and keeps overall progress', async () => {
+    let release: () => void = (): void => undefined;
+    setup({
+      type: 'demo',
+      overallProgress: true,
+      steps: [
+        {
+          key: 'work',
+          backend: false,
+          run: async (ctx: StepContext): Promise<void> => {
+            ctx.progress(40);
+            ctx.enterStep('detail', { key: 'run.detail', params: { batch: 2 } });
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+          },
+        },
+        { key: 'detail', backend: false },
+      ],
+    });
+    const run: PipelineRun = executor.start(startRequest);
+    await vi.waitFor((): void => expect(executor.get(run.id).stepName).toBe('detail'), { timeout: 3000 });
+    expect(executor.get(run.id)).toMatchObject({
+      status: 'running',
+      stepIndex: 2,
+      progress: 40,
+      stepDetail: { key: 'run.detail', params: { batch: 2 } },
+    });
+    release();
+    await waitForStatus(run.id, 'succeeded');
+    expect(executor.get(run.id).progress).toBe(100);
+  });
+
+  it('skips steps without run and resets the detail when the next step begins', async () => {
+    const details: Array<PipelineRun['stepDetail']> = [];
+    const probe = (id: string): PipelineRun['stepDetail'] => executor.get(id).stepDetail;
+    setup({
+      type: 'demo',
+      steps: [
+        {
+          key: 'one',
+          backend: false,
+          run: (ctx: StepContext): Promise<void> => {
+            ctx.enterStep('shown', { key: 'run.detail', params: { batch: 1 } });
+            details.push(probe(ctx.runId));
+            return Promise.resolve();
+          },
+        },
+        { key: 'shown', backend: false },
+        {
+          key: 'two',
+          backend: false,
+          run: (ctx: StepContext): Promise<void> => {
+            details.push(probe(ctx.runId));
+            return Promise.resolve();
+          },
+        },
+      ],
+    });
+    const run: PipelineRun = executor.start(startRequest);
+    await waitForStatus(run.id, 'succeeded');
+    expect(readLogText(run.id)).not.toContain('started: shown');
+    expect(details).toEqual([{ key: 'run.detail', params: { batch: 1 } }, null]);
+  });
+
+  it('fails the run when a step enters an unknown step', async () => {
+    setup(
+      makeDefinition([
+        {
+          key: 'bad',
+          backend: false,
+          run: (ctx: StepContext): Promise<void> => {
+            ctx.enterStep('missing', null);
+            return Promise.resolve();
+          },
+        },
+      ]),
+    );
+    const run: PipelineRun = executor.start(startRequest);
+    await waitForStatus(run.id, 'failed');
+  });
+
+  it('keeps the overall progress when the next step begins', async () => {
+    const seen: number[] = [];
+    setup({
+      type: 'demo',
+      overallProgress: true,
+      steps: [
+        {
+          key: 'a',
+          backend: false,
+          run: (ctx: StepContext): Promise<void> => {
+            ctx.progress(60);
+            return Promise.resolve();
+          },
+        },
+        {
+          key: 'b',
+          backend: false,
+          run: (ctx: StepContext): Promise<void> => {
+            seen.push(executor.get(ctx.runId).progress);
+            return Promise.resolve();
+          },
+        },
+      ],
+    });
+    const run: PipelineRun = executor.start(startRequest);
+    await waitForStatus(run.id, 'succeeded');
+    expect(seen).toEqual([60]);
+  });
+
+  it('deleting a run also removes its prompt folder', async () => {
+    const done: PipelineRun = executor.start(startRequest);
+    await waitForStatus(done.id, 'succeeded');
+    const dir: string = promptLogDir(paths, done.id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, '001-x-a1.md'), 'prompt');
+    const other: string = promptLogDir(paths, 'other-run');
+    mkdirSync(other, { recursive: true });
+    expect(executor.delete([done.id])).toEqual([done.id]);
+    expect(existsSync(dir)).toBe(false);
+    expect(existsSync(other)).toBe(true);
   });
 
   it('AC-4: cancel stops a running run and runs cleanup, a queued run is cancelled with no log', async () => {

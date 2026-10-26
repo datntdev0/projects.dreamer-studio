@@ -16,6 +16,7 @@ import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
+import { AnalysisChanged, AnalysisPlan, AnalysisProgress, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
 import { AnalysisStatus, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
 import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
@@ -133,9 +134,9 @@ const api: DreamerApi = {
   analysis: {
     status: (novelId: string): Promise<AnalysisStatus> => call(AnalysisChannel.Status, novelId),
     chapter: analysisUnavailable,
-    plan: analysisUnavailable,
-    start: analysisUnavailable,
-    cancel: analysisUnavailable,
+    plan: (request: AnalysisRunRequest): Promise<AnalysisPlan> => call(AnalysisChannel.Plan, request),
+    start: (request: AnalysisRunRequest): Promise<void> => call(AnalysisChannel.Start, request),
+    cancel: (novelId: string): Promise<void> => call(AnalysisChannel.Cancel, novelId),
     world: (query: WorldQuery): Promise<World> => call(AnalysisChannel.World, query),
     review: (query: ReviewQuery): Promise<ReviewPage> => call(AnalysisChannel.Review, query),
     occurrences: analysisUnavailable,
@@ -145,8 +146,10 @@ const api: DreamerApi = {
     ontologyOpen: (novelId: string): Promise<void> => call(AnalysisChannel.OntologyOpen, novelId),
     ontologyReset: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyReset, novelId),
     ontologyCheck: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyCheck, novelId),
-    onProgress: (): (() => void) => () => undefined,
-    onChanged: (): (() => void) => () => undefined,
+    onProgress: (listener: (progress: AnalysisProgress) => void): (() => void) =>
+      subscribe(AnalysisChannel.Progress, listener),
+    onChanged: (listener: (event: AnalysisChanged) => void): (() => void) =>
+      subscribe(AnalysisChannel.Changed, listener),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

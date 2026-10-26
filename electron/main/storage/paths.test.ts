@@ -27,6 +27,7 @@ describe('resolveAppPaths', () => {
       library: join(root, 'library'),
       logs: join(root, 'logs'),
       pipelineLogs: join(root, 'logs', 'pipelines'),
+      promptLogs: join(root, 'logs', 'prompts'),
       cache: join(root, 'cache'),
       llmCache: join(root, 'cache', 'llm'),
     });

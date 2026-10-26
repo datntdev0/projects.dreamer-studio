@@ -6,7 +6,7 @@ import { ProgressComponent } from '@components/status/progress.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { MAX_CONCURRENT_MIN } from '@dreamer/shared/models/settings';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { formatDuration } from '@core/format';
+import { formatDuration, shortId } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { PipelineStore } from '@core/stores/pipeline-store';
 import { SettingsStore } from '@core/stores/settings-store';
@@ -14,7 +14,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { PipelineSlot } from '@core/slots';
 import { PipelineActions } from '../pipeline-actions';
 import { RunStatusComponent } from './run-status.component';
-import { runName, runSeconds, runStepName, shortId } from '../run-status';
+import { runName, runSeconds, runStepName } from '../run-status';
 
 interface QueueRow {
   run: PipelineRun;

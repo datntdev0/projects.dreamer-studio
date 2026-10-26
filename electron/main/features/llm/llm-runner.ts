@@ -1,8 +1,9 @@
 import Ajv, { ErrorObject, ValidateFunction } from 'ajv';
 import { randomUUID } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { appendFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { isModelId, LlmRunRequest, LlmRunResult, LlmUsage } from '@dreamer/shared/models/llm';
 import { createLogger, Logger } from '../../logging/logger';
 import { LlmAdapter } from './llm-adapter';
@@ -15,9 +16,20 @@ export interface RunLlmInput {
   cacheDir: string;
   signal?: AbortSignal;
   log?: Logger;
+  promptFile?: string;
 }
 
 const logger: Logger = createLogger('llm');
+
+async function writePromptPart(file: string, content: string, append: boolean, log: Logger): Promise<void> {
+  try {
+    await mkdir(dirname(file), { recursive: true });
+    if (append) await appendFile(file, content, 'utf8');
+    else await writeFile(file, content, 'utf8');
+  } catch (error) {
+    log.warn(`could not write prompt log ${file}: ${errorMessage(error)}`);
+  }
+}
 
 export async function runLlm({
   adapter,
@@ -26,6 +38,7 @@ export async function runLlm({
   cacheDir,
   signal,
   log = logger,
+  promptFile,
 }: RunLlmInput): Promise<LlmRunResult> {
   if (request.model !== null && !isModelId(request.model)) {
     throw new CodedError(ErrorCode.LlmCliFailed, 'Invalid model id', 'model');
@@ -41,6 +54,11 @@ export async function runLlm({
     `${adapter.id} run started: promptBytes=${Buffer.byteLength(request.prompt)}, model=${request.model ?? 'default'}`,
   );
   try {
+    if (promptFile) {
+      const name: string = basename(promptFile, '.md').replace(/^\d{3}-/, '');
+      const header: string = `# ${name}\n\nCLI: ${adapter.id}\nModel: ${request.model ?? 'default'}\nTime: ${new Date(started).toISOString()}\n\n## Prompt\n\n${request.prompt}\n\n`;
+      await writePromptPart(promptFile, header, false, log);
+    }
     await mkdir(workDir, { recursive: true });
     const schemaFile: string = join(workDir, 'schema.json');
     await writeFile(schemaFile, JSON.stringify(request.schema), 'utf8');
@@ -84,8 +102,25 @@ export async function runLlm({
     log.info(
       `${adapter.id} run complete: durationMs=${durationMs}, inputTokens=${parsed.usage?.inputTokens ?? 'unknown'}, outputTokens=${parsed.usage?.outputTokens ?? 'unknown'}`,
     );
+    if (promptFile)
+      await writePromptPart(
+        promptFile,
+        `## Answer\n\n\`\`\`json\n${JSON.stringify(parsed.value, null, 2)}\n\`\`\`\n`,
+        true,
+        log,
+      );
     return { value: parsed.value, usage: parsed.usage, durationMs };
   } catch (error) {
+    if (promptFile) {
+      const code: string = error instanceof CodedError ? error.code : 'unknown';
+      const stdoutHead: string = Buffer.from(stdout).subarray(0, 2048).toString('utf8');
+      await writePromptPart(
+        promptFile,
+        `## Error\n\nCode: ${code}\nMessage: ${errorMessage(error)}\n\n### Stdout head\n\n\`\`\`text\n${stdoutHead}\n\`\`\`\n\n### Stderr tail\n\n\`\`\`text\n${stderr.slice(-2048)}\n\`\`\`\n`,
+        true,
+        log,
+      );
+    }
     if (error instanceof CodedError && error.code === ErrorCode.LlmBadOutput) {
       log.warn(`${adapter.id} answer head: ${stdout.slice(0, 2048)}`);
     }

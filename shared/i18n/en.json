@@ -1120,8 +1120,7 @@
   "analysis.pipeline.resetDefault": "Reset to default",
   "analysis.pipeline.runAnalysis": "Run analysis",
   "analysis.pipeline.close": "Close",
-  "analysis.pipeline.noLlmTitle": "No LLM configured",
-  "analysis.pipeline.noLlmMessage": "Configure an LLM before running analysis.",
+  "analysis.pipeline.noLlmTitle": "LLM not available",
   "analysis.pipeline.settingsLlm": "Settings › LLM",
   "analysis.pipeline.invalidOntologyTitle": "Invalid ontology",
   "analysis.pipeline.invalidOntologyMessage": "Resolve ontology problems before running analysis.",
@@ -1152,8 +1151,8 @@
   "analysis.pipeline.entities": "Entities",
   "analysis.pipeline.facts": "Facts",
   "analysis.pipeline.staleExplanation": "The chapter content changed since its last analysis. Analyse it again to refresh the result.",
-  "analysis.pipeline.notAnalysed": "This chapter has not been analysed",
-  "analysis.pipeline.notAnalysedHint": "Run analysis to review its entities and facts.",
+  "analysis.pipeline.notAnalysed": "This novel has not been analysed yet",
+  "analysis.pipeline.notAnalysedHint": "Run analysis to build its world of entities and facts.",
   "analysis.pipeline.type": "Type",
   "analysis.pipeline.allTypes": "All types",
   "analysis.pipeline.aliases": "Aliases",
@@ -1471,6 +1470,7 @@
   "analysis.entity.chapterHint": "The chapter this fact belongs to.",
   "analysis.entity.chapterFromQuote": "Set by the quote found in the novel.",
   "analysis.entity.chapterFromQuotePending": "Find the quote first",
+  "analysis.world.charactersAndPersonas": "Characters and personas",
   "library.translation.reader.display.label": "Translation display",
   "library.translation.reader.display.original": "Original",
   "library.translation.reader.display.translation": "Translation",
@@ -1636,5 +1636,6 @@
   "library.translation.glossary.instruction.hide": "Hide",
   "library.translation.glossary.instruction.hint": "Saved as the {language} instruction when the run starts.",
   "library.translation.glossary.instruction.undo": "Undo changes",
-  "library.translation.dialog.summaryChapter": "Ch. {from}"
+  "library.translation.dialog.summaryChapter": "Ch. {from}",
+  "library.novel.page.analyse": "Analyse"
 }

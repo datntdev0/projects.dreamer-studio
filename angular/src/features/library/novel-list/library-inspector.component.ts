@@ -15,6 +15,7 @@ import { formatCompact, formatCount, formatDateTime } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LibraryStore } from '@core/stores/library-store';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { PipelineStore } from '@core/stores/pipeline-store';
 import { coverPalette, coverUrl, languageName, translationLevel } from '../library-format';
 import { LibraryCoverComponent } from './library-cover.component';
@@ -40,6 +41,7 @@ export class LibraryInspectorComponent {
   readonly delete = output<string>();
   private readonly form = viewChild(NovelMetadataFormComponent);
   private readonly store: LibraryStore = inject(LibraryStore);
+  protected readonly currentNovel = inject(CurrentNovelStore);
   private readonly pipelines: PipelineStore = inject(PipelineStore);
   private readonly i18n: I18nService = inject(I18nService);
   private readonly toast: ToastService = inject(ToastService);

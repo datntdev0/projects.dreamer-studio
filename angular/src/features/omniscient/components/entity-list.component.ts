@@ -7,8 +7,8 @@ import { BadgeComponent } from '@components/status/badge.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { EntityType } from '@dreamer/shared/models/analysis';
-import { ENTITY_TYPES, entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
+import { ENTITY_TYPE_FILTERS, entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
+import type { EntityTypeFilter } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 import { sortEntities } from './entity-table.component';
 
@@ -34,9 +34,9 @@ export class EntityListComponent {
   protected readonly entities = computed(() => sortEntities(this.store.visibleEntities(), 'chapters', 'desc'));
   protected readonly typeOptions = computed<SegmentedOption[]>(() => [
     { value: 'all', label: this.i18n.t('analysis.world.allTypes'), icon: 'layers' },
-    ...ENTITY_TYPES.map((type) => ({
+    ...ENTITY_TYPE_FILTERS.map((type) => ({
       value: type,
-      label: this.i18n.t(entityTypeKeys[type]),
+      label: this.i18n.t(type === 'character' ? 'analysis.world.charactersAndPersonas' : entityTypeKeys[type]),
       icon: entityTypeIcons[type],
     })),
   ]);
@@ -46,7 +46,7 @@ export class EntityListComponent {
   });
 
   protected setType(value: string): void {
-    this.store.typeFilter.set(value as EntityType | 'all');
+    this.store.typeFilter.set(value as EntityTypeFilter);
   }
 
   protected search(event: Event): void {

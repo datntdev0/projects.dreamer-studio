@@ -33,6 +33,7 @@ describe('library paths', () => {
       dir: join(paths.library, novelId),
       metadata: join(paths.library, novelId, 'metadata.json'),
       chapters: join(paths.library, novelId, 'chapters'),
+      analysis: join(paths.library, novelId, 'analysis'),
     });
     expect(libraryFiles.chapterPath(folder, contentHash)).toBe(join(folder.chapters, `${contentHash}.txt`));
     expect(libraryFiles.coverPath(folder, 'cover.jpg')).toBe(join(folder.dir, 'cover.jpg'));
@@ -52,6 +53,7 @@ describe('library paths', () => {
       dir,
       metadata: join(dir, 'metadata.json'),
       chapters: join(dir, 'chapters'),
+      analysis: join(dir, 'analysis'),
     });
   });
 

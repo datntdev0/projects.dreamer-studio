@@ -37,7 +37,7 @@
     </div>
   }
   @default {
-    <div class="ds-page-toolbar library-translation-toolbar">
+    <div class="ds-page-toolbar compact-labels">
       <ng-container [ngTemplateOutlet]="back" />
       @if (novel(); as item) {
         <h1 dsPageTitle data-testid="novel-page-title" [attr.lang]="headingLanguage()">
@@ -57,7 +57,7 @@
               (click)="translationStore.setView(view)"
             >
               <ds-icon [name]="viewIcons[view]" size="sm" />
-              <span class="library-translation-label">{{
+              <span class="ds-toolbar-label">{{
                 (view === 'reader' ? 'library.translation.page.view.reader' : 'library.translation.page.view.glossary')
                   | t
               }}</span>
@@ -74,6 +74,20 @@
         </div>
         <span class="ds-spacer"></span>
         <div class="ds-page-actions" role="group" [attr.aria-label]="'library.novel.page.actions' | t">
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="novel-page-analyse"
+            [disabled]="editing()"
+            [attr.aria-label]="'library.novel.page.analyse' | t"
+            [dsTooltip]="'library.novel.page.analyse' | t"
+            (click)="currentNovel.analyse(item.id)"
+          >
+            <ds-icon name="network" size="sm" /><span class="ds-toolbar-label">{{
+              'library.novel.page.analyse' | t
+            }}</span>
+          </button>
           @if (translationStore.running()) {
             <ds-translation-pill />
           } @else {
@@ -91,7 +105,7 @@
                 [disabled]="!!translateReason() || !status()"
                 (click)="translationStore.openContentDialog(null)"
               >
-                <ds-icon name="languages" size="sm" /><span class="library-translation-label">{{
+                <ds-icon name="languages" size="sm" /><span class="ds-toolbar-label">{{
                   'library.translation.page.translate' | t
                 }}</span>
               </button>
@@ -111,7 +125,7 @@
               [disabled]="!!editReason() || editing()"
               (click)="startEdit()"
             >
-              <ds-icon name="pencil" size="sm" /><span class="library-translation-label">{{ editLabel() }}</span>
+              <ds-icon name="pencil" size="sm" /><span class="ds-toolbar-label">{{ editLabel() }}</span>
             </button>
           </span>
           <button
@@ -123,7 +137,7 @@
             [dsTooltip]="'library.reader.focus.tooltip' | t"
             (click)="toggleFocusMode()"
           >
-            <ds-icon name="maximize" size="sm" /><span class="library-translation-label">{{
+            <ds-icon name="maximize" size="sm" /><span class="ds-toolbar-label">{{
               'library.novel.page.focus' | t
             }}</span>
           </button>
@@ -136,9 +150,8 @@
       }
     </div>
     @if (novel()?.lock; as lock) {
-      <div class="library-novel-lock" data-testid="novel-page-lock">
+      <div class="ds-page-notice" data-testid="novel-page-lock">
         <ds-banner
-          class="library-novel-banner"
           variant="warning"
           [dismissible]="false"
           [heading]="lockHeading()"
@@ -153,7 +166,7 @@
       </div>
     }
     @if (translationStore.error()) {
-      <div class="library-novel-lock" data-testid="translation-page-error">
+      <div class="ds-page-notice" data-testid="translation-page-error">
         <ds-banner
           variant="danger"
           [dismissible]="false"

@@ -37,6 +37,7 @@ import type {
 } from '@dreamer/shared/models/novel';
 import { DesktopApi } from '@core/desktop-api';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
+import { SettingsStore } from '@core/stores/settings-store';
 import {
   DEFAULT_ONTOLOGY,
   JADE_RIVER_NOVEL,
@@ -51,6 +52,7 @@ import {
 } from './analysis';
 import type { JadeRiverEdition } from './analysis';
 import { toNovelSummary } from './library';
+import { fakeLlmApi, fakeSettingsApi } from './desktop-api';
 import { FakePipelinesApi } from './pipelines-api';
 
 export type AnalysisScenario =
@@ -184,11 +186,6 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       },
       ontology: DEFAULT_ONTOLOGY,
       ontologyProblems: this.invalidOntology ? ONTOLOGY_PROBLEMS : [],
-      llm: {
-        available: this.scenario !== 'noLlm',
-        label: this.scenario === 'noLlm' ? '' : 'Storybook LLM',
-        reason: this.scenario === 'noLlm' ? 'No LLM configured' : null,
-      },
     };
   }
 
@@ -481,7 +478,22 @@ export function provideFakeAnalysisApi(scenario: AnalysisScenario): (Provider | 
   const novelId =
     scenario === 'emptyLibrary' ? null : scenario === 'notAnalysed' ? UNANALYSED_NOVEL.id : JADE_RIVER_NOVEL.id;
   return [
-    { provide: DesktopApi, useFactory: () => new FakeAnalysisApi(scenario, inject(DestroyRef)) },
+    {
+      provide: DesktopApi,
+      useFactory: () =>
+        Object.assign(
+          new FakeAnalysisApi(scenario, inject(DestroyRef)),
+          fakeSettingsApi({
+            llm: {
+              paths: {},
+              default: scenario === 'noLlm' ? null : { cli: 'claude', model: null },
+              features: {},
+            },
+          }),
+          fakeLlmApi(scenario === 'noLlm' ? 'none' : 'mixed'),
+        ),
+    },
+    provideAppInitializer(() => inject(SettingsStore).load()),
     provideAppInitializer(() => inject(CurrentNovelStore).select(novelId)),
   ];
 }

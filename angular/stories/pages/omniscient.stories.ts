@@ -1,12 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/angular';
-import {
-  analysisScenarioOptions,
-  analysisStoryDecorators,
-  type AnalysisStoryArgs,
-} from '../../fixtures/analysis-story';
+import { analysisScenarioOptions, analysisStoryDecorators, type AnalysisStoryArgs } from '../fixtures/analysis-story';
 
 const meta: Meta<AnalysisStoryArgs> = {
-  title: 'Pages/Analysis/Omniscient',
+  title: 'Pages/Omniscient',
   parameters: { layout: 'fullscreen' },
   args: { route: '/omniscient', scenario: 'normal' },
   argTypes: { scenario: { control: 'select', options: analysisScenarioOptions } },
@@ -17,3 +13,5 @@ const meta: Meta<AnalysisStoryArgs> = {
 export default meta;
 type Story = StoryObj<AnalysisStoryArgs>;
 export const Main: Story = {};
+export const NoLlm: Story = { args: { scenario: 'noLlm' } };
+export const EmptyLibrary: Story = { args: { scenario: 'emptyLibrary' } };

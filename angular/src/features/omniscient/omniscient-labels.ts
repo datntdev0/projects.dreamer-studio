@@ -2,6 +2,17 @@ import type { ChapterAnalysisStatus, EntityType, FailReason, ItemStatus } from '
 
 export const ENTITY_TYPES: EntityType[] = ['character', 'persona', 'location', 'organization', 'glossary'];
 
+export type FilterEntityType = Exclude<EntityType, 'persona'>;
+
+export type EntityTypeFilter = FilterEntityType | 'all';
+
+export const ENTITY_TYPE_FILTERS: FilterEntityType[] = ['character', 'location', 'organization', 'glossary'];
+
+export function filterEntityTypes(filter: EntityTypeFilter): EntityType[] {
+  if (filter === 'all') return [];
+  return filter === 'character' ? ['character', 'persona'] : [filter];
+}
+
 export const chapterStatusKeys: Record<ChapterAnalysisStatus, string> = {
   'not-analysed': 'analysis.pipeline.status.notAnalysed',
   clean: 'analysis.pipeline.status.clean',

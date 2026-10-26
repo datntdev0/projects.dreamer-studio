@@ -163,7 +163,7 @@ async function exportNovel(
   return session.executor.startRun('novel-export', exportParams(id, outputPath), exportLabel(novel), id);
 }
 
-function isNovelIdValue(value: unknown): value is string {
+export function isNovelIdValue(value: unknown): value is string {
   return typeof value === 'string' && isNovelId(value);
 }
 

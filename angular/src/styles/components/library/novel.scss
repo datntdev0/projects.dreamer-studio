@@ -17,21 +17,6 @@
     }
   }
 
-  .library-novel-lock {
-    flex: none;
-    padding: var(--sp-sm) var(--sp-md);
-    border-bottom: 1px solid var(--color-border);
-
-    ds-banner .banner {
-      align-items: center;
-    }
-
-    ds-banner .meta {
-      color: var(--color-text-secondary);
-      font: var(--font-size-small) var(--font-mono);
-    }
-  }
-
   .library-novel-skeleton-title {
     display: block;
     width: calc(var(--sp-huge) * 3);
@@ -55,11 +40,6 @@
     aspect-ratio: 3 / 4;
     margin: var(--sp-md);
   }
-}
-
-ds-banner.library-novel-banner .banner {
-  gap: var(--sp-sm);
-  padding: var(--sp-sm) var(--sp-md);
 }
 
 .library-novel-panel {

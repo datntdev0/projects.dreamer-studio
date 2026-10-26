@@ -5,6 +5,7 @@ import { ConfirmService } from '@components/dialog/confirm.service';
 import { IconComponent } from '@components/icon/icon.component';
 import { DotComponent } from '@components/status/dot.component';
 import { ProgressComponent } from '@components/status/progress.component';
+import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { AnalysisStep } from '@dreamer/shared/models/analysis';
@@ -19,7 +20,15 @@ const STEP_KEYS: Record<AnalysisStep, string> = {
 
 @Component({
   selector: 'ds-run-pill',
-  imports: [ButtonDirective, DotComponent, IconComponent, ProgressComponent, RouterLink, TranslatePipe],
+  imports: [
+    ButtonDirective,
+    DotComponent,
+    IconComponent,
+    ProgressComponent,
+    RouterLink,
+    TooltipDirective,
+    TranslatePipe,
+  ],
   templateUrl: './run-pill.component.html',
   host: {
     class: 'ds-world-run-pill-wrap',
@@ -43,6 +52,18 @@ export class RunPillComponent {
   protected readonly percent = computed(() => {
     const run = this.store.run();
     return run?.total ? (run.done / run.total) * 100 : null;
+  });
+  protected readonly pillLabel = computed(() => {
+    const run = this.store.run();
+    if (!run) return '';
+    const chapter = this.chapter();
+    const details = [
+      chapter ? this.i18n.t('analysis.run.pillChapter', { chapter }) : null,
+      this.i18n.t(STEP_KEYS[run.step]),
+      `${run.done} / ${run.total}`,
+    ];
+    if (run.failed) details.push(this.i18n.t('analysis.run.pillFailed', { count: run.failed }));
+    return details.filter(Boolean).join(' · ');
   });
 
   protected closeOutside(event: Event): void {

@@ -1,3 +1,5 @@
+@use 'bootstrap/scss/mixins/visually-hidden' as accessibility;
+
 .ds-app {
   position: relative;
   display: grid;
@@ -578,6 +580,41 @@ html:not([data-theme='light']) .ds-only-light {
   .ds-input {
     width: var(--left-w);
     max-width: 100%;
+  }
+
+  &.compact-labels {
+    container: page-toolbar / inline-size;
+
+    .ds-world-views {
+      flex: none;
+
+      button {
+        white-space: nowrap;
+      }
+    }
+
+    @container page-toolbar (max-width: 759px) {
+      .ds-toolbar-label {
+        @include accessibility.visually-hidden();
+      }
+    }
+  }
+}
+
+.ds-page-notice {
+  flex: none;
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid var(--color-border);
+
+  ds-banner .banner {
+    align-items: center;
+    gap: var(--sp-sm);
+    padding: var(--sp-sm) var(--sp-md);
+  }
+
+  ds-banner .meta {
+    color: var(--color-text-secondary);
+    font: var(--font-size-small) var(--font-mono);
   }
 }
 

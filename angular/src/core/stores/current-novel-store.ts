@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { LibraryStore } from '@core/stores/library-store';
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 
@@ -16,6 +17,7 @@ function readCurrentNovel(): string | null {
 @Injectable({ providedIn: 'root' })
 export class CurrentNovelStore {
   private readonly library: LibraryStore = inject(LibraryStore);
+  private readonly router: Router = inject(Router);
   private readonly selected = signal<string | null>(readCurrentNovel());
 
   readonly novels: Signal<NovelSummary[]> = this.library.novels;
@@ -37,5 +39,10 @@ export class CurrentNovelStore {
     } catch {
       return;
     }
+  }
+
+  analyse(id: string): void {
+    this.select(id);
+    void this.router.navigateByUrl('/omniscient');
   }
 }

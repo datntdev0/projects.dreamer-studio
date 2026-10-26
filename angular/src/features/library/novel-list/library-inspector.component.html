@@ -16,6 +16,9 @@
   <button dsBtn variant="primary" size="sm" type="button" data-testid="insp-open" (click)="open.emit(novel().id)">
     <ds-icon name="book" size="sm" />{{ 'library.inspector.open' | t }}
   </button>
+  <button dsBtn size="sm" type="button" data-testid="insp-analyse" (click)="currentNovel.analyse(novel().id)">
+    <ds-icon name="network" size="sm" />{{ 'library.novel.page.analyse' | t }}
+  </button>
   <button
     dsBtn
     size="sm"

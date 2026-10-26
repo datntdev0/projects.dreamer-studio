@@ -14,6 +14,7 @@ import { pingBackend, startBackend, stopBackend } from './backend/backend-proces
 import { getBackendStatus } from './backend/backend-status';
 import { setLanguage } from './app/app-i18n';
 import { registerAppIpc } from './ipc/app-ipc';
+import { registerAnalysisIpc } from './ipc/analysis-ipc';
 import { registerBackendIpc } from './ipc/backend-ipc';
 import { registerDevIpc } from './ipc/dev-ipc';
 import { registerDiagnosticsIpc } from './ipc/diagnostics-ipc';
@@ -24,6 +25,7 @@ import { registerPipelineIpc } from './ipc/pipeline-ipc';
 import { registerSettingsIpc } from './ipc/settings-ipc';
 import { createLogger, Logger } from './logging/logger';
 import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
+import { AnalysisService } from './features/analysis/analysis-service';
 import { CheckContext } from './features/diagnostics/self-check';
 import { SelfCheckEngine } from './features/diagnostics/self-check-engine';
 import { registerLibraryChecks } from './features/library/library-checks';
@@ -152,6 +154,7 @@ async function onReady(): Promise<void> {
   registerPipelineIpc(() => manager.session().executor);
   registerLibraryIpc(() => manager.session());
   registerLlmIpc(llm);
+  registerAnalysisIpc(new AnalysisService((): AppPaths => manager.paths()));
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);

@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { Router } from '@angular/router';
 import { DesktopApi } from '@core/desktop-api';
 import { AppInfoStore } from '@core/app-info';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { RecentNovelStore } from '@core/stores/recent-novel-store';
 import { signal } from '@angular/core';
 import { CodedError } from '@dreamer/shared/errors/app-error';
@@ -121,6 +122,7 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
     search: vi.fn(async (): Promise<void> => undefined),
     cancelSearch: vi.fn(async (): Promise<void> => undefined),
     changeChapters: vi.fn(async (): Promise<NovelDetail | null> => detail),
+    writeLog: vi.fn(),
   };
   const params = new BehaviorSubject(convertToParamMap({ id }));
   const queryParams = new BehaviorSubject(
@@ -133,6 +135,7 @@ async function createPage(options: TestOptions = {}): Promise<PageTest> {
       { provide: DesktopApi, useValue: api },
       { provide: AppInfoStore, useValue: { info: signal({ appDataDir: 'test-data' }) } },
       { provide: RecentNovelStore, useValue: { record: vi.fn() } },
+      { provide: CurrentNovelStore, useValue: { analyse: vi.fn() } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -180,7 +183,7 @@ describe('NovelPage', () => {
       (Array.from(fixture.nativeElement.querySelectorAll('.ds-page-actions button')) as Element[]).map(
         (button: Element) => button.getAttribute('data-testid'),
       ),
-    ).toEqual(['translation-page-translate', 'novel-page-edit', 'novel-page-focus']);
+    ).toEqual(['novel-page-analyse', 'translation-page-translate', 'novel-page-edit', 'novel-page-focus']);
     expect((query(fixture, 'novel-page-edit') as HTMLButtonElement).disabled).toBe(false);
     expect(rows(fixture).length).toBeLessThan(CHAPTERS.length);
     expect(rows(fixture)[0].dataset['position']).toBe('1');

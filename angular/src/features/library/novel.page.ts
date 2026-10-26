@@ -50,6 +50,7 @@ import { NovelSearchStore } from './novel-search.store';
 import { NovelStore } from './novel.store';
 import { TranslationStore } from './translation.store';
 import { AppInfoStore } from '@core/app-info';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { RecentNovelStore } from '@core/stores/recent-novel-store';
 import { GlossaryViewComponent } from './translation/glossary-view.component';
 import { InstructionEditorComponent } from './translation/instruction-editor.component';
@@ -132,6 +133,7 @@ export class NovelPage {
   private readonly router: Router = inject(Router);
   private readonly appInfo = inject(AppInfoStore);
   private readonly recentNovels = inject(RecentNovelStore);
+  protected readonly currentNovel = inject(CurrentNovelStore);
   private lastRecordedNovel: string | null = null;
   private lastRecordedRoot: string | null = null;
   private readonly hiddenPanels: Set<SplitterEdge> = new Set<SplitterEdge>();

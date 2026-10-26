@@ -1,7 +1,12 @@
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { DesktopApi } from '@core/desktop-api';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
+import { I18nService } from '@core/i18n/i18n.service';
+import { LlmStore } from '@core/stores/llm-store';
+import { SettingsStore } from '@core/stores/settings-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { formatLlmChoice, LLM_CLIS, resolveLlm } from '@dreamer/shared/models/llm';
+import type { LlmProblem } from '@dreamer/shared/models/llm';
 import type {
   AnalysisPlan,
   AnalysisProgress,
@@ -17,6 +22,8 @@ import type {
   ReviewPage,
 } from '@dreamer/shared/models/analysis';
 import type { ReviewStatusFilter, World, WorldEdit, WorldEntity, WorldLink } from '@dreamer/shared/models/analysis';
+import { filterEntityTypes } from './omniscient-labels';
+import type { EntityTypeFilter } from './omniscient-labels';
 
 export type OmniscientView = 'graph' | 'table' | 'review';
 
@@ -34,6 +41,12 @@ export interface MergeBlock {
   count: number;
 }
 
+export interface OmniscientLlm {
+  available: boolean;
+  label: string;
+  reason: string;
+}
+
 export interface AnalysisSummary {
   total: number;
   analysed: number;
@@ -42,11 +55,20 @@ export interface AnalysisSummary {
 }
 
 const EMPTY_WORLD: World = { entities: [], links: [] };
+const LLM_PROBLEM_KEYS: Record<LlmProblem, string> = {
+  noDefault: 'settings.llm.features.problem.noDefault',
+  defaultUnavailable: 'settings.llm.features.problem.defaultUnavailable',
+  notInstalled: 'settings.llm.features.problem.notInstalled',
+  invalidPath: 'settings.llm.features.problem.invalidPath',
+};
 
 @Injectable()
 export class OmniscientStore {
   private readonly api = inject(DesktopApi);
   private readonly current = inject(CurrentNovelStore);
+  private readonly i18n = inject(I18nService);
+  private readonly llmStore = inject(LlmStore);
+  private readonly settings = inject(SettingsStore);
   private readonly progressValue = signal<AnalysisProgress | null>(null);
   private statusRequest = 0;
   private worldRequest = 0;
@@ -69,7 +91,7 @@ export class OmniscientStore {
   readonly selectedId = signal<string | null>(null);
   readonly mergeIds = signal<string[]>([]);
   readonly query = signal('');
-  readonly typeFilter = signal<EntityType | 'all'>('all');
+  readonly typeFilter = signal<EntityTypeFilter>('all');
   readonly predicateFilter = signal('all');
   readonly reviewStatus = signal<ReviewStatusFilter>('open');
   readonly reviewChapter = signal<number | null>(null);
@@ -79,7 +101,18 @@ export class OmniscientStore {
   readonly locked = computed(() => !!this.novel()?.lock || !!this.run());
   readonly ontology = computed(() => this.status()?.ontology ?? null);
   readonly ontologyProblems = computed<OntologyProblem[]>(() => this.status()?.ontologyProblems ?? []);
-  readonly llm = computed(() => this.status()?.llm ?? null);
+  readonly llm = computed<OmniscientLlm | null>(() => {
+    const statuses = this.llmStore.statuses();
+    const settings = this.settings.settings()?.llm;
+    if (!statuses || !settings) return null;
+    const { choice, problem } = resolveLlm(settings, 'worldAnalysis', statuses);
+    const cli = choice ? LLM_CLIS[choice.cli].name : '';
+    return {
+      available: problem === null,
+      label: choice ? formatLlmChoice(choice, this.i18n.t('settings.llm.features.cliDefault')) : '',
+      reason: problem ? this.i18n.t(LLM_PROBLEM_KEYS[problem], { cli }) : '',
+    };
+  });
   readonly canRun = computed(
     () =>
       !!this.novelId() && !this.locked() && !this.busy() && !!this.llm()?.available && !this.ontologyProblems().length,
@@ -116,10 +149,7 @@ export class OmniscientStore {
   readonly entities = computed(() => this.world()?.entities ?? []);
   readonly links = computed(() => this.world()?.links ?? []);
   readonly graphWorld = computed<World>(() => this.world() ?? EMPTY_WORLD);
-  readonly graphTypes = computed<EntityType[]>(() => {
-    const type = this.typeFilter();
-    return type === 'all' ? [] : [type];
-  });
+  readonly graphTypes = computed<EntityType[]>(() => filterEntityTypes(this.typeFilter()));
   readonly graphPredicates = computed<string[]>(() => {
     const predicate = this.predicateFilter();
     return predicate === 'all' ? [] : [predicate];
@@ -127,10 +157,10 @@ export class OmniscientStore {
   readonly predicates = computed(() => [...new Set(this.links().map((item) => item.predicate))].sort());
   readonly visibleEntities = computed(() => {
     const query = this.query().trim().toLocaleLowerCase();
-    const type = this.typeFilter();
+    const types = this.graphTypes();
     return this.entities().filter(
       (entity) =>
-        (type === 'all' || entity.type === type) &&
+        (!types.length || types.includes(entity.type)) &&
         (!query || [entity.name, ...entity.aliases].some((name) => name.toLocaleLowerCase().includes(query))),
     );
   });
@@ -140,6 +170,7 @@ export class OmniscientStore {
   readonly openReviewCount = computed(() => this.merge()?.openIssues ?? 0);
 
   constructor() {
+    void this.llmStore.load();
     const offProgress = this.api.onAnalysisProgress((progress) => {
       if (progress.novelId === this.novelId()) this.progressValue.set(progress);
     });

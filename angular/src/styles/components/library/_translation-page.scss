@@ -1,29 +1,3 @@
-.library-translation-toolbar {
-  container: novel-toolbar / inline-size;
-
-  .ds-world-views {
-    flex: none;
-  }
-
-  h1 {
-    min-width: 0;
-  }
-
-  @container novel-toolbar (max-width: 759px) {
-    .library-translation-label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-  }
-}
-
 .library-translation-instruction {
   display: flex;
   flex-direction: column;

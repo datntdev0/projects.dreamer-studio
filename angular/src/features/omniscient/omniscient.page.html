@@ -1,4 +1,4 @@
-<div class="ds-page-toolbar ds-world-toolbar">
+<div class="ds-page-toolbar compact-labels ds-world-toolbar">
   <h1 dsPageTitle>
     {{ 'analysis.page.title' | t }}
   </h1>
@@ -8,10 +8,12 @@
         type="button"
         [attr.data-testid]="'world-view-' + view"
         [attr.aria-pressed]="store.view() === view"
+        [attr.aria-label]="viewKeys[view] | t"
+        [dsTooltip]="viewKeys[view] | t"
         [disabled]="!store.novelId()"
         (click)="store.view.set(view)"
       >
-        <ds-icon [name]="viewIcons[view]" size="sm" />{{ viewKeys[view] | t }}
+        <ds-icon [name]="viewIcons[view]" size="sm" /><span class="ds-toolbar-label">{{ viewKeys[view] | t }}</span>
         @if (view === 'review' && store.openReviewCount()) {
           <ds-badge>{{ store.openReviewCount() }}</ds-badge>
         }
@@ -41,93 +43,103 @@
       variant="primary"
       type="button"
       data-testid="world-run"
+      [attr.aria-label]="'analysis.pipeline.runAnalysis' | t"
+      [dsTooltip]="'analysis.pipeline.runAnalysis' | t"
       [disabled]="!store.canRun()"
       (click)="store.dialog.set({ kind: 'run' })"
     >
-      <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.runAnalysis' | t }}
+      <ds-icon name="play" size="sm" /><span class="ds-toolbar-label">{{ 'analysis.pipeline.runAnalysis' | t }}</span>
     </button>
   }
 </div>
 @if (store.error()) {
-  <ds-banner
-    variant="danger"
-    [dismissible]="false"
-    [heading]="'analysis.page.title' | t"
-    [message]="store.error()"
-    [dismissLabel]="'analysis.pipeline.close' | t"
-  />
+  <div class="ds-page-notice">
+    <ds-banner
+      variant="danger"
+      [dismissible]="false"
+      [heading]="'analysis.page.title' | t"
+      [message]="store.error()"
+      [dismissLabel]="'analysis.pipeline.close' | t"
+    />
+  </div>
 }
 @if (store.llm(); as llm) {
   @if (!llm.available) {
-    <ds-banner
-      variant="warning"
-      [dismissible]="false"
-      [heading]="'analysis.pipeline.noLlmTitle' | t"
-      [message]="'analysis.pipeline.noLlmMessage' | t"
-      [dismissLabel]="'analysis.pipeline.close' | t"
-      data-testid="world-no-llm"
-      ><a dsBtn size="sm" routerLink="/settings/llm" data-testid="world-settings-llm">{{
-        'analysis.pipeline.settingsLlm' | t
-      }}</a></ds-banner
-    >
+    <div class="ds-page-notice">
+      <ds-banner
+        variant="warning"
+        [dismissible]="false"
+        [heading]="'analysis.pipeline.noLlmTitle' | t"
+        [message]="llm.reason"
+        [dismissLabel]="'analysis.pipeline.close' | t"
+        data-testid="world-no-llm"
+        ><a dsBtn size="sm" routerLink="/settings/llm" data-testid="world-settings-llm">{{
+          'analysis.pipeline.settingsLlm' | t
+        }}</a></ds-banner
+      >
+    </div>
   }
 }
 @if (store.ontologyProblems().length) {
-  <ds-banner
-    variant="danger"
-    [dismissible]="false"
-    [heading]="'analysis.pipeline.invalidOntologyTitle' | t"
-    [message]="'analysis.pipeline.invalidOntologyMessage' | t"
-    [dismissLabel]="'analysis.pipeline.close' | t"
-    data-testid="world-invalid-ontology"
-    ><button
-      dsBtn
-      size="sm"
-      type="button"
-      data-testid="world-view-problems"
-      (click)="store.dialog.set({ kind: 'ontology' })"
+  <div class="ds-page-notice">
+    <ds-banner
+      variant="danger"
+      [dismissible]="false"
+      [heading]="'analysis.pipeline.invalidOntologyTitle' | t"
+      [message]="'analysis.pipeline.invalidOntologyMessage' | t"
+      [dismissLabel]="'analysis.pipeline.close' | t"
+      data-testid="world-invalid-ontology"
+      ><button
+        dsBtn
+        size="sm"
+        type="button"
+        data-testid="world-view-problems"
+        (click)="store.dialog.set({ kind: 'ontology' })"
+      >
+        {{ 'analysis.pipeline.viewProblems' | t }}
+      </button></ds-banner
     >
-      {{ 'analysis.pipeline.viewProblems' | t }}
-    </button></ds-banner
-  >
+  </div>
 }
 @if (store.novel()?.lock) {
-  <ds-banner
-    variant="warning"
-    [dismissible]="false"
-    [heading]="'analysis.pipeline.lockedTitle' | t"
-    [message]="'analysis.pipeline.lockedMessage' | t"
-    [dismissLabel]="'analysis.pipeline.close' | t"
-    data-testid="world-locked"
-  />
+  <div class="ds-page-notice">
+    <ds-banner
+      variant="warning"
+      [dismissible]="false"
+      [heading]="'analysis.pipeline.lockedTitle' | t"
+      [message]="'analysis.pipeline.lockedMessage' | t"
+      [dismissLabel]="'analysis.pipeline.close' | t"
+      data-testid="world-locked"
+    />
+  </div>
 }
-@if (!store.novels().length) {
-  <div class="ds-world-empty">
-    <ds-icon name="library" size="xl" />
-    <h2>{{ 'analysis.pipeline.emptyLibrary' | t }}</h2>
-    <p>{{ 'analysis.pipeline.emptyLibraryHint' | t }}</p>
-    <a dsBtn variant="primary" routerLink="/library/import" data-testid="world-import-package">{{
-      'analysis.pipeline.importPackage' | t
-    }}</a>
-  </div>
-} @else if (!store.loading() && !store.summary().analysed && !store.summary().stale && !store.run()) {
-  <div class="ds-world-empty">
-    <ds-icon name="network" size="xl" />
-    <h2>{{ 'analysis.pipeline.notAnalysed' | t }}</h2>
-    <p>{{ 'analysis.pipeline.notAnalysedHint' | t }}</p>
-    <button
-      dsBtn
-      variant="primary"
-      type="button"
-      data-testid="world-run-empty"
-      [disabled]="!store.canRun()"
-      (click)="store.dialog.set({ kind: 'run' })"
-    >
-      <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.runAnalysis' | t }}
-    </button>
-  </div>
-} @else {
-  <div class="ds-world-body">
+<div class="ds-world-body">
+  @if (!store.novels().length) {
+    <div class="ds-world-empty">
+      <ds-icon name="library" size="xl" />
+      <h2>{{ 'analysis.pipeline.emptyLibrary' | t }}</h2>
+      <p>{{ 'analysis.pipeline.emptyLibraryHint' | t }}</p>
+      <a dsBtn variant="primary" routerLink="/library/import" data-testid="world-import-package">{{
+        'analysis.pipeline.importPackage' | t
+      }}</a>
+    </div>
+  } @else if (!store.loading() && !store.summary().analysed && !store.summary().stale && !store.run()) {
+    <div class="ds-world-empty">
+      <ds-icon name="network" size="xl" />
+      <h2>{{ 'analysis.pipeline.notAnalysed' | t }}</h2>
+      <p>{{ 'analysis.pipeline.notAnalysedHint' | t }}</p>
+      <button
+        dsBtn
+        variant="primary"
+        type="button"
+        data-testid="world-run-empty"
+        [disabled]="!store.canRun()"
+        (click)="store.dialog.set({ kind: 'run' })"
+      >
+        <ds-icon name="play" size="sm" />{{ 'analysis.pipeline.runAnalysis' | t }}
+      </button>
+    </div>
+  } @else {
     @switch (store.view()) {
       @case ('graph') {
         <ds-world-graph
@@ -146,36 +158,36 @@
         <ds-review-view />
       }
     }
-  </div>
-  <ng-template
-    dsPanel="left"
-    panelClass="ds-world-panel"
-    testId="world-left-panel"
-    [label]="'analysis.page.entities' | t"
-    [resizeLabel]="'analysis.page.resizeEntities' | t"
-  >
-    <ds-entity-list />
-  </ng-template>
-  <ng-template
-    dsPanel="right"
-    panelClass="ds-world-panel"
-    testId="world-right-panel"
-    [label]="'analysis.page.details' | t"
-    [resizeLabel]="'analysis.page.resizeDetails' | t"
-  >
-    <ds-entity-panel />
-  </ng-template>
-  @if (store.view() !== 'review') {
-    <ng-template
-      dsPanel="bottom"
-      panelClass="ds-world-panel"
-      testId="world-bottom-panel"
-      [label]="'analysis.page.timeline' | t"
-      [resizeLabel]="'analysis.page.resizeTimeline' | t"
-    >
-      <ds-world-timeline />
-    </ng-template>
   }
+</div>
+<ng-template
+  dsPanel="left"
+  panelClass="ds-world-panel"
+  testId="world-left-panel"
+  [label]="'analysis.page.entities' | t"
+  [resizeLabel]="'analysis.page.resizeEntities' | t"
+>
+  <ds-entity-list />
+</ng-template>
+<ng-template
+  dsPanel="right"
+  panelClass="ds-world-panel"
+  testId="world-right-panel"
+  [label]="'analysis.page.details' | t"
+  [resizeLabel]="'analysis.page.resizeDetails' | t"
+>
+  <ds-entity-panel />
+</ng-template>
+@if (store.view() !== 'review') {
+  <ng-template
+    dsPanel="bottom"
+    panelClass="ds-world-panel"
+    testId="world-bottom-panel"
+    [label]="'analysis.page.timeline' | t"
+    [resizeLabel]="'analysis.page.resizeTimeline' | t"
+  >
+    <ds-world-timeline />
+  </ng-template>
 }
 <ds-run-analysis-dialog />
 <ds-ontology-problems-dialog />

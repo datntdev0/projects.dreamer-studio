@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron
 import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
-import { AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer/shared/ipc/channels';
+import { AnalysisChannel, AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer/shared/ipc/channels';
 import {
   DiagnosticsChannel,
   LibraryChannel,
@@ -16,6 +16,7 @@ import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
+import { AnalysisStatus, ReviewPage, ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
@@ -129,13 +130,13 @@ const api: DreamerApi = {
       subscribe(LibraryChannel.Changed, listener),
   },
   analysis: {
-    status: analysisUnavailable,
+    status: (novelId: string): Promise<AnalysisStatus> => call(AnalysisChannel.Status, novelId),
     chapter: analysisUnavailable,
     plan: analysisUnavailable,
     start: analysisUnavailable,
     cancel: analysisUnavailable,
-    world: analysisUnavailable,
-    review: analysisUnavailable,
+    world: (query: WorldQuery): Promise<World> => call(AnalysisChannel.World, query),
+    review: (query: ReviewQuery): Promise<ReviewPage> => call(AnalysisChannel.Review, query),
     occurrences: analysisUnavailable,
     edit: analysisUnavailable,
     merge: analysisUnavailable,

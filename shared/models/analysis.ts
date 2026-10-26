@@ -138,7 +138,6 @@ export interface AnalysisStatus {
   merge: AnalysisMergeState;
   ontology: Ontology;
   ontologyProblems: OntologyProblem[];
-  llm: { available: boolean; label: string; reason: string | null };
 }
 
 export interface AnalysisChapterRequest {

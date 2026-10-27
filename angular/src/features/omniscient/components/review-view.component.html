@@ -189,6 +189,12 @@
                           {{ entity.aliases.join(', ') }}
                         </span>
                       }
+                      @if (entity.titles?.length) {
+                        <span class="ds-world-review-aliases">
+                          <span class="ds-world-review-key">{{ 'analysis.review.prop.titles' | t }}</span>
+                          {{ entity.titles.join(', ') }}
+                        </span>
+                      }
                       <span class="ds-spacer"></span>
                       <ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row: issue.rows[0] }" />
                     </div>
@@ -225,52 +231,15 @@
                     }
                   </dl>
                   <span class="ds-spacer"></span>
-                  @if (!issue.variants) {
-                    <ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row: issue.rows[0] }" />
-                  }
+                  <ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row: issue.rows[0] }" />
                 </div>
-                @if (issue.variants) {
-                  <table class="ds-world-review-variants" [attr.data-testid]="'world-review-variants-' + issue.key">
-                    <thead>
-                      <tr>
-                        <th scope="col">{{ 'analysis.review.prop.value' | t }}</th>
-                        <th scope="col">{{ 'analysis.review.prop.fact' | t }}</th>
-                        <th scope="col">{{ 'analysis.pipeline.statusFilter' | t }}</th>
-                        <th scope="col">
-                          <span class="visually-hidden">{{ 'analysis.review.actions' | t }}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of issue.rows; track row.key) {
-                        <tr
-                          [attr.data-status]="row.status"
-                          [attr.data-testid]="'world-review-row-' + rowId(issue, row)"
-                        >
-                          <td>{{ row.items[0].fact?.value }}</td>
-                          <td>
-                            <ng-container
-                              [ngTemplateOutlet]="fact"
-                              [ngTemplateOutletContext]="{ item: contextOf(row) }"
-                            />
-                          </td>
-                          <td><ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row }" /></td>
-                          <td>
-                            <ng-container [ngTemplateOutlet]="actions" [ngTemplateOutletContext]="{ issue, row }" />
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                } @else {
-                  <div class="ds-world-review-fact">
-                    <span class="ds-world-review-key">{{ 'analysis.review.prop.fact' | t }}</span>
-                    <ng-container
-                      [ngTemplateOutlet]="fact"
-                      [ngTemplateOutletContext]="{ item: contextOf(issue.rows[0]) }"
-                    />
-                  </div>
-                }
+                <div class="ds-world-review-fact">
+                  <span class="ds-world-review-key">{{ 'analysis.review.prop.fact' | t }}</span>
+                  <ng-container
+                    [ngTemplateOutlet]="fact"
+                    [ngTemplateOutletContext]="{ item: contextOf(issue.rows[0]) }"
+                  />
+                </div>
               }
               <div class="ds-world-review-actions">
                 @if (issue.open && issue.reason === 'alias-conflict' && clashingAlias(issue); as alias) {

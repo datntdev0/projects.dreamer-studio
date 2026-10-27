@@ -306,6 +306,13 @@ export class OmniscientStore {
     });
   }
 
+  async chapterParagraphs(index: number): Promise<string[] | null> {
+    const novelId = this.novelId();
+    const file = this.status()?.chapters.find((chapter) => chapter.index === index)?.file;
+    if (!novelId || !file) return null;
+    return (await this.api.getChapter({ novelId, file }))?.paragraphs ?? null;
+  }
+
   findQuote(quote: string): Promise<QuoteMatch[]> {
     const novelId = this.novelId();
     return novelId ? this.api.analysisFindQuote({ novelId, quote }) : Promise.resolve([]);

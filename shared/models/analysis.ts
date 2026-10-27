@@ -1,5 +1,7 @@
-export const ENTITY_TYPES = ['Character', 'Persona', 'Location', 'Organization', 'Item', 'Glossary'] as const;
+export const ENTITY_TYPES = ['Character', 'Persona', 'Location', 'Organization', 'Artifact', 'Glossary'] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
+export const ENTITY_PROPERTIES = ['name', 'alias', 'title'] as const;
+export type EntityPropertyName = (typeof ENTITY_PROPERTIES)[number];
 export type ChapterAnalysisStatus = 'not-analysed' | 'clean' | 'has-issues' | 'reviewed' | 'stale' | 'failed';
 export type ItemStatus = 'verified' | 'failed' | 'accepted' | 'rejected';
 export type FailReason =
@@ -7,20 +9,18 @@ export type FailReason =
   | 'quote-not-found'
   | 'entity-not-in-ontology'
   | 'predicate-not-in-ontology'
-  | 'value-missing'
-  | 'value-not-allowed'
   | 'entity-not-found'
   | 'type-not-allowed'
   | 'label-missing'
   | 'name-conflict'
-  | 'alias-conflict'
-  | 'value-conflict';
+  | 'alias-conflict';
 
 export interface AnalysisEntity {
   id: string;
-  type: EntityType | 'artifact';
+  type: EntityType | 'unknown';
   name: string;
   aliases: string[];
+  titles?: string[];
   wordsFound: string[];
   status: ItemStatus;
   reason?: FailReason;
@@ -36,7 +36,6 @@ export interface AnalysisFact {
   objectId?: string;
   subjectName?: string;
   objectName?: string;
-  value?: string;
   label?: string;
   quote: string | null;
   status: ItemStatus;
@@ -88,10 +87,15 @@ export interface OntologyPredicate {
   kind: 'relationship' | 'scalar';
   subjectTypes: EntityType[];
   objectTypes?: EntityType[];
-  allowedValues?: string[];
-  multiple?: boolean;
   symmetric?: boolean;
   labeled?: boolean;
+  description?: string;
+}
+
+export interface EntityProperty {
+  name: EntityPropertyName;
+  required: boolean;
+  multiple: boolean;
   description?: string;
 }
 
@@ -102,6 +106,7 @@ export interface Ontology {
   entityTypes: EntityType[];
   entityTypeDescriptions: Partial<Record<EntityType, string>>;
   entityTypeExamples: Partial<Record<EntityType, string[]>>;
+  entityTypeProperties: Partial<Record<EntityType, EntityProperty[]>>;
   predicates: OntologyPredicate[];
 }
 
@@ -122,16 +127,15 @@ export type OntologyProblemCode =
   | 'predicate-name-invalid'
   | 'predicate-duplicate'
   | 'type-list-invalid'
-  | 'value-type-invalid'
-  | 'values-missing'
-  | 'values-not-allowed'
-  | 'values-invalid'
-  | 'value-duplicate'
   | 'symmetric-types-differ'
   | 'character-outside-has-persona'
   | 'has-persona-invalid'
   | 'has-persona-missing'
-  | 'persona-missing';
+  | 'persona-missing'
+  | 'property-unknown'
+  | 'property-duplicate'
+  | 'name-property-invalid'
+  | 'property-not-multiple';
 
 export interface OntologyProblem {
   line: number;
@@ -147,7 +151,6 @@ export interface OntologyParseResult {
 export interface WorldScalar {
   factId?: string;
   predicate: string;
-  value: string;
   chapterIndex: number;
   quote: string | null;
   overlay?: boolean;
@@ -159,6 +162,7 @@ export interface WorldEntity {
   type: EntityType;
   name: string;
   aliases: string[];
+  titles: string[];
   degree: number;
   chapters: number[];
   scalars: WorldScalar[];
@@ -260,7 +264,7 @@ export interface WorldFile {
 }
 
 export interface CandidateOutput {
-  entities: { type: string; name: string; aliases: string[] }[];
+  entities: { type: string; name: string; aliases: string[]; titles?: string[] }[];
 }
 
 export interface PredicateOutput {
@@ -268,7 +272,6 @@ export interface PredicateOutput {
     predicate: string;
     subject: string;
     object: string | null;
-    value: string | null;
     label: string | null;
     quote: string;
   }[];
@@ -323,7 +326,7 @@ export interface ReviewQuery {
 
 export interface ReviewRelated {
   name: string;
-  type: EntityType | 'artifact';
+  type: EntityType | 'unknown';
   chapters: number[];
 }
 
@@ -343,7 +346,7 @@ export interface ReviewItem {
 export interface ReviewEntityOption {
   id: string;
   name: string;
-  type: EntityType | 'artifact';
+  type: EntityType | 'unknown';
 }
 
 export interface ReviewPage {

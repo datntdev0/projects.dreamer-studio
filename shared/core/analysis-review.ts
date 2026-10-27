@@ -15,12 +15,9 @@ export const REASON_SEVERITY: Record<FailReason, ReviewSeverity> = {
   'predicate-not-in-ontology': 'error',
   'entity-not-found': 'error',
   'type-not-allowed': 'error',
-  'value-missing': 'error',
-  'value-not-allowed': 'warning',
   'label-missing': 'warning',
   'name-conflict': 'warning',
   'alias-conflict': 'warning',
-  'value-conflict': 'warning',
 };
 
 export const ACCEPTABLE_REASONS: FailReason[] = (Object.keys(REASON_SEVERITY) as FailReason[]).filter(
@@ -33,7 +30,6 @@ const FACT_FIELDS: (keyof AnalysisFact)[] = [
   'predicate',
   'objectId',
   'objectName',
-  'value',
   'label',
   'quote',
 ];
@@ -75,11 +71,12 @@ function fixEntity(
   chapter: CandidateChapter,
   ontology: Ontology,
 ): void {
-  if (!edit.entity?.type && !edit.entity?.aliases && !edit.entity?.name?.trim())
+  if (!edit.entity?.type && !edit.entity?.aliases && !edit.entity?.titles && !edit.entity?.name?.trim())
     throw invalid(`Fix of ${entity.id} has no allowed field`);
   if (edit.entity.name?.trim()) entity.name = edit.entity.name.trim();
   if (edit.entity.type) entity.type = edit.entity.type;
   if (edit.entity.aliases) entity.aliases = [...edit.entity.aliases];
+  if (edit.entity.titles) entity.titles = [...edit.entity.titles];
   const result = checkEntity(chapter, entity, ontology);
   entity.wordsFound = result.wordsFound;
   settle(entity, result.reason);
@@ -165,7 +162,6 @@ export function reviewIssueKey(item: ReviewItem): string {
   const reason: FailReason | undefined = target.issue ?? target.reason;
   if (item.entity && (reason === 'name-conflict' || reason === 'alias-conflict'))
     return `${reason}:${nameKey(item.entity.name)}`;
-  if (item.fact && reason === 'value-conflict') return `${reason}:${item.fact.subjectId}:${item.fact.predicate}`;
   return `${reason}:${item.chapterIndex}:${item.itemKind}:${target.id}`;
 }
 

@@ -1,5 +1,6 @@
 import type { AnalysisChapterDetail, EntityType, OverlayEdit, ReviewEdit } from '../models/analysis';
 import type { World, WorldEdit, WorldEntity, WorldLink } from '../models/analysis';
+import { mergeWords } from './analysis-checks';
 import { isMergeable } from './analysis-review';
 
 function cloneChapter(chapter: AnalysisChapterDetail): AnalysisChapterDetail {
@@ -36,6 +37,7 @@ function applyEntityEdit(world: World, edit: OverlayEdit): void {
       world.entities.push({
         ...edit.entity,
         aliases: [...(edit.entity.aliases ?? [])],
+        titles: [],
         chapters: [],
         scalars: [],
         degree: 0,
@@ -50,8 +52,7 @@ function applyEntityEdit(world: World, edit: OverlayEdit): void {
     entity.type = edit.entityType;
     entity.overlay = true;
   } else if (edit.kind === 'entity-add-alias' && entity) {
-    if (!entity.aliases.some((alias) => alias.toLocaleLowerCase() === edit.alias.toLocaleLowerCase()))
-      entity.aliases.push(edit.alias);
+    entity.aliases = mergeWords(entity.aliases, [edit.alias]);
     entity.overlay = true;
   } else if (edit.kind === 'entity-remove-alias' && entity) {
     entity.aliases = entity.aliases.filter((alias) => alias.toLocaleLowerCase() !== edit.alias.toLocaleLowerCase());
@@ -68,6 +69,7 @@ function applyEntityEdit(world: World, edit: OverlayEdit): void {
       if (!source) continue;
       target.aliases.push(...source.aliases.filter((alias) => !target.aliases.includes(alias)));
       target.aliases.push(source.name);
+      target.titles = mergeWords(target.titles, source.titles);
       target.chapters.push(...source.chapters.filter((index) => !target.chapters.includes(index)));
       target.scalars.push(...source.scalars);
       target.staleChapters.push(...source.staleChapters.filter((index) => !target.staleChapters.includes(index)));
@@ -86,6 +88,7 @@ function applyEntityEdit(world: World, edit: OverlayEdit): void {
     world.entities.push({
       ...edit.newEntity,
       aliases: moved,
+      titles: [],
       chapters: [...entity.chapters],
       scalars: [],
       degree: 0,
@@ -106,11 +109,10 @@ function addUserFact(world: World, edit: Extract<OverlayEdit, { kind: 'fact-add'
   const fact = edit.fact;
   const subject = world.entities.find((entity) => entity.id === fact.subjectId);
   if (!subject) return;
-  if (fact.kind === 'scalar' && fact.value !== undefined) {
+  if (fact.kind === 'scalar') {
     subject.scalars.push({
       factId: fact.id,
       predicate: fact.predicate,
-      value: fact.value,
       chapterIndex: edit.chapterIndex,
       quote: fact.quote,
       overlay: true,
@@ -179,7 +181,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
     if (!chapter.resultFile || chapter.status === 'failed') continue;
     const idToKey = new Map<string, string>();
     for (const item of chapter.entities) {
-      if (!isMergeable(item) || item.type === 'artifact') continue;
+      if (!isMergeable(item) || item.type === 'unknown') continue;
       const key = `${item.type}:${item.name.trim().toLocaleLowerCase()}`;
       idToKey.set(item.id, key);
       let entity = entities.get(key);
@@ -189,6 +191,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
           type: item.type as EntityType,
           name: item.name,
           aliases: [],
+          titles: [],
           degree: 0,
           chapters: [],
           scalars: [],
@@ -197,10 +200,8 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
         entities.set(key, entity);
       }
       if (!entity.chapters.includes(chapter.index)) entity.chapters.push(chapter.index);
-      for (const alias of item.aliases) {
-        if (!entity.aliases.some((existing) => existing.toLocaleLowerCase() === alias.toLocaleLowerCase()))
-          entity.aliases.push(alias);
-      }
+      entity.aliases = mergeWords(entity.aliases, item.aliases);
+      entity.titles = mergeWords(entity.titles, item.titles ?? []);
       if (chapter.status === 'stale') {
         entity.stale = true;
         if (!entity.staleChapters.includes(chapter.index)) entity.staleChapters.push(chapter.index);
@@ -211,11 +212,9 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
       const subjectKey = idToKey.get(fact.subjectId);
       if (!subjectKey) continue;
       if (fact.kind === 'scalar') {
-        if (fact.value === undefined) continue;
         entities.get(subjectKey)!.scalars.push({
           factId: fact.id,
           predicate: fact.predicate,
-          value: fact.value,
           chapterIndex: chapter.index,
           quote: fact.quote,
           ...(editedFacts.has(fact.id) ? { overlay: true } : {}),

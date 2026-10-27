@@ -129,7 +129,7 @@ describe('mergeWorld', () => {
 
   it('merges open warnings and sets index.mergedAt', async () => {
     const chapters = [summary(1, 'has-issues'), summary(2, 'has-issues')];
-    const index = await seed('value-conflict', ...chapters);
+    const index = await seed('name-conflict', ...chapters);
     await mergeWorld(folder, chapters, index);
     const world = readWorldFile(folder)!;
     expect(world.chapters.map((chapter) => chapter.index)).toEqual([1, 2]);

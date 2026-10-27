@@ -16,10 +16,14 @@ const ontology: Ontology = {
   entityTypes: ['Persona', 'Location'],
   entityTypeDescriptions: { Persona: 'A named identity', Location: 'A named place' },
   entityTypeExamples: { Persona: ['Mai'] },
-  predicates: [
-    { name: 'alias', kind: 'scalar', subjectTypes: ['Persona'], multiple: true },
-    { name: 'located_in', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Location'] },
-  ],
+  entityTypeProperties: {
+    Persona: [
+      { name: 'name', required: true, multiple: false, description: 'The name' },
+      { name: 'alias', required: false, multiple: true },
+    ],
+    Location: [{ name: 'name', required: true, multiple: false }],
+  },
+  predicates: [{ name: 'located_in', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Location'] }],
 };
 const chapter: LlmChapter = { index: 1, title: 'One', paragraphs: ['Mai walked into Hanoi.'] };
 const log: Logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as Logger;
@@ -41,14 +45,13 @@ const goodFacts: unknown = {
       predicate: 'located_in',
       subject: 'Mai',
       object: 'Hanoi',
-      value: null,
       label: null,
       quote: 'Mai walked into Hanoi.',
     },
   ],
 };
 const badFacts: unknown = {
-  facts: [{ predicate: 'located_in', subject: 'Mai', object: 'Hanoi', value: null, label: null, quote: 'Never said.' }],
+  facts: [{ predicate: 'located_in', subject: 'Mai', object: 'Hanoi', label: null, quote: 'Never said.' }],
 };
 
 type Reply = unknown;
@@ -142,13 +145,15 @@ describe('askCandidates', () => {
     expect(prompts[0]).toContain('- Location:');
   });
 
-  it('adds the task, rules, examples and alias limits from the ontology', async () => {
+  it('adds the task, rules, examples and entity properties from the ontology', async () => {
     const { ask, prompts } = scripted([goodCandidates]);
     await candidates(ask);
     expect(prompts[0]).toContain('Extract the world.');
     expect(prompts[0]).toContain('- Only stated facts.');
-    expect(prompts[0]).toContain('- Persona: A named identity Examples: Mai.');
-    expect(prompts[0]).toContain('- Location: A named place No aliases.');
+    expect(prompts[0]).toContain(
+      '- Persona: A named identity Examples: Mai. Properties: name (required): The name; alias (optional, many values).',
+    );
+    expect(prompts[0]).toContain('- Location: A named place Properties: name (required).');
   });
 
   it('lists only the stage type when stage is one type', async () => {

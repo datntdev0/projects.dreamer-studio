@@ -5,7 +5,10 @@ import { FieldComponent } from '@components/form/field.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { EntityType, ReviewEdit, ReviewItem } from '@dreamer/shared/models/analysis';
+import { checkEntity } from '@dreamer/shared/core/analysis-checks';
+import type { CandidateChapter } from '@dreamer/shared/core/analysis-checks';
+import { hasProperty } from '@dreamer/shared/core/ontology-rules';
+import type { AnalysisEntity, EntityType, ReviewEdit, ReviewItem } from '@dreamer/shared/models/analysis';
 import { ENTITY_TYPES, entityTypeKeys, reasonKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
@@ -13,9 +16,10 @@ interface FixForm {
   name: string;
   type: string;
   aliases: string;
+  titles: string;
   subject: string;
   predicate: string;
-  value: string;
+  object: string;
   label: string;
   quote: string;
 }
@@ -26,14 +30,15 @@ const EMPTY_FORM: FixForm = {
   name: '',
   type: '',
   aliases: '',
+  titles: '',
   subject: '',
   predicate: '',
-  value: '',
+  object: '',
   label: '',
   quote: '',
 };
 
-function splitAliases(value: string): string[] {
+function splitWords(value: string): string[] {
   return value
     .split(',')
     .map((alias) => alias.trim())
@@ -50,6 +55,8 @@ export class FixItemDialogComponent {
   private readonly i18n = inject(I18nService);
   protected readonly form = signal<FixForm>(EMPTY_FORM);
   private readonly original = signal<FixForm>(EMPTY_FORM);
+  private readonly chapters = signal<CandidateChapter[] | null>(null);
+  private chapterRequest = 0;
   protected readonly types = computed(() => this.store.ontology()?.entityTypes ?? ENTITY_TYPES);
 
   protected readonly item = computed<ReviewItem | null>(() => {
@@ -72,9 +79,13 @@ export class FixItemDialogComponent {
   private readonly predicate = computed(() =>
     this.store.ontology()?.predicates.find((predicate) => predicate.name === this.form().predicate),
   );
-  protected readonly values = computed(() => this.predicate()?.allowedValues ?? []);
-  protected readonly freeText = computed(() => this.scalar() && !this.values().length);
   protected readonly labeled = computed(() => this.predicate()?.labeled === true);
+  protected readonly hasAliases = computed(
+    () => hasProperty(this.store.ontology(), this.form().type, 'alias') || !!this.original().aliases,
+  );
+  protected readonly hasTitles = computed(
+    () => hasProperty(this.store.ontology(), this.form().type, 'title') || !!this.original().titles,
+  );
   protected readonly entities = computed(() =>
     [...(this.store.review()?.entities[this.item()?.chapterIndex ?? -1] ?? [])]
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -90,14 +101,30 @@ export class FixItemDialogComponent {
     return (
       !!form.subject &&
       !!form.predicate &&
-      !!form.value.trim() &&
+      (this.scalar() || !!form.object) &&
       !!form.quote.trim() &&
       (!this.labeled() || !!form.label.trim())
     );
   });
+  protected readonly missingChapters = computed(() => {
+    const entity = this.item()?.entity;
+    const ontology = this.store.ontology();
+    const form = this.form();
+    if (!entity || !ontology) return [];
+    const fixed: AnalysisEntity = {
+      ...entity,
+      name: form.name.trim(),
+      type: form.type as EntityType,
+      aliases: splitWords(form.aliases),
+    };
+    return (this.chapters() ?? [])
+      .filter((chapter) => checkEntity(chapter, fixed, ontology).reason === 'words-not-found')
+      .map((chapter) => chapter.index);
+  });
   protected readonly canSave = computed(
     () =>
       this.valid() &&
+      (!this.item()?.entity || (this.chapters() !== null && !this.missingChapters().length)) &&
       JSON.stringify(this.form()) !== JSON.stringify(this.original()) &&
       !this.store.locked() &&
       !this.store.busy(),
@@ -110,7 +137,7 @@ export class FixItemDialogComponent {
     });
   }
 
-  protected typeLabel(type: EntityType | 'artifact'): string {
+  protected typeLabel(type: EntityType | 'unknown'): string {
     const key = entityTypeKeys[type] as string | undefined;
     return key ? this.i18n.t(key) : type;
   }
@@ -118,8 +145,6 @@ export class FixItemDialogComponent {
   protected set(field: FixField, event: Event): void {
     const value = (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value;
     this.form.update((form) => ({ ...form, [field]: value }));
-    if (field === 'predicate' && this.scalar() && this.values().length)
-      this.form.update((form) => ({ ...form, value: this.values()[0] }));
   }
 
   protected missing(field: FixField): boolean {
@@ -144,7 +169,12 @@ export class FixItemDialogComponent {
       return {
         ...base,
         itemId: target.entity.id,
-        entity: { name: form.name.trim(), type: form.type as EntityType, aliases: splitAliases(form.aliases) },
+        entity: {
+          name: form.name.trim(),
+          type: form.type as EntityType,
+          aliases: splitWords(form.aliases),
+          titles: splitWords(form.titles),
+        },
       };
     return {
       ...base,
@@ -152,7 +182,7 @@ export class FixItemDialogComponent {
       fact: {
         subjectId: form.subject,
         predicate: form.predicate,
-        ...(this.scalar() ? { value: form.value.trim() } : { objectId: form.value }),
+        ...(this.scalar() ? {} : { objectId: form.object }),
         ...(this.labeled() ? { label: form.label.trim() } : {}),
         quote: form.quote.trim(),
       },
@@ -162,26 +192,41 @@ export class FixItemDialogComponent {
   private reset(item: ReviewItem): void {
     const entity = item.entity;
     const fact = item.fact;
-    const values = this.store.ontology()?.predicates.find((predicate) => predicate.name === fact?.predicate);
     const form: FixForm = entity
       ? {
           ...EMPTY_FORM,
           name: entity.name,
-          type: entity.type === 'artifact' ? (this.types()[0] ?? '') : entity.type,
+          type: entity.type === 'unknown' ? (this.types()[0] ?? '') : entity.type,
           aliases: entity.aliases.join(', '),
+          titles: (entity.titles ?? []).join(', '),
         }
       : {
           ...EMPTY_FORM,
           subject: fact?.subjectId ?? '',
           predicate: fact?.predicate ?? '',
-          value:
-            fact?.kind === 'scalar'
-              ? (fact.value ?? values?.allowedValues?.[0] ?? '')
-              : (fact?.objectId ?? this.entities()[0]?.id ?? ''),
+          object: fact?.kind === 'scalar' ? '' : (fact?.objectId ?? this.entities()[0]?.id ?? ''),
           label: fact?.label ?? '',
           quote: fact?.quote ?? '',
         };
     this.form.set(form);
     this.original.set(entity ? { ...form, type: entity.type } : form);
+    if (entity) void this.loadChapters();
+  }
+
+  private async loadChapters(): Promise<void> {
+    const request = ++this.chapterRequest;
+    this.chapters.set(null);
+    const indexes = [...new Set(this.items().map((item) => item.chapterIndex))];
+    const chapters = await Promise.all(indexes.map((index) => this.loadChapter(index)));
+    if (request === this.chapterRequest) this.chapters.set(chapters.flatMap((chapter) => (chapter ? [chapter] : [])));
+  }
+
+  private async loadChapter(index: number): Promise<CandidateChapter | null> {
+    try {
+      const paragraphs = await this.store.chapterParagraphs(index);
+      return paragraphs ? { index, paragraphs } : null;
+    } catch {
+      return null;
+    }
   }
 }

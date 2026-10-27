@@ -1,7 +1,7 @@
 import type { AnalysisEntity, AnalysisFact, CandidateOutput, ChapterAnalysisCounts } from '../models/analysis';
 import type { EntityType } from '../models/analysis';
 import type { FailReason, Ontology, OntologyPredicate, PredicateOutput } from '../models/analysis';
-import { aliasTypes, factPredicates, HAS_PERSONA } from './ontology-rules';
+import { HAS_PERSONA, propertyTypes } from './ontology-rules';
 import { findTextContext, findTextMatches } from './text-match';
 
 export interface CandidateChapter {
@@ -31,6 +31,16 @@ export function checkEntity(
   return { wordsFound };
 }
 
+export function mergeWords(words: string[], added: string[], name: string = ''): string[] {
+  const merged: string[] = [...words];
+  for (const raw of added) {
+    const word = raw.trim();
+    if (word && nameKey(word) !== nameKey(name) && !merged.some((existing) => nameKey(existing) === nameKey(word)))
+      merged.push(word);
+  }
+  return merged;
+}
+
 export function checkCandidates(input: {
   chapters: CandidateChapter[];
   output: CandidateOutput;
@@ -39,27 +49,22 @@ export function checkCandidates(input: {
 }): { entities: Map<number, AnalysisEntity[]>; errors: string[] } {
   const entities = new Map<number, AnalysisEntity[]>(input.chapters.map((chapter) => [chapter.index, []]));
   const errors: string[] = [];
-  const unique = new Map<string, { type: string; name: string; aliases: string[] }>();
-  const withAliases: EntityType[] = aliasTypes(input.ontology);
+  const unique = new Map<string, { type: string; name: string; aliases: string[]; titles: string[] }>();
+  const withAliases: EntityType[] = propertyTypes(input.ontology, 'alias');
+  const withTitles: EntityType[] = propertyTypes(input.ontology, 'title');
   for (const candidate of input.output.entities) {
     const name = candidate.name.trim();
     if (!name) continue;
     const id = `${candidate.type}:${nameKey(name)}`;
     let merged = unique.get(id);
     if (!merged) {
-      merged = { type: candidate.type, name, aliases: [] };
+      merged = { type: candidate.type, name, aliases: [], titles: [] };
       unique.set(id, merged);
     }
-    if (!withAliases.includes(candidate.type as EntityType)) continue;
-    for (const rawAlias of candidate.aliases) {
-      const alias = rawAlias.trim();
-      if (
-        alias &&
-        nameKey(alias) !== nameKey(merged.name) &&
-        !merged.aliases.some((existing) => nameKey(existing) === nameKey(alias))
-      )
-        merged.aliases.push(alias);
-    }
+    if (withAliases.includes(candidate.type as EntityType))
+      merged.aliases = mergeWords(merged.aliases, candidate.aliases, merged.name);
+    if (withTitles.includes(candidate.type as EntityType))
+      merged.titles = mergeWords(merged.titles, candidate.titles ?? []);
   }
   const first = input.chapters[0];
   if (!first) return { entities, errors };
@@ -79,6 +84,7 @@ export function checkCandidates(input: {
         type: candidate.type as AnalysisEntity['type'],
         name: candidate.name,
         aliases: candidate.aliases,
+        ...(candidate.titles.length ? { titles: candidate.titles } : {}),
         wordsFound,
         status: 'failed',
         reason,
@@ -96,11 +102,29 @@ export function checkCandidates(input: {
         type: candidate.type as AnalysisEntity['type'],
         name: candidate.name,
         aliases: candidate.aliases,
+        ...(candidate.titles.length ? { titles: candidate.titles } : {}),
         wordsFound,
         status: 'verified',
       });
   }
-  return { entities, errors };
+  return { entities, errors: [...errors, ...personaErrors([...unique.values()], input.ontology, input.stage)] };
+}
+
+function personaErrors(
+  candidates: { type: string; name: string }[],
+  ontology: Ontology,
+  stage: EntityType | 'all',
+): string[] {
+  if (stage !== 'all' || !ontology.entityTypes.includes('Persona')) return [];
+  const personas: Set<string> = new Set<string>(
+    candidates.filter((candidate) => candidate.type === 'Persona').map((candidate) => nameKey(candidate.name)),
+  );
+  return candidates
+    .filter((candidate) => candidate.type === 'Character' && !personas.has(nameKey(candidate.name)))
+    .map(
+      (candidate) =>
+        `Entity "${candidate.name}" (Character): add a Persona with the same name; attributes and relations belong to the Persona.`,
+    );
 }
 
 function resolveEntity(
@@ -133,12 +157,10 @@ function factError(fact: AnalysisFact, reason: FailReason, ontology: Ontology, t
   const label = `Fact "${fact.subjectName ?? fact.subjectId} / ${fact.predicate}"`;
   if (reason === 'entity-not-found') return `${label}: the subject or object is not a known entity.`;
   if (reason === 'predicate-not-in-ontology')
-    return `${label}: predicate is not allowed; use one of: ${factPredicates(ontology)
+    return `${label}: predicate is not allowed; use one of: ${ontology.predicates
       .map((item) => item.name)
       .join(', ')}.`;
   if (reason === 'type-not-allowed') return `${label}: ${typeDetail}`;
-  if (reason === 'value-missing') return `${label}: the value is missing.`;
-  if (reason === 'value-not-allowed') return `${label}: the value is not one of the allowed values.`;
   if (reason === 'label-missing') return `${label}: this predicate needs a label that names the relation.`;
   return `${label}: the quote is not in the chapter text.`;
 }
@@ -149,25 +171,17 @@ export function checkFact(
   fact: AnalysisFact,
   ontology: Ontology,
 ): FailReason | undefined {
-  const predicate: OntologyPredicate | undefined = factPredicates(ontology).find(
+  const predicate: OntologyPredicate | undefined = ontology.predicates.find(
     (item: OntologyPredicate): boolean => nameKey(item.name) === nameKey(fact.predicate),
   );
   const find = (id: string | undefined): AnalysisEntity | undefined =>
     entities.find((entity: AnalysisEntity): boolean => entity.id === id && entity.status !== 'rejected');
   const subject: AnalysisEntity | undefined = find(fact.subjectId);
   const object: AnalysisEntity | undefined = find(fact.objectId);
-  const value: string = fact.value?.trim() ?? '';
   const quote: string = fact.quote?.trim() ?? '';
   if (!subject || (fact.kind === 'relationship' && !object)) return 'entity-not-found';
   if (!predicate) return 'predicate-not-in-ontology';
   if (typeProblem(predicate, subject, object)) return 'type-not-allowed';
-  if (fact.kind === 'scalar' && !value) return 'value-missing';
-  if (
-    fact.kind === 'scalar' &&
-    predicate.allowedValues &&
-    !predicate.allowedValues.some((allowed) => nameKey(allowed) === nameKey(value))
-  )
-    return 'value-not-allowed';
   if (predicate.labeled && !fact.label?.trim()) return 'label-missing';
   if (!quote || findTextContext(chapter.paragraphs, quote, { fold: true }) === null) return 'quote-not-found';
   return undefined;
@@ -182,7 +196,7 @@ export function checkPredicates(input: {
   const facts: AnalysisFact[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
-  const predicates: OntologyPredicate[] = factPredicates(input.ontology);
+  const predicates: OntologyPredicate[] = input.ontology.predicates;
   for (const raw of input.output.facts) {
     const predicateName = raw.predicate.trim();
     const predicate: OntologyPredicate | undefined = predicates.find(
@@ -195,7 +209,6 @@ export function checkPredicates(input: {
         : resolveEntity(raw.object ?? '', input.entities, predicate?.objectTypes);
     if (predicate?.symmetric && subject && object && object.id < subject.id) [subject, object] = [object, subject];
     const kind: AnalysisFact['kind'] = predicate?.kind ?? (raw.object !== null ? 'relationship' : 'scalar');
-    const value = raw.value?.trim() ?? '';
     const label = predicate?.labeled ? (raw.label?.trim() ?? '') : '';
     const quote = raw.quote.trim();
     const fact: AnalysisFact = {
@@ -206,7 +219,6 @@ export function checkPredicates(input: {
       ...(kind === 'relationship' && object ? { objectId: object.id } : {}),
       subjectName: subject?.name ?? raw.subject,
       ...(kind === 'relationship' ? { objectName: object?.name ?? raw.object ?? '' } : {}),
-      ...(kind === 'scalar' ? { value } : {}),
       ...(label ? { label } : {}),
       quote,
       status: 'verified',
@@ -214,16 +226,13 @@ export function checkPredicates(input: {
     const duplicateKey = JSON.stringify([
       nameKey(fact.predicate),
       nameKey(subject?.id ?? raw.subject),
-      kind === 'relationship' ? nameKey(object?.id ?? raw.object ?? '') : nameKey(value),
+      kind === 'relationship' ? nameKey(object?.id ?? raw.object ?? '') : nameKey(quote),
       nameKey(label),
     ]);
     if (seen.has(duplicateKey)) continue;
     seen.add(duplicateKey);
     const typeDetail = predicate && subject ? typeProblem(predicate, subject, object) : undefined;
     const reason: FailReason | undefined = checkFact(input.chapter, input.entities, fact, input.ontology);
-    if (kind === 'scalar' && value && predicate?.allowedValues) {
-      fact.value = predicate.allowedValues.find((allowed) => nameKey(allowed) === nameKey(value)) ?? value;
-    }
     if (reason) {
       fact.status = 'failed';
       fact.reason = reason;
@@ -260,7 +269,7 @@ export function hasIssues(counts: ChapterAnalysisCounts): boolean {
 
 type CheckedItems = { entities: AnalysisEntity[]; facts: AnalysisFact[] };
 
-const CONFLICTS: readonly FailReason[] = ['name-conflict', 'alias-conflict', 'value-conflict'];
+const CONFLICTS: readonly FailReason[] = ['name-conflict', 'alias-conflict'];
 
 function takesPartInConflicts(item: AnalysisEntity | AnalysisFact): boolean {
   return (
@@ -309,22 +318,6 @@ function aliasConflicts(entities: AnalysisEntity[]): Set<string> {
   );
 }
 
-function valueConflicts(facts: AnalysisFact[], ontology: Ontology): Set<string> {
-  const ids: Set<string> = new Set<string>();
-  const scalars: AnalysisFact[] = facts.filter((fact: AnalysisFact): boolean => {
-    const predicate: OntologyPredicate | undefined = ontology.predicates.find(
-      (item: OntologyPredicate): boolean => item.name === fact.predicate,
-    );
-    return fact.kind === 'scalar' && predicate !== undefined && predicate.multiple !== true;
-  });
-  for (const group of groupBy(scalars, (fact: AnalysisFact): string =>
-    JSON.stringify([fact.subjectId, fact.predicate]),
-  ))
-    if (new Set(group.map((fact: AnalysisFact): string => nameKey(fact.value ?? ''))).size > 1)
-      group.forEach((fact: AnalysisFact): void => void ids.add(fact.id));
-  return ids;
-}
-
 function isKeptConflict(item: AnalysisEntity | AnalysisFact): boolean {
   return item.status === 'accepted' && item.issue !== undefined && CONFLICTS.includes(item.issue);
 }
@@ -344,10 +337,8 @@ export function checkConflicts(input: {
   ontology: Ontology;
 }): CheckedItems {
   const entities: AnalysisEntity[] = input.entities.filter(takesPartInConflicts);
-  const facts: AnalysisFact[] = input.facts.filter(takesPartInConflicts);
   const nameIds: Set<string> = nameConflicts(entities, input.ontology);
   const aliasIds: Set<string> = aliasConflicts(entities);
-  const valueIds: Set<string> = valueConflicts(facts, input.ontology);
   return {
     entities: input.entities.map((entity: AnalysisEntity): AnalysisEntity =>
       applyConflict(
@@ -355,9 +346,7 @@ export function checkConflicts(input: {
         nameIds.has(entity.id) ? 'name-conflict' : aliasIds.has(entity.id) ? 'alias-conflict' : undefined,
       ),
     ),
-    facts: input.facts.map((fact: AnalysisFact): AnalysisFact =>
-      applyConflict(fact, valueIds.has(fact.id) ? 'value-conflict' : undefined),
-    ),
+    facts: input.facts.map((fact: AnalysisFact): AnalysisFact => ({ ...fact })),
   };
 }
 

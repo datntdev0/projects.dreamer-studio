@@ -70,21 +70,12 @@
           <ds-icon name="chevron-down" size="sm" />
         </span>
       </ds-field>
-    } @else {
-      <ds-field controlId="world-fact-value" required [label]="'analysis.world.value' | t">
-        <input
-          id="world-fact-value"
-          class="ds-input"
-          data-testid="world-fact-value"
-          [value]="value()"
-          (input)="value.set($any($event.target).value)"
-        />
-      </ds-field>
     }
     <ds-field
       controlId="world-fact-quote"
-      [label]="'analysis.world.quoteOptional' | t"
-      [hint]="'analysis.entity.quoteHint' | t"
+      [required]="kind() === 'scalar'"
+      [label]="(kind() === 'scalar' ? 'analysis.world.quote' : 'analysis.world.quoteOptional') | t"
+      [hint]="(kind() === 'scalar' ? 'analysis.entity.scalarQuoteHint' : 'analysis.entity.quoteHint') | t"
     >
       <textarea
         id="world-fact-quote"

@@ -12,11 +12,20 @@ const ONTOLOGY: Ontology = {
   entityTypes: ['Character', 'Persona', 'Location'],
   entityTypeDescriptions: {},
   entityTypeExamples: {},
+  entityTypeProperties: {
+    Character: [{ name: 'name', required: true, multiple: false }],
+    Persona: [
+      { name: 'name', required: true, multiple: false },
+      { name: 'alias', required: false, multiple: true },
+      { name: 'title', required: false, multiple: true },
+    ],
+    Location: [{ name: 'name', required: true, multiple: false }],
+  },
   predicates: [
     { name: 'has_persona', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Persona'] },
     { name: 'enemy_of', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Persona'] },
     { name: 'located_in', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Location'] },
-    { name: 'gender', kind: 'scalar', subjectTypes: ['Persona'], allowedValues: ['female', 'male'] },
+    { name: 'gender', kind: 'scalar', subjectTypes: ['Persona'] },
   ],
 };
 
@@ -72,11 +81,9 @@ describe('canAccept', () => {
   it('allows warnings only', () => {
     expect(canAccept('words-not-found')).toBe(false);
     expect(canAccept('quote-not-found')).toBe(false);
-    expect(canAccept('value-not-allowed')).toBe(true);
     expect(canAccept('label-missing')).toBe(true);
     expect(canAccept('name-conflict')).toBe(true);
     expect(canAccept('alias-conflict')).toBe(true);
-    expect(canAccept('value-conflict')).toBe(true);
     expect(canAccept('type-not-allowed')).toBe(false);
     expect(canAccept(undefined)).toBe(false);
   });
@@ -188,19 +195,18 @@ describe('applyReviewEdit', () => {
     expect(result.facts[0]).toMatchObject({ objectId: 'hanoi', objectName: 'Hanoi', status: 'verified' });
   });
 
-  it('fixes a scalar value', () => {
+  it('fixes the quote of a scalar fact', () => {
     const bad = fact({
       kind: 'scalar',
       predicate: 'gender',
-      value: 'robot',
       objectId: undefined,
       objectName: undefined,
-      quote: 'Mai is a woman',
+      quote: 'Mai is a man',
       status: 'failed',
-      reason: 'value-not-allowed',
+      reason: 'quote-not-found',
     });
-    const result = apply(edit({ kind: 'review-fix', fact: { value: 'female' } }), ENTITIES, [bad]);
-    expect(result.facts[0]).toMatchObject({ value: 'female', status: 'verified', issue: 'value-not-allowed' });
+    const result = apply(edit({ kind: 'review-fix', fact: { quote: 'Mai is a woman' } }), ENTITIES, [bad]);
+    expect(result.facts[0]).toMatchObject({ quote: 'Mai is a woman', status: 'verified', issue: 'quote-not-found' });
   });
 
   it('fixes a label', () => {

@@ -108,61 +108,75 @@
             </button>
           }
         </div>
-        <section class="ds-world-detail-section" data-testid="world-entity-aliases">
-          <h3>
-            {{ 'analysis.world.aliases' | t }} <span class="meta num">{{ entity.aliases.length }}</span>
-          </h3>
-          @if (entity.aliases.length) {
+        @if (entity.titles.length) {
+          <section class="ds-world-detail-section" data-testid="world-entity-titles">
+            <h3>
+              {{ 'analysis.world.titles' | t }} <span class="meta num">{{ entity.titles.length }}</span>
+            </h3>
             <ul class="ds-world-detail-chips">
-              @for (alias of entity.aliases; track alias) {
-                <li>
-                  {{ alias
-                  }}<button
-                    type="button"
-                    [attr.aria-label]="'analysis.entity.removeAlias' | t: { alias }"
-                    [attr.data-testid]="'world-entity-alias-remove-' + $index"
-                    [disabled]="store.locked()"
-                    (click)="removeAlias(entity, alias)"
-                  >
-                    <ds-icon name="x" size="sm" />
-                  </button>
-                </li>
+              @for (title of entity.titles; track title) {
+                <li>{{ title }}</li>
               }
             </ul>
-          } @else {
-            <p class="meta">{{ 'analysis.entity.noAliases' | t }}</p>
-          }
-          <div class="ds-world-detail-inline">
-            <input
-              class="ds-input"
-              data-testid="world-entity-alias-input"
-              [attr.aria-label]="'analysis.entity.addAlias' | t"
-              [attr.aria-invalid]="aliasExists() || null"
-              [placeholder]="'analysis.world.newAlias' | t"
-              [value]="alias()"
-              [disabled]="store.locked()"
-              (input)="alias.set($any($event.target).value)"
-              (keydown.enter)="addAlias(entity)"
-            />
-            <button
-              dsBtn
-              type="button"
-              [iconOnly]="true"
-              data-testid="world-entity-alias-add"
-              [attr.aria-label]="'analysis.entity.addAlias' | t"
-              [dsTooltip]="'analysis.entity.addAlias' | t"
-              [disabled]="store.locked() || !alias().trim() || aliasExists()"
-              (click)="addAlias(entity)"
-            >
-              <ds-icon name="plus" size="sm" />
-            </button>
-          </div>
-          @if (aliasExists()) {
-            <p class="ds-world-detail-error" role="alert">
-              <ds-icon name="alert-circle" size="sm" />{{ 'analysis.entity.aliasExists' | t }}
-            </p>
-          }
-        </section>
+          </section>
+        }
+        @if (hasAliases() || entity.aliases.length) {
+          <section class="ds-world-detail-section" data-testid="world-entity-aliases">
+            <h3>
+              {{ 'analysis.world.aliases' | t }} <span class="meta num">{{ entity.aliases.length }}</span>
+            </h3>
+            @if (entity.aliases.length) {
+              <ul class="ds-world-detail-chips">
+                @for (alias of entity.aliases; track alias) {
+                  <li>
+                    {{ alias
+                    }}<button
+                      type="button"
+                      [attr.aria-label]="'analysis.entity.removeAlias' | t: { alias }"
+                      [attr.data-testid]="'world-entity-alias-remove-' + $index"
+                      [disabled]="store.locked()"
+                      (click)="removeAlias(entity, alias)"
+                    >
+                      <ds-icon name="x" size="sm" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="meta">{{ 'analysis.entity.noAliases' | t }}</p>
+            }
+            <div class="ds-world-detail-inline">
+              <input
+                class="ds-input"
+                data-testid="world-entity-alias-input"
+                [attr.aria-label]="'analysis.entity.addAlias' | t"
+                [attr.aria-invalid]="aliasExists() || null"
+                [placeholder]="'analysis.world.newAlias' | t"
+                [value]="alias()"
+                [disabled]="store.locked()"
+                (input)="alias.set($any($event.target).value)"
+                (keydown.enter)="addAlias(entity)"
+              />
+              <button
+                dsBtn
+                type="button"
+                [iconOnly]="true"
+                data-testid="world-entity-alias-add"
+                [attr.aria-label]="'analysis.entity.addAlias' | t"
+                [dsTooltip]="'analysis.entity.addAlias' | t"
+                [disabled]="store.locked() || !alias().trim() || aliasExists()"
+                (click)="addAlias(entity)"
+              >
+                <ds-icon name="plus" size="sm" />
+              </button>
+            </div>
+            @if (aliasExists()) {
+              <p class="ds-world-detail-error" role="alert">
+                <ds-icon name="alert-circle" size="sm" />{{ 'analysis.entity.aliasExists' | t }}
+              </p>
+            }
+          </section>
+        }
         <section class="ds-world-detail-section" data-testid="world-entity-values">
           <h3>{{ 'analysis.entity.values' | t }}</h3>
           @for (group of scalarGroups(); track group.predicate) {
@@ -175,7 +189,6 @@
                     [attr.data-testid]="'world-entity-value-' + (scalar.factId ?? $index)"
                   >
                     <div class="ds-world-detail-row">
-                      <strong>{{ scalar.value }}</strong>
                       <span class="meta num">{{
                         'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex }
                       }}</span>

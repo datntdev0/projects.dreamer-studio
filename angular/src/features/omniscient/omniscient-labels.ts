@@ -8,7 +8,13 @@ export type FilterEntityType = Exclude<EntityType, 'Persona'>;
 
 export type EntityTypeFilter = FilterEntityType | 'all';
 
-export const ENTITY_TYPE_FILTERS: FilterEntityType[] = ['Character', 'Location', 'Organization', 'Item', 'Glossary'];
+export const ENTITY_TYPE_FILTERS: FilterEntityType[] = [
+  'Character',
+  'Location',
+  'Organization',
+  'Artifact',
+  'Glossary',
+];
 
 export function filterEntityTypes(filter: EntityTypeFilter): EntityType[] {
   if (filter === 'all') return [];
@@ -43,37 +49,34 @@ export const itemStatusKinds = {
   accepted: 'info',
   rejected: 'neutral',
 } as const;
-export const entityTypeKeys: Record<EntityType | 'artifact', string> = {
+export const entityTypeKeys: Record<EntityType | 'unknown', string> = {
   Character: 'analysis.pipeline.entityType.character',
   Persona: 'analysis.pipeline.entityType.persona',
   Location: 'analysis.pipeline.entityType.location',
   Organization: 'analysis.pipeline.entityType.organization',
-  Item: 'analysis.pipeline.entityType.item',
+  Artifact: 'analysis.pipeline.entityType.artifact',
   Glossary: 'analysis.pipeline.entityType.glossary',
-  artifact: 'analysis.pipeline.entityType.artifact',
+  unknown: 'analysis.pipeline.entityType.unknown',
 };
-export const entityTypeIcons: Record<EntityType | 'artifact', string> = {
+export const entityTypeIcons: Record<EntityType | 'unknown', string> = {
   Character: 'user',
   Persona: 'eye',
   Location: 'pin',
   Organization: 'building',
-  Item: 'cube',
+  Artifact: 'cube',
   Glossary: 'tag',
-  artifact: 'box',
+  unknown: 'box',
 };
 export const reasonKeys: Record<FailReason, string> = {
   'words-not-found': 'analysis.pipeline.reason.wordsNotFound',
   'quote-not-found': 'analysis.pipeline.reason.quoteNotFound',
   'entity-not-in-ontology': 'analysis.pipeline.reason.entityNotInOntology',
   'predicate-not-in-ontology': 'analysis.pipeline.reason.predicateNotInOntology',
-  'value-missing': 'analysis.pipeline.reason.valueMissing',
-  'value-not-allowed': 'analysis.pipeline.reason.valueNotAllowed',
   'entity-not-found': 'analysis.pipeline.reason.entityNotFound',
   'type-not-allowed': 'analysis.pipeline.reason.typeNotAllowed',
   'label-missing': 'analysis.pipeline.reason.labelMissing',
   'name-conflict': 'analysis.pipeline.reason.nameConflict',
   'alias-conflict': 'analysis.pipeline.reason.aliasConflict',
-  'value-conflict': 'analysis.pipeline.reason.valueConflict',
 };
 
 export const REASON_ORDER: FailReason[] = [
@@ -81,13 +84,10 @@ export const REASON_ORDER: FailReason[] = [
   'predicate-not-in-ontology',
   'entity-not-found',
   'type-not-allowed',
-  'value-missing',
   'words-not-found',
   'quote-not-found',
   'name-conflict',
   'alias-conflict',
-  'value-conflict',
-  'value-not-allowed',
   'label-missing',
 ];
 
@@ -96,14 +96,11 @@ export const reasonHintKeys: Record<FailReason, string> = {
   'quote-not-found': 'analysis.review.hint.quoteNotFound',
   'entity-not-in-ontology': 'analysis.review.hint.entityNotInOntology',
   'predicate-not-in-ontology': 'analysis.review.hint.predicateNotInOntology',
-  'value-missing': 'analysis.review.hint.valueMissing',
-  'value-not-allowed': 'analysis.review.hint.valueNotAllowed',
   'entity-not-found': 'analysis.review.hint.entityNotFound',
   'type-not-allowed': 'analysis.review.hint.typeNotAllowed',
   'label-missing': 'analysis.review.hint.labelMissing',
   'name-conflict': 'analysis.review.hint.nameConflict',
   'alias-conflict': 'analysis.review.hint.aliasConflict',
-  'value-conflict': 'analysis.review.hint.valueConflict',
 };
 
 export const reasonIcons: Record<FailReason, string> = {
@@ -111,14 +108,11 @@ export const reasonIcons: Record<FailReason, string> = {
   'quote-not-found': 'message',
   'entity-not-in-ontology': 'type',
   'predicate-not-in-ontology': 'nodes',
-  'value-missing': 'hash',
-  'value-not-allowed': 'hash',
   'entity-not-found': 'search',
   'type-not-allowed': 'shield',
   'label-missing': 'tag',
   'name-conflict': 'layers',
   'alias-conflict': 'link',
-  'value-conflict': 'columns',
 };
 
 export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {
@@ -138,14 +132,13 @@ export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {
   'predicate-name-invalid': 'analysis.ontology.problem.predicateNameInvalid',
   'predicate-duplicate': 'analysis.ontology.problem.predicateDuplicate',
   'type-list-invalid': 'analysis.ontology.problem.typeListInvalid',
-  'value-type-invalid': 'analysis.ontology.problem.valueTypeInvalid',
-  'values-missing': 'analysis.ontology.problem.valuesMissing',
-  'values-not-allowed': 'analysis.ontology.problem.valuesNotAllowed',
-  'values-invalid': 'analysis.ontology.problem.valuesInvalid',
-  'value-duplicate': 'analysis.ontology.problem.valueDuplicate',
   'symmetric-types-differ': 'analysis.ontology.problem.symmetricTypesDiffer',
   'character-outside-has-persona': 'analysis.ontology.problem.characterOutsideHasPersona',
   'has-persona-invalid': 'analysis.ontology.problem.hasPersonaInvalid',
   'has-persona-missing': 'analysis.ontology.problem.hasPersonaMissing',
   'persona-missing': 'analysis.ontology.problem.personaMissing',
+  'property-unknown': 'analysis.ontology.problem.propertyUnknown',
+  'property-duplicate': 'analysis.ontology.problem.propertyDuplicate',
+  'name-property-invalid': 'analysis.ontology.problem.namePropertyInvalid',
+  'property-not-multiple': 'analysis.ontology.problem.propertyNotMultiple',
 };

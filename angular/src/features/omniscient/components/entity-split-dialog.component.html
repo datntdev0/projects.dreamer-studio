@@ -55,7 +55,7 @@
                 [attr.data-testid]="'world-split-value-' + $index"
                 [checked]="facts().includes(scalar.factId)"
                 (checkedChange)="toggleFacts([scalar.factId], $event)"
-                >{{ scalar.predicate }}: {{ scalar.value }}
+                >{{ scalar.predicate }}: {{ scalar.quote }}
                 <span class="meta num"
                   >&middot; {{ 'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex } }}</span
                 ></ds-checkbox

@@ -42,8 +42,8 @@ The theme is set by `data-theme="dark" | "light"` on `<html>` (Storybook: theme 
 | `--color-entity-character` | `#7cb4ff` | `#1f5fbf` | Entity type: character (graph node, list dot, legend) |
 | `--color-entity-persona` | `#c9a2f2` | `#7a3db8` | Entity type: persona |
 | `--color-entity-location` | `#f2bd5b` | `#8a5a00` | Entity type: location |
-| `--color-entity-organization` | `#ffa36b` | `#b04a12` | Entity type: organization |
-| `--color-entity-item` | `#f28cb8` | `#b0306a` | Entity type: item |
+| `--color-entity-organization` | `#9bd66b` | `#3f7d1a` | Entity type: organization |
+| `--color-entity-artifact` | `#f28cb8` | `#b0306a` | Entity type: artifact |
 | `--color-entity-glossary` | `#5fd0dc` | `#0d7480` | Entity type: glossary term |
 
 ### Elevation and overlay

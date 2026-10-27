@@ -4,15 +4,15 @@ import { describe, expect, it } from 'vitest';
 import type { OntologyProblem } from '../models/analysis';
 import type { OntologyProblemCode } from '../models/analysis';
 import { parseOntology } from './ontology';
-import { aliasTypes, factPredicates } from './ontology-rules';
+import { propertyTypes } from './ontology-rules';
 
 const HEAD: string[] = [
   'version: 1',
   'task: Extract facts.',
-  'entity_types:',
+  'entity_schema:',
   '  - type: Persona',
-  '    description: A persona',
-  '  - type: Location',
+  '    properties: [{ property: name, required: true }]',
+  '  - { type: Location, properties: [{ property: name, required: true }] }',
 ];
 
 function doc(...lines: string[]): string {
@@ -52,7 +52,7 @@ describe('parseOntology default file', () => {
 
   it('parses without problems and lists six entity types', () => {
     expect(problems).toEqual([]);
-    expect(ontology.entityTypes).toEqual(['Character', 'Persona', 'Location', 'Organization', 'Item', 'Glossary']);
+    expect(ontology.entityTypes).toEqual(['Character', 'Persona', 'Location', 'Organization', 'Artifact', 'Glossary']);
     expect(ontology.task).not.toBe('');
     expect(ontology.rules.length).toBeGreaterThan(0);
   });
@@ -63,8 +63,8 @@ describe('parseOntology default file', () => {
     expect(hasPersona).toMatchObject({ kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Persona'] });
   });
 
-  it('uses character only in name and has_persona', () => {
-    const others = ontology.predicates.filter((item) => item.name !== 'has_persona' && item.name !== 'name');
+  it('uses character only in has_persona', () => {
+    const others = ontology.predicates.filter((item) => item.name !== 'has_persona');
 
     expect(others.length).toBeGreaterThan(0);
     for (const item of others) {
@@ -73,12 +73,14 @@ describe('parseOntology default file', () => {
     }
   });
 
-  it('keeps name and alias out of the fact predicates', () => {
-    const names: string[] = factPredicates(ontology).map((item) => item.name);
-
-    expect(names).not.toContain('name');
-    expect(names).not.toContain('alias');
-    expect(aliasTypes(ontology)).not.toContain('Character');
+  it('gives every type a required name and only personas aliases and titles', () => {
+    expect(propertyTypes(ontology, 'name')).toEqual(ontology.entityTypes);
+    expect(propertyTypes(ontology, 'alias')).toEqual(['Persona']);
+    expect(propertyTypes(ontology, 'title')).toEqual(['Persona']);
+    expect(ontology.entityTypeProperties.Persona).toContainEqual(
+      expect.objectContaining({ name: 'name', required: true }),
+    );
+    expect(ontology.predicates.map((item) => item.name)).not.toContain('title');
   });
 });
 
@@ -91,20 +93,21 @@ describe('parseOntology valid input', () => {
       '  Extract facts.',
       'rules:',
       '  - Only stated facts.',
-      'entity_types:',
+      'entity_schema:',
       '  - type: Persona',
       '    description: A persona',
       '    examples: [Mai]',
+      '    properties:',
+      '      - property: name',
+      '        required: true',
+      '        description: The name',
+      '      - property: alias',
+      '        multiple: true',
       '  - type: Location',
+      '    properties: [{ property: name, required: true }]',
       'scalar_predicates:',
       '  - predicate: mood',
       '    domain: [Persona]',
-      '    value_type: enum',
-      '    values: [happy, sad]',
-      '  - predicate: title',
-      '    domain: [Persona]',
-      '    value_type: string',
-      '    multiple: true',
       'connection_predicates:',
       '  - predicate: lives_in',
       '    subject: [Persona]',
@@ -127,9 +130,15 @@ describe('parseOntology valid input', () => {
         entityTypes: ['Persona', 'Location'],
         entityTypeDescriptions: { Persona: 'A persona' },
         entityTypeExamples: { Persona: ['Mai'] },
+        entityTypeProperties: {
+          Persona: [
+            { name: 'name', required: true, multiple: false, description: 'The name' },
+            { name: 'alias', required: false, multiple: true },
+          ],
+          Location: [{ name: 'name', required: true, multiple: false }],
+        },
         predicates: [
-          { name: 'mood', kind: 'scalar', subjectTypes: ['Persona'], allowedValues: ['happy', 'sad'] },
-          { name: 'title', kind: 'scalar', subjectTypes: ['Persona'], multiple: true },
+          { name: 'mood', kind: 'scalar', subjectTypes: ['Persona'] },
           {
             name: 'lives_in',
             kind: 'relationship',
@@ -153,7 +162,7 @@ describe('parseOntology valid input', () => {
 
 describe('parseOntology problems', () => {
   it('reports YAML syntax errors', () => {
-    expect(parseOntology('entity_types: [Persona').problems[0].code).toBe('yaml-syntax');
+    expect(parseOntology('entity_schema: [Persona').problems[0].code).toBe('yaml-syntax');
   });
 
   it('reports a root that is not a map', () => {
@@ -170,7 +179,7 @@ describe('parseOntology problems', () => {
     const keys: string[] = parseOntology('version: 1')
       .problems.filter((item: OntologyProblem): boolean => item.code === 'section-missing')
       .map((item: OntologyProblem): string => item.params.key);
-    expect(keys).toEqual(['task', 'entity_types', 'scalar_predicates', 'connection_predicates']);
+    expect(keys).toEqual(['task', 'entity_schema', 'scalar_predicates', 'connection_predicates']);
   });
 
   it('reports a section that is not a list and an item that is not a map', () => {
@@ -192,57 +201,55 @@ describe('parseOntology problems', () => {
   });
 
   it('reports a type that is not listed', () => {
-    expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Item]', '    value_type: string'),
-      'entity-type-not-listed',
-      9,
-      { type: 'Item', key: 'domain', predicate: 'mood' },
-    );
+    expectProblem(withScalars('  - predicate: mood', '    domain: [Artifact]'), 'entity-type-not-listed', 9, {
+      type: 'Artifact',
+      key: 'domain',
+      predicate: 'mood',
+    });
   });
 
   it('reports empty and duplicate predicate names', () => {
-    expectProblem(withScalars('  - domain: [Persona]', '    value_type: string'), 'predicate-name-invalid', 8);
+    expectProblem(withScalars('  - domain: [Persona]'), 'predicate-name-invalid', 8);
     const text: string = withScalars(
       '  - predicate: mood',
       '    domain: [Persona]',
-      '    value_type: string',
       '  - predicate: mood',
       '    domain: [Persona]',
-      '    value_type: string',
     );
-    expectProblem(text, 'predicate-duplicate', 11, { predicate: 'mood' });
+    expectProblem(text, 'predicate-duplicate', 10, { predicate: 'mood' });
   });
 
-  it('reports scalar value type problems', () => {
-    expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Persona]', '    value_type: number'),
-      'value-type-invalid',
-      10,
+  it('reports entity property problems', () => {
+    const text: string = doc(
+      'version: 1',
+      'task: x',
+      'entity_schema:',
+      '  - type: Persona',
+      '    properties:',
+      '      - property: nickname',
+      '      - property: name',
+      '      - property: name',
+      '      - property: alias',
+      'scalar_predicates: []',
+      'connection_predicates: []',
     );
-    expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Persona]', '    value_type: enum'),
-      'values-missing',
-      8,
-    );
-    expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Persona]', '    value_type: string', '    values: [a]'),
-      'values-not-allowed',
-      11,
-    );
-    expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Persona]', '    value_type: enum', '    values: [a, a]'),
-      'value-duplicate',
-      11,
-      { value: 'a' },
-    );
+    expectProblem(text, 'property-unknown', 6, { property: 'nickname', type: 'Persona' });
+    expectProblem(text, 'name-property-invalid', 7, { type: 'Persona' });
+    expectProblem(text, 'property-duplicate', 8, { property: 'name', type: 'Persona' });
+    expectProblem(text, 'property-not-multiple', 9, { property: 'alias', type: 'Persona' });
+  });
+
+  it('reports a type without a name property', () => {
+    const text: string = doc('version: 1', 'task: x', 'entity_schema:', '  - type: Location', 'scalar_predicates: []');
+    expectProblem(text, 'name-property-invalid', 4, { type: 'Location' });
   });
 
   it('reports flags that are not booleans', () => {
     expectProblem(
-      withScalars('  - predicate: mood', '    domain: [Persona]', '    value_type: string', '    multiple: yes'),
+      withConnections('  - predicate: near', '    subject: [Persona]', '    object: [Persona]', '    symmetric: yes'),
       'flag-invalid',
-      11,
-      { key: 'multiple', predicate: 'mood' },
+      12,
+      { key: 'symmetric', predicate: 'near' },
     );
   });
 
@@ -264,7 +271,7 @@ describe('parseOntology problems', () => {
   });
 
   it('enforces the persona rule', () => {
-    const head: string[] = ['version: 1', 'task: x', 'entity_types:', '  - type: Character', '  - type: Persona'];
+    const head: string[] = ['version: 1', 'task: x', 'entity_schema:', '  - type: Character', '  - type: Persona'];
     expectProblem(doc(...head, 'scalar_predicates: []', 'connection_predicates: []'), 'has-persona-missing', 0);
     expectProblem(
       doc(
@@ -272,7 +279,6 @@ describe('parseOntology problems', () => {
         'scalar_predicates:',
         '  - predicate: age',
         '    domain: [Character]',
-        '    value_type: string',
         'connection_predicates:',
         '  - predicate: has_persona',
         '    subject: [Persona]',
@@ -295,7 +301,7 @@ describe('parseOntology problems', () => {
       8,
     );
     expectProblem(
-      doc('version: 1', 'task: x', 'entity_types:', '  - type: Character', 'scalar_predicates: []'),
+      doc('version: 1', 'task: x', 'entity_schema:', '  - type: Character', 'scalar_predicates: []'),
       'persona-missing',
       0,
     );

@@ -19,9 +19,21 @@ export const DEFAULT_ONTOLOGY: Ontology = {
   name: 'novel-ontology',
   task: 'Extract the entities and predicates from the chapters.',
   rules: ['Extract only facts stated explicitly in the text.'],
-  entityTypes: ['Character', 'Persona', 'Location', 'Organization', 'Item', 'Glossary'],
+  entityTypes: ['Character', 'Persona', 'Location', 'Organization', 'Artifact', 'Glossary'],
   entityTypeDescriptions: {},
   entityTypeExamples: {},
+  entityTypeProperties: {
+    Character: [{ name: 'name', required: true, multiple: false }],
+    Persona: [
+      { name: 'name', required: true, multiple: false },
+      { name: 'alias', required: false, multiple: true },
+      { name: 'title', required: false, multiple: true },
+    ],
+    Location: [{ name: 'name', required: true, multiple: false }],
+    Organization: [{ name: 'name', required: true, multiple: false }],
+    Artifact: [{ name: 'name', required: true, multiple: false }],
+    Glossary: [{ name: 'name', required: true, multiple: false }],
+  },
   predicates: [
     { name: 'parent_of', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Character'] },
     { name: 'sibling_of', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Character'] },
@@ -57,33 +69,18 @@ export const DEFAULT_ONTOLOGY: Ontology = {
       name: 'owns',
       kind: 'relationship',
       subjectTypes: ['Character', 'Persona', 'Organization'],
-      objectTypes: ['Item', 'Glossary'],
+      objectTypes: ['Artifact', 'Glossary'],
     },
-    {
-      name: 'age',
-      kind: 'scalar',
-      subjectTypes: ['Character'],
-      allowedValues: Array.from({ length: 100 }, (_, age) => String(age + 1)),
-    },
-    {
-      name: 'gender',
-      kind: 'scalar',
-      subjectTypes: ['Character'],
-      allowedValues: ['female', 'male', 'nonbinary', 'unknown'],
-    },
-    {
-      name: 'cultivation rank',
-      kind: 'scalar',
-      subjectTypes: ['Character'],
-      allowedValues: ['mortal', 'breath', 'foundation', 'core', 'nascent'],
-    },
-    { name: 'status', kind: 'scalar', subjectTypes: ['Character', 'Persona'], allowedValues: ['alive', 'dead'] },
+    { name: 'age', kind: 'scalar', subjectTypes: ['Character'] },
+    { name: 'gender', kind: 'scalar', subjectTypes: ['Character'] },
+    { name: 'cultivation rank', kind: 'scalar', subjectTypes: ['Character'] },
+    { name: 'status', kind: 'scalar', subjectTypes: ['Character', 'Persona'] },
   ],
 };
 
 export const ONTOLOGY_PROBLEMS: OntologyProblem[] = [
-  { line: 8, code: 'entity-type-unknown', params: { type: 'artifact', predicate: 'owns', key: 'object' } },
-  { line: 17, code: 'value-duplicate', params: { predicate: 'cultivation rank', value: 'core' } },
+  { line: 8, code: 'entity-type-unknown', params: { type: 'weapon', predicate: 'owns', key: 'object' } },
+  { line: 17, code: 'property-not-multiple', params: { property: 'alias', type: 'Persona' } },
   { line: 23, code: 'type-list-invalid', params: { predicate: 'sworn to', key: 'object' } },
 ];
 
@@ -169,7 +166,7 @@ export const ENTITY_SEEDS: {
   { id: 'ash-court', type: 'Organization', name: 'Ash Court', aliases: [], zh: '灰烬廷', zhAliases: [] },
   { id: 'ferry-guild', type: 'Organization', name: 'Ferry Guild', aliases: [], zh: '渡船行会', zhAliases: [] },
   { id: 'night-lanterns', type: 'Organization', name: 'Night Lanterns', aliases: [], zh: '夜灯会', zhAliases: [] },
-  { id: 'jade-seal', type: 'Item', name: 'jade seal', aliases: ['seal'], zh: '玉印', zhAliases: ['印信'] },
+  { id: 'jade-seal', type: 'Artifact', name: 'jade seal', aliases: ['seal'], zh: '玉印', zhAliases: ['印信'] },
   { id: 'moon-script', type: 'Glossary', name: 'moon script', aliases: [], zh: '月文', zhAliases: [] },
   { id: 'spirit-root', type: 'Glossary', name: 'spirit root', aliases: [], zh: '灵根', zhAliases: [] },
   { id: 'river-oath', type: 'Glossary', name: 'river oath', aliases: [], zh: '河誓', zhAliases: [] },
@@ -199,7 +196,6 @@ interface LinkSeed {
 interface ScalarSeed {
   subjectId: string;
   predicate: string;
-  value: string;
   quote: string;
 }
 
@@ -245,7 +241,7 @@ const OPENING_SCENES: Scene[] = [
       },
       { subjectId: 'old-fen', predicate: 'parent_of', objectId: 'lin-yue', quote: 'Old Fen was Lin Yue’s father.' },
     ],
-    scalars: [{ subjectId: 'lin-yue', predicate: 'age', value: '17', quote: 'Lin Yue was seventeen that spring.' }],
+    scalars: [{ subjectId: 'lin-yue', predicate: 'age', quote: 'Lin Yue was seventeen that spring.' }],
   },
   {
     title: 'The White Crane Letter',
@@ -290,7 +286,6 @@ const OPENING_SCENES: Scene[] = [
       {
         subjectId: 'mei-ren',
         predicate: 'cultivation rank',
-        value: 'breath',
         quote: 'Mei Ren could hold the breath rank for only a moment.',
       },
     ],
@@ -330,9 +325,7 @@ const OPENING_SCENES: Scene[] = [
       { subjectId: 'lady-bai', predicate: 'enemy_of', objectId: 'shen-wu', quote: 'Lady Bai vowed to oppose Shen Wu.' },
       { subjectId: 'lin-yue', predicate: 'lover_of', objectId: 'mei-ren', quote: 'Lin Yue still loved Mei Ren.' },
     ],
-    scalars: [
-      { subjectId: 'lin-yue', predicate: 'status', value: 'alive', quote: 'Lin Yue walked away without looking back.' },
-    ],
+    scalars: [{ subjectId: 'lin-yue', predicate: 'status', quote: 'Lin Yue walked away without looking back.' }],
   },
   {
     title: 'The Archive Below',
@@ -372,7 +365,6 @@ const OPENING_SCENES: Scene[] = [
       {
         subjectId: 'lin-yue',
         predicate: 'age',
-        value: '18',
         quote: 'Lin Yue was eighteen by the time the flood reached the archive.',
       },
     ],
@@ -597,7 +589,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     if (id === 'invalid-crown') {
       return {
         id,
-        type: 'artifact',
+        type: 'unknown',
         name: edition === 'zh' ? '青铜冠' : 'bronze crown',
         aliases: [],
         wordsFound: [edition === 'zh' ? '青铜冠' : 'bronze crown'],
@@ -649,7 +641,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
           kind: 'scalar' as const,
           predicate: scalar.predicate,
           subjectId: scalar.subjectId,
-          value: scalar.value,
           quote: scalar.quote,
           status: 'verified' as const,
         })),
@@ -698,13 +689,12 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
       kind: 'scalar',
       predicate: 'cultivation rank',
       subjectId: scene.links[0].subjectId,
-      value: 'star sovereign',
       quote:
         edition === 'zh'
           ? `${nameOf(scene.links[0].subjectId, edition)}称新境界为星君。`
           : `${nameOf(scene.links[0].subjectId, edition)} called the new rank star sovereign.`,
       status: 'failed',
-      reason: 'value-not-allowed',
+      reason: 'quote-not-found',
     });
   }
   const paragraphs = [...scene.paragraphs];
@@ -782,13 +772,7 @@ export const JADE_RIVER_REVIEW_EDITS: ReviewEdit[] = [
   { kind: 'review-reject', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-accepted-quote' },
   { kind: 'review-reject', chapterIndex: 27, itemKind: 'fact', itemId: 'c27-rejected-predicate' },
   { kind: 'review-reject', chapterIndex: 28, itemKind: 'entity', itemId: 'silent-oracle' },
-  {
-    kind: 'review-fix',
-    chapterIndex: 28,
-    itemKind: 'fact',
-    itemId: 'c28-invalid-rank',
-    fact: { value: 'core' },
-  },
+  { kind: 'review-reject', chapterIndex: 28, itemKind: 'fact', itemId: 'c28-invalid-rank' },
 ];
 
 export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): OverlayEdit[] {

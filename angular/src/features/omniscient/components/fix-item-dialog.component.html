@@ -44,19 +44,43 @@
             <ds-icon name="chevron-down" size="sm" />
           </span>
         </ds-field>
-        <ds-field
-          controlId="world-fix-aliases"
-          [label]="'analysis.review.prop.aliases' | t"
-          [hint]="'analysis.review.aliasesHint' | t"
-        >
-          <input
-            id="world-fix-aliases"
-            class="ds-input"
-            data-testid="world-fix-aliases"
-            [value]="form().aliases"
-            (input)="set('aliases', $event)"
-          />
-        </ds-field>
+        @if (hasAliases()) {
+          <ds-field
+            controlId="world-fix-aliases"
+            [label]="'analysis.review.prop.aliases' | t"
+            [hint]="'analysis.review.aliasesHint' | t"
+          >
+            <input
+              id="world-fix-aliases"
+              class="ds-input"
+              data-testid="world-fix-aliases"
+              [value]="form().aliases"
+              (input)="set('aliases', $event)"
+            />
+          </ds-field>
+        }
+        @if (missingChapters().length) {
+          <p class="ds-world-detail-error" role="alert" data-testid="world-fix-words-missing">
+            <ds-icon name="alert-circle" size="sm" />{{
+              'analysis.review.wordsNotFound' | t: { chapters: missingChapters().join(', ') }
+            }}
+          </p>
+        }
+        @if (hasTitles()) {
+          <ds-field
+            controlId="world-fix-titles"
+            [label]="'analysis.review.prop.titles' | t"
+            [hint]="'analysis.review.titlesHint' | t"
+          >
+            <input
+              id="world-fix-titles"
+              class="ds-input"
+              data-testid="world-fix-titles"
+              [value]="form().titles"
+              (input)="set('titles', $event)"
+            />
+          </ds-field>
+        }
       } @else {
         <ds-field controlId="world-fix-subject" [label]="'analysis.review.prop.subject' | t">
           <span class="ds-select">
@@ -88,41 +112,17 @@
             <ds-icon name="chevron-down" size="sm" />
           </span>
         </ds-field>
-        @if (freeText()) {
-          <ds-field
-            controlId="world-fix-value-text"
-            required
-            [label]="'analysis.review.prop.value' | t"
-            [error]="missing('value') ? ('analysis.review.required' | t) : ''"
-          >
-            <input
-              id="world-fix-value-text"
-              class="ds-input"
-              data-testid="world-fix-value-text"
-              [value]="form().value"
-              (input)="set('value', $event)"
-            />
-          </ds-field>
-        } @else {
-          <ds-field
-            controlId="world-fix-value"
-            [label]="(scalar() ? 'analysis.review.prop.value' : 'analysis.review.prop.object') | t"
-          >
+        @if (!scalar()) {
+          <ds-field controlId="world-fix-object" [label]="'analysis.review.prop.object' | t">
             <span class="ds-select">
               <select
-                id="world-fix-value"
+                id="world-fix-object"
                 class="ds-input"
-                data-testid="world-fix-value"
-                (change)="set('value', $event)"
+                data-testid="world-fix-object"
+                (change)="set('object', $event)"
               >
-                @if (scalar()) {
-                  @for (option of values(); track option) {
-                    <option [value]="option" [selected]="form().value === option">{{ option }}</option>
-                  }
-                } @else {
-                  @for (option of entities(); track option.id) {
-                    <option [value]="option.id" [selected]="form().value === option.id">{{ option.name }}</option>
-                  }
+                @for (option of entities(); track option.id) {
+                  <option [value]="option.id" [selected]="form().object === option.id">{{ option.name }}</option>
                 }
               </select>
               <ds-icon name="chevron-down" size="sm" />

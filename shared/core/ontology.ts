@@ -6,13 +6,13 @@ import { parseDocument } from 'yaml';
 import type { Node } from 'yaml';
 import type { Pair } from 'yaml';
 import type { YAMLMap } from 'yaml';
-import type { EntityType } from '../models/analysis';
+import type { EntityProperty, EntityType } from '../models/analysis';
 import type { Ontology } from '../models/analysis';
 import type { OntologyParseResult } from '../models/analysis';
 import type { OntologyPredicate } from '../models/analysis';
 import type { OntologyProblem } from '../models/analysis';
 import type { OntologyProblemCode } from '../models/analysis';
-import { HAS_PERSONA, isEntityType, NAME_PREDICATE } from './ontology-rules';
+import { HAS_PERSONA, isEntityProperty, isEntityType, NAME_PROPERTY } from './ontology-rules';
 
 export const ONTOLOGY_FILE = 'ontology.yml';
 
@@ -21,12 +21,13 @@ const ROOT_KEYS: readonly string[] = [
   'version',
   'task',
   'rules',
-  'entity_types',
+  'entity_schema',
   'scalar_predicates',
   'connection_predicates',
 ];
-const ENTITY_TYPE_KEYS: readonly string[] = ['type', 'description', 'examples'];
-const SCALAR_KEYS: readonly string[] = ['predicate', 'domain', 'value_type', 'values', 'multiple', 'description'];
+const ENTITY_TYPE_KEYS: readonly string[] = ['type', 'description', 'examples', 'properties'];
+const PROPERTY_KEYS: readonly string[] = ['property', 'required', 'multiple', 'description'];
+const SCALAR_KEYS: readonly string[] = ['predicate', 'domain', 'description'];
 const CONNECTION_KEYS: readonly string[] = ['predicate', 'subject', 'object', 'symmetric', 'labeled', 'description'];
 
 type MaybeNode = Node | null | undefined;
@@ -46,6 +47,7 @@ export function emptyOntology(): Ontology {
     entityTypes: [],
     entityTypeDescriptions: {},
     entityTypeExamples: {},
+    entityTypeProperties: {},
     predicates: [],
   };
 }
@@ -175,6 +177,38 @@ function validateEntityType(context: Context, map: YAMLMap): void {
   const examples: string[] = readTextList(context, map, 'examples', { type });
   if (description) context.ontology.entityTypeDescriptions[type] = description;
   if (examples.length > 0) context.ontology.entityTypeExamples[type] = examples;
+  context.ontology.entityTypeProperties[type] = validateProperties(context, map, type);
+}
+
+function validateProperty(context: Context, map: YAMLMap, type: EntityType, properties: EntityProperty[]): void {
+  checkKeys(context, map, PROPERTY_KEYS);
+  const node: MaybeNode = valueOf(map, 'property');
+  const name: string | undefined = textValue(node);
+  if (!isEntityProperty(name)) {
+    problem(context, 'property-unknown', node ?? map, { property: keyText(node), type });
+    return;
+  }
+  if (properties.some((property: EntityProperty): boolean => property.name === name)) {
+    problem(context, 'property-duplicate', node, { property: name, type });
+    return;
+  }
+  const required: boolean = readFlag(context, map, 'required', name);
+  const multiple: boolean = readFlag(context, map, 'multiple', name);
+  const description: string | undefined = readText(context, map, 'description', false, { property: name, type });
+  if (name === NAME_PROPERTY && (!required || multiple)) problem(context, 'name-property-invalid', node, { type });
+  if (name !== NAME_PROPERTY && !multiple) problem(context, 'property-not-multiple', node, { property: name, type });
+  properties.push({ name, required, multiple, ...(description ? { description } : {}) });
+}
+
+function validateProperties(context: Context, map: YAMLMap, type: EntityType): EntityProperty[] {
+  const properties: EntityProperty[] = [];
+  if (field(map, 'properties') !== undefined)
+    readList(context, map, 'properties').forEach((item: YAMLMap): void =>
+      validateProperty(context, item, type, properties),
+    );
+  if (!properties.some((property: EntityProperty): boolean => property.name === NAME_PROPERTY))
+    problem(context, 'name-property-invalid', valueOf(map, 'type'), { type });
+  return properties;
 }
 
 function validateTypeList(
@@ -208,25 +242,6 @@ function validateTypeList(
   return types;
 }
 
-function validateValues(context: Context, node: MaybeNode, predicate: string): string[] {
-  if (!isSeq(node) || node.items.length === 0) {
-    problem(context, 'values-invalid', node, { predicate });
-    return [];
-  }
-  const values: string[] = [];
-  for (const item of node.items) {
-    const value: string | undefined = textValue(item);
-    if (value === undefined || value.trim().length === 0) {
-      problem(context, 'values-invalid', item as Node, { predicate });
-    } else if (values.includes(value)) {
-      problem(context, 'value-duplicate', item as Node, { predicate, value });
-    } else {
-      values.push(value);
-    }
-  }
-  return values;
-}
-
 function readPredicateName(context: Context, map: YAMLMap): string | undefined {
   const node: MaybeNode = valueOf(map, 'predicate');
   const name: string | undefined = textValue(node)?.trim();
@@ -247,26 +262,10 @@ function validateScalar(context: Context, map: YAMLMap): void {
   const name: string | undefined = readPredicateName(context, map);
   checkKeys(context, map, SCALAR_KEYS, name);
   if (name === undefined) return;
-  const subjectTypes: EntityType[] = validateTypeList(context, map, 'domain', name, name === NAME_PREDICATE);
-  const valueTypeNode: MaybeNode = valueOf(map, 'value_type');
-  const valueType: string | undefined = textValue(valueTypeNode);
-  if (valueType !== 'string' && valueType !== 'enum') {
-    problem(context, 'value-type-invalid', valueTypeNode ?? map, { predicate: name });
-  }
-  const valuesField: Pair | undefined = field(map, 'values');
-  let allowedValues: string[] | undefined;
-  if (valueType === 'enum') {
-    if (valuesField === undefined) problem(context, 'values-missing', map, { predicate: name });
-    else allowedValues = validateValues(context, valuesField.value as MaybeNode, name);
-  } else if (valuesField !== undefined) {
-    problem(context, 'values-not-allowed', valuesField.key as Node, { predicate: name });
-  }
-  const multiple: boolean = readFlag(context, map, 'multiple', name);
+  const subjectTypes: EntityType[] = validateTypeList(context, map, 'domain', name, false);
   const description: string | undefined = readText(context, map, 'description', false, { predicate: name });
   if (context.problems.length !== before) return;
   const predicate: OntologyPredicate = { name, kind: 'scalar', subjectTypes };
-  if (allowedValues !== undefined) predicate.allowedValues = allowedValues;
-  if (multiple) predicate.multiple = true;
   if (description !== undefined) predicate.description = description;
   context.ontology.predicates.push(predicate);
 }
@@ -328,7 +327,7 @@ function validateRoot(context: Context, root: MaybeNode): void {
   context.ontology.name = readText(context, root, 'name', false) ?? '';
   context.ontology.task = readText(context, root, 'task', true) ?? '';
   context.ontology.rules = readTextList(context, root, 'rules');
-  readList(context, root, 'entity_types').forEach((map: YAMLMap): void => validateEntityType(context, map));
+  readList(context, root, 'entity_schema').forEach((map: YAMLMap): void => validateEntityType(context, map));
   readList(context, root, 'scalar_predicates').forEach((map: YAMLMap): void => validateScalar(context, map));
   readList(context, root, 'connection_predicates').forEach((map: YAMLMap): void => validateConnection(context, map));
   validatePersonaRule(context);

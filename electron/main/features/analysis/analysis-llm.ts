@@ -1,7 +1,7 @@
 import { checkCandidates, checkPredicates } from '@dreamer/shared/core/analysis-checks';
-import { aliasTypes, factPredicates } from '@dreamer/shared/core/ontology-rules';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import type { AnalysisEntity, AnalysisFact, CandidateOutput, EntityType } from '@dreamer/shared/models/analysis';
+import type { AnalysisEntity, AnalysisFact, CandidateOutput, EntityProperty } from '@dreamer/shared/models/analysis';
+import type { EntityType } from '@dreamer/shared/models/analysis';
 import type { Ontology, OntologyPredicate, PredicateOutput } from '@dreamer/shared/models/analysis';
 import type { LlmFeatureRunRequest, LlmRunResult } from '@dreamer/shared/models/llm';
 import type { Logger } from '../../logging/logger';
@@ -25,8 +25,9 @@ const candidateSchema: Record<string, unknown> = {
           type: { type: 'string' },
           name: { type: 'string' },
           aliases: { type: 'array', items: { type: 'string' } },
+          titles: { type: 'array', items: { type: 'string' } },
         },
-        required: ['type', 'name', 'aliases'],
+        required: ['type', 'name', 'aliases', 'titles'],
         additionalProperties: false,
       },
     },
@@ -46,11 +47,10 @@ const predicateSchema: Record<string, unknown> = {
           predicate: { type: 'string' },
           subject: { type: 'string' },
           object: { type: ['string', 'null'] },
-          value: { type: ['string', 'null'] },
           label: { type: ['string', 'null'] },
           quote: { type: 'string' },
         },
-        required: ['predicate', 'subject', 'object', 'value', 'label', 'quote'],
+        required: ['predicate', 'subject', 'object', 'label', 'quote'],
         additionalProperties: false,
       },
     },
@@ -67,12 +67,21 @@ function ontologyRules(ontology: Ontology): string[] {
   return ontology.rules.map((rule: string): string => `- ${rule}`);
 }
 
+function propertyText(property: EntityProperty): string {
+  const traits: string = [
+    property.required ? 'required' : 'optional',
+    ...(property.multiple ? ['many values'] : []),
+  ].join(', ');
+  return `${property.name} (${traits})${property.description ? `: ${property.description}` : ''}`;
+}
+
 function entityTypeLine(ontology: Ontology, type: EntityType): string {
   const examples: string[] = ontology.entityTypeExamples[type] ?? [];
+  const properties: EntityProperty[] = ontology.entityTypeProperties[type] ?? [];
   return [
     `- ${type}: ${ontology.entityTypeDescriptions[type] ?? ''}`,
     examples.length > 0 ? ` Examples: ${examples.join(', ')}.` : '',
-    aliasTypes(ontology).includes(type) ? '' : ' No aliases.',
+    ` Properties: ${properties.map(propertyText).join('; ')}.`,
   ].join('');
 }
 
@@ -80,7 +89,7 @@ function candidatePrompt(chapters: LlmChapter[], ontology: Ontology, stage: Enti
   const types: EntityType[] =
     stage === 'all' ? ontology.entityTypes : ontology.entityTypes.filter((type) => type === stage);
   return [
-    'Extract named entities from these chapters. Return JSON: {"entities":[{"type":"...","name":"...","aliases":[]}]}',
+    'Extract named entities from these chapters. Return JSON: {"entities":[{"type":"...","name":"...","aliases":[],"titles":[]}]}',
     '## Task',
     ontology.task,
     '## Entity types to use',
@@ -88,7 +97,8 @@ function candidatePrompt(chapters: LlmChapter[], ontology: Ontology, stage: Enti
     '## Rules',
     [
       ...ontologyRules(ontology),
-      '- Aliases are other names the text uses for the same entity.',
+      '- Aliases are other names the text uses for the same entity. Titles are positions or honorifics.',
+      '- Leave aliases or titles empty when the entity type does not have that property.',
       '- Include no entity that is not in the text.',
     ].join('\n'),
     ...chapters.map(chapterText),
@@ -106,9 +116,7 @@ function predicateLine(predicate: OntologyPredicate): string {
     ];
     return `- ${predicate.name}: connection; ${subjects}; ${objects}; ${[...traits, description].join('; ')}`;
   }
-  const values: string = `values: ${predicate.allowedValues?.join(', ') ?? 'any text'}`;
-  const count: string = predicate.multiple ? 'many values' : 'one value';
-  return `- ${predicate.name}: scalar; ${subjects}; ${values}; ${count}; ${description}`;
+  return `- ${predicate.name}: scalar; ${subjects}; ${description}`;
 }
 
 function predicatePrompt(chapter: LlmChapter, entities: AnalysisEntity[], ontology: Ontology): string {
@@ -120,19 +128,19 @@ function predicatePrompt(chapter: LlmChapter, entities: AnalysisEntity[], ontolo
     )
     .join('\n');
   return [
-    'Extract facts from this chapter. Return JSON: {"facts":[{"predicate":"...","subject":"...","object":null,"value":null,"label":null,"quote":"..."}]}',
+    'Extract facts from this chapter. Return JSON: {"facts":[{"predicate":"...","subject":"...","object":null,"label":null,"quote":"..."}]}',
     '## Task',
     ontology.task,
     '## Entities',
     names || 'None',
     '## Predicates',
-    factPredicates(ontology).map(predicateLine).join('\n') || 'None',
+    ontology.predicates.map(predicateLine).join('\n') || 'None',
     '## Rules',
     [
       ...ontologyRules(ontology),
       '- Subject and object must be names from the entity list.',
-      '- For a connection, set value to null. Set label only when the predicate needs a label; otherwise null.',
-      '- For a scalar, set object and label to null and use an allowed value when listed.',
+      '- For a connection, set label only when the predicate needs a label; otherwise null.',
+      '- For a scalar, set object and label to null. Its quote is the sentence that describes the attribute.',
     ].join('\n'),
     chapterText(chapter),
   ].join('\n\n');

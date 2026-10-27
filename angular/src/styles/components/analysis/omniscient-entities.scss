@@ -14,7 +14,7 @@
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--world-type-color) 14%, transparent);
 
-  @each $type in Character, Persona, Location, Organization, Item, Glossary {
+  @each $type in Character, Persona, Location, Organization, Artifact, Glossary {
     &[data-type='#{$type}'] {
       --world-type-color: var(--color-entity-#{string.to-lower-case($type)});
     }

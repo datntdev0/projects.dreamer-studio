@@ -38,7 +38,6 @@ export class FactDialogComponent {
   protected readonly kind = signal<FactKind>('relationship');
   protected readonly predicate = signal('');
   protected readonly objectId = signal('');
-  protected readonly value = signal('');
   protected readonly chapterIndex = signal<number | null>(null);
   protected readonly quote = signal('');
   protected readonly matches = signal<QuoteMatch[] | null>(null);
@@ -107,7 +106,7 @@ export class FactDialogComponent {
       !!this.subject() &&
       !!this.predicate().trim() &&
       this.chapter() !== null &&
-      (this.kind() === 'relationship' ? !!this.objectId() : !!this.value().trim()) &&
+      (this.kind() === 'relationship' ? !!this.objectId() : !!this.quoteText()) &&
       !this.store.busy() &&
       !this.store.locked(),
   );
@@ -176,7 +175,7 @@ export class FactDialogComponent {
     const kind = this.kind();
     const predicate = this.predicate().trim();
     const quote = this.quoteText() || null;
-    const object = kind === 'relationship' ? { objectId: this.objectId() } : { value: this.value().trim() };
+    const object = kind === 'relationship' ? { objectId: this.objectId() } : {};
     const target = this.target();
     const edit: WorldEdit = target
       ? {
@@ -214,7 +213,6 @@ export class FactDialogComponent {
     this.kind.set(target?.scalar ? 'scalar' : 'relationship');
     this.predicate.set(target?.scalar?.predicate ?? target?.link?.predicate ?? '');
     this.objectId.set(target?.link?.target ?? this.objectGroups()[0]?.items[0]?.id ?? '');
-    this.value.set(target?.scalar?.value ?? '');
     const quote = target?.scalar?.quote ?? target?.link?.quotes[0] ?? '';
     this.quote.set(quote);
     this.matches.set(null);

@@ -24,7 +24,7 @@ type SeverityFilter = ReviewSeverity | 'all';
 interface ReviewProp {
   key: string;
   value: string;
-  type?: EntityType | 'artifact';
+  type?: EntityType | 'unknown';
 }
 
 interface ReviewRow {
@@ -53,7 +53,7 @@ interface ReviewSection {
 const STATUS_FILTERS: ReviewStatusFilter[] = ['open', 'all', 'verified', 'failed', 'accepted', 'rejected'];
 const KIND_FILTERS: ReviewKind[] = ['all', 'entity', 'fact'];
 const SEVERITY_FILTERS: SeverityFilter[] = ['all', 'error', 'warning'];
-const VARIANT_REASONS: FailReason[] = ['name-conflict', 'value-conflict'];
+const VARIANT_REASONS: FailReason[] = ['name-conflict'];
 
 function target(item: ReviewItem): { id: string; status: ItemStatus; reason?: FailReason; issue?: FailReason } {
   return item.entity ?? item.fact!;
@@ -68,9 +68,7 @@ function itemKey(item: ReviewItem): string {
 }
 
 function variantKey(reason: FailReason, item: ReviewItem): string {
-  if (reason === 'name-conflict') return item.entity?.type ?? itemKey(item);
-  if (reason === 'value-conflict') return item.fact?.value ?? itemKey(item);
-  return 'all';
+  return reason === 'name-conflict' ? (item.entity?.type ?? itemKey(item)) : 'all';
 }
 
 function groupBy<T>(items: T[], keyOf: (item: T) => string): Map<string, T[]> {
@@ -193,7 +191,7 @@ export class ReviewViewComponent {
     return this.i18n.t(itemStatusKeys[status]);
   }
 
-  protected typeIcon(type: EntityType | 'artifact'): string {
+  protected typeIcon(type: EntityType | 'unknown'): string {
     return (entityTypeIcons[type] as string | undefined) ?? 'box';
   }
 
@@ -205,7 +203,7 @@ export class ReviewViewComponent {
     return this.statusIcons[status];
   }
 
-  protected typeLabel(type: EntityType | 'artifact'): string {
+  protected typeLabel(type: EntityType | 'unknown'): string {
     const key = entityTypeKeys[type] as string | undefined;
     return key ? this.i18n.t(key) : type;
   }
@@ -219,13 +217,12 @@ export class ReviewViewComponent {
     const fact = first.fact!;
     const subject = this.entityProp('analysis.review.prop.subject', first, fact.subjectId, first.subjectName);
     const predicate: ReviewProp = { key: 'analysis.review.prop.predicate', value: fact.predicate };
-    if (issue.variants) return [subject, predicate];
-    const target: ReviewProp =
+    const object: ReviewProp[] =
       fact.kind === 'scalar'
-        ? { key: 'analysis.review.prop.value', value: fact.value || '—' }
-        : this.entityProp('analysis.review.prop.object', first, fact.objectId, first.objectName);
+        ? []
+        : [this.entityProp('analysis.review.prop.object', first, fact.objectId, first.objectName)];
     const label: ReviewProp[] = fact.label ? [{ key: 'analysis.review.prop.label', value: fact.label }] : [];
-    return [subject, predicate, target, ...label];
+    return [subject, predicate, ...object, ...label];
   }
 
   protected contextOf(row: ReviewRow): ReviewItem {

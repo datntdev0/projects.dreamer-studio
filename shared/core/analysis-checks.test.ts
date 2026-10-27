@@ -12,9 +12,16 @@ const ONTOLOGY: Ontology = {
   entityTypes: ['Character', 'Persona', 'Location'],
   entityTypeDescriptions: {},
   entityTypeExamples: {},
+  entityTypeProperties: {
+    Character: [{ name: 'name', required: true, multiple: false }],
+    Persona: [
+      { name: 'name', required: true, multiple: false },
+      { name: 'alias', required: false, multiple: true },
+      { name: 'title', required: false, multiple: true },
+    ],
+    Location: [{ name: 'name', required: true, multiple: false }],
+  },
   predicates: [
-    { name: 'name', kind: 'scalar', subjectTypes: ['Character', 'Persona', 'Location'] },
-    { name: 'alias', kind: 'scalar', subjectTypes: ['Persona', 'Location'], multiple: true },
     { name: 'has_persona', kind: 'relationship', subjectTypes: ['Character'], objectTypes: ['Persona'] },
     { name: 'enemy_of', kind: 'relationship', subjectTypes: ['Persona'], objectTypes: ['Persona'] },
     {
@@ -32,7 +39,8 @@ const ONTOLOGY: Ontology = {
       symmetric: true,
       labeled: true,
     },
-    { name: 'gender', kind: 'scalar', subjectTypes: ['Persona'], allowedValues: ['female', 'male', 'unknown'] },
+    { name: 'gender', kind: 'scalar', subjectTypes: ['Persona'] },
+    { name: 'mood', kind: 'scalar', subjectTypes: ['Persona'] },
   ],
 };
 
@@ -67,7 +75,6 @@ function fact(over: Partial<PredicateOutput['facts'][number]>): PredicateOutput[
     predicate: 'enemy_of',
     subject: 'Mai',
     object: 'Lan',
-    value: null,
     label: null,
     quote: 'Mai Linh hated Lan',
     ...over,
@@ -146,6 +153,19 @@ describe('checkCandidates', () => {
     expect(entities.get(1)![0]).toMatchObject({ name: 'Mai', aliases: ['Mai Linh', 'Lan'] });
   });
 
+  it('keeps titles of a persona and drops titles of other types', () => {
+    const output = candidates(
+      { type: 'Persona', name: 'Mai', aliases: [], titles: ['queen', ' Queen ', 'witch'] },
+      { type: 'Location', name: 'Hanoi', aliases: ['capital'], titles: ['old city'] },
+    );
+    const { entities } = runCandidates(output);
+    expect(entities.get(1)).toEqual([
+      expect.objectContaining({ name: 'Mai', aliases: [], titles: ['queen', 'witch'] }),
+      expect.objectContaining({ name: 'Hanoi', aliases: [] }),
+    ]);
+    expect(entities.get(1)![1].titles).toBeUndefined();
+  });
+
   it('drops empty names', () => {
     const { entities, errors } = runCandidates(candidates({ type: 'Persona', name: '   ', aliases: [] }));
     expect([...entities.values()].flat()).toEqual([]);
@@ -155,6 +175,27 @@ describe('checkCandidates', () => {
   it('has a key for every chapter index', () => {
     const { entities } = runCandidates(candidates());
     expect([...entities.keys()]).toEqual([1, 2, 3]);
+  });
+
+  it('asks for a Persona with the same name as each Character', () => {
+    const { errors } = runCandidates(candidates({ type: 'Character', name: 'Mai', aliases: [] }));
+    expect(errors).toEqual([
+      'Entity "Mai" (Character): add a Persona with the same name; attributes and relations belong to the Persona.',
+    ]);
+  });
+
+  it('accepts a Character that has a Persona with the same name', () => {
+    const output = candidates(
+      { type: 'Character', name: 'Mai', aliases: [] },
+      { type: 'Persona', name: 'MAI', aliases: [] },
+    );
+    expect(runCandidates(output).errors).toEqual([]);
+  });
+
+  it('does not ask for a Persona in a single-type stage', () => {
+    const output = candidates({ type: 'Character', name: 'Mai', aliases: [] });
+    const { errors } = checkCandidates({ chapters: CHAPTERS, output, ontology: ONTOLOGY, stage: 'Character' });
+    expect(errors).toEqual([]);
   });
 });
 
@@ -178,11 +219,16 @@ describe('checkPredicates', () => {
   });
 
   it('verifies a scalar fact', () => {
-    const { facts } = runPredicates(
-      ENTITIES,
-      fact({ predicate: 'gender', object: null, value: 'female', quote: 'She is a woman' }),
-    );
-    expect(facts[0]).toMatchObject({ kind: 'scalar', value: 'female', status: 'verified' });
+    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'gender', object: null, quote: 'She is a woman' }));
+    expect(facts[0]).toEqual({
+      id: 'f-1',
+      kind: 'scalar',
+      predicate: 'gender',
+      subjectId: 'Persona:mai',
+      subjectName: 'Mai',
+      quote: 'She is a woman',
+      status: 'verified',
+    });
   });
 
   it('resolves subject and object by alias', () => {
@@ -217,11 +263,6 @@ describe('checkPredicates', () => {
     expect(entities.get(1)?.[0]).toMatchObject({ name: 'Mai', aliases: [], status: 'verified' });
   });
 
-  it('does not accept name or alias as a fact predicate', () => {
-    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'alias', object: null, value: 'Linh' }));
-    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'predicate-not-in-ontology' });
-  });
-
   it('orders a symmetric connection by entity id', () => {
     const { facts } = runPredicates(ENTITIES, fact({ predicate: 'friend_of', subject: 'Mai', object: 'Lan' }));
     expect(facts[0]).toMatchObject({ subjectId: 'Persona:lan', objectId: 'Persona:mai', status: 'verified' });
@@ -253,7 +294,7 @@ describe('checkPredicates', () => {
     const shared = [entity('Character', 'Mai'), entity('Persona', 'Mai'), entity('Persona', 'Lan')];
     const { facts, errors } = runPredicates(
       shared,
-      fact({ predicate: 'gender', object: null, value: 'female', quote: 'She is a woman' }),
+      fact({ predicate: 'gender', object: null, quote: 'She is a woman' }),
       fact({ predicate: 'has_persona', object: 'Mai', quote: 'Hung was her real self' }),
     );
     expect(errors).toEqual([]);
@@ -261,22 +302,13 @@ describe('checkPredicates', () => {
     expect(facts[1]).toMatchObject({ subjectId: 'Character:mai', objectId: 'Persona:mai', status: 'verified' });
   });
 
-  it('fails a scalar value that is not allowed', () => {
-    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'gender', object: null, value: 'other' }));
-    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'value-not-allowed' });
-  });
-
-  it('fails an empty scalar value', () => {
-    const { facts } = runPredicates(ENTITIES, fact({ predicate: 'gender', object: null, value: null }));
-    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'value-missing' });
-  });
-
-  it('stores an allowed value with the ontology spelling', () => {
+  it('keeps two scalar facts of one predicate with different quotes', () => {
     const { facts } = runPredicates(
       ENTITIES,
-      fact({ predicate: 'gender', object: null, value: ' FEMALE ', quote: 'She is a woman' }),
+      fact({ predicate: 'mood', object: null, quote: 'Mai Linh hated Lan' }),
+      fact({ predicate: 'mood', object: null, quote: 'She is a woman' }),
     );
-    expect(facts[0]).toMatchObject({ value: 'female', status: 'verified' });
+    expect(facts.map((item: AnalysisFact) => item.status)).toEqual(['verified', 'verified']);
   });
 
   it('fails a quote that is not in the text', () => {
@@ -294,7 +326,8 @@ describe('checkPredicates', () => {
       ENTITIES,
       fact({}),
       fact({ subject: 'MAI LINH', object: 'lan' }),
-      fact({ predicate: 'gender', object: null, value: 'female', quote: 'She is a woman' }),
+      fact({ predicate: 'gender', object: null, quote: 'She is a woman' }),
+      fact({ predicate: 'gender', subject: 'mai linh', object: null, quote: 'She is a woman' }),
     );
     expect(facts.map((item: AnalysisFact) => item.id)).toEqual(['f-1', 'f-2']);
   });
@@ -354,15 +387,6 @@ describe('chapterCounts and hasIssues', () => {
   });
 });
 
-const MULTI_ONTOLOGY: Ontology = {
-  ...ONTOLOGY,
-  predicates: [
-    ...ONTOLOGY.predicates,
-    { name: 'title', kind: 'scalar', subjectTypes: ['Persona'], multiple: true },
-    { name: 'mood', kind: 'scalar', subjectTypes: ['Persona'] },
-  ],
-};
-
 function item<T extends AnalysisEntity | AnalysisFact>(base: T, over: Partial<T>): T {
   return { ...base, ...over };
 }
@@ -380,14 +404,13 @@ function relation(over: Partial<AnalysisFact> = {}): AnalysisFact {
   };
 }
 
-function scalar(id: string, predicate: string, value: string, over: Partial<AnalysisFact> = {}): AnalysisFact {
+function scalar(id: string, predicate: string, quote: string, over: Partial<AnalysisFact> = {}): AnalysisFact {
   return {
     id,
     kind: 'scalar',
     predicate,
     subjectId: 'Persona:mai',
-    value,
-    quote: 'Mai Linh hated Lan',
+    quote,
     status: 'verified',
     ...over,
   };
@@ -442,10 +465,9 @@ describe('checkFact', () => {
     expect(checkFact(TEXT, entities, relation({ objectId: 'Location:hanoi' }), ONTOLOGY)).toBe('type-not-allowed');
   });
 
-  it('fails value-missing for an empty scalar and value-not-allowed for an unlisted one', () => {
-    expect(checkFact(TEXT, entities, scalar('f', 'gender', 'robot'), ONTOLOGY)).toBe('value-not-allowed');
-    expect(checkFact(TEXT, entities, scalar('f', 'gender', ' '), ONTOLOGY)).toBe('value-missing');
-    expect(checkFact(TEXT, entities, scalar('f', 'gender', 'FEMALE'), ONTOLOGY)).toBeUndefined();
+  it('passes a scalar fact with only a quote', () => {
+    expect(checkFact(TEXT, entities, scalar('f', 'gender', 'She is a woman'), ONTOLOGY)).toBeUndefined();
+    expect(checkFact(TEXT, entities, scalar('f', 'gender', 'She is a man'), ONTOLOGY)).toBe('quote-not-found');
   });
 
   it('fails label-missing', () => {
@@ -477,7 +499,7 @@ describe('checkFact', () => {
 });
 
 describe('checkConflicts', () => {
-  const run = (entities: AnalysisEntity[], facts: AnalysisFact[] = [], ontology: Ontology = MULTI_ONTOLOGY) =>
+  const run = (entities: AnalysisEntity[], facts: AnalysisFact[] = [], ontology: Ontology = ONTOLOGY) =>
     checkConflicts({ entities, facts, ontology });
 
   it('flags the same name with different types on both entities', () => {
@@ -519,55 +541,17 @@ describe('checkConflicts', () => {
     expect(result.entities.map((e) => e.status)).toEqual(['verified', 'verified']);
   });
 
-  it('flags different values of a non-multiple scalar', () => {
-    const result = run(ENTITIES, [scalar('a', 'mood', 'sad'), scalar('b', 'mood', 'happy')]);
-    expect(result.facts.map((f) => [f.status, f.reason])).toEqual([
-      ['failed', 'value-conflict'],
-      ['failed', 'value-conflict'],
-    ]);
-  });
-
-  it('does not flag equal values, other subjects or other predicates', () => {
+  it('does not flag several scalar facts of one predicate', () => {
     const facts = [
-      scalar('a', 'mood', 'sad'),
-      scalar('b', 'mood', 'SAD'),
-      scalar('c', 'mood', 'happy', { subjectId: 'Persona:lan' }),
-      scalar('d', 'gender', 'female'),
+      scalar('a', 'mood', 'Mai Linh hated Lan'),
+      scalar('b', 'mood', 'She is a woman'),
+      scalar('c', 'mood', 'Hung was her real self', { status: 'failed', reason: 'quote-not-found' }),
     ];
-    expect(run(ENTITIES, facts).facts.map((f) => f.status)).toEqual(['verified', 'verified', 'verified', 'verified']);
-  });
-
-  it('does not flag different values of a multiple scalar', () => {
-    const result = run(ENTITIES, [scalar('a', 'title', 'queen'), scalar('b', 'title', 'witch')]);
-    expect(result.facts.map((f) => f.status)).toEqual(['verified', 'verified']);
-  });
-
-  it('ignores rejected and other failed items', () => {
-    const facts = [
-      scalar('a', 'mood', 'sad'),
-      scalar('b', 'mood', 'happy', { status: 'rejected' }),
-      scalar('c', 'mood', 'angry', { status: 'failed', reason: 'quote-not-found' }),
-    ];
-    const result = run(ENTITIES, facts);
-    expect(result.facts.map((f) => [f.status, f.reason])).toEqual([
+    expect(run(ENTITIES, facts).facts.map((f) => [f.status, f.reason])).toEqual([
       ['verified', undefined],
-      ['rejected', undefined],
+      ['verified', undefined],
       ['failed', 'quote-not-found'],
     ]);
-  });
-
-  it('counts an accepted item', () => {
-    const result = run(ENTITIES, [scalar('a', 'mood', 'sad', { status: 'accepted' }), scalar('b', 'mood', 'happy')]);
-    expect(result.facts.map((f) => f.reason)).toEqual(['value-conflict', 'value-conflict']);
-  });
-
-  it('clears a conflict after one side is rejected and keeps issue', () => {
-    const first = run(ENTITIES, [scalar('a', 'mood', 'sad'), scalar('b', 'mood', 'happy')]);
-    const facts = first.facts.map((f) => (f.id === 'b' ? item(f, { status: 'rejected' }) : { ...f, issue: f.reason }));
-    const result = run(ENTITIES, facts);
-    expect(result.facts[0]).toMatchObject({ status: 'verified', issue: 'value-conflict' });
-    expect(result.facts[0].reason).toBeUndefined();
-    expect(result.facts[1].status).toBe('rejected');
   });
 
   it('clears a name conflict after one side is rejected', () => {
@@ -589,10 +573,10 @@ describe('checkConflicts', () => {
 describe('checkChapter', () => {
   it('sets issue to the reason on failed items only', () => {
     const ghost = item(entity('Persona', 'Ghost'), { status: 'failed', reason: 'words-not-found' });
-    const facts = [relation(), scalar('a', 'mood', 'sad'), scalar('b', 'mood', 'happy')];
-    const result = checkChapter({ entities: [entity('Persona', 'Mai'), ghost], facts, ontology: MULTI_ONTOLOGY });
+    const facts = [relation(), relation({ id: 'f-2', status: 'failed', reason: 'quote-not-found' })];
+    const result = checkChapter({ entities: [entity('Persona', 'Mai'), ghost], facts, ontology: ONTOLOGY });
     expect(result.entities.map((e) => e.issue)).toEqual([undefined, 'words-not-found']);
-    expect(result.facts.map((f) => f.issue)).toEqual([undefined, 'value-conflict', 'value-conflict']);
+    expect(result.facts.map((f) => f.issue)).toEqual([undefined, 'quote-not-found']);
   });
 
   it('keeps an existing issue', () => {
@@ -601,7 +585,7 @@ describe('checkChapter', () => {
       reason: 'words-not-found',
       issue: 'entity-not-in-ontology',
     });
-    const result = checkChapter({ entities: [ghost], facts: [], ontology: MULTI_ONTOLOGY });
+    const result = checkChapter({ entities: [ghost], facts: [], ontology: ONTOLOGY });
     expect(result.entities[0].issue).toBe('entity-not-in-ontology');
   });
 });
@@ -616,7 +600,7 @@ describe('checkWorld', () => {
   it('flags a name conflict across chapters and keeps the ids of each chapter', () => {
     const result = checkWorld(
       [chapter(1, [entity('Persona', 'Mai')]), chapter(2, [entity('Location', 'Mai'), entity('Persona', 'Lan')])],
-      MULTI_ONTOLOGY,
+      ONTOLOGY,
     );
     expect(result.map((c) => c.entities.map((e) => [e.id, e.reason, e.issue]))).toEqual([
       [['Persona:mai', 'name-conflict', 'name-conflict']],
@@ -633,16 +617,5 @@ describe('checkWorld', () => {
       ONTOLOGY,
     );
     expect(result.flatMap((c) => c.entities.map((e) => e.status))).toEqual(['verified', 'verified']);
-  });
-
-  it('flags two values of a single-value predicate in different chapters', () => {
-    const result = checkWorld(
-      [chapter(1, [], [scalar('f-1', 'mood', 'sad')]), chapter(2, [], [scalar('f-1', 'mood', 'happy')])],
-      MULTI_ONTOLOGY,
-    );
-    expect(result.map((c) => c.facts.map((f) => [f.id, f.reason]))).toEqual([
-      [['f-1', 'value-conflict']],
-      [['f-1', 'value-conflict']],
-    ]);
   });
 });

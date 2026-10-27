@@ -9,6 +9,7 @@ import type { TabItem } from '@components/tabs/tabs.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { hasProperty } from '@dreamer/shared/core/ontology-rules';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { Occurrence, WorldEntity, WorldLink, WorldScalar } from '@dreamer/shared/models/analysis';
 import { entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
@@ -67,6 +68,9 @@ export class EntityPanelComponent {
     for (const scalar of scalars) groups.set(scalar.predicate, [...(groups.get(scalar.predicate) ?? []), scalar]);
     return [...groups].map(([predicate, values]) => ({ predicate, values }));
   });
+  protected readonly hasAliases = computed(() =>
+    hasProperty(this.store.ontology(), this.store.selected()?.type, 'alias'),
+  );
   protected readonly aliasExists = computed(() => {
     const alias = this.alias().trim().toLocaleLowerCase();
     const entity = this.store.selected();

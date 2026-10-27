@@ -1,6 +1,6 @@
 @use 'sass:string';
 
-$world-types: Character, Persona, Location, Organization, Item, Glossary;
+$world-types: Character, Persona, Location, Organization, Artifact, Glossary;
 
 ds-world-graph {
   --world-hostile: var(--color-danger);

@@ -5,12 +5,16 @@ export type ItemStatus = 'verified' | 'failed' | 'accepted' | 'rejected';
 export type FailReason =
   | 'words-not-found'
   | 'quote-not-found'
-  | 'type-not-in-ontology'
+  | 'entity-not-in-ontology'
   | 'predicate-not-in-ontology'
+  | 'value-missing'
   | 'value-not-allowed'
   | 'entity-not-found'
   | 'type-not-allowed'
-  | 'label-missing';
+  | 'label-missing'
+  | 'name-conflict'
+  | 'alias-conflict'
+  | 'value-conflict';
 
 export interface AnalysisEntity {
   id: string;
@@ -20,6 +24,7 @@ export interface AnalysisEntity {
   wordsFound: string[];
   status: ItemStatus;
   reason?: FailReason;
+  issue?: FailReason;
   edited?: boolean;
 }
 
@@ -36,6 +41,7 @@ export interface AnalysisFact {
   quote: string | null;
   status: ItemStatus;
   reason?: FailReason;
+  issue?: FailReason;
   edited?: boolean;
   addedByUser?: boolean;
 }
@@ -180,9 +186,15 @@ export interface World {
   mergedAt?: string | null;
 }
 
+export interface AnalysisIssueCounts {
+  open: number;
+  errors: number;
+}
+
 export interface AnalysisMergeState {
   pending: number;
   openIssues: number;
+  openErrors: number;
   mergedAt: string | null;
 }
 
@@ -222,6 +234,7 @@ export interface AnalysisIndexEntry {
   counts: ChapterAnalysisCounts;
   error?: string;
   analysedAt: string;
+  updatedAt?: string;
 }
 
 export interface AnalysisIndexFile {
@@ -229,6 +242,21 @@ export interface AnalysisIndexFile {
   chapters: AnalysisIndexEntry[];
   lastRun: AnalysisLastRun | null;
   mergedAt: string | null;
+  issues?: AnalysisIssueCounts;
+}
+
+export interface WorldFileChapter {
+  index: number;
+  file: string;
+  title: string;
+  entities: AnalysisEntity[];
+  facts: AnalysisFact[];
+}
+
+export interface WorldFile {
+  version: 1;
+  mergedAt: string;
+  chapters: WorldFileChapter[];
 }
 
 export interface CandidateOutput {
@@ -293,6 +321,12 @@ export interface ReviewQuery {
   itemKind: 'entity' | 'fact' | 'all';
 }
 
+export interface ReviewRelated {
+  name: string;
+  type: EntityType | 'artifact';
+  chapters: number[];
+}
+
 export interface ReviewItem {
   chapterIndex: number;
   chapterTitle: string;
@@ -302,12 +336,20 @@ export interface ReviewItem {
   subjectName?: string;
   objectName?: string;
   context: TextContext | null;
+  issueKey?: string;
+  related?: ReviewRelated[];
+}
+
+export interface ReviewEntityOption {
+  id: string;
+  name: string;
+  type: EntityType | 'artifact';
 }
 
 export interface ReviewPage {
   items: ReviewItem[];
   openCount: number;
-  failedChapters: ChapterAnalysisSummary[];
+  entities: Record<number, ReviewEntityOption[]>;
 }
 
 export interface QuoteQuery {

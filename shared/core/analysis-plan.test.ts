@@ -70,6 +70,39 @@ describe('chapterStatuses', () => {
   });
 });
 
+describe('chapterStatuses pending', () => {
+  function pendingOf(over: Partial<AnalysisIndexEntry>, mergedAt: string | null): boolean {
+    const index: AnalysisIndexFile = { ...indexOf(entry(1, 'a', over)), mergedAt };
+    return chapterStatuses(chapters('a'), index)[0].pending;
+  }
+
+  it('is pending for a clean or reviewed chapter that was never merged', () => {
+    expect(pendingOf({ status: 'clean' }, null)).toBe(true);
+    expect(pendingOf({ status: 'reviewed' }, null)).toBe(true);
+  });
+
+  it('is pending for has-issues, because open warnings are merged', () => {
+    expect(pendingOf({ status: 'has-issues' }, null)).toBe(true);
+  });
+
+  it('is never pending for failed, stale or not-analysed', () => {
+    expect(pendingOf({ status: 'failed' }, null)).toBe(false);
+    expect(chapterStatuses(chapters('new'), indexOf(entry(1, 'old')))[0].pending).toBe(false);
+    expect(chapterStatuses(chapters('a'), null)[0].pending).toBe(false);
+  });
+
+  it('compares updatedAt with mergedAt', () => {
+    const over: Partial<AnalysisIndexEntry> = { analysedAt: '2026-01-01T00:00:00Z' };
+    expect(pendingOf({ ...over, updatedAt: '2026-01-03T00:00:00Z' }, '2026-01-02T00:00:00Z')).toBe(true);
+    expect(pendingOf({ ...over, updatedAt: '2026-01-01T12:00:00Z' }, '2026-01-02T00:00:00Z')).toBe(false);
+  });
+
+  it('falls back to analysedAt when updatedAt is missing', () => {
+    expect(pendingOf({ analysedAt: '2026-01-03T00:00:00Z' }, '2026-01-02T00:00:00Z')).toBe(true);
+    expect(pendingOf({ analysedAt: '2026-01-01T00:00:00Z' }, '2026-01-02T00:00:00Z')).toBe(false);
+  });
+});
+
 describe('planRun', () => {
   const all = summaries('not-analysed', 'clean', 'stale', 'failed', 'has-issues', 'reviewed');
 

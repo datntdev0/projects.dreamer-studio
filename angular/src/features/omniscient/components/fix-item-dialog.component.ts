@@ -5,9 +5,40 @@ import { FieldComponent } from '@components/form/field.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { EntityType, ReviewItem } from '@dreamer/shared/models/analysis';
+import type { EntityType, ReviewEdit, ReviewItem } from '@dreamer/shared/models/analysis';
 import { ENTITY_TYPES, entityTypeKeys, reasonKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
+
+interface FixForm {
+  name: string;
+  type: string;
+  aliases: string;
+  subject: string;
+  predicate: string;
+  value: string;
+  label: string;
+  quote: string;
+}
+
+type FixField = keyof FixForm;
+
+const EMPTY_FORM: FixForm = {
+  name: '',
+  type: '',
+  aliases: '',
+  subject: '',
+  predicate: '',
+  value: '',
+  label: '',
+  quote: '',
+};
+
+function splitAliases(value: string): string[] {
+  return value
+    .split(',')
+    .map((alias) => alias.trim())
+    .filter(Boolean);
+}
 
 @Component({
   selector: 'ds-fix-item-dialog',
@@ -17,15 +48,19 @@ import { OmniscientStore } from '../omniscient.store';
 export class FixItemDialogComponent {
   protected readonly store = inject(OmniscientStore);
   private readonly i18n = inject(I18nService);
+  protected readonly form = signal<FixForm>(EMPTY_FORM);
+  private readonly original = signal<FixForm>(EMPTY_FORM);
   protected readonly types = computed(() => this.store.ontology()?.entityTypes ?? ENTITY_TYPES);
-  protected readonly type = signal<EntityType>('Character');
-  protected readonly predicate = signal('');
-  protected readonly value = signal('');
 
   protected readonly item = computed<ReviewItem | null>(() => {
     const dialog = this.store.dialog();
     return dialog?.kind === 'fix' ? dialog.item : null;
   });
+  protected readonly items = computed<ReviewItem[]>(() => {
+    const dialog = this.store.dialog();
+    return dialog?.kind === 'fix' ? (dialog.items ?? [dialog.item]) : [];
+  });
+  protected readonly chapterCount = computed(() => new Set(this.items().map((item) => item.chapterIndex)).size);
   protected readonly scalar = computed(() => this.item()?.fact?.kind === 'scalar');
   protected readonly predicates = computed(() => {
     const fact = this.item()?.fact;
@@ -34,28 +69,39 @@ export class FixItemDialogComponent {
       .filter((predicate) => predicate.kind === fact.kind)
       .map((predicate) => predicate.name);
   });
-  protected readonly values = computed(
-    () =>
-      this.store.ontology()?.predicates.find((predicate) => predicate.name === this.predicate())?.allowedValues ?? [],
+  private readonly predicate = computed(() =>
+    this.store.ontology()?.predicates.find((predicate) => predicate.name === this.form().predicate),
   );
-  protected readonly objects = computed(() =>
-    [...this.store.entities()]
+  protected readonly values = computed(() => this.predicate()?.allowedValues ?? []);
+  protected readonly freeText = computed(() => this.scalar() && !this.values().length);
+  protected readonly labeled = computed(() => this.predicate()?.labeled === true);
+  protected readonly entities = computed(() =>
+    [...(this.store.review()?.entities[this.item()?.chapterIndex ?? -1] ?? [])]
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entity) => ({ id: entity.id, name: entity.name })),
+      .map((entity) => ({ id: entity.id, name: `${entity.name} · ${this.typeLabel(entity.type)}` })),
   );
   protected readonly reason = computed(() => {
     const reason = this.item()?.entity?.reason ?? this.item()?.fact?.reason;
     return reason ? this.i18n.t(reasonKeys[reason]) : '';
   });
-  protected readonly changed = computed(() => {
-    const item = this.item();
-    if (item?.entity) return this.type() !== item.entity.type;
-    const fact = item?.fact;
-    if (!fact || !this.predicate() || !this.value()) return false;
-    const current = fact.kind === 'scalar' ? fact.value : fact.objectId;
-    return this.predicate() !== fact.predicate || this.value() !== current;
+  protected readonly valid = computed(() => {
+    const form = this.form();
+    if (this.item()?.entity) return !!form.name.trim() && !!form.type;
+    return (
+      !!form.subject &&
+      !!form.predicate &&
+      !!form.value.trim() &&
+      !!form.quote.trim() &&
+      (!this.labeled() || !!form.label.trim())
+    );
   });
-  protected readonly canSave = computed(() => this.changed() && !this.store.locked() && !this.store.busy());
+  protected readonly canSave = computed(
+    () =>
+      this.valid() &&
+      JSON.stringify(this.form()) !== JSON.stringify(this.original()) &&
+      !this.store.locked() &&
+      !this.store.busy(),
+  );
 
   constructor() {
     effect(() => {
@@ -65,20 +111,19 @@ export class FixItemDialogComponent {
   }
 
   protected typeLabel(type: EntityType | 'artifact'): string {
-    return this.i18n.t(entityTypeKeys[type]);
+    const key = entityTypeKeys[type] as string | undefined;
+    return key ? this.i18n.t(key) : type;
   }
 
-  protected setType(event: Event): void {
-    this.type.set((event.target as HTMLSelectElement).value as EntityType);
+  protected set(field: FixField, event: Event): void {
+    const value = (event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value;
+    this.form.update((form) => ({ ...form, [field]: value }));
+    if (field === 'predicate' && this.scalar() && this.values().length)
+      this.form.update((form) => ({ ...form, value: this.values()[0] }));
   }
 
-  protected setPredicate(event: Event): void {
-    this.predicate.set((event.target as HTMLSelectElement).value);
-    if (this.scalar()) this.value.set(this.values()[0] ?? '');
-  }
-
-  protected setValue(event: Event): void {
-    this.value.set((event.target as HTMLSelectElement).value);
+  protected missing(field: FixField): boolean {
+    return !this.form()[field].trim();
   }
 
   protected close(): void {
@@ -87,37 +132,56 @@ export class FixItemDialogComponent {
 
   protected async save(): Promise<void> {
     const item = this.item();
-    const id = item?.entity?.id ?? item?.fact?.id;
-    if (!item || !id || !this.canSave()) return;
-    const saved = await this.store.edit({
-      kind: 'review-fix',
-      chapterIndex: item.chapterIndex,
-      itemKind: item.itemKind,
-      itemId: id,
-      ...(item.entity
-        ? { entity: { type: this.type(), reason: undefined } }
-        : {
-            fact: {
-              predicate: this.predicate(),
-              ...(this.scalar() ? { value: this.value() } : { objectId: this.value() }),
-              reason: undefined,
-            },
-          }),
-    });
+    if (!item || !this.canSave()) return;
+    const saved = await this.store.editMany(this.items().map((target) => this.edit(target)));
     if (saved) this.close();
   }
 
+  private edit(target: ReviewItem): ReviewEdit {
+    const form = this.form();
+    const base = { kind: 'review-fix' as const, chapterIndex: target.chapterIndex, itemKind: target.itemKind };
+    if (target.entity)
+      return {
+        ...base,
+        itemId: target.entity.id,
+        entity: { name: form.name.trim(), type: form.type as EntityType, aliases: splitAliases(form.aliases) },
+      };
+    return {
+      ...base,
+      itemId: target.fact?.id ?? '',
+      fact: {
+        subjectId: form.subject,
+        predicate: form.predicate,
+        ...(this.scalar() ? { value: form.value.trim() } : { objectId: form.value }),
+        ...(this.labeled() ? { label: form.label.trim() } : {}),
+        quote: form.quote.trim(),
+      },
+    };
+  }
+
   private reset(item: ReviewItem): void {
-    const entityType = item.entity?.type;
-    this.type.set(entityType && entityType !== 'artifact' ? entityType : this.types()[0]);
+    const entity = item.entity;
     const fact = item.fact;
-    if (!fact) return;
-    const predicate = this.predicates().includes(fact.predicate) ? fact.predicate : (this.predicates()[0] ?? '');
-    this.predicate.set(predicate);
-    if (fact.kind === 'scalar') {
-      this.value.set(fact.value && this.values().includes(fact.value) ? fact.value : (this.values()[0] ?? ''));
-    } else {
-      this.value.set(fact.objectId ?? this.objects()[0]?.id ?? '');
-    }
+    const values = this.store.ontology()?.predicates.find((predicate) => predicate.name === fact?.predicate);
+    const form: FixForm = entity
+      ? {
+          ...EMPTY_FORM,
+          name: entity.name,
+          type: entity.type === 'artifact' ? (this.types()[0] ?? '') : entity.type,
+          aliases: entity.aliases.join(', '),
+        }
+      : {
+          ...EMPTY_FORM,
+          subject: fact?.subjectId ?? '',
+          predicate: fact?.predicate ?? '',
+          value:
+            fact?.kind === 'scalar'
+              ? (fact.value ?? values?.allowedValues?.[0] ?? '')
+              : (fact?.objectId ?? this.entities()[0]?.id ?? ''),
+          label: fact?.label ?? '',
+          quote: fact?.quote ?? '',
+        };
+    this.form.set(form);
+    this.original.set(entity ? { ...form, type: entity.type } : form);
   }
 }

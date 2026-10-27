@@ -16,7 +16,8 @@ import { DreamerApi } from '@dreamer/shared/ipc/dreamer-api';
 import { IpcResult } from '@dreamer/shared/ipc/ipc-result';
 import { LogEntry } from '@dreamer/shared/ipc/log';
 import { AboutLink } from '@dreamer/shared/models/about';
-import { AnalysisChanged, AnalysisPlan, AnalysisProgress, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
+import { AnalysisChanged, AnalysisEditRequest, AnalysisPlan } from '@dreamer/shared/models/analysis';
+import { AnalysisProgress, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
 import { AnalysisStatus, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
 import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
@@ -140,8 +141,8 @@ const api: DreamerApi = {
     world: (query: WorldQuery): Promise<World> => call(AnalysisChannel.World, query),
     review: (query: ReviewQuery): Promise<ReviewPage> => call(AnalysisChannel.Review, query),
     occurrences: analysisUnavailable,
-    edit: analysisUnavailable,
-    merge: analysisUnavailable,
+    edit: (request: AnalysisEditRequest): Promise<void> => call(AnalysisChannel.Edit, request),
+    merge: (novelId: string): Promise<void> => call(AnalysisChannel.Merge, novelId),
     findQuote: analysisUnavailable,
     ontologyOpen: (novelId: string): Promise<void> => call(AnalysisChannel.OntologyOpen, novelId),
     ontologyReset: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyReset, novelId),

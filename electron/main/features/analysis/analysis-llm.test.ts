@@ -101,7 +101,7 @@ describe('askCandidates', () => {
     const { ask, prompts } = scripted([badCandidates]);
     const result: Map<number, AnalysisEntity[]> = await candidates(ask);
     expect(prompts).toHaveLength(3);
-    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'type-not-in-ontology' });
+    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'entity-not-in-ontology' });
   });
 
   it('retries after LLM_BAD_OUTPUT', async () => {
@@ -122,7 +122,7 @@ describe('askCandidates', () => {
     const { ask, prompts } = scripted([badCandidates, badOutput(), badOutput()]);
     const result: Map<number, AnalysisEntity[]> = await candidates(ask);
     expect(prompts).toHaveLength(3);
-    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'type-not-in-ontology' });
+    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'entity-not-in-ontology' });
   });
 
   it.each<[string, Error]>([

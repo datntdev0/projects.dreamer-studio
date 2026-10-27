@@ -3,7 +3,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { OntologyProblem } from '../models/analysis';
 import type { OntologyProblemCode } from '../models/analysis';
-import { aliasTypes, factPredicates, parseOntology } from './ontology';
+import { parseOntology } from './ontology';
+import { aliasTypes, factPredicates } from './ontology-rules';
 
 const HEAD: string[] = [
   'version: 1',

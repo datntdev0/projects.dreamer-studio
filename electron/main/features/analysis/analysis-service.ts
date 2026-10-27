@@ -1,21 +1,70 @@
-import { chapterStatuses } from '@dreamer/shared/core/analysis-plan';
+import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
+import { chapterStatuses, emptyIndex, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
+import { applyReviewEdit, chapterReviewStatus, filterReviewItems } from '@dreamer/shared/core/analysis-review';
+import { ReviewChapter, reviewEntityOptions, reviewItems } from '@dreamer/shared/core/analysis-review';
+import { buildWorld, isReviewEdit } from '@dreamer/shared/core/world';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
+import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
 import { AnalysisIndexFile, AnalysisPlan, AnalysisRun, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
 import { AnalysisStatus, ChapterAnalysisSummary } from '@dreamer/shared/models/analysis';
-import { OntologyParseResult } from '@dreamer/shared/models/analysis';
+import { AnalysisChapterDetail, AnalysisEditRequest } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexEntry } from '@dreamer/shared/models/analysis';
+import { AnalysisMergeState, ChapterResult, OntologyParseResult } from '@dreamer/shared/models/analysis';
 import { OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
-import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
+import { ReviewQuery, World, WorldEdit } from '@dreamer/shared/models/analysis';
+import { WorldFile, WorldFileChapter, WorldQuery } from '@dreamer/shared/models/analysis';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { AppDataSession } from '../../app/app-data-session';
+import { broadcast } from '../../ipc/broadcast';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
-import { readAnalysisIndex } from './analysis-files';
+import { readAnalysisIndex, readChapterParagraphs, readChapterResult, readWorldFile } from './analysis-files';
+import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { mergeWorld } from './analysis-merge';
+import { readAnalysedChapters, recheckWorld } from './analysis-recheck';
 import { checkOntology, loadOntology, openOntology, resetOntology } from './analysis-ontology';
 import { AnalysisRuns } from './analysis-runs';
 import { AnalysisRunCheck, checkAnalysisRun, WorldAnalysisDeps } from './world-analysis-pipeline';
+
+function isReviewable(chapter: ChapterAnalysisSummary): boolean {
+  return chapter.status === 'has-issues' || chapter.status === 'reviewed';
+}
+
+function mergeState(chapters: ChapterAnalysisSummary[], index: AnalysisIndexFile | null): AnalysisMergeState {
+  return {
+    pending: chapters.filter((chapter: ChapterAnalysisSummary): boolean => chapter.pending).length,
+    openIssues: index?.issues?.open ?? 0,
+    openErrors: index?.issues?.errors ?? 0,
+    mergedAt: index?.mergedAt ?? null,
+  };
+}
+
+function worldFileDetail(chapter: WorldFileChapter): AnalysisChapterDetail {
+  return {
+    index: chapter.index,
+    title: chapter.title,
+    file: chapter.file,
+    resultFile: chapter.file,
+    status: 'clean',
+    counts: chapterCounts(chapter.entities, chapter.facts),
+    pending: false,
+    paragraphs: [],
+    entities: chapter.entities,
+    facts: chapter.facts,
+  };
+}
+
+async function readReviewParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
+  try {
+    return await readChapterParagraphs(folder, file);
+  } catch (error) {
+    if (error instanceof CodedError && error.code === ErrorCode.ChapterFileMissing) return [];
+    throw error;
+  }
+}
 
 export class AnalysisService {
   private readonly observed: WeakSet<AppDataSession> = new WeakSet<AppDataSession>();
@@ -59,7 +108,7 @@ export class AnalysisService {
       novelId,
       chapters,
       run,
-      merge: { pending: 0, openIssues: 0, mergedAt: null },
+      merge: mergeState(chapters, index),
       ontology: parsed.ontology,
       ontologyProblems: parsed.problems,
       lastRun: index?.lastRun ?? null,
@@ -124,13 +173,82 @@ export class AnalysisService {
   }
 
   async world(query: WorldQuery): Promise<World> {
+    const folder: NovelFolder = this.folder(query.novelId);
     this.readNovel(query.novelId);
-    return { entities: [], links: [], mergedAt: null };
+    const file: WorldFile | null = readWorldFile(folder);
+    if (file === null) return { entities: [], links: [], mergedAt: null };
+    const world: World = buildWorld(file.chapters.map(worldFileDetail), { chapter: query.chapter, only: query.only });
+    return { ...world, mergedAt: file.mergedAt };
   }
 
   async review(query: ReviewQuery): Promise<ReviewPage> {
-    this.readNovel(query.novelId);
-    return { items: [], openCount: 0, failedChapters: [] };
+    const folder: NovelFolder = this.folder(query.novelId);
+    const status: AnalysisStatus = await this.status(query.novelId);
+    const chapters: ReviewChapter[] = [];
+    const listed: ReviewChapter[] = [];
+    for (const { chapter, result } of readAnalysedChapters(folder, status.chapters)) {
+      const reviewable: boolean = isReviewable(chapter);
+      const paragraphs: string[] = reviewable ? await readReviewParagraphs(folder, chapter.file) : [];
+      const item: ReviewChapter = { ...chapter, paragraphs, entities: result.entities, facts: result.facts };
+      chapters.push(item);
+      if (reviewable) listed.push(item);
+    }
+    return {
+      items: filterReviewItems(reviewItems(chapters), query),
+      openCount: status.merge.openIssues,
+      entities: reviewEntityOptions(listed),
+    };
+  }
+
+  edit(request: AnalysisEditRequest): Promise<void> {
+    const edit: WorldEdit = request.edit;
+    if (!isReviewEdit(edit)) throw new CodedError(ErrorCode.NotImplemented, `Edit not implemented: ${edit.kind}`);
+    const novelId: string = request.novelId;
+    return withNovelLock(novelId, async (): Promise<void> => {
+      const novel: NovelMetadata = this.readNovel(novelId);
+      assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
+      const folder: NovelFolder = this.folder(novelId);
+      const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+      const chapter: ChapterAnalysisSummary | undefined = chapterStatuses(novel.chapters, index)[edit.chapterIndex - 1];
+      const result: ChapterResult | null =
+        chapter && isReviewable(chapter) ? readChapterResult(folder, chapter.file) : null;
+      const entry: AnalysisIndexEntry | undefined = index.chapters.find(
+        (candidate: AnalysisIndexEntry): boolean => candidate.file === chapter?.file,
+      );
+      if (!chapter || !result || !entry)
+        throw new CodedError(ErrorCode.AnalysisEditInvalid, `Chapter ${edit.chapterIndex} cannot be edited`);
+      const edited = applyReviewEdit({
+        chapter: { index: chapter.index, paragraphs: await readChapterParagraphs(folder, chapter.file) },
+        entities: result.entities,
+        facts: result.facts,
+        edit,
+        ontology: loadOntology(folder).ontology,
+      });
+      await writeChapterResult(folder, { ...result, ...edited });
+      await writeAnalysisIndex(
+        folder,
+        upsertIndexEntry(index, {
+          ...entry,
+          status: chapterReviewStatus(edited.entities, edited.facts),
+          counts: chapterCounts(edited.entities, edited.facts),
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+      await recheckWorld(folder, novel);
+      broadcast(AnalysisChannel.Changed, { novelId });
+    });
+  }
+
+  merge(novelId: string): Promise<void> {
+    return withNovelLock(novelId, async (): Promise<void> => {
+      const novel: NovelMetadata = this.readNovel(novelId);
+      assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
+      const folder: NovelFolder = this.folder(novelId);
+      await recheckWorld(folder, novel);
+      const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+      await mergeWorld(folder, chapterStatuses(novel.chapters, index), index);
+      broadcast(AnalysisChannel.Changed, { novelId });
+    });
   }
 
   private readNovel(novelId: string): NovelMetadata {

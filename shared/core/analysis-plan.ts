@@ -40,9 +40,18 @@ export function chapterStatuses(
       counts: previous?.counts ?? emptyCounts(),
       ...(current?.error ? { error: current.error } : {}),
       ...(previous && status !== 'failed' ? { resultFile: previous.file } : {}),
-      pending: false,
+      pending: isPending(status, current, index?.mergedAt ?? null),
     };
   });
+}
+
+function isPending(
+  status: ChapterAnalysisStatus,
+  entry: AnalysisIndexEntry | undefined,
+  mergedAt: string | null,
+): boolean {
+  if (!entry || !isUpToDate(status)) return false;
+  return mergedAt === null || (entry.updatedAt ?? entry.analysedAt) > mergedAt;
 }
 
 export function isUpToDate(status: ChapterAnalysisStatus): boolean {

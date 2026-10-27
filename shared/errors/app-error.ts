@@ -34,6 +34,7 @@ export const ErrorCode = {
   AnalysisLlmOutputInvalid: 'ANALYSIS_LLM_OUTPUT_INVALID',
   NotImplemented: 'NOT_IMPLEMENTED',
   AnalysisOpenIssues: 'ANALYSIS_OPEN_ISSUES',
+  AnalysisEditInvalid: 'ANALYSIS_EDIT_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

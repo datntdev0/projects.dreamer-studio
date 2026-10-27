@@ -580,8 +580,15 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     }
     for (const scalar of scene.scalars) ids.add(scalar.subjectId);
   }
-  if (index === 27) ids.add('invalid-crown');
-  if (index === 28) ids.add('silent-oracle');
+  if (index === 26) ids.add('ash-court-place');
+  if (index === 27) {
+    ids.add('invalid-crown');
+    ids.add('elder-su');
+  }
+  if (index === 28) {
+    ids.add('silent-oracle');
+    ids.add('master-qiao');
+  }
   if (index === 4) {
     ids.add('jade-river-place');
     ids.add('jade-river-term');
@@ -595,7 +602,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         aliases: [],
         wordsFound: [edition === 'zh' ? '青铜冠' : 'bronze crown'],
         status: 'failed',
-        reason: 'type-not-in-ontology',
+        reason: 'entity-not-in-ontology',
       };
     }
     if (id === 'silent-oracle') {
@@ -609,10 +616,22 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         reason: 'words-not-found',
       };
     }
+    if (id === 'ash-court-place') {
+      const name = nameOf('ash-court', edition);
+      return { id, type: 'Location', name, aliases: [], wordsFound: [name], status: 'verified' };
+    }
     const seed = BY_ID.get(id)!;
     const name = nameOf(id, edition);
     const aliases = edition === 'zh' ? seed.zhAliases : seed.aliases;
-    return { id: seed.id, type: seed.type, name, aliases, wordsFound: [name], status: 'verified' };
+    const extra = index === 28 && id === 'master-qiao' ? [nameOf('elder-su', edition)] : [];
+    return {
+      id: seed.id,
+      type: seed.type,
+      name,
+      aliases: [...aliases, ...extra],
+      wordsFound: [name],
+      status: 'verified',
+    };
   });
   const facts: AnalysisFact[] = hasResult
     ? [
@@ -689,6 +708,24 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     });
   }
   const paragraphs = [...scene.paragraphs];
+  if (index === 26)
+    paragraphs.push(
+      edition === 'zh'
+        ? `${nameOf('ash-court', edition)}矗立在对岸，城墙被旧烟熏得发黑。`
+        : `The ${nameOf('ash-court', edition)} rose on the far bank, its walls black with old smoke.`,
+    );
+  if (index === 27)
+    paragraphs.push(
+      edition === 'zh'
+        ? `${nameOf('elder-su', edition)}在藏经阁前清点卷轴。`
+        : `${nameOf('elder-su', edition)} counted the scrolls outside the archive.`,
+    );
+  if (index === 28)
+    paragraphs.push(
+      edition === 'zh'
+        ? `${nameOf('master-qiao', edition)}，弟子们称他为${nameOf('elder-su', edition)}，在门口等候。`
+        : `${nameOf('master-qiao', edition)}, whom the novices called ${nameOf('elder-su', edition)}, waited at the gate.`,
+    );
   if (index === 27)
     paragraphs.push(
       edition === 'zh'
@@ -742,9 +779,9 @@ export const UNANALYSED_CHAPTERS: ChapterAnalysis[] = makeChapters(UNANALYSED_NO
 export const JADE_RIVER_PENDING = [26, 27, 28];
 
 export const JADE_RIVER_REVIEW_EDITS: ReviewEdit[] = [
-  { kind: 'review-accept', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-accepted-quote' },
+  { kind: 'review-reject', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-accepted-quote' },
   { kind: 'review-reject', chapterIndex: 27, itemKind: 'fact', itemId: 'c27-rejected-predicate' },
-  { kind: 'review-accept', chapterIndex: 28, itemKind: 'entity', itemId: 'silent-oracle' },
+  { kind: 'review-reject', chapterIndex: 28, itemKind: 'entity', itemId: 'silent-oracle' },
   {
     kind: 'review-fix',
     chapterIndex: 28,

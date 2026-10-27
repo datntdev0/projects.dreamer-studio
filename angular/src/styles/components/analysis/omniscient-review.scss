@@ -94,88 +94,86 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--sp-lg);
+  gap: var(--sp-xxl);
   min-height: 0;
-  padding: var(--sp-lg);
+  padding: var(--sp-lg) var(--sp-xl) var(--sp-xxl);
   overflow: auto;
 }
 
-.ds-world-review-failed {
+.ds-world-review-toc {
+  display: flex;
   flex: none;
-  padding: var(--sp-md);
-  border: var(--gutter) solid var(--color-danger);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+}
 
-  ul {
-    display: grid;
-    gap: var(--sp-xs);
-    margin: var(--sp-sm) 0 0;
-    padding: 0;
-    list-style: none;
+.ds-world-review-toc-item {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  align-items: center;
+  padding: var(--sp-xs) var(--sp-sm);
+  border: var(--gutter) solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-meta);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
   }
 
-  li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-xs) var(--sp-sm);
-    font-size: var(--font-size-meta);
+  &[data-open] {
+    color: var(--color-text);
   }
 
-  li span {
+  &[data-severity='error'] > ds-icon {
+    color: var(--color-danger);
+  }
+
+  &[data-severity='warning'] > ds-icon {
+    color: var(--color-warning);
+  }
+
+  .num {
+    color: var(--color-text-tertiary);
+  }
+}
+
+.ds-world-review-section {
+  display: grid;
+  flex: none;
+  gap: 0;
+  scroll-margin-top: var(--sp-lg);
+}
+
+.ds-world-review-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: flex-start;
+  padding-bottom: var(--sp-md);
+  border-bottom: var(--gutter) solid var(--color-border-strong);
+
+  > ds-icon {
+    flex: none;
+    margin-top: var(--sp-xxs);
     color: var(--color-text-secondary);
   }
 }
 
-.ds-world-review-failed-head {
-  display: flex;
-  gap: var(--sp-sm);
-  align-items: center;
-  color: var(--color-danger);
-
-  h3 {
-    margin: 0;
-    color: var(--color-text);
-    font-size: var(--font-size-h3);
-  }
-}
-
-.ds-world-review-group {
+.ds-world-review-section-title {
   display: grid;
-  flex: none;
-  gap: var(--sp-sm);
-}
-
-.ds-world-review-group-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-sm);
-  align-items: center;
+  gap: var(--sp-xs);
+  min-width: 0;
 
   h3 {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--sp-sm);
-    align-items: baseline;
+    align-items: center;
     margin: 0;
     font-size: var(--font-size-h3);
-  }
-}
-
-.ds-world-review-item {
-  display: grid;
-  gap: var(--sp-sm);
-  padding: var(--sp-md);
-  border: var(--gutter) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-
-  &[data-status='failed'] {
-    border-left: var(--sp-xs) solid var(--color-danger);
-  }
-
-  &[data-status='rejected'] .ds-world-review-name {
-    color: var(--color-text-tertiary);
-    text-decoration: line-through;
   }
 
   p {
@@ -183,54 +181,106 @@
   }
 }
 
-.ds-world-review-item-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-xs);
-  align-items: center;
+.ds-world-review-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.ds-world-review-type {
-  display: inline-flex;
-  gap: var(--sp-xs);
-  align-items: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-small);
-}
+.ds-world-review-issue {
+  display: grid;
+  gap: var(--sp-md);
+  padding: var(--sp-lg) 0 var(--sp-lg) var(--sp-lg);
+  border-bottom: var(--gutter) solid var(--color-border);
+  border-left: var(--sp-xxs) solid transparent;
 
-.ds-world-review-name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
+  &[data-open] {
+    border-left-color: var(--color-warning);
+  }
 
-  .meta {
-    font-weight: 400;
+  .ds-world-review-section[data-severity='error'] &[data-open] {
+    border-left-color: var(--color-danger);
   }
 }
 
-.ds-world-review-sep {
-  color: var(--color-text-tertiary);
-  font-weight: 400;
+.ds-world-review-title {
+  margin: 0;
+  font-weight: 600;
 }
 
-.ds-world-review-reason,
-.ds-world-fix-reason {
+.ds-world-review-line {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm) var(--sp-md);
+  align-items: center;
+  min-width: 0;
+}
+
+.ds-world-review-entity {
+  display: inline-flex;
   gap: var(--sp-xs);
   align-items: center;
-  color: var(--color-danger);
-  font-size: var(--font-size-meta);
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
-.ds-world-review-context {
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-md);
-  border-left: var(--sp-xxs) solid var(--color-border-strong);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface);
+.ds-world-review-key {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-small);
+}
+
+.ds-world-review-aliases {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  align-items: baseline;
   color: var(--color-text-secondary);
-  font-family: var(--font-serif);
-  font-size: var(--font-size-base);
-  line-height: var(--reader-leading);
+}
+
+.ds-world-review-props {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm) var(--sp-xl);
+  min-width: 0;
+  margin: 0;
+
+  > div {
+    display: grid;
+    gap: var(--sp-xxs);
+    min-width: 0;
+  }
+
+  dt {
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-small);
+    font-weight: 400;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.ds-world-review-fact {
+  display: grid;
+  gap: var(--sp-xs);
+}
+
+.ds-world-review-quote {
+  display: grid;
+  gap: var(--sp-xxs);
+  padding-left: var(--sp-md);
+  border-left: var(--sp-xxs) solid var(--color-border-strong);
+
+  q {
+    color: var(--color-text-secondary);
+    font-family: var(--font-serif);
+    font-size: var(--font-size-base);
+    line-height: var(--reader-leading);
+  }
 
   mark {
     padding: 0 var(--sp-xxs);
@@ -240,31 +290,54 @@
   }
 }
 
-.ds-world-review-missing {
-  display: grid;
-  gap: var(--sp-xs);
-  padding: var(--sp-sm) var(--sp-md);
-  border: var(--gutter) dashed var(--color-border-strong);
-  border-radius: var(--radius-xs);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-meta);
-
-  &.failed .ds-world-review-missing-note {
-    color: var(--color-danger);
-  }
-}
-
-.ds-world-review-claim {
-  color: var(--color-text);
-  font-family: var(--font-serif);
-  font-size: var(--font-size-base);
-  line-height: var(--reader-leading);
-}
-
 .ds-world-review-missing-note {
   display: flex;
   gap: var(--sp-xs);
   align-items: center;
+  color: var(--color-danger);
+  font-size: var(--font-size-meta);
+}
+
+.ds-world-review-variants {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 0 var(--sp-sm) var(--sp-xs) 0;
+    border-bottom: var(--gutter) solid var(--color-border);
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-small);
+    font-weight: 400;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: var(--sp-sm) var(--sp-sm) var(--sp-sm) 0;
+    border-bottom: var(--gutter) solid var(--color-border);
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  td:last-child {
+    padding-right: 0;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  tr[data-status='rejected'] .ds-world-review-entity {
+    color: var(--color-text-tertiary);
+    text-decoration: line-through;
+  }
+}
+
+.ds-world-review-row-actions {
+  display: inline-flex;
+  gap: var(--sp-xs);
+  white-space: nowrap;
 }
 
 .ds-world-review-actions {
@@ -272,6 +345,18 @@
   flex-wrap: wrap;
   gap: var(--sp-xs);
   justify-content: flex-end;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.ds-world-fix-reason {
+  display: flex;
+  gap: var(--sp-xs);
+  align-items: center;
+  color: var(--color-danger);
+  font-size: var(--font-size-meta);
 }
 
 .ds-world-review-empty {
@@ -289,17 +374,5 @@
 
   p {
     margin: 0;
-  }
-}
-
-.ds-world-fix-current {
-  display: grid;
-  gap: var(--sp-xs);
-  padding: var(--sp-sm) var(--sp-md);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-
-  strong {
-    overflow-wrap: anywhere;
   }
 }

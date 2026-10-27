@@ -1,9 +1,6 @@
 import type { AnalysisChapterDetail, EntityType, OverlayEdit, ReviewEdit } from '../models/analysis';
 import type { World, WorldEdit, WorldEntity, WorldLink } from '../models/analysis';
-
-function allowed(item: { status: string }): boolean {
-  return item.status === 'verified' || item.status === 'accepted';
-}
+import { isMergeable } from './analysis-review';
 
 function cloneChapter(chapter: AnalysisChapterDetail): AnalysisChapterDetail {
   return {
@@ -17,31 +14,8 @@ function cloneChapter(chapter: AnalysisChapterDetail): AnalysisChapterDetail {
   };
 }
 
-const ACCEPTABLE_REASONS = new Set(['words-not-found', 'quote-not-found']);
-
 export function isReviewEdit(edit: WorldEdit): edit is ReviewEdit {
   return edit.kind === 'review-reject' || edit.kind === 'review-fix' || edit.kind === 'review-accept';
-}
-
-export function applyReviewEdits(chapter: AnalysisChapterDetail, edits: ReviewEdit[]): AnalysisChapterDetail {
-  const result = cloneChapter(chapter);
-  for (const edit of edits) {
-    if (edit.chapterIndex !== result.index) continue;
-    const item =
-      edit.itemKind === 'entity'
-        ? result.entities.find((entity) => entity.id === edit.itemId)
-        : result.facts.find((fact) => fact.id === edit.itemId);
-    if (!item) continue;
-    if (edit.kind === 'review-reject') item.status = 'rejected';
-    if (edit.kind === 'review-accept' && (!item.reason || ACCEPTABLE_REASONS.has(item.reason)))
-      item.status = 'accepted';
-    if (edit.kind === 'review-fix') {
-      Object.assign(item, edit.itemKind === 'entity' ? edit.entity : edit.fact);
-      item.status = 'verified';
-    }
-    item.edited = true;
-  }
-  return result;
 }
 
 function applyFactEdits(chapters: AnalysisChapterDetail[], edits: OverlayEdit[]): void {
@@ -205,7 +179,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
     if (!chapter.resultFile || chapter.status === 'failed') continue;
     const idToKey = new Map<string, string>();
     for (const item of chapter.entities) {
-      if (!allowed(item) || item.type === 'artifact') continue;
+      if (!isMergeable(item) || item.type === 'artifact') continue;
       const key = `${item.type}:${item.name.trim().toLocaleLowerCase()}`;
       idToKey.set(item.id, key);
       let entity = entities.get(key);
@@ -233,7 +207,7 @@ export function buildWorld(chapters: AnalysisChapterDetail[], scope: WorldScope,
       }
     }
     for (const fact of chapter.facts) {
-      if (!allowed(fact)) continue;
+      if (!isMergeable(fact)) continue;
       const subjectKey = idToKey.get(fact.subjectId);
       if (!subjectKey) continue;
       if (fact.kind === 'scalar') {

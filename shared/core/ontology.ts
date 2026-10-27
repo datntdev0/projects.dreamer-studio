@@ -6,18 +6,15 @@ import { parseDocument } from 'yaml';
 import type { Node } from 'yaml';
 import type { Pair } from 'yaml';
 import type { YAMLMap } from 'yaml';
-import { ENTITY_TYPES } from '../models/analysis';
 import type { EntityType } from '../models/analysis';
 import type { Ontology } from '../models/analysis';
 import type { OntologyParseResult } from '../models/analysis';
 import type { OntologyPredicate } from '../models/analysis';
 import type { OntologyProblem } from '../models/analysis';
 import type { OntologyProblemCode } from '../models/analysis';
+import { HAS_PERSONA, isEntityType, NAME_PREDICATE } from './ontology-rules';
 
 export const ONTOLOGY_FILE = 'ontology.yml';
-export const HAS_PERSONA = 'has_persona';
-export const NAME_PREDICATE = 'name';
-export const ALIAS_PREDICATE = 'alias';
 
 const ROOT_KEYS: readonly string[] = [
   'name',
@@ -51,23 +48,6 @@ export function emptyOntology(): Ontology {
     entityTypeExamples: {},
     predicates: [],
   };
-}
-
-export function isEntityType(value: unknown): value is EntityType {
-  return (ENTITY_TYPES as readonly string[]).includes(value as string);
-}
-
-export function factPredicates(ontology: Ontology): OntologyPredicate[] {
-  return ontology.predicates.filter(
-    (predicate: OntologyPredicate): boolean => predicate.name !== NAME_PREDICATE && predicate.name !== ALIAS_PREDICATE,
-  );
-}
-
-export function aliasTypes(ontology: Ontology): EntityType[] {
-  return (
-    ontology.predicates.find((predicate: OntologyPredicate): boolean => predicate.name === ALIAS_PREDICATE)
-      ?.subjectTypes ?? []
-  );
 }
 
 function lineOf(context: Context, node: MaybeNode): number {

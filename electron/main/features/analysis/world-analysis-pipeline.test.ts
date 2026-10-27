@@ -323,6 +323,12 @@ describe('analyse', () => {
     await runAll();
     expect(entry(3).status).toBe('has-issues');
     expect(entry(3).counts.failed).toBe(1);
+    const saved3 = readChapterResult(folder, entry(3).file)!;
+    expect(saved3.facts[0]).toMatchObject({ status: 'failed' });
+    expect(saved3.facts[0].issue).toBe(saved3.facts[0].reason);
+    expect(saved3.facts[0].issue).toBeDefined();
+    expect(readChapterResult(folder, entry(1).file)!.facts[0].issue).toBeUndefined();
+    expect(Number.isNaN(Date.parse(entry(3).updatedAt!))).toBe(false);
     expect(entry(1).status).toBe('clean');
     expect(callsOf('predicates').filter((call: Call): boolean => call.chapters[0] === 3)).toHaveLength(3);
     expect(readAnalysisIndex(folder)?.lastRun).toMatchObject({ analysed: 3, failed: 0, issues: 1 });

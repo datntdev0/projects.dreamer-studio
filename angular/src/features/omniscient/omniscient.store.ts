@@ -30,7 +30,7 @@ export type OmniscientView = 'graph' | 'table' | 'review';
 export type OmniscientDialog =
   | { kind: 'run' }
   | { kind: 'ontology' }
-  | { kind: 'fix'; item: ReviewItem }
+  | { kind: 'fix'; item: ReviewItem; items?: ReviewItem[] }
   | { kind: 'entity'; mode: 'add' | 'rename' | 'type'; entityId: string | null }
   | { kind: 'merge'; entityIds: string[] }
   | { kind: 'split'; entityId: string }
@@ -144,14 +144,11 @@ export class OmniscientStore {
     (this.status()?.chapters ?? []).filter((item) => item.status === 'has-issues' || item.status === 'reviewed'),
   );
   readonly merge = computed(() => this.status()?.merge ?? null);
-  readonly issueChapterCount = computed(
-    () => this.reviewChapters().filter((item) => item.status === 'has-issues').length,
-  );
   readonly mergeBlock = computed<MergeBlock | null>(() => {
     const merge = this.merge();
     if (this.run()) return { key: 'analysis.merge.blockedRunning', count: 0 };
     if (this.novel()?.lock) return { key: 'analysis.merge.blockedLocked', count: 0 };
-    if (merge?.openIssues) return { key: 'analysis.merge.blockedIssues', count: merge.openIssues };
+    if (merge?.openErrors) return { key: 'analysis.merge.blockedIssues', count: merge.openErrors };
     return merge?.pending ? null : { key: 'analysis.merge.nothing', count: 0 };
   });
   readonly entities = computed(() => this.world()?.entities ?? []);
@@ -301,19 +298,6 @@ export class OmniscientStore {
     });
   }
 
-  retryFailed(): Promise<boolean> {
-    const failed = (this.review()?.failedChapters ?? []).map((item) => item.index);
-    if (!failed.length) return Promise.resolve(false);
-    return this.start({
-      mode: 'range',
-      from: Math.min(...failed),
-      to: Math.max(...failed),
-      overwrite: false,
-      stage: 'all',
-      batchSize: 1,
-    });
-  }
-
   mergeWorld(): Promise<boolean> {
     if (this.mergeBlock()) return Promise.resolve(false);
     return this.mutate(async (novelId) => {
@@ -338,6 +322,14 @@ export class OmniscientStore {
     if (this.locked()) return Promise.resolve(false);
     return this.mutate(async (novelId) => {
       await this.api.analysisEdit({ novelId, edit });
+      await this.reload();
+    });
+  }
+
+  editMany(edits: WorldEdit[]): Promise<boolean> {
+    if (this.locked() || !edits.length) return Promise.resolve(false);
+    return this.mutate(async (novelId) => {
+      for (const edit of edits) await this.api.analysisEdit({ novelId, edit });
       await this.reload();
     });
   }

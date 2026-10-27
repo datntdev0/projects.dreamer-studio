@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { splitParagraphs } from '@dreamer/shared/core/novel-text';
+import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { AnalysisIndexFile, ChapterResult } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexFile, ChapterResult, WorldFile } from '@dreamer/shared/models/analysis';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
-import { NovelFolder } from '../library/library-files';
+import { chapterPath, NovelFolder } from '../library/library-files';
 import { asWriteError } from '../library/library-io';
 import { writeFileAtomic } from '../library/novel/novel-files';
 
@@ -12,6 +15,10 @@ const logger: Logger = createLogger('analysis');
 
 export function analysisIndexFile(folder: NovelFolder): string {
   return join(folder.analysis, 'index.json');
+}
+
+export function worldFile(folder: NovelFolder): string {
+  return join(folder.analysis, 'world.json');
 }
 
 export function chapterResultFile(folder: NovelFolder, file: string): string {
@@ -67,6 +74,40 @@ export function readChapterResult(folder: NovelFolder, file: string): ChapterRes
     return null;
   }
   return parsed as ChapterResult;
+}
+
+export function readWorldFile(folder: NovelFolder): WorldFile | null {
+  const file: string = worldFile(folder);
+  const parsed: unknown = readJson(file);
+  if (parsed === undefined) return null;
+  if (
+    !isRecord(parsed) ||
+    parsed.version !== 1 ||
+    typeof parsed.mergedAt !== 'string' ||
+    !Array.isArray(parsed.chapters)
+  ) {
+    logger.warn(`analysis world file invalid: ${file}`);
+    return null;
+  }
+  return parsed as unknown as WorldFile;
+}
+
+export async function writeWorldFile(folder: NovelFolder, world: WorldFile): Promise<void> {
+  try {
+    await writeFileAtomic(worldFile(folder), `${JSON.stringify(world, null, 2)}\n`);
+  } catch (error: unknown) {
+    asWriteError(error);
+  }
+}
+
+export async function readChapterParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
+  const path: string = chapterPath(folder, file);
+  const details = await stat(path).catch((): null => null);
+  if (!details?.isFile() || details.size === 0)
+    throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter file is missing or empty: ${path}`);
+  const paragraphs: string[] = splitParagraphs(await readFile(path, 'utf8'));
+  if (paragraphs.length === 0) throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter file is empty: ${path}`);
+  return paragraphs;
 }
 
 export async function writeChapterResult(folder: NovelFolder, result: ChapterResult): Promise<void> {

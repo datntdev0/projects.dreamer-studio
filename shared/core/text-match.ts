@@ -5,11 +5,28 @@ export interface TextMatch {
   end: number;
 }
 
+export interface TextMatchOptions {
+  fold?: boolean;
+}
+
+const SINGLE_QUOTES: RegExp = /[‘’‚‛′]/g;
+const DOUBLE_QUOTES: RegExp = /[“”„‟«»″]/g;
+const DASHES: RegExp = /[‐‑‒–—―−]/g;
+
 const segmenter: Intl.Segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
-export function findTextContext(paragraphs: string[], needle: string, radius = 80): TextContext | null {
+function foldPunctuation(value: string): string {
+  return value.replace(SINGLE_QUOTES, "'").replace(DOUBLE_QUOTES, '"').replace(DASHES, '-').replace(/\s+/g, ' ');
+}
+
+export function findTextContext(
+  paragraphs: string[],
+  needle: string,
+  options: TextMatchOptions = {},
+): TextContext | null {
+  const radius = 80;
   for (const paragraph of paragraphs) {
-    const match: TextMatch | undefined = findTextMatches(paragraph, needle)[0];
+    const match: TextMatch | undefined = findTextMatches(paragraph, needle, options)[0];
     if (!match) continue;
     const chars: string[] = Array.from(paragraph);
     const start: number = Math.max(0, match.start - radius);
@@ -23,24 +40,31 @@ export function findTextContext(paragraphs: string[], needle: string, radius = 8
   return null;
 }
 
-export function findTextMatches(text: string, query: string): TextMatch[] {
+export function findTextMatches(text: string, query: string, options: TextMatchOptions = {}): TextMatch[] {
+  const fold: boolean = options.fold === true;
   const starts: number[] = [];
   const ends: number[] = [];
   let lower = '';
   let index = 0;
   for (const { segment } of segmenter.segment(text)) {
     const end: number = index + Array.from(segment).length;
-    const value: string = segment.normalize('NFC').toLocaleLowerCase();
-    lower += value;
-    for (let offset = 0; offset < value.length; offset += 1) {
-      starts.push(index);
-      ends.push(end);
+    const normalized: string = segment.normalize('NFC').toLocaleLowerCase();
+    const value: string = fold ? foldPunctuation(normalized) : normalized;
+    if (fold && value === ' ' && lower.endsWith(' ')) {
+      ends[ends.length - 1] = end;
+    } else {
+      lower += value;
+      for (let offset = 0; offset < value.length; offset += 1) {
+        starts.push(index);
+        ends.push(end);
+      }
     }
     index = end;
   }
-  const needle: string = Array.from(query.normalize('NFC'))
+  const lowered: string = Array.from(query.normalize('NFC'))
     .map((character: string): string => character.toLocaleLowerCase())
     .join('');
+  const needle: string = fold ? foldPunctuation(lowered).trim() : lowered;
   if (!needle) return [];
   const matches: TextMatch[] = [];
   let offset = 0;

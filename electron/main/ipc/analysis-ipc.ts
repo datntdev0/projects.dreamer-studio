@@ -1,6 +1,6 @@
 import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
-import { isEntityType } from '@dreamer/shared/core/ontology';
-import { AnalysisPlan, AnalysisRunRequest, AnalysisStatus } from '@dreamer/shared/models/analysis';
+import { isEntityType } from '@dreamer/shared/core/ontology-rules';
+import { AnalysisEditRequest, AnalysisPlan, AnalysisRunRequest, AnalysisStatus } from '@dreamer/shared/models/analysis';
 import { OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
 import { ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { isPlainObject } from '@dreamer/shared/models/validation';
@@ -49,6 +49,32 @@ function isReviewQuery(value: unknown): value is ReviewQuery {
   );
 }
 
+const REVIEW_KINDS: string[] = ['review-reject', 'review-fix', 'review-accept'];
+
+function isReviewEditShape(value: Record<string, unknown>): boolean {
+  return (
+    typeof value.kind === 'string' &&
+    REVIEW_KINDS.includes(value.kind) &&
+    typeof value.chapterIndex === 'number' &&
+    Number.isInteger(value.chapterIndex) &&
+    value.chapterIndex >= 1 &&
+    (value.itemKind === 'entity' || value.itemKind === 'fact') &&
+    typeof value.itemId === 'string' &&
+    (value.entity === undefined || isPlainObject(value.entity)) &&
+    (value.fact === undefined || isPlainObject(value.fact))
+  );
+}
+
+function isAnalysisEditRequest(value: unknown): value is AnalysisEditRequest {
+  return (
+    isPlainObject(value) &&
+    isNovelIdValue(value.novelId) &&
+    isPlainObject(value.edit) &&
+    typeof value.edit.kind === 'string' &&
+    (!REVIEW_KINDS.includes(value.edit.kind) || isReviewEditShape(value.edit))
+  );
+}
+
 export function registerAnalysisIpc(service: AnalysisService): void {
   handleValidated(AnalysisChannel.Status, isNovelIdValue, (novelId: string): Promise<AnalysisStatus> =>
     service.status(novelId),
@@ -64,6 +90,10 @@ export function registerAnalysisIpc(service: AnalysisService): void {
   handleValidated(AnalysisChannel.Review, isReviewQuery, (query: ReviewQuery): Promise<ReviewPage> =>
     service.review(query),
   );
+  handleValidated(AnalysisChannel.Edit, isAnalysisEditRequest, (request: AnalysisEditRequest): Promise<void> =>
+    service.edit(request),
+  );
+  handleValidated(AnalysisChannel.Merge, isNovelIdValue, (novelId: string): Promise<void> => service.merge(novelId));
   handleValidated(AnalysisChannel.OntologyOpen, isNovelIdValue, (novelId: string): Promise<void> =>
     service.ontologyOpen(novelId),
   );

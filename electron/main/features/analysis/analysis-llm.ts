@@ -1,5 +1,5 @@
 import { checkCandidates, checkPredicates } from '@dreamer/shared/core/analysis-checks';
-import { aliasTypes, factPredicates } from '@dreamer/shared/core/ontology';
+import { aliasTypes, factPredicates } from '@dreamer/shared/core/ontology-rules';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { AnalysisEntity, AnalysisFact, CandidateOutput, EntityType } from '@dreamer/shared/models/analysis';
 import type { Ontology, OntologyPredicate, PredicateOutput } from '@dreamer/shared/models/analysis';

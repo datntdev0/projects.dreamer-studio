@@ -64,12 +64,61 @@ export const entityTypeIcons: Record<EntityType | 'artifact', string> = {
 export const reasonKeys: Record<FailReason, string> = {
   'words-not-found': 'analysis.pipeline.reason.wordsNotFound',
   'quote-not-found': 'analysis.pipeline.reason.quoteNotFound',
-  'type-not-in-ontology': 'analysis.pipeline.reason.typeNotInOntology',
+  'entity-not-in-ontology': 'analysis.pipeline.reason.entityNotInOntology',
   'predicate-not-in-ontology': 'analysis.pipeline.reason.predicateNotInOntology',
+  'value-missing': 'analysis.pipeline.reason.valueMissing',
   'value-not-allowed': 'analysis.pipeline.reason.valueNotAllowed',
   'entity-not-found': 'analysis.pipeline.reason.entityNotFound',
   'type-not-allowed': 'analysis.pipeline.reason.typeNotAllowed',
   'label-missing': 'analysis.pipeline.reason.labelMissing',
+  'name-conflict': 'analysis.pipeline.reason.nameConflict',
+  'alias-conflict': 'analysis.pipeline.reason.aliasConflict',
+  'value-conflict': 'analysis.pipeline.reason.valueConflict',
+};
+
+export const REASON_ORDER: FailReason[] = [
+  'entity-not-in-ontology',
+  'predicate-not-in-ontology',
+  'entity-not-found',
+  'type-not-allowed',
+  'value-missing',
+  'words-not-found',
+  'quote-not-found',
+  'name-conflict',
+  'alias-conflict',
+  'value-conflict',
+  'value-not-allowed',
+  'label-missing',
+];
+
+export const reasonHintKeys: Record<FailReason, string> = {
+  'words-not-found': 'analysis.review.hint.wordsNotFound',
+  'quote-not-found': 'analysis.review.hint.quoteNotFound',
+  'entity-not-in-ontology': 'analysis.review.hint.entityNotInOntology',
+  'predicate-not-in-ontology': 'analysis.review.hint.predicateNotInOntology',
+  'value-missing': 'analysis.review.hint.valueMissing',
+  'value-not-allowed': 'analysis.review.hint.valueNotAllowed',
+  'entity-not-found': 'analysis.review.hint.entityNotFound',
+  'type-not-allowed': 'analysis.review.hint.typeNotAllowed',
+  'label-missing': 'analysis.review.hint.labelMissing',
+  'name-conflict': 'analysis.review.hint.nameConflict',
+  'alias-conflict': 'analysis.review.hint.aliasConflict',
+  'value-conflict': 'analysis.review.hint.valueConflict',
+};
+
+export const reasonIcons: Record<FailReason, string> = {
+  'words-not-found': 'book',
+  'quote-not-found': 'message',
+  'entity-not-in-ontology': 'type',
+  'predicate-not-in-ontology': 'nodes',
+  'value-missing': 'hash',
+  'value-not-allowed': 'hash',
+  'entity-not-found': 'search',
+  'type-not-allowed': 'shield',
+  'label-missing': 'tag',
+  'name-conflict': 'layers',
+  'alias-conflict': 'link',
+  'value-conflict': 'columns',
 };
 
 export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {

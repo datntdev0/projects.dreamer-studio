@@ -1,6 +1,6 @@
 <ds-dialog
   [open]="!!item()"
-  [heading]="'analysis.pipeline.fixItem' | t"
+  [heading]="(item()?.entity ? 'analysis.review.fixEntity' : 'analysis.review.fixFact') | t"
   icon="pencil"
   [dismissible]="!store.busy()"
   [closeLabel]="'analysis.pipeline.close' | t"
@@ -8,77 +8,158 @@
 >
   @if (item(); as current) {
     <div class="ds-world-fix" data-testid="world-fix-dialog">
-      <div class="ds-world-fix-current">
-        <span class="meta">{{
-          'analysis.review.chapter' | t: { index: current.chapterIndex, title: current.chapterTitle }
-        }}</span>
-        <strong data-testid="world-fix-current">
-          @if (current.entity; as entity) {
-            {{ entity.name }} &middot; {{ typeLabel(entity.type) }}
-          } @else if (current.fact; as fact) {
-            {{ current.subjectName || store.entityName(fact.subjectId) }} &middot; {{ fact.predicate }} &middot;
-            {{ fact.kind === 'scalar' ? fact.value : current.objectName || store.entityName(fact.objectId ?? '') }}
-          }
-        </strong>
-        @if (reason()) {
-          <span class="ds-world-fix-reason" data-testid="world-fix-reason">
-            <ds-icon name="alert-circle" size="sm" />{{ reason() }}
-          </span>
+      @if (reason()) {
+        <p class="ds-world-fix-reason" data-testid="world-fix-reason">
+          <ds-icon name="alert-circle" size="sm" />{{ reason() }}
+        </p>
+      }
+      <p class="meta">
+        {{ (current.entity ? 'analysis.review.fixEntityHint' : 'analysis.review.fixFactHint') | t }}
+        @if (chapterCount() > 1) {
+          {{ 'analysis.review.fixScope' | t: { count: chapterCount() } }}
         }
-      </div>
-      <p class="meta">{{ 'analysis.review.fixHint' | t }}</p>
+      </p>
       @if (current.entity) {
-        <ds-field [label]="'analysis.pipeline.type' | t" controlId="world-fix-type">
-          <span class="ds-select">
-            <select id="world-fix-type" class="ds-input" data-testid="world-fix-type" (change)="setType($event)">
-              @for (option of types(); track option) {
-                <option [value]="option" [selected]="type() === option">{{ typeLabel(option) }}</option>
-              }
-            </select>
-            <ds-icon name="chevron-down" size="sm" />
-          </span>
+        <ds-field
+          controlId="world-fix-name"
+          required
+          [label]="'analysis.review.prop.entity' | t"
+          [error]="missing('name') ? ('analysis.review.required' | t) : ''"
+        >
+          <input
+            id="world-fix-name"
+            class="ds-input"
+            data-testid="world-fix-name"
+            [value]="form().name"
+            (input)="set('name', $event)"
+          />
         </ds-field>
-      } @else {
-        <ds-field [label]="'analysis.pipeline.predicate' | t" controlId="world-fix-predicate">
+        <ds-field controlId="world-fix-type" [label]="'analysis.review.prop.entityType' | t">
           <span class="ds-select">
-            <select
-              id="world-fix-predicate"
-              class="ds-input"
-              data-testid="world-fix-predicate"
-              (change)="setPredicate($event)"
-            >
-              @for (option of predicates(); track option) {
-                <option [value]="option" [selected]="predicate() === option">{{ option }}</option>
+            <select id="world-fix-type" class="ds-input" data-testid="world-fix-type" (change)="set('type', $event)">
+              @for (option of types(); track option) {
+                <option [value]="option" [selected]="form().type === option">{{ typeLabel(option) }}</option>
               }
             </select>
             <ds-icon name="chevron-down" size="sm" />
           </span>
         </ds-field>
         <ds-field
-          [label]="(scalar() ? 'analysis.world.value' : 'analysis.world.object') | t"
-          controlId="world-fix-value"
-          [error]="scalar() && !values().length ? ('analysis.review.noValues' | t) : ''"
+          controlId="world-fix-aliases"
+          [label]="'analysis.review.prop.aliases' | t"
+          [hint]="'analysis.review.aliasesHint' | t"
         >
+          <input
+            id="world-fix-aliases"
+            class="ds-input"
+            data-testid="world-fix-aliases"
+            [value]="form().aliases"
+            (input)="set('aliases', $event)"
+          />
+        </ds-field>
+      } @else {
+        <ds-field controlId="world-fix-subject" [label]="'analysis.review.prop.subject' | t">
           <span class="ds-select">
             <select
-              id="world-fix-value"
+              id="world-fix-subject"
               class="ds-input"
-              data-testid="world-fix-value"
-              [disabled]="scalar() && !values().length"
-              (change)="setValue($event)"
+              data-testid="world-fix-subject"
+              (change)="set('subject', $event)"
             >
-              @if (scalar()) {
-                @for (option of values(); track option) {
-                  <option [value]="option" [selected]="value() === option">{{ option }}</option>
-                }
-              } @else {
-                @for (option of objects(); track option.id) {
-                  <option [value]="option.id" [selected]="value() === option.id">{{ option.name }}</option>
-                }
+              @for (option of entities(); track option.id) {
+                <option [value]="option.id" [selected]="form().subject === option.id">{{ option.name }}</option>
               }
             </select>
             <ds-icon name="chevron-down" size="sm" />
           </span>
+        </ds-field>
+        <ds-field controlId="world-fix-predicate" [label]="'analysis.review.prop.predicate' | t">
+          <span class="ds-select">
+            <select
+              id="world-fix-predicate"
+              class="ds-input"
+              data-testid="world-fix-predicate"
+              (change)="set('predicate', $event)"
+            >
+              @for (option of predicates(); track option) {
+                <option [value]="option" [selected]="form().predicate === option">{{ option }}</option>
+              }
+            </select>
+            <ds-icon name="chevron-down" size="sm" />
+          </span>
+        </ds-field>
+        @if (freeText()) {
+          <ds-field
+            controlId="world-fix-value-text"
+            required
+            [label]="'analysis.review.prop.value' | t"
+            [error]="missing('value') ? ('analysis.review.required' | t) : ''"
+          >
+            <input
+              id="world-fix-value-text"
+              class="ds-input"
+              data-testid="world-fix-value-text"
+              [value]="form().value"
+              (input)="set('value', $event)"
+            />
+          </ds-field>
+        } @else {
+          <ds-field
+            controlId="world-fix-value"
+            [label]="(scalar() ? 'analysis.review.prop.value' : 'analysis.review.prop.object') | t"
+          >
+            <span class="ds-select">
+              <select
+                id="world-fix-value"
+                class="ds-input"
+                data-testid="world-fix-value"
+                (change)="set('value', $event)"
+              >
+                @if (scalar()) {
+                  @for (option of values(); track option) {
+                    <option [value]="option" [selected]="form().value === option">{{ option }}</option>
+                  }
+                } @else {
+                  @for (option of entities(); track option.id) {
+                    <option [value]="option.id" [selected]="form().value === option.id">{{ option.name }}</option>
+                  }
+                }
+              </select>
+              <ds-icon name="chevron-down" size="sm" />
+            </span>
+          </ds-field>
+        }
+        @if (labeled()) {
+          <ds-field
+            controlId="world-fix-label"
+            required
+            [label]="'analysis.review.prop.label' | t"
+            [error]="missing('label') ? ('analysis.review.required' | t) : ''"
+          >
+            <input
+              id="world-fix-label"
+              class="ds-input"
+              data-testid="world-fix-label"
+              [value]="form().label"
+              (input)="set('label', $event)"
+            />
+          </ds-field>
+        }
+        <ds-field
+          controlId="world-fix-quote"
+          required
+          [label]="'analysis.review.prop.fact' | t"
+          [hint]="'analysis.review.quoteHint' | t"
+          [error]="missing('quote') ? ('analysis.review.required' | t) : ''"
+        >
+          <textarea
+            id="world-fix-quote"
+            class="ds-input"
+            rows="3"
+            data-testid="world-fix-quote"
+            [value]="form().quote"
+            (input)="set('quote', $event)"
+          ></textarea>
         </ds-field>
       }
     </div>

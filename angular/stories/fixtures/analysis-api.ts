@@ -1,6 +1,14 @@
 import { DestroyRef, inject, provideAppInitializer, type EnvironmentProviders, type Provider } from '@angular/core';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { applyReviewEdits, buildWorld, isReviewEdit } from '@dreamer/shared/core/world';
+import { checkWorld } from '@dreamer/shared/core/analysis-checks';
+import {
+  applyReviewEdit,
+  chapterReviewStatus,
+  filterReviewItems,
+  issueCounts,
+} from '@dreamer/shared/core/analysis-review';
+import { reviewEntityOptions, reviewItems } from '@dreamer/shared/core/analysis-review';
+import { buildWorld, isReviewEdit } from '@dreamer/shared/core/world';
 import { findTextContext } from '@dreamer/shared/core/text-match';
 import type {
   AnalysisChanged,
@@ -22,7 +30,6 @@ import type {
   QuoteMatch,
   QuoteQuery,
   ReviewEdit,
-  ReviewItem,
   ReviewPage,
   ReviewQuery,
   World,
@@ -44,6 +51,7 @@ import {
   JADE_RIVER_PENDING,
   JADE_RIVER_REVIEW_EDITS,
   ONTOLOGY_PROBLEMS,
+  ENTITY_SEEDS,
   UNANALYSED_CHAPTERS,
   UNANALYSED_NOVEL,
   jadeRiverChapters,
@@ -61,10 +69,34 @@ export type AnalysisScenario =
 const STEPS: AnalysisRun['step'][] = ['preparation', 'candidates', 'predicates', 'verification'];
 const TICK_MS = 280;
 const DONE: ChapterAnalysisStatus[] = ['clean', 'has-issues', 'reviewed'];
-const READY_TO_MERGE_EDITS: ReviewEdit[] = [
-  { kind: 'review-accept', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-missing-quote' },
-  { kind: 'review-reject', chapterIndex: 27, itemKind: 'entity', itemId: 'invalid-crown' },
-];
+
+function readyToMergeEdits(edition: JadeRiverEdition): ReviewEdit[] {
+  const qiao = ENTITY_SEEDS.find((seed) => seed.id === 'master-qiao')!;
+  return [
+    { kind: 'review-reject', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-missing-quote' },
+    { kind: 'review-reject', chapterIndex: 27, itemKind: 'entity', itemId: 'invalid-crown' },
+    { kind: 'review-reject', chapterIndex: 4, itemKind: 'entity', itemId: 'jade-river-term' },
+    {
+      kind: 'review-fix',
+      chapterIndex: 26,
+      itemKind: 'entity',
+      itemId: 'ash-court-place',
+      entity: { type: 'Organization' },
+    },
+    {
+      kind: 'review-fix',
+      chapterIndex: 28,
+      itemKind: 'entity',
+      itemId: 'master-qiao',
+      entity: { aliases: edition === 'zh' ? qiao.zhAliases : qiao.aliases },
+    },
+  ];
+}
+
+function withWorldConflicts(details: Map<number, AnalysisChapterDetail>): void {
+  const current = [...details.values()].filter((detail) => DONE.includes(detail.status));
+  for (const detail of checkWorld(current, DEFAULT_ONTOLOGY)) details.set(detail.index, detail);
+}
 
 export class FakeAnalysisApi extends FakePipelinesApi {
   private readonly chapters = new Map<string, ChapterAnalysis[]>();
@@ -99,7 +131,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
     );
     this.reviewEdits.set(novelId, [
       ...JADE_RIVER_REVIEW_EDITS,
-      ...(scenario === 'readyToMerge' ? READY_TO_MERGE_EDITS : []),
+      ...(scenario === 'readyToMerge' ? readyToMergeEdits(edition) : []),
     ]);
     this.overlay.set(novelId, jadeRiverOverlay(edition));
     this.pending.set(novelId, new Set(JADE_RIVER_PENDING));
@@ -159,8 +191,9 @@ export class FakeAnalysisApi extends FakePipelinesApi {
 
   override async analysisStatus(novelId: string): Promise<AnalysisStatus | null> {
     const pending = this.pending.get(novelId) ?? new Set<number>();
+    const details = this.details(novelId);
     const chapters = (this.chapters.get(novelId) ?? []).map((chapter): ChapterAnalysisSummary => {
-      const detail = this.reviewed(novelId, chapter);
+      const detail = details.get(chapter.index)!;
       const items = [...detail.entities, ...detail.facts];
       const counts = {
         entities: detail.entities.length,
@@ -171,17 +204,18 @@ export class FakeAnalysisApi extends FakePipelinesApi {
         rejected: items.filter((item) => item.status === 'rejected').length,
       };
       const { index, title, file, resultFile, error } = chapter;
-      const status = this.chapterStatus(chapter, counts.failed);
+      const status = this.chapterStatus(chapter, detail);
       return { index, title, file, resultFile, status, counts, pending: pending.has(index), error };
     });
-    const withIssues = chapters.filter((chapter) => chapter.status === 'has-issues');
+    const issues = issueCounts(reviewItems(this.reviewChapters(chapters, details)));
     return {
       novelId,
       chapters,
       run: this.activeRuns.get(novelId) ?? null,
       merge: {
         pending: pending.size,
-        openIssues: withIssues.reduce((sum, chapter) => sum + chapter.counts.failed, 0),
+        openIssues: issues.open,
+        openErrors: issues.errors,
         mergedAt: this.mergedAt.get(novelId) ?? null,
       },
       ontology: DEFAULT_ONTOLOGY,
@@ -192,7 +226,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
 
   override async analysisChapter(request: AnalysisChapterRequest): Promise<AnalysisChapterDetail | null> {
     const chapter = this.chapters.get(request.novelId)?.find((item) => item.file === request.file);
-    return chapter ? this.reviewed(request.novelId, chapter) : null;
+    return chapter ? (this.details(request.novelId).get(chapter.index) ?? null) : null;
   }
 
   override async analysisPlan(request: AnalysisRunRequest): Promise<AnalysisPlan | null> {
@@ -245,38 +279,11 @@ export class FakeAnalysisApi extends FakePipelinesApi {
 
   override async analysisReview(query: ReviewQuery): Promise<ReviewPage | null> {
     const status = await this.analysisStatus(query.novelId);
-    const chapters = status?.chapters ?? [];
-    const items: ReviewItem[] = [];
-    for (const chapter of chapters.filter((item) => item.status === 'has-issues' || item.status === 'reviewed')) {
-      const raw = this.chapters.get(query.novelId)?.find((item) => item.index === chapter.index);
-      if (!raw) continue;
-      const issues = new Set(this.issueIds(raw));
-      const detail = this.reviewed(query.novelId, raw);
-      const name = (id: string | undefined): string => detail.entities.find((entity) => entity.id === id)?.name ?? '';
-      const chapterItems: ReviewItem[] = [
-        ...detail.entities.map((entity) => ({
-          chapterIndex: chapter.index,
-          chapterTitle: chapter.title,
-          itemKind: 'entity' as const,
-          entity,
-          context: findTextContext(detail.paragraphs, entity.wordsFound[0] ?? entity.name),
-        })),
-        ...detail.facts.map((fact) => ({
-          chapterIndex: chapter.index,
-          chapterTitle: chapter.title,
-          itemKind: 'fact' as const,
-          fact,
-          subjectName: name(fact.subjectId),
-          objectName: name(fact.objectId),
-          context: fact.quote ? findTextContext(detail.paragraphs, fact.quote) : null,
-        })),
-      ];
-      items.push(...chapterItems.filter((item) => issues.has(this.itemId(item)) && this.matchesReview(item, query)));
-    }
+    const chapters = this.reviewChapters(status?.chapters ?? [], this.details(query.novelId));
     return {
-      items,
+      items: filterReviewItems(reviewItems(chapters), query),
       openCount: status?.merge.openIssues ?? 0,
-      failedChapters: chapters.filter((item) => item.status === 'failed'),
+      entities: reviewEntityOptions(chapters),
     };
   }
 
@@ -298,15 +305,23 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   override async analysisEdit(request: AnalysisEditRequest): Promise<void> {
     const { novelId, edit } = request;
     this.assertFree(novelId);
-    if (isReviewEdit(edit)) this.reviewEdits.set(novelId, [...(this.reviewEdits.get(novelId) ?? []), edit]);
-    else this.overlay.set(novelId, [...(this.overlay.get(novelId) ?? []), edit]);
+    if (isReviewEdit(edit)) {
+      const edits = this.reviewEdits.get(novelId) ?? [];
+      this.reviewEdits.set(novelId, [...edits, edit]);
+      try {
+        this.details(novelId);
+      } catch (error) {
+        this.reviewEdits.set(novelId, edits);
+        throw error;
+      }
+    } else this.overlay.set(novelId, [...(this.overlay.get(novelId) ?? []), edit]);
     this.emitChanged(novelId);
   }
 
   override async analysisMerge(novelId: string): Promise<void> {
     this.assertFree(novelId);
-    const openIssues = (await this.analysisStatus(novelId))?.merge.openIssues ?? 0;
-    if (openIssues) throw new CodedError(ErrorCode.AnalysisOpenIssues, `${openIssues} issues are still open`);
+    const openErrors = (await this.analysisStatus(novelId))?.merge.openErrors ?? 0;
+    if (openErrors) throw new CodedError(ErrorCode.AnalysisOpenIssues, `${openErrors} errors are still open`);
     this.pending.set(novelId, new Set());
     this.merged.set(novelId, this.snapshot(novelId));
     this.mergedAt.set(novelId, new Date().toISOString());
@@ -434,44 +449,44 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       throw new CodedError(ErrorCode.NovelLocked, 'Novel is busy');
   }
 
-  private reviewed(novelId: string, chapter: ChapterAnalysis): AnalysisChapterDetail {
-    return applyReviewEdits(chapter, this.reviewEdits.get(novelId) ?? []);
+  private details(novelId: string): Map<number, AnalysisChapterDetail> {
+    const details = new Map<number, AnalysisChapterDetail>(
+      (this.chapters.get(novelId) ?? []).map((chapter) => [chapter.index, { ...chapter }]),
+    );
+    withWorldConflicts(details);
+    for (const edit of this.reviewEdits.get(novelId) ?? []) {
+      const detail = details.get(edit.chapterIndex);
+      if (!detail) continue;
+      const edited = applyReviewEdit({
+        chapter: detail,
+        entities: detail.entities,
+        facts: detail.facts,
+        edit,
+        ontology: DEFAULT_ONTOLOGY,
+      });
+      details.set(edit.chapterIndex, { ...detail, ...edited });
+      withWorldConflicts(details);
+    }
+    return details;
   }
 
   private snapshot(novelId: string): AnalysisChapterDetail[] {
     const pending = this.pending.get(novelId) ?? new Set<number>();
-    return (this.chapters.get(novelId) ?? [])
-      .filter((chapter) => chapter.resultFile && chapter.status !== 'failed' && !pending.has(chapter.index))
-      .map((chapter) => this.reviewed(novelId, chapter));
-  }
-
-  private chapterStatus(chapter: ChapterAnalysis, failed: number): ChapterAnalysisStatus {
-    if (!DONE.includes(chapter.status)) return chapter.status;
-    if (failed) return 'has-issues';
-    return this.issueIds(chapter).length ? 'reviewed' : 'clean';
-  }
-
-  private issueIds(chapter: ChapterAnalysis): string[] {
-    return [...chapter.entities, ...chapter.facts].filter((item) => item.status === 'failed').map((item) => item.id);
-  }
-
-  private itemId(item: ReviewItem): string {
-    return item.entity?.id ?? item.fact?.id ?? '';
-  }
-
-  private itemStatus(item: ReviewItem): string {
-    return item.entity?.status ?? item.fact?.status ?? '';
-  }
-
-  private matchesReview(item: ReviewItem, query: ReviewQuery): boolean {
-    const status = this.itemStatus(item);
-    const statusMatch =
-      query.status === 'all' || (query.status === 'open' ? status === 'failed' : status === query.status);
-    return (
-      statusMatch &&
-      (query.itemKind === 'all' || item.itemKind === query.itemKind) &&
-      (query.chapterIndex === null || item.chapterIndex === query.chapterIndex)
+    return [...this.details(novelId).values()].filter(
+      (chapter) => chapter.resultFile && chapter.status !== 'failed' && !pending.has(chapter.index),
     );
+  }
+
+  private chapterStatus(chapter: ChapterAnalysis, detail: AnalysisChapterDetail): ChapterAnalysisStatus {
+    if (!DONE.includes(chapter.status)) return chapter.status;
+    return chapterReviewStatus(detail.entities, detail.facts);
+  }
+
+  private reviewChapters(
+    chapters: ChapterAnalysisSummary[],
+    details: Map<number, AnalysisChapterDetail>,
+  ): AnalysisChapterDetail[] {
+    return chapters.filter((chapter) => DONE.includes(chapter.status)).map((chapter) => details.get(chapter.index)!);
   }
 }
 

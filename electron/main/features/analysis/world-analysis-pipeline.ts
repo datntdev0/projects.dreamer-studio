@@ -1,9 +1,7 @@
-import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { chapterCounts, hasIssues, mergeStageEntities } from '@dreamer/shared/core/analysis-checks';
+import { chapterCounts, checkChapter, hasIssues, mergeStageEntities } from '@dreamer/shared/core/analysis-checks';
 import { AnalysisRunQueue, chapterStatuses, emptyIndex } from '@dreamer/shared/core/analysis-plan';
 import { isUpToDate, planRun, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
-import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AnalysisEntity, AnalysisIndexEntry, AnalysisIndexFile, AnalysisRun } from '@dreamer/shared/models/analysis';
 import { AnalysisRunRequest, ChapterAnalysisCounts, ChapterResult, Ontology } from '@dreamer/shared/models/analysis';
@@ -15,11 +13,13 @@ import { PipelineDefinition, StepContext } from '../pipelines/pipeline-definitio
 import { promptLogDir } from '../pipelines/run-log';
 import { LlmService } from '../llm/llm-service';
 import { SettingsStore } from '../settings/settings-store';
-import { chapterPath, novelFolder, NovelFolder } from '../library/library-files';
+import { novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
-import { readAnalysisIndex, readChapterResult, writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { readAnalysisIndex, readChapterParagraphs, readChapterResult } from './analysis-files';
+import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { askCandidates, askPredicates, LlmChapter } from './analysis-llm';
 import { ensureOntology, loadOntology } from './analysis-ontology';
+import { recheckWorld } from './analysis-recheck';
 import { AnalysisRuns } from './analysis-runs';
 
 export interface WorldAnalysisDeps {
@@ -74,13 +74,7 @@ async function queuedChapters(
   const chapters: Map<number, LlmChapter> = new Map<number, LlmChapter>();
   for (const index of plan.queue) {
     const entry: NovelChapterEntry = novel.chapters[index - 1];
-    const path: string = chapterPath(folder, entry.file);
-    const details = await stat(path).catch((): null => null);
-    if (!details?.isFile() || details.size === 0)
-      throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter file is missing or empty: ${path}`);
-    const paragraphs: string[] = splitParagraphs(await readFile(path, 'utf8'));
-    if (paragraphs.length === 0) throw new CodedError(ErrorCode.ChapterFileMissing, `Chapter file is empty: ${path}`);
-    chapters.set(index, { index, title: entry.title, paragraphs });
+    chapters.set(index, { index, title: entry.title, paragraphs: await readChapterParagraphs(folder, entry.file) });
   }
   return chapters;
 }
@@ -99,14 +93,15 @@ async function saveEntry(
 }
 
 async function saveLastRun(
-  novelId: string,
+  novel: NovelMetadata,
   folder: NovelFolder,
   runId: string,
   analysed: number,
   failed: number,
   issues: number,
 ): Promise<void> {
-  await withNovelLock(novelId, async (): Promise<void> => {
+  await withNovelLock(novel.id, async (): Promise<void> => {
+    await recheckWorld(folder, novel);
     const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
     await writeAnalysisIndex(folder, {
       ...index,
@@ -150,13 +145,15 @@ async function failChapter(
 ): Promise<void> {
   const chapter: NovelChapterEntry = novel.chapters[index - 1];
   const counts: ChapterAnalysisCounts = { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
+  const analysedAt: string = new Date().toISOString();
   await saveEntry(ctx.params.novelId as string, folder, {
     index,
     file: chapter.file,
     status: 'failed',
     counts,
     error: code,
-    analysedAt: new Date().toISOString(),
+    analysedAt,
+    updatedAt: analysedAt,
   });
   run.done++;
   run.failed++;
@@ -239,17 +236,18 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
           request.stage,
         );
         try {
-          const facts = await askPredicates({ chapter, entities, ontology, ask, log: ctx.log });
+          const asked = await askPredicates({ chapter, entities, ontology, ask, log: ctx.log });
           ctx.checkpoint();
           run.step = 'verification';
           publish(deps, request.novelId, run, ctx);
-          const counts: ChapterAnalysisCounts = chapterCounts(entities, facts);
+          const { entities: checkedEntities, facts } = checkChapter({ entities, facts: asked, ontology });
+          const counts: ChapterAnalysisCounts = chapterCounts(checkedEntities, facts);
           const status: AnalysisIndexEntry['status'] = hasIssues(counts) ? 'has-issues' : 'clean';
           const analysedAt: string = new Date().toISOString();
           await saveEntry(
             request.novelId,
             folder,
-            { index: chapter.index, file, status, counts, analysedAt },
+            { index: chapter.index, file, status, counts, analysedAt, updatedAt: analysedAt },
             {
               version: 1,
               file,
@@ -257,7 +255,7 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
               title: chapter.title,
               analysedAt,
               llm: check.llmLabel,
-              entities,
+              entities: checkedEntities,
               facts,
             },
           );
@@ -272,10 +270,9 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
       }
     }
     ctx.checkpoint();
-    await saveLastRun(request.novelId, folder, ctx.runId, run.done - run.failed, run.failed, issues);
+    await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed, issues);
   } catch (error: unknown) {
-    if (isAbort(error))
-      await saveLastRun(request.novelId, folder, ctx.runId, run.done - run.failed, run.failed, issues);
+    if (isAbort(error)) await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed, issues);
     throw error;
   }
 }

@@ -111,6 +111,26 @@ describe('buildWorldFile', () => {
   });
 });
 
+describe('buildWorldFile with a previous world', () => {
+  it('keeps the previous results of a failed re-analysis and drops a deleted chapter', () => {
+    const before = [summary(1, 'clean'), summary(2, 'clean'), summary(3, 'clean')];
+    const previous = buildWorldFile(
+      before,
+      resultMap(...before.map((chapter) => result(chapter, [entity(`e${chapter.index}`, 'verified')], []))),
+      'first',
+    );
+    const after = [summary(1, 'clean'), summary(2, 'failed')];
+    const world = buildWorldFile(
+      after,
+      resultMap(result(after[0], [entity('e1', 'verified')], [])),
+      'second',
+      previous,
+    );
+    expect(world.chapters.map((chapter) => chapter.index)).toEqual([1, 2]);
+    expect(world.chapters[1].entities.map((item: AnalysisEntity): string => item.id)).toEqual(['e2']);
+  });
+});
+
 describe('mergeWorld', () => {
   async function seed(reason: FailReason, ...chapters: ChapterAnalysisSummary[]): Promise<AnalysisIndexFile> {
     for (const chapter of chapters) {

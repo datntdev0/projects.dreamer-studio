@@ -22,7 +22,8 @@ import { LayoutService } from '@shell/layout/layout.service';
 import { PanelDirective } from '@shell/layout/panel.directive';
 import { formatCount } from '@core/format';
 import { fold, isTypingTarget, languageName, matches, toggled, translationLevel } from './library-format';
-import type { TranslationLevel } from './library-format';
+import { analysisLevel } from './library-format';
+import type { AnalysisLevel, TranslationLevel } from './library-format';
 import { LibraryInspectorComponent } from './novel-list/library-inspector.component';
 import { LibraryItemsComponent } from './novel-list/library-items.component';
 import { NovelDeleteDialogComponent } from './novel-list/novel-delete-dialog.component';
@@ -82,12 +83,14 @@ export class LibraryPage implements OnInit {
   protected readonly languageFilter = signal<string | null>(null);
   protected readonly genreFilters = signal<string[]>([]);
   protected readonly publicationFilters = signal<string[]>([]);
+  protected readonly analysisFilters = signal<string[]>([]);
   protected readonly translationFilters = signal<string[]>([]);
   protected readonly selected = signal<string[]>([]);
   protected readonly leaveOpen = signal<boolean>(false);
   protected readonly deleteTargets = signal<NovelSummary[]>([]);
   protected readonly publications: ('ongoing' | 'completed')[] = ['ongoing', 'completed'];
   protected readonly translationLevels: TranslationLevel[] = ['full', 'partial'];
+  protected readonly analysisLevels: AnalysisLevel[] = ['full', 'partial', 'none'];
   protected readonly sortKeys: LibrarySortKey[] = ['updatedAt', 'importedAt', 'title', 'author', 'chapterCount'];
   protected readonly tabs: Signal<TabItem[]> = computed(() => [
     { id: 'novels', label: this.i18n.t('library.browse.novels') },
@@ -112,6 +115,9 @@ export class LibraryPage implements OnInit {
   );
   protected readonly publicationCounts: Signal<Map<string, number>> = computed(() =>
     this.countBy(this.store.novels().map((novel: NovelSummary) => novel.publication)),
+  );
+  protected readonly analysisCounts: Signal<Map<string, number>> = computed(() =>
+    this.countBy(this.store.novels().map((novel: NovelSummary) => analysisLevel(novel.analysis))),
   );
   protected readonly hasTranslations: Signal<boolean> = computed(() =>
     this.store.novels().some((novel: NovelSummary) => novel.translations.length > 0),
@@ -141,6 +147,7 @@ export class LibraryPage implements OnInit {
     const language: string | null = this.languageFilter();
     const genres: string[] = this.genreFilters();
     const publications: string[] = this.publicationFilters();
+    const analyses: string[] = this.analysisFilters();
     const translations: string[] = this.translationFilters();
     const key: LibrarySortKey = this.store.sortKey();
     const direction: number = this.store.sortDirection() === 'asc' ? 1 : -1;
@@ -152,6 +159,7 @@ export class LibraryPage implements OnInit {
           (!language || novel.language === language) &&
           genres.every((genre: string) => novel.tags.includes(genre)) &&
           (!publications.length || publications.includes(novel.publication)) &&
+          (!analyses.length || analyses.includes(analysisLevel(novel.analysis))) &&
           (!translations.length ||
             novel.translations.some((item: TranslationLanguageSummary) => {
               const level: TranslationLevel | null = translationLevel(item);
@@ -205,6 +213,14 @@ export class LibraryPage implements OnInit {
     this.translationFilters.update((current: string[]) => toggled(current, value));
   }
 
+  protected toggleAnalysis(value: string): void {
+    this.analysisFilters.update((current: string[]) => toggled(current, value));
+  }
+
+  protected analysisFilterKey(level: AnalysisLevel): string {
+    return `library.analysis.status.filter.${level}`;
+  }
+
   protected translationFilterKey(level: TranslationLevel): string {
     return `library.translation.status.filter.${level}`;
   }
@@ -218,6 +234,7 @@ export class LibraryPage implements OnInit {
     this.languageFilter.set(null);
     this.genreFilters.set([]);
     this.publicationFilters.set([]);
+    this.analysisFilters.set([]);
     this.translationFilters.set([]);
   }
 

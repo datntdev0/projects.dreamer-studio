@@ -1,5 +1,5 @@
 import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
-import { chapterStatuses, emptyIndex, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
+import { chapterStatuses, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
 import { applyReviewEdit, chapterReviewStatus, filterReviewItems } from '@dreamer/shared/core/analysis-review';
 import { ReviewChapter, reviewEntityOptions, reviewItems } from '@dreamer/shared/core/analysis-review';
 import { buildWorld, entityOccurrences, findQuoteMatches, isReviewEdit } from '@dreamer/shared/core/world';
@@ -23,6 +23,7 @@ import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { readAnalysisIndex, readChapterParagraphs, readChapterResult, readWorldFile } from './analysis-files';
+import { readAlignedIndex } from './analysis-files';
 import { readReviewParagraphs } from './analysis-files';
 import { overlayEdits, saveOverlayEdit, worldFileChapters } from './analysis-overlay';
 import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
@@ -156,10 +157,10 @@ export class AnalysisService {
   }
 
   async world(query: WorldQuery): Promise<World> {
-    this.readNovel(query.novelId);
+    const novel: NovelMetadata = this.readNovel(query.novelId);
     const folder: NovelFolder = this.folder(query.novelId);
     const file: WorldFile | null = readWorldFile(folder);
-    const chapters: AnalysisChapterDetail[] = worldFileChapters(file);
+    const chapters: AnalysisChapterDetail[] = worldFileChapters(file, novel.chapters);
     const edits: OverlayEdit[] = overlayEdits(folder);
     return {
       ...worldOf(chapters, edits, query),
@@ -169,9 +170,9 @@ export class AnalysisService {
   }
 
   async occurrences(query: OccurrenceQuery): Promise<Occurrence[]> {
-    this.readNovel(query.novelId);
+    const novel: NovelMetadata = this.readNovel(query.novelId);
     const folder: NovelFolder = this.folder(query.novelId);
-    const details: AnalysisChapterDetail[] = worldFileChapters(readWorldFile(folder));
+    const details: AnalysisChapterDetail[] = worldFileChapters(readWorldFile(folder), novel.chapters);
     const world: World = worldOf(details, overlayEdits(folder), { chapter: null, only: false });
     const entity: WorldEntity | undefined = world.entities.find(
       (item: WorldEntity): boolean => item.id === query.entityId,
@@ -225,7 +226,7 @@ export class AnalysisService {
       const novel: NovelMetadata = this.readNovel(novelId);
       assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
       const folder: NovelFolder = this.folder(novelId);
-      const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+      const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
       const chapter: ChapterAnalysisSummary | undefined = chapterStatuses(novel.chapters, index)[edit.chapterIndex - 1];
       const result: ChapterResult | null =
         chapter && isReviewable(chapter) ? readChapterResult(folder, chapter.file) : null;
@@ -272,7 +273,7 @@ export class AnalysisService {
       assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
       const folder: NovelFolder = this.folder(novelId);
       await recheckWorld(folder, novel);
-      const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+      const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
       await mergeWorld(folder, chapterStatuses(novel.chapters, index), index);
       broadcast(AnalysisChannel.Changed, { novelId });
     });

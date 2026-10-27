@@ -1,4 +1,5 @@
 import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
+import { ChapterMatch, matchChapters } from '@dreamer/shared/core/analysis-plan';
 import { activeOverlay, buildWorld, factBase, OccurrenceChapter } from '@dreamer/shared/core/world';
 import { checkOverlayEdit } from '@dreamer/shared/core/world-overlay-checks';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
@@ -8,23 +9,33 @@ import { NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-s
 import { NovelFolder } from '../library/library-files';
 import { readReviewParagraphs, readWorldFile, readWorldOverlay, writeWorldOverlay } from './analysis-files';
 
-function worldFileDetail(chapter: WorldFileChapter): AnalysisChapterDetail {
+function worldFileDetail(
+  match: ChapterMatch<WorldFileChapter>,
+  chapter: { file: string; title: string },
+): AnalysisChapterDetail {
   return {
-    index: chapter.index,
+    index: match.index,
     title: chapter.title,
     file: chapter.file,
-    resultFile: chapter.file,
-    status: 'clean',
-    counts: chapterCounts(chapter.entities, chapter.facts),
+    resultFile: match.entry.file,
+    status: match.stale ? 'stale' : 'clean',
+    counts: chapterCounts(match.entry.entities, match.entry.facts),
     pending: false,
     paragraphs: [],
-    entities: chapter.entities,
-    facts: chapter.facts,
+    entities: match.entry.entities,
+    facts: match.entry.facts,
   };
 }
 
-export function worldFileChapters(file: WorldFile | null): AnalysisChapterDetail[] {
-  return file ? file.chapters.map(worldFileDetail) : [];
+export function worldFileChapters(
+  file: WorldFile | null,
+  chapters: { file: string; title: string }[],
+): AnalysisChapterDetail[] {
+  return file
+    ? matchChapters(file.chapters, chapters).map((match: ChapterMatch<WorldFileChapter>): AnalysisChapterDetail =>
+        worldFileDetail(match, chapters[match.index - 1]),
+      )
+    : [];
 }
 
 export function overlayEdits(folder: NovelFolder): OverlayEdit[] {
@@ -57,7 +68,7 @@ export async function saveOverlayEdit(
   edit: OverlayEdit,
   ontology: Ontology,
 ): Promise<void> {
-  const chapters: AnalysisChapterDetail[] = worldFileChapters(readWorldFile(folder));
+  const chapters: AnalysisChapterDetail[] = worldFileChapters(readWorldFile(folder), novel.chapters);
   const edits: OverlayEdit[] = overlayEdits(folder);
   const world: World = buildWorld(chapters, { chapter: null, only: false }, edits);
   const saved: OverlayEdit = withBase(edit, chapters);

@@ -96,6 +96,20 @@
           </div>
         }
       </div>
+      <div class="library-filter-section" data-testid="analysis-status-filter">
+        <h3>{{ 'library.analysis.status.filter.heading' | t }}</h3>
+        @for (level of analysisLevels; track level) {
+          <div class="library-filter-check">
+            <ds-checkbox
+              [checked]="analysisFilters().includes(level)"
+              [attr.data-testid]="'lib-analysis-' + level"
+              (checkedChange)="toggleAnalysis(level)"
+              >{{ analysisFilterKey(level) | t }}</ds-checkbox
+            >
+            <span class="library-filter-count">{{ count(analysisCounts().get(level) ?? 0) }}</span>
+          </div>
+        }
+      </div>
       @if (hasTranslations()) {
         <div class="library-filter-section" data-testid="translation-status-filter">
           <h3>{{ 'library.translation.status.filter.heading' | t }}</h3>

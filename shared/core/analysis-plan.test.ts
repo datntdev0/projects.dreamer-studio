@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AnalysisIndexEntry, AnalysisIndexFile, AnalysisRunOptions } from '../models/analysis';
 import type { ChapterAnalysisCounts, ChapterAnalysisStatus, ChapterAnalysisSummary } from '../models/analysis';
 import type { NovelChapterEntry } from '../models/novel-store';
-import { chapterStatuses, emptyIndex, planRun, upsertIndexEntry } from './analysis-plan';
+import { alignIndex, chapterStatuses, emptyIndex, matchChapters, planRun, upsertIndexEntry } from './analysis-plan';
 
 const COUNTS: ChapterAnalysisCounts = { entities: 2, facts: 1, verified: 3, failed: 0, accepted: 0, rejected: 0 };
 const ZERO: ChapterAnalysisCounts = { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
@@ -178,5 +178,138 @@ describe('upsertIndexEntry and emptyIndex', () => {
     const result = upsertIndexEntry(index, entry(1, 'a'));
     expect(result.chapters.map((item) => item.index)).toEqual([1, 2]);
     expect(result.mergedAt).toBe('x');
+  });
+});
+
+function statusesOf(current: NovelChapterEntry[], ...entries: AnalysisIndexEntry[]): string[] {
+  return chapterStatuses(current, indexOf(...entries)).map((item) => item.status);
+}
+
+describe('matchChapters', () => {
+  it('matches an entry by its file at the current position, not stale', () => {
+    const result = matchChapters([entry(1, 'a'), entry(2, 'b')], chapters('x', 'a', 'b'));
+    expect(result.map((match) => [match.entry.file, match.index, match.stale])).toEqual([
+      ['a', 2, false],
+      ['b', 3, false],
+    ]);
+  });
+
+  it('matches an entry by its index as stale when the file changed', () => {
+    const result = matchChapters([entry(1, 'a'), entry(2, 'b')], chapters('a', 'b2'));
+    expect(result.map((match) => [match.entry.file, match.index, match.stale])).toEqual([
+      ['a', 1, false],
+      ['b', 2, true],
+    ]);
+  });
+
+  it('drops an entry whose file is gone and whose index is beyond the chapters', () => {
+    const result = matchChapters([entry(1, 'a'), entry(3, 'c')], chapters('a', 'b'));
+    expect(result.map((match) => match.entry.file)).toEqual(['a']);
+  });
+
+  it('drops an entry when its index belongs to a chapter that matches another file', () => {
+    const result = matchChapters([entry(1, 'a'), entry(2, 'b')], chapters('b', 'c'));
+    expect(result.map((match) => [match.entry.file, match.index, match.stale])).toEqual([['b', 1, false]]);
+  });
+
+  it('gives the file match priority over the index', () => {
+    const result = matchChapters([entry(1, 'a'), entry(2, 'b')], chapters('b', 'a'));
+    expect(result.map((match) => [match.entry.file, match.index, match.stale])).toEqual([
+      ['b', 1, false],
+      ['a', 2, false],
+    ]);
+  });
+
+  it('gives an empty list without entries', () => {
+    expect(matchChapters([], chapters('a'))).toEqual([]);
+  });
+});
+
+describe('alignIndex', () => {
+  it('moves entries to their current index and drops deleted ones', () => {
+    const aligned = alignIndex(
+      { ...indexOf(entry(1, 'a'), entry(2, 'b'), entry(3, 'c')), mergedAt: 'm' },
+      chapters('b', 'c'),
+    );
+    expect(aligned.chapters.map((item) => [item.file, item.index])).toEqual([
+      ['b', 1],
+      ['c', 2],
+    ]);
+    expect(aligned.mergedAt).toBe('m');
+  });
+
+  it('gives a stale entry the index of its chapter', () => {
+    const aligned = alignIndex(indexOf(entry(2, 'b')), chapters('a', 'b2'));
+    expect(aligned.chapters.map((item) => [item.file, item.index])).toEqual([['b', 2]]);
+  });
+
+  it('keeps the entry of a moved chapter when upserting another chapter after the alignment', () => {
+    const aligned = alignIndex(indexOf(entry(1, 'a'), entry(2, 'b')), chapters('x', 'a', 'b'));
+    const next = upsertIndexEntry(aligned, entry(1, 'x'));
+    expect(next.chapters.map((item) => [item.file, item.index])).toEqual([
+      ['x', 1],
+      ['a', 2],
+      ['b', 3],
+    ]);
+  });
+});
+
+describe('chapterStatuses after chapter changes', () => {
+  const analysed = [entry(1, 'a'), entry(2, 'b'), entry(3, 'c')];
+
+  it('marks an edited chapter stale and keeps its previous result', () => {
+    const result = chapterStatuses(chapters('a', 'b2', 'c'), indexOf(...analysed));
+    expect(result.map((item) => item.status)).toEqual(['clean', 'stale', 'clean']);
+    expect(result[1]).toMatchObject({ resultFile: 'b', counts: COUNTS, pending: false });
+  });
+
+  it('marks an inserted chapter not-analysed and keeps the status of moved chapters', () => {
+    const result = chapterStatuses(chapters('a', 'x', 'b', 'c'), indexOf(...analysed));
+    expect(result.map((item) => item.status)).toEqual(['clean', 'not-analysed', 'clean', 'clean']);
+    expect(result[2]).toMatchObject({ file: 'b', index: 3 });
+  });
+
+  it('keeps the status of moved chapters after a delete', () => {
+    expect(statusesOf(chapters('a', 'c'), ...analysed)).toEqual(['clean', 'clean']);
+  });
+
+  it('keeps the status of a moved chapter that was not clean', () => {
+    const issues = [entry(1, 'a'), entry(2, 'b', { status: 'has-issues' }), entry(3, 'c', { status: 'reviewed' })];
+    expect(statusesOf(chapters('b', 'c'), ...issues)).toEqual(['has-issues', 'reviewed']);
+  });
+
+  it('marks the merged chapter stale and drops the other entry', () => {
+    const result = chapterStatuses(chapters('a', 'bc'), indexOf(...analysed));
+    expect(result.map((item) => item.status)).toEqual(['clean', 'stale']);
+    expect(result[1].resultFile).toBe('b');
+  });
+
+  it('marks the first part of a split stale and the second part not-analysed', () => {
+    expect(statusesOf(chapters('a', 'b1', 'b2', 'c'), ...analysed)).toEqual([
+      'clean',
+      'stale',
+      'not-analysed',
+      'clean',
+    ]);
+  });
+
+  it('keeps a failed entry failed when the file matches', () => {
+    const result = chapterStatuses(
+      chapters('a', 'b'),
+      indexOf(entry(1, 'a'), entry(2, 'b', { status: 'has-issues', error: 'boom' })),
+    );
+    expect(result.map((item) => item.status)).toEqual(['clean', 'failed']);
+    expect(result[1].error).toBe('boom');
+  });
+
+  it('marks a failed entry stale when the chapter was edited', () => {
+    const result = chapterStatuses(chapters('a2'), indexOf(entry(1, 'a', { error: 'boom' })));
+    expect(result[0].status).toBe('stale');
+    expect(result[0].error).toBeUndefined();
+  });
+
+  it('finds a moved chapter by its file before the index (AC-5)', () => {
+    const result = chapterStatuses(chapters('b', 'a'), indexOf(entry(1, 'a', { status: 'has-issues' }), entry(2, 'b')));
+    expect(result.map((item) => item.status)).toEqual(['clean', 'has-issues']);
   });
 });

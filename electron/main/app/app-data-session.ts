@@ -26,6 +26,10 @@ function refreshImported(index: LibraryIndex, notify: (novelIds: string[]) => vo
   }
 }
 
+function refreshAnalysis(notify: (novelIds: string[]) => void, run: PipelineRun): void {
+  if (run.type === 'world-analysis' && run.novelId !== null) notify([run.novelId]);
+}
+
 export class AppDataSession {
   private constructor(
     readonly paths: AppPaths,
@@ -54,7 +58,10 @@ export class AppDataSession {
       const notify: (novelIds: string[]) => void = (novelIds: string[]): void =>
         broadcast(LibraryChannel.Changed, { novelIds });
       const library: LibraryService = new LibraryService(paths, index, runs, notify);
-      executor.onRunFinished((run: PipelineRun): void => refreshImported(index, notify, run));
+      executor.onRunFinished((run: PipelineRun): void => {
+        refreshImported(index, notify, run);
+        refreshAnalysis(notify, run);
+      });
       return new AppDataSession(paths, db, executor, index, library, logsWritable);
     } catch (error) {
       db.close();

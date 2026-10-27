@@ -18,7 +18,7 @@ import { LibraryStore } from '@core/stores/library-store';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { PipelineStore } from '@core/stores/pipeline-store';
 import { PipelineActions } from '../../pipelines/pipeline-actions';
-import { coverPalette, coverUrl, languageName, translationLevel } from '../library-format';
+import { analysisLevel, coverPalette, coverUrl, languageName, translationLevel } from '../library-format';
 import { LibraryCoverComponent } from './library-cover.component';
 import { NovelMetadataFormComponent } from './novel-metadata-form.component';
 
@@ -106,6 +106,7 @@ export class LibraryInspectorComponent {
   }
 
   protected readonly translationLevel = translationLevel;
+  protected readonly analysisLevel = analysisLevel;
   protected readonly shortId = shortId;
 
   protected date(iso: string): string {

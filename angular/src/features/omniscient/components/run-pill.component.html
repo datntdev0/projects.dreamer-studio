@@ -12,7 +12,7 @@
   >
     <ds-dot kind="primary" pulse />
     @if (chapter(); as current) {
-      <span class="ds-toolbar-label num">{{ 'analysis.run.pillChapter' | t: { chapter: current } }}</span>
+      <span class="num">{{ 'analysis.run.pillChapter' | t: { chapter: current } }}</span>
       <span class="ds-toolbar-label ds-world-run-pill-sep" aria-hidden="true">&middot;</span>
     }
     <span class="ds-toolbar-label">{{ stepKeys[run.step] | t }}</span>
@@ -20,9 +20,8 @@
     <span class="num">{{ run.done }} / {{ run.total }}</span>
     @if (run.failed) {
       <span class="ds-world-run-pill-failed num" data-testid="world-run-pill-failed">
-        <ds-icon name="alert-circle" size="sm" /><span class="ds-toolbar-label">{{
-          'analysis.run.pillFailed' | t: { count: run.failed }
-        }}</span>
+        <ds-icon name="alert-circle" size="sm" /><span>{{ run.failed }}</span
+        ><span class="ds-toolbar-label">{{ 'analysis.run.pillFailedLabel' | t }}</span>
       </span>
     }
     <ds-icon name="chevron-down" size="sm" />

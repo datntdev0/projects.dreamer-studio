@@ -20,12 +20,14 @@ import type {
   ReviewQuery,
   WorldQuery,
 } from '@dreamer/shared/models/analysis';
+import type { NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import { NOVEL_STORE_VERSION } from '@dreamer/shared/models/novel-store';
 import { resolveAppPaths } from '@storage/paths';
 import { AppDataSession } from '../../app/app-data-session';
 import { chapterPath, novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, writeChapter, writeMetadata } from '../library/novel/novel-files';
-import { readAnalysisIndex, readChapterResult, writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { readAnalysisIndex, readChapterResult, readWorldFile } from './analysis-files';
+import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { worldOverlayFile } from './analysis-files';
 import { recheckWorld } from './analysis-recheck';
 import { AnalysisRuns } from './analysis-runs';
@@ -320,6 +322,92 @@ describe('merge and world', () => {
     const rerun: AnalysisIndexEntry = { ...index.chapters[0], analysedAt: '2999-01-01T00:00:00.000Z' };
     await writeAnalysisIndex(folder, upsertIndexEntry(index, rerun));
     expect((await service.status(novelId)).merge.pending).toBe(1);
+  });
+});
+
+describe('chapter changes after the merge', () => {
+  async function mergeAll(): Promise<void> {
+    await service.edit(editRequest({ kind: 'review-reject', chapterIndex: 2, itemKind: 'entity', itemId: 'e2' }));
+    await service.edit(editRequest({ kind: 'review-accept', chapterIndex: 2, itemKind: 'fact', itemId: 'f2' }));
+    await service.merge(novelId);
+  }
+
+  async function changeChapters(
+    change: (chapters: NovelChapterEntry[], added: NovelChapterEntry) => void,
+  ): Promise<void> {
+    const metadata = readMetadata(folder)!;
+    const written = await writeChapter(folder, 'A new chapter text.');
+    const added: NovelChapterEntry = {
+      title: 'New',
+      file: written.file,
+      paragraphs: written.paragraphs,
+      chars: written.chars,
+    };
+    change(metadata.chapters, added);
+    await writeMetadata(folder, metadata);
+  }
+
+  async function worldItems() {
+    const world = await service.world(worldQuery);
+    const byName = new Map(world.entities.map((item) => [item.name, item]));
+    return { world, byName };
+  }
+
+  it('marks the entities of an edited chapter stale', async () => {
+    await mergeAll();
+    await changeChapters((chapters, added) => chapters.splice(1, 1, added));
+    const { byName } = await worldItems();
+    expect(byName.get('Lan')).toMatchObject({ stale: true, staleChapters: [2], chapters: [2] });
+    expect(byName.get('Mai Linh')?.stale).toBeFalsy();
+  });
+
+  it('marks the links of an edited chapter stale', async () => {
+    const linked = [entity('e1', 'Ann'), entity('e2', 'Bob')];
+    await seedChapter(3, 'clean', linked, [fact('f1', { quote: 'Nothing here.' })]);
+    await recheckWorld(folder, readMetadata(folder)!);
+    await mergeAll();
+    expect((await service.world(worldQuery)).links.map((link) => link.stale)).toEqual([undefined]);
+    await changeChapters((chapters, added) => chapters.splice(2, 1, added));
+    const { world, byName } = await worldItems();
+    expect(world.links.map((link) => [link.chapters, link.staleChapters, link.stale])).toEqual([[[3], [3], true]]);
+    expect(byName.get('Ann')?.stale).toBe(true);
+  });
+
+  it('keeps the world of an inserted chapter and moves the chapters after it', async () => {
+    await mergeAll();
+    await changeChapters((chapters, added) => chapters.splice(0, 0, added));
+    const { world, byName } = await worldItems();
+    expect(byName.get('Mai Linh')).toMatchObject({ chapters: [2] });
+    expect(byName.get('Lan')).toMatchObject({ chapters: [3] });
+    expect(world.entities.some((item) => item.stale)).toBe(false);
+    expect(world.links.some((link) => link.stale)).toBe(false);
+  });
+
+  it('leaves the results of a deleted chapter out of the world and moves the other chapters', async () => {
+    await mergeAll();
+    await changeChapters((chapters) => chapters.splice(0, 1));
+    const { byName } = await worldItems();
+    expect([...byName.keys()]).toEqual(['Lan']);
+    expect(byName.get('Lan')).toMatchObject({ chapters: [1] });
+    expect(byName.get('Lan')?.stale).toBeFalsy();
+  });
+
+  it('keeps the previous world results of a stale chapter on the next merge', async () => {
+    await mergeAll();
+    await changeChapters((chapters, added) => chapters.splice(1, 1, added));
+    await service.merge(novelId);
+    expect(readWorldFile(folder)!.chapters.map((chapter) => chapter.index)).toEqual([1, 2]);
+    const { byName } = await worldItems();
+    expect(byName.get('Lan')).toMatchObject({ stale: true, chapters: [2] });
+  });
+
+  it('drops the results of a deleted chapter on the next merge and moves the kept ones', async () => {
+    await mergeAll();
+    await changeChapters((chapters) => chapters.splice(0, 1));
+    await service.merge(novelId);
+    const stored = readWorldFile(folder)!.chapters;
+    expect(stored.map((chapter) => [chapter.index, chapter.file])).toEqual([[1, files[1]]]);
+    expect(readAnalysisIndex(folder)!.chapters.map((item) => [item.index, item.file])).toEqual([[1, files[1]]]);
   });
 });
 

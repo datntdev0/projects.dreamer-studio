@@ -1,11 +1,11 @@
 import { chapterCounts, checkWorld } from '@dreamer/shared/core/analysis-checks';
-import { chapterStatuses, emptyIndex, isUpToDate, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
+import { chapterStatuses, isUpToDate, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
 import { chapterReviewStatus, issueCounts, ReviewChapter, reviewItems } from '@dreamer/shared/core/analysis-review';
 import { AnalysisIndexEntry, AnalysisIndexFile, ChapterAnalysisSummary } from '@dreamer/shared/models/analysis';
 import { ChapterResult, ReviewItem } from '@dreamer/shared/models/analysis';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { NovelFolder } from '../library/library-files';
-import { readAnalysisIndex, readChapterResult, writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { readAlignedIndex, readChapterResult, writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { loadOntology } from './analysis-ontology';
 
 export interface AnalysedChapter {
@@ -28,7 +28,7 @@ function isChanged(before: ChapterResult, after: ChapterResult): boolean {
 }
 
 export async function recheckWorld(folder: NovelFolder, novel: NovelMetadata): Promise<void> {
-  const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+  const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
   const analysed: AnalysedChapter[] = readAnalysedChapters(folder, chapterStatuses(novel.chapters, index));
   const checked: ChapterResult[] = checkWorld(
     analysed.map((item: AnalysedChapter): ChapterResult => item.result),

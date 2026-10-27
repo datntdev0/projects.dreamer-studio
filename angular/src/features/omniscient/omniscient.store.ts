@@ -22,6 +22,7 @@ import type {
   ReviewPage,
 } from '@dreamer/shared/models/analysis';
 import type { ReviewStatusFilter, World, WorldEdit, WorldEntity, WorldLink } from '@dreamer/shared/models/analysis';
+import type { LibraryChangedEvent } from '@dreamer/shared/models/novel';
 import { filterEntityTypes } from './omniscient-labels';
 import type { EntityTypeFilter } from './omniscient-labels';
 
@@ -184,12 +185,17 @@ export class OmniscientStore {
     const offChanged = this.api.onAnalysisChanged((event) => {
       if (event.novelId === this.novelId()) void this.reload();
     });
+    const offLibraryChanged = this.api.onLibraryChanged((event: LibraryChangedEvent): void => {
+      const novelId = this.novelId();
+      if (novelId && event.novelIds.includes(novelId)) void this.reload();
+    });
     inject(DestroyRef).onDestroy(() => {
       this.statusRequest++;
       this.worldRequest++;
       this.reviewRequest++;
       offProgress();
       offChanged();
+      offLibraryChanged();
     });
     effect(() => {
       const id = this.novelId();

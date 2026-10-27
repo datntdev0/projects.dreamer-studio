@@ -44,6 +44,15 @@ class LibraryStoreStub {
   }
 }
 
+function analysedNovels(): NovelSummary[] {
+  const [full, partial, none] = FIXTURE_SUMMARIES;
+  return [
+    { ...full, analysis: { analysed: 4, total: 4 } },
+    { ...partial, analysis: { analysed: 1, total: 4 } },
+    { ...none, analysis: { analysed: 0, total: 4 } },
+  ];
+}
+
 let store: LibraryStoreStub;
 let showModal: (() => void) | undefined;
 
@@ -228,6 +237,25 @@ describe('LibraryPage', () => {
 
     await click(fixture, 'library-page-clear');
     expect(cardIds(fixture)).toHaveLength(FIXTURE_SUMMARIES.length);
+  });
+
+  it('REQ-032 AC-6: filters by fully and partly analysed novels', async () => {
+    const [full, partial, none] = analysedNovels();
+    const fixture: ComponentFixture<LibraryTestHost> = await createPage({ novels: [full, partial, none] });
+
+    await check(fixture, 'lib-analysis-full');
+    expect(cardIds(fixture)).toEqual([full.id]);
+
+    await check(fixture, 'lib-analysis-partial');
+    expect(cardIds(fixture).sort()).toEqual([full.id, partial.id].sort());
+  });
+
+  it('REQ-032 AC-6: filters by not analysed novels', async () => {
+    const [full, partial, none] = analysedNovels();
+    const fixture: ComponentFixture<LibraryTestHost> = await createPage({ novels: [full, partial, none] });
+
+    await check(fixture, 'lib-analysis-none');
+    expect(cardIds(fixture)).toEqual([none.id]);
   });
 
   it('shows the load error and retries', async () => {

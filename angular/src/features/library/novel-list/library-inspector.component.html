@@ -97,8 +97,15 @@
     <strong class="num" data-testid="insp-characters">{{ compact(novel().charCount) }}</strong
     ><span>{{ 'library.inspector.characters' | t }}</span>
   </div>
-  <div class="library-inspector-soon" tabindex="0" [dsTooltip]="'common.soon' | t">
-    <strong class="meta">&mdash;</strong><span>{{ 'library.inspector.analysed' | t }}</span>
+  <div class="translation-status-insp" data-testid="insp-analysed">
+    <span class="translation-status-insp-line">
+      <strong class="num">{{ count(novel().analysis.analysed) }}</strong>
+      <span class="translation-status-total num">/ {{ count(novel().analysis.total) }}</span>
+      @if (analysisLevel(novel().analysis) === 'full') {
+        <ds-icon name="check" size="sm" class="translation-status-done" aria-hidden="true" />
+      }
+    </span>
+    <span>{{ 'library.inspector.analysed' | t }}</span>
   </div>
   <div class="translation-status-insp" data-testid="translation-status-insp">
     @for (item of novel().translations; track item.language) {

@@ -259,6 +259,7 @@ export function toNovelSummary(novel: LibraryNovel): NovelSummary {
     importedAt: novel.importedAt,
     updatedAt: novel.updatedAt,
     hasCover: false,
+    analysis: { analysed: novel.analysedCount, total: novel.chapterCount },
     translations:
       novel.translatedCount > 0
         ? [

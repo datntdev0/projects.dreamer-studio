@@ -1,14 +1,22 @@
+import { chapterStatuses, isUpToDate } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { NovelChapter, NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
+import { ChapterAnalysisSummary } from '@dreamer/shared/models/analysis';
+import { NovelAnalysisSummary, NovelChapter, NovelDetail, NovelSummary } from '@dreamer/shared/models/novel';
 import * as NovelStore from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 import { AppPaths } from '@storage/paths';
-import { listLibraryFolders, novelFolder } from './library-files';
+import { listLibraryFolders, NovelFolder, novelFolder } from './library-files';
 import { readMetadata } from './novel/novel-files';
+import { readAnalysisIndex } from '../analysis/analysis-files';
 
 const logger: Logger = createLogger('library');
 
-function toSummary(metadata: NovelStore.NovelMetadata): NovelSummary {
+function analysisSummary(metadata: NovelStore.NovelMetadata, folder: NovelFolder): NovelAnalysisSummary {
+  const statuses: ChapterAnalysisSummary[] = chapterStatuses(metadata.chapters, readAnalysisIndex(folder));
+  return { analysed: statuses.filter((chapter): boolean => isUpToDate(chapter.status)).length, total: statuses.length };
+}
+
+function toSummary(metadata: NovelStore.NovelMetadata, folder: NovelFolder): NovelSummary {
   return {
     id: metadata.id,
     originalTitle: metadata.originalTitle,
@@ -26,13 +34,14 @@ function toSummary(metadata: NovelStore.NovelMetadata): NovelSummary {
     updatedAt: metadata.updatedAt,
     hasCover: metadata.cover !== null,
     translations: [],
+    analysis: analysisSummary(metadata, folder),
     lock: null,
   };
 }
 
-function toDetail(metadata: NovelStore.NovelMetadata): NovelDetail {
+function toDetail(metadata: NovelStore.NovelMetadata, folder: NovelFolder): NovelDetail {
   return {
-    ...toSummary(metadata),
+    ...toSummary(metadata, folder),
     description: metadata.description,
     chapters: metadata.chapters.map((chapter: NovelStore.NovelChapterEntry, index: number): NovelChapter => ({
       position: index + 1,
@@ -55,7 +64,9 @@ export class LibraryIndex {
   }
 
   list(): NovelSummary[] {
-    return Array.from(this.novels.values()).map(toSummary);
+    return Array.from(this.novels.values()).map((metadata: NovelStore.NovelMetadata): NovelSummary =>
+      toSummary(metadata, novelFolder(this.paths, metadata.id)),
+    );
   }
 
   get(id: string): NovelDetail {
@@ -63,7 +74,7 @@ export class LibraryIndex {
     if (!metadata) {
       throw new CodedError(ErrorCode.NovelNotFound, `Novel not found: ${id}`);
     }
-    return toDetail(metadata);
+    return toDetail(metadata, novelFolder(this.paths, id));
   }
 
   coverFile(id: string): NovelStore.NovelCoverFile | null {

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { chapterCounts, checkChapter, hasIssues, mergeStageEntities } from '@dreamer/shared/core/analysis-checks';
-import { AnalysisRunQueue, chapterStatuses, emptyIndex } from '@dreamer/shared/core/analysis-plan';
+import { AnalysisRunQueue, chapterStatuses } from '@dreamer/shared/core/analysis-plan';
 import { isUpToDate, planRun, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AnalysisEntity, AnalysisIndexEntry, AnalysisIndexFile, AnalysisRun } from '@dreamer/shared/models/analysis';
@@ -15,7 +15,7 @@ import { LlmService } from '../llm/llm-service';
 import { SettingsStore } from '../settings/settings-store';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
-import { readAnalysisIndex, readChapterParagraphs, readChapterResult } from './analysis-files';
+import { readAlignedIndex, readAnalysisIndex, readChapterParagraphs, readChapterResult } from './analysis-files';
 import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { askCandidates, askPredicates, LlmChapter } from './analysis-llm';
 import { ensureOntology, loadOntology } from './analysis-ontology';
@@ -82,12 +82,13 @@ async function queuedChapters(
 async function saveEntry(
   novelId: string,
   folder: NovelFolder,
+  chapters: NovelChapterEntry[],
   entry: AnalysisIndexEntry,
   result?: ChapterResult,
 ): Promise<void> {
   await withNovelLock(novelId, async (): Promise<void> => {
     if (result) await writeChapterResult(folder, result);
-    const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+    const index: AnalysisIndexFile = readAlignedIndex(folder, chapters);
     await writeAnalysisIndex(folder, upsertIndexEntry(index, entry));
   });
 }
@@ -102,7 +103,7 @@ async function saveLastRun(
 ): Promise<void> {
   await withNovelLock(novel.id, async (): Promise<void> => {
     await recheckWorld(folder, novel);
-    const index: AnalysisIndexFile = readAnalysisIndex(folder) ?? emptyIndex();
+    const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
     await writeAnalysisIndex(folder, {
       ...index,
       lastRun: { runId, analysed, failed, issues, finishedAt: new Date().toISOString() },
@@ -146,7 +147,7 @@ async function failChapter(
   const chapter: NovelChapterEntry = novel.chapters[index - 1];
   const counts: ChapterAnalysisCounts = { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
   const analysedAt: string = new Date().toISOString();
-  await saveEntry(ctx.params.novelId as string, folder, {
+  await saveEntry(ctx.params.novelId as string, folder, novel.chapters, {
     index,
     file: chapter.file,
     status: 'failed',
@@ -247,6 +248,7 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
           await saveEntry(
             request.novelId,
             folder,
+            novel.chapters,
             { index: chapter.index, file, status, counts, analysedAt, updatedAt: analysedAt },
             {
               version: 1,

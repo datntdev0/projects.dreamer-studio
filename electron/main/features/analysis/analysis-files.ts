@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { splitParagraphs } from '@dreamer/shared/core/novel-text';
+import { alignIndex, emptyIndex } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { AnalysisIndexFile, ChapterResult, OverlayFile, WorldFile } from '@dreamer/shared/models/analysis';
@@ -53,6 +54,10 @@ export function readAnalysisIndex(folder: NovelFolder): AnalysisIndexFile | null
     return null;
   }
   return parsed as AnalysisIndexFile;
+}
+
+export function readAlignedIndex(folder: NovelFolder, chapters: { file: string }[]): AnalysisIndexFile {
+  return alignIndex(readAnalysisIndex(folder) ?? emptyIndex(), chapters);
 }
 
 export async function writeAnalysisIndex(folder: NovelFolder, index: AnalysisIndexFile): Promise<void> {

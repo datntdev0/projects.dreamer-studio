@@ -23,7 +23,13 @@ export interface NovelSummary {
   updatedAt: string;
   hasCover: boolean;
   translations: TranslationLanguageSummary[];
+  analysis: NovelAnalysisSummary;
   lock: NovelLock | null;
+}
+
+export interface NovelAnalysisSummary {
+  analysed: number;
+  total: number;
 }
 
 export interface NovelChapter {

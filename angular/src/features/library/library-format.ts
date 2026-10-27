@@ -1,4 +1,4 @@
-import type { NovelSummary } from '@dreamer/shared/models/novel';
+import type { NovelAnalysisSummary, NovelSummary } from '@dreamer/shared/models/novel';
 import type { NovelLock } from '@dreamer/shared/models/novel';
 import type { ChapterRef } from '@dreamer/shared/models/novel';
 import type { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
@@ -17,9 +17,16 @@ export type TextField = RequiredField | 'author' | 'description';
 
 export type TranslationLevel = 'full' | 'partial';
 
+export type AnalysisLevel = 'full' | 'partial' | 'none';
+
 export function translationLevel(item: TranslationLanguageSummary): TranslationLevel | null {
   if (item.translated >= item.total && item.total > 0) return 'full';
   return item.translated > 0 && item.translated < item.total ? 'partial' : null;
+}
+
+export function analysisLevel(summary: NovelAnalysisSummary): AnalysisLevel {
+  if (summary.analysed >= summary.total && summary.total > 0) return 'full';
+  return summary.analysed > 0 ? 'partial' : 'none';
 }
 
 const LANGUAGE_CODES: string[] = ['zh', 'ja', 'ko', 'en', 'vi'];

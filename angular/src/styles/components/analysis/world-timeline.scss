@@ -47,16 +47,9 @@ ds-world-timeline {
   .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-xs);
+    gap: var(--sp-sm);
     align-items: center;
     margin: 0;
-  }
-
-  .meta > * + *::before {
-    display: inline-block;
-    margin-right: var(--sp-xs);
-    color: var(--color-text-tertiary);
-    content: '\00B7';
   }
 }
 

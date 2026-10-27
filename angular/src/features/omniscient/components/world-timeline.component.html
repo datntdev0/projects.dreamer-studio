@@ -95,7 +95,9 @@
             type="button"
             class="ds-world-timeline-failed"
             data-testid="world-timeline-failed"
-            (click)="store.openReview()"
+            [attr.aria-label]="'analysis.graph.retryFailed' | t"
+            [dsTooltip]="'analysis.graph.retryFailed' | t"
+            (click)="store.dialog.set({ kind: 'run' })"
           >
             <ds-icon [name]="failedIcon" size="sm" />{{ 'analysis.graph.failed' | t: { count: counts().failed } }}
           </button></span

@@ -60,6 +60,7 @@ const NOVEL: NovelSummary = {
   updatedAt: '2026-10-20T10:00:00.000Z',
   hasCover: false,
   translations: [],
+  analysis: { analysed: 0, total: 12 },
   lock: null,
 };
 

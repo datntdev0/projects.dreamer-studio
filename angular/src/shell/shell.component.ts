@@ -1,8 +1,9 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, inject, input, linkedSignal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ConfirmHostComponent } from '@components/dialog/confirm-host.component';
 import { ToastOutletComponent } from '@components/toast/toast-outlet.component';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { SettingsStore } from '@core/stores/settings-store';
 import { ThemeService } from '@core/theme/theme.service';
 import { PanelOutletComponent } from './layout/panel-outlet.component';
 import { RailComponent } from './rail/rail.component';
@@ -25,10 +26,16 @@ import { TopbarComponent } from './topbar/topbar.component';
 })
 export class ShellComponent {
   readonly initialRailExpanded = input<boolean>(true);
+  private readonly settings: SettingsStore = inject(SettingsStore);
   protected readonly theme: ThemeService = inject(ThemeService);
-  protected readonly railExpanded = signal<boolean>(true);
+  protected readonly railExpanded = linkedSignal<boolean>(() => {
+    const rail = this.settings.settings()?.rail;
+    return rail ? rail === 'full' : this.initialRailExpanded();
+  });
 
-  constructor() {
-    effect(() => this.railExpanded.set(this.initialRailExpanded()));
+  protected toggleRail(): void {
+    const expanded: boolean = !this.railExpanded();
+    this.railExpanded.set(expanded);
+    void this.settings.update({ rail: expanded ? 'full' : 'minimal' });
   }
 }

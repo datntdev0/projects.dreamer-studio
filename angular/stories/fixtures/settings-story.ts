@@ -59,7 +59,7 @@ class SettingsStoryStore {
   ) {
     const initial: AppSettings = {
       ...defaultSettings(this.scenario.appDataDir),
-      pipelines: { maxConcurrent: this.scenario.maxConcurrent },
+      pipelines: { ...defaultSettings(this.scenario.appDataDir).pipelines, maxConcurrent: this.scenario.maxConcurrent },
     };
     this.state = signal<SettingsState | null>(
       this.scenario.loading
@@ -81,7 +81,7 @@ class SettingsStoryStore {
     const settings: AppSettings = {
       ...current.settings,
       ...patch,
-      pipelines: patch.pipelines ?? current.settings.pipelines,
+      pipelines: { ...current.settings.pipelines, ...patch.pipelines },
       llm: { ...current.settings.llm, ...patch.llm },
     };
     this.state.set({ ...current, settings });
@@ -95,7 +95,7 @@ class SettingsStoryStore {
     const defaults: AppSettings = defaultSettings(this.scenario.defaultAppDataDir);
     const settings: AppSettings =
       section === 'general'
-        ? { ...current.settings, language: defaults.language, theme: defaults.theme }
+        ? { ...current.settings, language: defaults.language, theme: defaults.theme, rail: defaults.rail }
         : section === 'llm'
           ? { ...current.settings, llm: { ...current.settings.llm, features: {} } }
           : { ...current.settings, pipelines: defaults.pipelines };

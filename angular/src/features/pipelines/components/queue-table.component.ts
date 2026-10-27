@@ -4,7 +4,7 @@ import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { ProgressComponent } from '@components/status/progress.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { MAX_CONCURRENT_MIN } from '@dreamer/shared/models/settings';
+import { DEFAULT_PIPELINE_SETTINGS } from '@dreamer/shared/models/settings';
 import type { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { formatDuration, shortId } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -66,7 +66,7 @@ export class QueueTableComponent {
   protected readonly queuedCount = computed<number>(() => this.slot().runs.length - this.runningCount());
 
   protected readonly maxConcurrent = computed<number>(
-    () => this.settings.settings()?.pipelines.maxConcurrent ?? MAX_CONCURRENT_MIN,
+    () => this.settings.settings()?.pipelines.maxConcurrent ?? DEFAULT_PIPELINE_SETTINGS.maxConcurrent,
   );
 
   constructor() {

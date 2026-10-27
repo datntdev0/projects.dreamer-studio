@@ -5,6 +5,7 @@ import { IconComponent } from '@components/icon/icon.component';
 import { I18nService, type Language } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { SettingsStore } from '@core/stores/settings-store';
+import type { RailMode } from '@dreamer/shared/models/settings';
 import { ThemeService, type Theme } from '@core/theme/theme.service';
 import { SettingsReset } from '../settings-reset';
 
@@ -27,6 +28,11 @@ export class GeneralSectionComponent {
     { value: 'light', label: this.i18n.t('settings.general.themeLight'), icon: 'sun' },
     { value: 'dark', label: this.i18n.t('settings.general.themeDark'), icon: 'moon' },
   ]);
+  protected readonly railOptions = computed<SegmentedOption[]>(() => [
+    { value: 'full', label: this.i18n.t('settings.general.railFull'), icon: 'panel-left' },
+    { value: 'minimal', label: this.i18n.t('settings.general.railMinimal'), icon: 'columns' },
+  ]);
+  protected readonly rail = computed<RailMode>(() => this.store.settings()?.rail ?? 'full');
 
   protected setLanguage(language: string): void {
     void this.store.update({ language: language as Language });
@@ -34,6 +40,10 @@ export class GeneralSectionComponent {
 
   protected setTheme(theme: string): void {
     void this.store.update({ theme: theme as Theme });
+  }
+
+  protected setRail(rail: string): void {
+    void this.store.update({ rail: rail as RailMode });
   }
 
   protected reset(): void {

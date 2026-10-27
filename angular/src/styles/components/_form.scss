@@ -140,6 +140,88 @@
   }
 }
 
+.ds-range {
+  --range-fill: 0%;
+
+  width: 100%;
+  height: var(--control-h-sm);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.ds-range::-webkit-slider-runnable-track {
+  height: var(--progress-h);
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    to right,
+    var(--color-primary) var(--range-fill),
+    var(--color-surface-muted) var(--range-fill)
+  );
+}
+
+.ds-range::-webkit-slider-thumb {
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  margin-top: calc((var(--progress-h) - var(--range-thumb)) / 2);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+  appearance: none;
+}
+
+.ds-range:hover::-webkit-slider-thumb {
+  border-color: var(--color-primary-hover);
+  box-shadow:
+    var(--shadow-1),
+    0 0 0 var(--sp-xs) color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.ds-range:active::-webkit-slider-thumb {
+  border-color: var(--color-primary-active);
+}
+
+.ds-range:focus-visible {
+  outline: none;
+}
+
+.ds-range:focus-visible::-webkit-slider-thumb {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.ds-range:disabled {
+  cursor: not-allowed;
+}
+
+.ds-range:disabled::-webkit-slider-runnable-track {
+  background: var(--color-surface-muted);
+}
+
+.ds-range:disabled::-webkit-slider-thumb {
+  border-color: var(--color-border-strong);
+  box-shadow: none;
+}
+
+.ds-range-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-h);
+  height: var(--control-h-sm);
+  padding: 0 var(--sp-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
 .ds-checkbox-label {
   display: inline-flex;
   gap: var(--sp-sm);

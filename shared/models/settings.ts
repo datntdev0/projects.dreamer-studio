@@ -6,6 +6,8 @@ export { isAbsolutePath, isPlainObject } from './validation';
 
 export type Theme = 'light' | 'dark';
 
+export type RailMode = 'full' | 'minimal';
+
 export type SettingsNotice = 'none' | 'invalidFields' | 'unreadable';
 
 export type SettingsSection = 'general' | 'pipeline' | 'reading' | 'llm';
@@ -35,12 +37,26 @@ export const DEFAULT_READING_SETTINGS: ReadingSettings = { font: 'serif', size: 
 
 export interface PipelineSettings {
   maxConcurrent: number;
+  maxChapters: number;
 }
+
+export interface PipelineLimit {
+  min: number;
+  max: number;
+}
+
+export const PIPELINE_LIMITS: Record<keyof PipelineSettings, PipelineLimit> = {
+  maxConcurrent: { min: 1, max: 5 },
+  maxChapters: { min: 1, max: 10 },
+};
+
+export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = { maxConcurrent: 1, maxChapters: 1 };
 
 export interface AppSettings {
   version: 1;
   language: Language;
   theme: Theme;
+  rail: RailMode;
   appDataDir: string;
   pipelines: PipelineSettings;
   reading: ReadingSettings;
@@ -50,7 +66,8 @@ export interface AppSettings {
 export interface SettingsPatch {
   language?: Language;
   theme?: Theme;
-  pipelines?: PipelineSettings;
+  rail?: RailMode;
+  pipelines?: Partial<PipelineSettings>;
   reading?: ReadingSettings;
   llm?: LlmSettingsPatch;
 }
@@ -66,29 +83,32 @@ export interface SanitizedSettings {
   invalid: string[];
 }
 
-export const MAX_CONCURRENT_MIN: number = 1;
-
-export const MAX_CONCURRENT_MAX: number = 5;
-
 export function defaultSettings(appDataDir: string): AppSettings {
   return {
     version: 1,
     language: DEFAULT_LANGUAGE,
     theme: 'light',
+    rail: 'full',
     appDataDir,
-    pipelines: { maxConcurrent: MAX_CONCURRENT_MIN },
+    pipelines: { ...DEFAULT_PIPELINE_SETTINGS },
     reading: { ...DEFAULT_READING_SETTINGS },
     llm: defaultLlmSettings(),
   };
 }
 
 const THEMES: Theme[] = ['light', 'dark'];
+const RAIL_MODES: RailMode[] = ['full', 'minimal'];
 
-const PATCH_KEYS: string[] = ['language', 'theme', 'pipelines', 'reading', 'llm'];
+const PATCH_KEYS: string[] = ['language', 'theme', 'rail', 'pipelines', 'reading', 'llm'];
+const PIPELINE_KEYS: (keyof PipelineSettings)[] = ['maxConcurrent', 'maxChapters'];
 const READING_KEYS: (keyof ReadingSettings)[] = ['font', 'size', 'leading', 'width'];
 
 function isTheme(value: unknown): value is Theme {
   return THEMES.includes(value as Theme);
+}
+
+function isRailMode(value: unknown): value is RailMode {
+  return RAIL_MODES.includes(value as RailMode);
 }
 
 export function isReadingFont(value: unknown): value is ReadingFont {
@@ -99,8 +119,9 @@ export function sameReading(a: ReadingSettings, b: ReadingSettings): boolean {
   return READING_KEYS.every((key: keyof ReadingSettings): boolean => a[key] === b[key]);
 }
 
-function isMaxConcurrent(value: unknown): value is number {
-  return Number.isInteger(value) && (value as number) >= MAX_CONCURRENT_MIN && (value as number) <= MAX_CONCURRENT_MAX;
+function isPipelineNumber(name: keyof PipelineSettings, value: unknown): value is number {
+  const limit: PipelineLimit = PIPELINE_LIMITS[name];
+  return Number.isInteger(value) && (value as number) >= limit.min && (value as number) <= limit.max;
 }
 
 function isReadingNumber(value: unknown, limit: ReadingLimit): value is number {
@@ -127,7 +148,7 @@ function sanitizeReadingNumber(name: 'size' | 'leading' | 'width', value: unknow
 export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSettings {
   const defaults: AppSettings = defaultSettings(defaultDir);
   if (!isPlainObject(raw)) return { settings: defaults, invalid: [] };
-  const pipelines: unknown = isPlainObject(raw.pipelines) ? raw.pipelines.maxConcurrent : undefined;
+  const pipelines: Record<string, unknown> = isPlainObject(raw.pipelines) ? raw.pipelines : {};
   const invalid: string[] = [];
   let reading: ReadingSettings = { ...DEFAULT_READING_SETTINGS };
   if ('reading' in raw) {
@@ -150,13 +171,22 @@ export function sanitizeSettings(raw: unknown, defaultDir: string): SanitizedSet
     invalid.push(name);
     return fallback;
   };
+  const pickPipeline = (name: keyof PipelineSettings): number =>
+    pick(
+      `pipelines.${name}`,
+      pipelines[name],
+      (value: unknown): boolean => isPipelineNumber(name, value),
+      defaults.pipelines[name],
+    );
   const settings: AppSettings = {
     version: 1,
     language: pick('language', raw.language, isLanguage, defaults.language),
     theme: pick('theme', raw.theme, isTheme, defaults.theme),
+    rail: 'rail' in raw ? pick('rail', raw.rail, isRailMode, defaults.rail) : defaults.rail,
     appDataDir: pick('appDataDir', raw.appDataDir, isAbsolutePath, defaults.appDataDir),
     pipelines: {
-      maxConcurrent: pick('pipelines.maxConcurrent', pipelines, isMaxConcurrent, defaults.pipelines.maxConcurrent),
+      maxConcurrent: pickPipeline('maxConcurrent'),
+      maxChapters: 'maxChapters' in pipelines ? pickPipeline('maxChapters') : defaults.pipelines.maxChapters,
     },
     reading,
     llm: 'llm' in raw ? sanitizeLlmSettings(raw.llm, invalid) : defaultLlmSettings(),
@@ -170,17 +200,26 @@ export function validateSettingsPatch(patch: unknown): string | null {
   if (keys.length === 0 || keys.some((key: string): boolean => !PATCH_KEYS.includes(key))) return 'patch';
   const { pipelines } = patch;
   if (pipelines !== undefined) {
-    if (!isPlainObject(pipelines) || Object.keys(pipelines).some((key: string): boolean => key !== 'maxConcurrent')) {
+    const pipelineKeys: string[] = isPlainObject(pipelines) ? Object.keys(pipelines) : [];
+    if (
+      pipelineKeys.length === 0 ||
+      pipelineKeys.some((key: string): boolean => !PIPELINE_KEYS.includes(key as keyof PipelineSettings))
+    ) {
       return 'pipelines.maxConcurrent';
     }
   }
   if ('language' in patch && !isLanguage(patch.language)) return 'language';
   if ('theme' in patch && !isTheme(patch.theme)) return 'theme';
+  if ('rail' in patch && !isRailMode(patch.rail)) return 'rail';
   if ('llm' in patch) {
     const error: string | null = validateLlmPatch(patch.llm);
     if (error !== null) return error;
   }
-  if (isPlainObject(pipelines) && !isMaxConcurrent(pipelines.maxConcurrent)) return 'pipelines.maxConcurrent';
+  if (isPlainObject(pipelines)) {
+    for (const name of PIPELINE_KEYS) {
+      if (name in pipelines && !isPipelineNumber(name, pipelines[name])) return `pipelines.${name}`;
+    }
+  }
   if ('reading' in patch) {
     if (!isPlainObject(patch.reading)) return 'reading';
     const reading: Record<string, unknown> = patch.reading;

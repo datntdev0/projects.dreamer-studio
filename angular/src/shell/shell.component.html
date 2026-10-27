@@ -5,7 +5,7 @@
   [attr.data-rail]="railExpanded() ? 'expanded' : 'collapsed'"
   [attr.data-theme]="theme.theme()"
 >
-  <header dsTopbar [railExpanded]="railExpanded()" (toggleRail)="railExpanded.set(!railExpanded())"></header>
+  <header dsTopbar [railExpanded]="railExpanded()" (toggleRail)="toggleRail()"></header>
   <nav dsRail [collapsed]="!railExpanded()"></nav>
   <main class="ds-app-main">
     <ds-panel-outlet edge="left" />

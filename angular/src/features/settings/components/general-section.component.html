@@ -38,5 +38,20 @@
         />
       </div>
     </div>
+    <div class="settings-row" data-testid="settings-general-rail-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label">{{ 'settings.general.rail' | t }}</span>
+        <span class="settings-row-hint">{{ 'settings.general.railHint' | t }}</span>
+      </div>
+      <div class="settings-row-control">
+        <ds-segmented
+          [options]="railOptions()"
+          [value]="rail()"
+          [label]="'settings.general.rail' | t"
+          data-testid="settings-general-rail"
+          (valueChange)="setRail($event)"
+        />
+      </div>
+    </div>
   </div>
 </section>

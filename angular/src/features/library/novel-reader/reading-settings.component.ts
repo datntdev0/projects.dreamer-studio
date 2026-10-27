@@ -3,6 +3,7 @@ import { computed } from '@angular/core';
 import { inject } from '@angular/core';
 import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
+import { RangeDirective } from '@components/form/range.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
@@ -12,7 +13,7 @@ import type { ReadingSettings } from '@dreamer/shared/models/settings';
 
 @Component({
   selector: 'ds-reading-settings',
-  imports: [ButtonDirective, IconComponent, TranslatePipe],
+  imports: [ButtonDirective, IconComponent, RangeDirective, TranslatePipe],
   host: { class: 'library-reading-settings', 'data-testid': 'reading-settings' },
   templateUrl: './reading-settings.component.html',
 })

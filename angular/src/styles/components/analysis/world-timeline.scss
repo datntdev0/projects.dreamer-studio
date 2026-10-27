@@ -21,16 +21,9 @@ ds-world-timeline {
 }
 
 .ds-world-timeline-scrub {
-  input[type='range'] {
+  .ds-range {
     flex: 1;
     min-width: var(--panel-min-w);
-    margin: 0;
-    accent-color: var(--color-primary);
-    cursor: pointer;
-  }
-
-  input[type='range']:disabled {
-    cursor: default;
   }
 }
 

@@ -39,6 +39,7 @@ import { novelExportPipeline } from './features/library/novel/novel-export-pipel
 import { novelImportPipeline } from './features/library/novel/novel-import-pipeline';
 import { demoPipeline } from './features/pipelines/demo-pipeline';
 import { PipelineRegistry } from './features/pipelines/pipeline-registry';
+import { WorkSlots } from './features/pipelines/work-slots';
 import { SettingsLoadResult, SettingsStore } from './features/settings/settings-store';
 import { checkDatabase } from '@storage/database';
 import { devFailMigration, loadMigrations, Migration } from '@storage/migrator';
@@ -76,7 +77,8 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
 }
 
 const llm: LlmService = new LlmService(settings, () => manager.paths());
-const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns() };
+const chapterSlots: WorkSlots = new WorkSlots((): number => settings.get().pipelines.maxChapters);
+const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns(), chapterSlots };
 const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
@@ -90,7 +92,10 @@ const manager: AppDataManager = new AppDataManager(settings, {
   stopBackend,
   onReopenFailed: showDataFailure,
 });
-settings.onChange((): void => manager.current()?.executor.limitChanged());
+settings.onChange((): void => {
+  manager.current()?.executor.limitChanged();
+  chapterSlots.limitChanged();
+});
 
 const diagnostics: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
   const session: AppDataSession = manager.session();

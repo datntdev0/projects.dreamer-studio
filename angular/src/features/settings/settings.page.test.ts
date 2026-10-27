@@ -48,7 +48,7 @@ class SettingsStoreStub {
     const settings: AppSettings = {
       ...current.settings,
       ...patch,
-      pipelines: patch.pipelines ?? current.settings.pipelines,
+      pipelines: { ...current.settings.pipelines, ...patch.pipelines },
       llm: { ...current.settings.llm, ...patch.llm },
     };
     this.state.set({ ...current, settings });

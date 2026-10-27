@@ -15,6 +15,7 @@ import { LlmRunOptions, LlmService } from '../llm/llm-service';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { writeChapter, writeMetadata } from '../library/novel/novel-files';
 import { abortError, PipelineDefinition, StepContext } from '../pipelines/pipeline-definition';
+import { WorkSlots } from '../pipelines/work-slots';
 import { SettingsStore } from '../settings/settings-store';
 import { readAnalysisIndex, readChapterResult } from './analysis-files';
 import { novelOntologyFile } from './analysis-ontology';
@@ -124,7 +125,12 @@ function fakeSettings(withLlm: boolean): SettingsStore {
 }
 
 function setup(withLlm: boolean = true): void {
-  pipeline = worldAnalysisPipeline({ llm: fakeLlm(), settings: fakeSettings(withLlm), runs });
+  pipeline = worldAnalysisPipeline({
+    llm: fakeLlm(),
+    settings: fakeSettings(withLlm),
+    runs,
+    chapterSlots: new WorkSlots((): number => 1),
+  });
 }
 
 function request(overrides: Partial<AnalysisRunRequest> = {}): AnalysisRunRequest {

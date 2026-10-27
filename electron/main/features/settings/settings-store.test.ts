@@ -136,7 +136,11 @@ describe('SettingsStore', () => {
 
     it('update returns the new settings and persists them', () => {
       const result: AppSettings = store.update({ language: 'vi', pipelines: { maxConcurrent: 3 } });
-      const expected: AppSettings = { ...defaultSettings(defaultDir), language: 'vi', pipelines: { maxConcurrent: 3 } };
+      const expected: AppSettings = {
+        ...defaultSettings(defaultDir),
+        language: 'vi',
+        pipelines: { maxConcurrent: 3, maxChapters: 1 },
+      };
       expect(result).toEqual(expected);
       expect(store.get()).toEqual(expected);
       expect(readFile()).toEqual(expected);
@@ -228,7 +232,10 @@ describe('SettingsStore', () => {
       store.update({ language: 'vi', theme: 'dark', pipelines: { maxConcurrent: 4 } });
       store.setAppDataDir('D:\\studio');
       const result: AppSettings = store.reset('general');
-      const expected: AppSettings = { ...defaultSettings('D:\\studio'), pipelines: { maxConcurrent: 4 } };
+      const expected: AppSettings = {
+        ...defaultSettings('D:\\studio'),
+        pipelines: { maxConcurrent: 4, maxChapters: 1 },
+      };
       expect(result).toEqual(expected);
       expect(readFile()).toEqual(expected);
     });
@@ -244,7 +251,11 @@ describe('SettingsStore', () => {
       const reading: AppSettings['reading'] = { font: 'sans', size: 24, leading: 2, width: 84 };
       store.update({ language: 'vi', pipelines: { maxConcurrent: 3 }, reading });
       const result: AppSettings = store.reset('reading');
-      expect(result).toEqual({ ...defaultSettings(defaultDir), language: 'vi', pipelines: { maxConcurrent: 3 } });
+      expect(result).toEqual({
+        ...defaultSettings(defaultDir),
+        language: 'vi',
+        pipelines: { maxConcurrent: 3, maxChapters: 1 },
+      });
       expect(readFile()).toEqual(result);
     });
 

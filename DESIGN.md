@@ -196,6 +196,7 @@ Common uses: field label gap `--sp-xs`, button padding `--sp-md` (sm: `--sp-sm`,
 | Badge | `--badge-h` | 16px |
 | Status dot | `--dot-size` | 7px |
 | Progress bar | `--progress-h` × `--progress-w` | 4px × 140px |
+| Range slider | track `--progress-h`, thumb `--range-thumb`, settings width `--range-w` | 4px, 14px, 168px |
 
 ### Shell layout
 
@@ -241,6 +242,7 @@ Angular components in `angular/src/components/<name>/` (prefix `ds-`), styles in
 | Button | `<button dsBtn variant size iconOnly loading>` | `.ds-btn` + `primary`, `ghost`, `danger`, `danger-solid`, `sm`, `lg`, `icon-only` |
 | Input / select | native elements in `<ds-field label hint error required span>` | `.ds-input` (`.mono`), `span.ds-select > select.ds-input + ds-icon` |
 | Combobox | `<ds-combobox inputId [value] [options] mono toggleLabel testId (committed)>`; `revert()` | `role="combobox"` input + chevron toggle, full suggestion list (`--shadow-2`), arrows / Enter / Esc, commit on Enter, blur or pick |
+| Range | `<input type="range" dsRange>`, value next to it in `output.ds-range-value` | `.ds-range`: 4px track filled with primary up to the value (`--range-fill`), 14px thumb with primary ring, hover halo, focus ring on the thumb |
 | Segmented, checkbox | `<ds-segmented [options] [(value)]>`, `<ds-checkbox [(checked)]>` | radio-group with arrow keys |
 | Form grid | 2 columns when the grid is 760px or wider, 1 below; long fields `span="full"` | `.ds-form-grid > .ds-form-grid-fields` (container query) |
 | Card | `<ds-card icon heading interactive>`, right slot `[dsCardEnd]` | `.ds-card`, `.interactive` = button role, hover border, focus ring |

@@ -259,7 +259,7 @@ export type FakeSettingsApi = Pick<DesktopApi, 'settings' | 'updateSettings' | '
 
 export function fakeSettingsApi(initial: Partial<AppSettings> = {}): FakeSettingsApi {
   const defaults: AppSettings = defaultSettings(APP_INFO.appDataDir);
-  let current: AppSettings = { ...defaults, ...initial, llm: { ...defaults.llm, ...initial.llm } };
+  let current: AppSettings = { ...defaults, rail: 'minimal', ...initial, llm: { ...defaults.llm, ...initial.llm } };
   return {
     settings: (): Promise<SettingsState | null> =>
       Promise.resolve({ settings: current, defaultAppDataDir: APP_INFO.appDataDir, notice: 'none' }),
@@ -267,6 +267,7 @@ export function fakeSettingsApi(initial: Partial<AppSettings> = {}): FakeSetting
       current = {
         ...current,
         ...patch,
+        pipelines: { ...current.pipelines, ...patch.pipelines },
         llm: { ...current.llm, ...patch.llm },
       };
       return Promise.resolve(current);

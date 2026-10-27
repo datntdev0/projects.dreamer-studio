@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { CheckboxComponent } from '@components/form/checkbox.component';
+import { RangeDirective } from '@components/form/range.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { formatCount, formatDateTime } from '@core/format';
@@ -12,7 +13,7 @@ import { OmniscientStore } from '../omniscient.store';
 
 @Component({
   selector: 'ds-world-timeline',
-  imports: [ButtonDirective, CheckboxComponent, IconComponent, TooltipDirective, TranslatePipe],
+  imports: [ButtonDirective, CheckboxComponent, IconComponent, RangeDirective, TooltipDirective, TranslatePipe],
   templateUrl: './world-timeline.component.html',
 })
 export class WorldTimelineComponent {

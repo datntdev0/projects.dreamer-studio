@@ -243,17 +243,8 @@
   gap: var(--sp-md);
   align-items: center;
 
-  input[type='range'] {
-    width: calc(var(--control-h) * 6);
-    margin: 0;
-    accent-color: var(--color-primary);
-    cursor: pointer;
-  }
-
-  output {
-    min-width: var(--sp-lg);
-    font-weight: 600;
-    text-align: right;
+  .ds-range {
+    width: var(--range-w);
   }
 }
 

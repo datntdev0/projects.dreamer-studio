@@ -8,33 +8,39 @@
     </div>
   </header>
   <div class="settings-group">
-    <div class="settings-row" data-testid="settings-pipeline-max-row">
-      <div class="settings-row-text">
-        <label class="settings-row-label" for="settings-pipeline-max">{{ 'settings.pipeline.max' | t }}</label>
-        <span class="settings-row-hint" id="settings-pipeline-max-hint" data-testid="settings-pipeline-max-hint">
-          {{ 'settings.pipeline.maxHint' | t }}
-        </span>
-        @if (activeCount() > 0) {
-          <span class="settings-row-hint num" data-testid="settings-pipeline-active">
-            {{ 'settings.pipeline.activeNow' | t: { count: activeCount() } }}
+    @for (row of rows; track row.id) {
+      @let inputId = 'settings-pipeline-' + row.id;
+      <div class="settings-row" [attr.data-testid]="inputId + '-row'">
+        <div class="settings-row-text">
+          <label class="settings-row-label" [for]="inputId">{{ row.label | t }}</label>
+          <span class="settings-row-hint" [id]="inputId + '-hint'" [attr.data-testid]="inputId + '-hint'">
+            {{ row.hint | t }}
           </span>
-        }
+          @if (row.setting === 'maxConcurrent' && activeCount() > 0) {
+            <span class="settings-row-hint num" data-testid="settings-pipeline-active">
+              {{ 'settings.pipeline.activeNow' | t: { count: activeCount() } }}
+            </span>
+          }
+        </div>
+        <div class="settings-row-control settings-range">
+          <input
+            type="range"
+            dsRange
+            step="1"
+            [id]="inputId"
+            [min]="limits[row.setting].min"
+            [max]="limits[row.setting].max"
+            [value]="values()[row.setting]"
+            [attr.aria-describedby]="inputId + '-hint'"
+            [attr.data-testid]="inputId"
+            (input)="onInput(row.setting, $event)"
+            (change)="onChange(row.setting, $event)"
+          />
+          <output class="ds-range-value num" [for]="inputId" [attr.data-testid]="inputId + '-value'">{{
+            values()[row.setting]
+          }}</output>
+        </div>
       </div>
-      <div class="settings-row-control settings-range">
-        <input
-          id="settings-pipeline-max"
-          type="range"
-          step="1"
-          [min]="min"
-          [max]="max"
-          [value]="value()"
-          aria-describedby="settings-pipeline-max-hint"
-          data-testid="settings-pipeline-max"
-          (input)="onInput($event)"
-          (change)="onChange($event)"
-        />
-        <output class="num" for="settings-pipeline-max" data-testid="settings-pipeline-max-value">{{ value() }}</output>
-      </div>
-    </div>
+    }
   </div>
 </section>

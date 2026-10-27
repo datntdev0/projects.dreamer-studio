@@ -10,8 +10,9 @@ describe('sanitizeSettings', () => {
       version: 1,
       language: 'vi',
       theme: 'dark',
+      rail: 'minimal',
       appDataDir: 'D:\\studio',
-      pipelines: { maxConcurrent: 3 },
+      pipelines: { maxConcurrent: 3, maxChapters: 4 },
       reading: { font: 'sans', size: 22, leading: 1.8, width: 80 },
       llm: { paths: {}, default: null, features: {} },
     };

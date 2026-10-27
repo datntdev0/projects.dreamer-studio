@@ -12,6 +12,7 @@ import { AppPaths } from '@storage/paths';
 import { PipelineDefinition, StepContext } from '../pipelines/pipeline-definition';
 import { promptLogDir } from '../pipelines/run-log';
 import { LlmService } from '../llm/llm-service';
+import { WorkSlots } from '../pipelines/work-slots';
 import { SettingsStore } from '../settings/settings-store';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
@@ -26,6 +27,7 @@ export interface WorldAnalysisDeps {
   llm: LlmService;
   settings: SettingsStore;
   runs: AnalysisRuns;
+  chapterSlots: WorkSlots;
 }
 
 export interface AnalysisRunCheck {
@@ -130,6 +132,12 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+async function settleAll(tasks: Promise<void>[]): Promise<void> {
+  const results: PromiseSettledResult<void>[] = await Promise.allSettled(tasks);
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason;
+}
+
 function publish(deps: WorldAnalysisDeps, novelId: string, run: AnalysisRun, ctx: StepContext): void {
   deps.runs.set(novelId, { ...run });
   if (run.total > 0) ctx.progress((run.done / run.total) * 100);
@@ -196,6 +204,55 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
     const promptFile: string = join(promptLogDir(ctx.paths, ctx.runId), `${number}-${name}.md`);
     return deps.llm.runForFeature('worldAnalysis', llmRequest, { signal: ctx.signal, log: ctx.log, promptFile });
   };
+  const analyseChapter = async (
+    chapter: LlmChapter,
+    candidates: AnalysisEntity[],
+    detail: PipelineStepDetail,
+  ): Promise<void> => {
+    ctx.checkpoint();
+    ctx.enterStep('analysis.run.step.predicates', detail);
+    run.step = 'predicates';
+    run.runningChapter = chapter.index;
+    publish(deps, request.novelId, run, ctx);
+    const file: string = novel.chapters[chapter.index - 1].file;
+    const previous: AnalysisEntity[] = isUpToDate(statuses[chapter.index - 1].status)
+      ? (readChapterResult(folder, file)?.entities ?? [])
+      : [];
+    const entities: AnalysisEntity[] = mergeStageEntities(previous, candidates, request.stage);
+    try {
+      const asked = await askPredicates({ chapter, entities, ontology, ask, log: ctx.log });
+      ctx.checkpoint();
+      run.step = 'verification';
+      publish(deps, request.novelId, run, ctx);
+      const { entities: checkedEntities, facts } = checkChapter({ entities, facts: asked, ontology });
+      const counts: ChapterAnalysisCounts = chapterCounts(checkedEntities, facts);
+      const status: AnalysisIndexEntry['status'] = hasIssues(counts) ? 'has-issues' : 'clean';
+      const analysedAt: string = new Date().toISOString();
+      await saveEntry(
+        request.novelId,
+        folder,
+        novel.chapters,
+        { index: chapter.index, file, status, counts, analysedAt, updatedAt: analysedAt },
+        {
+          version: 1,
+          file,
+          index: chapter.index,
+          title: chapter.title,
+          analysedAt,
+          llm: check.llmLabel,
+          entities: checkedEntities,
+          facts,
+        },
+      );
+      ctx.log.info(`Chapter ${chapter.index} saved: ${status}`);
+      if (status === 'has-issues') issues++;
+      run.done++;
+      publish(deps, request.novelId, run, ctx);
+    } catch (error: unknown) {
+      if (!isChapterFailure(error)) throw error;
+      await failChapter(deps, ctx, folder, novel, chapter.index, error.code, run);
+    }
+  };
   try {
     for (const [batchIndex, batch] of check.plan.batches.entries()) {
       ctx.checkpoint();
@@ -206,70 +263,21 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
       const batchChapters: LlmChapter[] = batch.map((index: number): LlmChapter => chapters.get(index)!);
       let candidates: Map<number, AnalysisEntity[]>;
       try {
-        candidates = await askCandidates({
-          chapters: batchChapters,
-          ontology,
-          stage: request.stage,
-          ask,
-          log: ctx.log,
-        });
+        candidates = await deps.chapterSlots.run(ctx.signal, () =>
+          askCandidates({ chapters: batchChapters, ontology, stage: request.stage, ask, log: ctx.log }),
+        );
       } catch (error: unknown) {
         if (!isChapterFailure(error)) throw error;
         for (const index of batch) await failChapter(deps, ctx, folder, novel, index, error.code, run);
         continue;
       }
-      for (const chapter of batchChapters) {
-        ctx.checkpoint();
-        ctx.enterStep(
-          'analysis.run.step.predicates',
-          batchDetail(batchIndex, check.plan.batches.length, [chapter.index]),
-        );
-        run.step = 'predicates';
-        run.runningChapter = chapter.index;
-        publish(deps, request.novelId, run, ctx);
-        const file: string = novel.chapters[chapter.index - 1].file;
-        const previous: AnalysisEntity[] = isUpToDate(statuses[chapter.index - 1].status)
-          ? (readChapterResult(folder, file)?.entities ?? [])
-          : [];
-        const entities: AnalysisEntity[] = mergeStageEntities(
-          previous,
-          candidates.get(chapter.index) ?? [],
-          request.stage,
-        );
-        try {
-          const asked = await askPredicates({ chapter, entities, ontology, ask, log: ctx.log });
-          ctx.checkpoint();
-          run.step = 'verification';
-          publish(deps, request.novelId, run, ctx);
-          const { entities: checkedEntities, facts } = checkChapter({ entities, facts: asked, ontology });
-          const counts: ChapterAnalysisCounts = chapterCounts(checkedEntities, facts);
-          const status: AnalysisIndexEntry['status'] = hasIssues(counts) ? 'has-issues' : 'clean';
-          const analysedAt: string = new Date().toISOString();
-          await saveEntry(
-            request.novelId,
-            folder,
-            novel.chapters,
-            { index: chapter.index, file, status, counts, analysedAt, updatedAt: analysedAt },
-            {
-              version: 1,
-              file,
-              index: chapter.index,
-              title: chapter.title,
-              analysedAt,
-              llm: check.llmLabel,
-              entities: checkedEntities,
-              facts,
-            },
-          );
-          ctx.log.info(`Chapter ${chapter.index} saved: ${status}`);
-          if (status === 'has-issues') issues++;
-          run.done++;
-          publish(deps, request.novelId, run, ctx);
-        } catch (error: unknown) {
-          if (!isChapterFailure(error)) throw error;
-          await failChapter(deps, ctx, folder, novel, chapter.index, error.code, run);
-        }
-      }
+      await settleAll(
+        batchChapters.map((chapter: LlmChapter): Promise<void> => {
+          const detail: PipelineStepDetail = batchDetail(batchIndex, check.plan.batches.length, [chapter.index]);
+          const found: AnalysisEntity[] = candidates.get(chapter.index) ?? [];
+          return deps.chapterSlots.run(ctx.signal, () => analyseChapter(chapter, found, detail));
+        }),
+      );
     }
     ctx.checkpoint();
     await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed, issues);

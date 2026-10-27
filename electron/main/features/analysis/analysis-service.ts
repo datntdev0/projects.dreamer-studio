@@ -2,7 +2,8 @@ import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
 import { chapterStatuses, emptyIndex, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
 import { applyReviewEdit, chapterReviewStatus, filterReviewItems } from '@dreamer/shared/core/analysis-review';
 import { ReviewChapter, reviewEntityOptions, reviewItems } from '@dreamer/shared/core/analysis-review';
-import { buildWorld, isReviewEdit } from '@dreamer/shared/core/world';
+import { buildWorld, entityOccurrences, findQuoteMatches, isReviewEdit } from '@dreamer/shared/core/world';
+import { OccurrenceChapter, overlayOrphans, WorldScope } from '@dreamer/shared/core/world';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
 import { AnalysisIndexFile, AnalysisPlan, AnalysisRun, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
@@ -11,8 +12,8 @@ import { AnalysisChapterDetail, AnalysisEditRequest } from '@dreamer/shared/mode
 import { AnalysisIndexEntry } from '@dreamer/shared/models/analysis';
 import { AnalysisMergeState, ChapterResult, OntologyParseResult } from '@dreamer/shared/models/analysis';
 import { OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
-import { ReviewQuery, World, WorldEdit } from '@dreamer/shared/models/analysis';
-import { WorldFile, WorldFileChapter, WorldQuery } from '@dreamer/shared/models/analysis';
+import { Occurrence, OccurrenceQuery, OverlayEdit, QuoteMatch, QuoteQuery } from '@dreamer/shared/models/analysis';
+import { ReviewQuery, World, WorldEdit, WorldEntity, WorldFile, WorldQuery } from '@dreamer/shared/models/analysis';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
@@ -22,6 +23,8 @@ import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { readAnalysisIndex, readChapterParagraphs, readChapterResult, readWorldFile } from './analysis-files';
+import { readReviewParagraphs } from './analysis-files';
+import { overlayEdits, saveOverlayEdit, worldFileChapters } from './analysis-overlay';
 import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { mergeWorld } from './analysis-merge';
 import { readAnalysedChapters, recheckWorld } from './analysis-recheck';
@@ -42,28 +45,8 @@ function mergeState(chapters: ChapterAnalysisSummary[], index: AnalysisIndexFile
   };
 }
 
-function worldFileDetail(chapter: WorldFileChapter): AnalysisChapterDetail {
-  return {
-    index: chapter.index,
-    title: chapter.title,
-    file: chapter.file,
-    resultFile: chapter.file,
-    status: 'clean',
-    counts: chapterCounts(chapter.entities, chapter.facts),
-    pending: false,
-    paragraphs: [],
-    entities: chapter.entities,
-    facts: chapter.facts,
-  };
-}
-
-async function readReviewParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
-  try {
-    return await readChapterParagraphs(folder, file);
-  } catch (error) {
-    if (error instanceof CodedError && error.code === ErrorCode.ChapterFileMissing) return [];
-    throw error;
-  }
+function worldOf(chapters: AnalysisChapterDetail[], edits: OverlayEdit[], scope: WorldScope): World {
+  return buildWorld(chapters, scope, edits);
 }
 
 export class AnalysisService {
@@ -173,12 +156,46 @@ export class AnalysisService {
   }
 
   async world(query: WorldQuery): Promise<World> {
-    const folder: NovelFolder = this.folder(query.novelId);
     this.readNovel(query.novelId);
+    const folder: NovelFolder = this.folder(query.novelId);
     const file: WorldFile | null = readWorldFile(folder);
-    if (file === null) return { entities: [], links: [], mergedAt: null };
-    const world: World = buildWorld(file.chapters.map(worldFileDetail), { chapter: query.chapter, only: query.only });
-    return { ...world, mergedAt: file.mergedAt };
+    const chapters: AnalysisChapterDetail[] = worldFileChapters(file);
+    const edits: OverlayEdit[] = overlayEdits(folder);
+    return {
+      ...worldOf(chapters, edits, query),
+      orphans: overlayOrphans(chapters, edits),
+      mergedAt: file?.mergedAt ?? null,
+    };
+  }
+
+  async occurrences(query: OccurrenceQuery): Promise<Occurrence[]> {
+    this.readNovel(query.novelId);
+    const folder: NovelFolder = this.folder(query.novelId);
+    const details: AnalysisChapterDetail[] = worldFileChapters(readWorldFile(folder));
+    const world: World = worldOf(details, overlayEdits(folder), { chapter: null, only: false });
+    const entity: WorldEntity | undefined = world.entities.find(
+      (item: WorldEntity): boolean => item.id === query.entityId,
+    );
+    if (!entity) return [];
+    const chapters: OccurrenceChapter[] = [];
+    for (const chapter of details.filter((item: AnalysisChapterDetail): boolean =>
+      entity.chapters.includes(item.index),
+    )) {
+      const paragraphs: string[] = await readReviewParagraphs(folder, chapter.file);
+      chapters.push({ index: chapter.index, title: chapter.title, paragraphs });
+    }
+    return entityOccurrences(entity, chapters);
+  }
+
+  async findQuote(query: QuoteQuery): Promise<QuoteMatch[]> {
+    const novel: NovelMetadata = this.readNovel(query.novelId);
+    const folder: NovelFolder = this.folder(query.novelId);
+    const chapters: OccurrenceChapter[] = [];
+    for (const [position, entry] of novel.chapters.entries()) {
+      const paragraphs: string[] = await readReviewParagraphs(folder, entry.file);
+      chapters.push({ index: position + 1, title: entry.title, paragraphs });
+    }
+    return findQuoteMatches(chapters, query.quote);
   }
 
   async review(query: ReviewQuery): Promise<ReviewPage> {
@@ -202,8 +219,8 @@ export class AnalysisService {
 
   edit(request: AnalysisEditRequest): Promise<void> {
     const edit: WorldEdit = request.edit;
-    if (!isReviewEdit(edit)) throw new CodedError(ErrorCode.NotImplemented, `Edit not implemented: ${edit.kind}`);
     const novelId: string = request.novelId;
+    if (!isReviewEdit(edit)) return this.overlayEdit(novelId, edit);
     return withNovelLock(novelId, async (): Promise<void> => {
       const novel: NovelMetadata = this.readNovel(novelId);
       assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
@@ -235,6 +252,16 @@ export class AnalysisService {
         }),
       );
       await recheckWorld(folder, novel);
+      broadcast(AnalysisChannel.Changed, { novelId });
+    });
+  }
+
+  private overlayEdit(novelId: string, edit: OverlayEdit): Promise<void> {
+    return withNovelLock(novelId, async (): Promise<void> => {
+      const novel: NovelMetadata = this.readNovel(novelId);
+      assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
+      const folder: NovelFolder = this.folder(novelId);
+      await saveOverlayEdit(folder, novel, edit, loadOntology(folder).ontology);
       broadcast(AnalysisChannel.Changed, { novelId });
     });
   }

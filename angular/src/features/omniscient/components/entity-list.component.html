@@ -61,6 +61,19 @@
         }}</span>
       }
     </button>
+    @if (store.orphans().length) {
+      <button
+        type="button"
+        class="ds-world-entities-queue is-warning"
+        data-testid="world-orphans"
+        (click)="store.dialog.set({ kind: 'orphans' })"
+      >
+        <ds-icon name="alert-triangle" />
+        <span class="label">{{
+          pluralKey('orphanRow', store.orphans().length) | t: { count: store.orphans().length }
+        }}</span>
+      </button>
+    }
   </div>
   <p id="world-entities-keys" class="visually-hidden">{{ 'analysis.entities.keyboardHint' | t }}</p>
   <div
@@ -115,7 +128,7 @@
         }
         <span
           class="ds-world-entity-count num"
-          [dsTooltip]="'analysis.entities.chapterCount' | t: { count: entity.chapters.length }"
+          [dsTooltip]="pluralKey('entitiesChapters', entity.chapters.length) | t: { count: entity.chapters.length }"
           >{{ entity.chapters.length }}</span
         >
       </div>

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ import type {
 } from '@dreamer/shared/models/analysis';
 import type {
   ChapterResult,
+  OverlayEdit,
   ReviewEdit,
   ReviewItem,
   ReviewPage,
@@ -22,9 +23,10 @@ import type {
 import { NOVEL_STORE_VERSION } from '@dreamer/shared/models/novel-store';
 import { resolveAppPaths } from '@storage/paths';
 import { AppDataSession } from '../../app/app-data-session';
-import { novelFolder, NovelFolder } from '../library/library-files';
+import { chapterPath, novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, writeChapter, writeMetadata } from '../library/novel/novel-files';
 import { readAnalysisIndex, readChapterResult, writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { worldOverlayFile } from './analysis-files';
 import { recheckWorld } from './analysis-recheck';
 import { AnalysisRuns } from './analysis-runs';
 import { AnalysisService } from './analysis-service';
@@ -41,10 +43,11 @@ vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
 vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
+const activeRuns = vi.hoisted(() => ({ list: [] as object[] }));
 vi.mock('@storage/repositories/pipeline-run-repository', () => ({
   PipelineRunRepository: class {
     activeNovelRuns(): object[] {
-      return [];
+      return activeRuns.list;
     }
   },
 }));
@@ -137,6 +140,7 @@ async function idsOf(over: Partial<ReviewQuery>): Promise<string[]> {
 }
 
 beforeEach(async () => {
+  activeRuns.list = [];
   tempRoot = mkdtempSync(join(tmpdir(), 'dreamer-analysis-service-'));
   const paths = resolveAppPaths(tempRoot);
   folder = novelFolder(paths, novelId);
@@ -258,11 +262,6 @@ describe('edit', () => {
     expect(savedEntity('e2')).toMatchObject({ type: 'Location', status: 'verified', issue: 'type-not-allowed' });
   });
 
-  it('refuses overlay edits with NOT_IMPLEMENTED', () => {
-    const request: AnalysisEditRequest = { novelId, edit: { kind: 'fact-reset', factId: 'f1', chapterIndex: 2 } };
-    expect(() => service.edit(request)).toThrow(expect.objectContaining({ code: ErrorCode.NotImplemented }));
-  });
-
   it('refuses an edit in a clean chapter with ANALYSIS_EDIT_INVALID', async () => {
     await expect(
       service.edit(editRequest({ kind: 'review-reject', chapterIndex: 1, itemKind: 'entity', itemId: 'e1' })),
@@ -283,7 +282,7 @@ describe('merge and world', () => {
 
   it('blocks the merge while an error is open', async () => {
     await expect(service.merge(novelId)).rejects.toMatchObject({ code: ErrorCode.AnalysisOpenIssues });
-    expect(await service.world(worldQuery)).toEqual({ entities: [], links: [], mergedAt: null });
+    expect(await service.world(worldQuery)).toEqual({ entities: [], links: [], mergedAt: null, orphans: [] });
   });
 
   it('merges, builds the world from world.json and clears pending', async () => {
@@ -321,5 +320,229 @@ describe('merge and world', () => {
     const rerun: AnalysisIndexEntry = { ...index.chapters[0], analysedAt: '2999-01-01T00:00:00.000Z' };
     await writeAnalysisIndex(folder, upsertIndexEntry(index, rerun));
     expect((await service.status(novelId)).merge.pending).toBe(1);
+  });
+});
+
+describe('occurrences', () => {
+  async function mergedId(name: string): Promise<string> {
+    await service.edit(editRequest({ kind: 'review-reject', chapterIndex: 2, itemKind: 'entity', itemId: 'e2' }));
+    await service.edit(editRequest({ kind: 'review-accept', chapterIndex: 2, itemKind: 'fact', itemId: 'f2' }));
+    await service.merge(novelId);
+    return (await service.world(worldQuery)).entities.find((item) => item.name === name)!.id;
+  }
+
+  it('gives an empty list before the merge', async () => {
+    expect(await service.occurrences({ novelId, entityId: 'e1' })).toEqual([]);
+  });
+
+  it('gives an empty list for an unknown entity', async () => {
+    await mergedId('Lan');
+    expect(await service.occurrences({ novelId, entityId: 'missing' })).toEqual([]);
+  });
+
+  it('finds the context of an entity in its chapters', async () => {
+    const id: string = await mergedId('Mai Linh');
+    const result = await service.occurrences({ novelId, entityId: id });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ chapterIndex: 1, chapterTitle: 'Chapter 1' });
+    expect(result[0].context?.match).toBe('Mai Linh');
+  });
+
+  it('gives a null context when the chapter text file is missing', async () => {
+    const id: string = await mergedId('Mai Linh');
+    rmSync(chapterPath(folder, files[0]));
+    const result = await service.occurrences({ novelId, entityId: id });
+    expect(result).toEqual([{ chapterIndex: 1, chapterTitle: 'Chapter 1', context: null }]);
+  });
+
+  it('refuses an unknown novel with NOVEL_NOT_FOUND', async () => {
+    await expect(
+      service.occurrences({ novelId: '99999999-1234-4abc-8def-1234567890ab', entityId: 'e1' }),
+    ).rejects.toMatchObject({ code: ErrorCode.NovelNotFound });
+  });
+});
+
+describe('overlay', () => {
+  const quote: string = 'Lan lived in Hanoi.';
+
+  async function seedMerged(renamedMai: boolean = false): Promise<void> {
+    const mai = entity(renamedMai ? 'm2' : 'm', renamedMai ? 'Someone' : 'Mai Linh');
+    const hanoi = entity('h', 'Hanoi', { type: 'Location' });
+    await seedChapter(1, 'clean', [mai, hanoi], []);
+    await seedChapter(2, 'clean', [entity('l', 'Lan'), hanoi], [fact('f1', { subjectId: 'l', objectId: 'h', quote })]);
+    await recheckWorld(folder, readMetadata(folder)!);
+    await service.merge(novelId);
+  }
+
+  async function world() {
+    return service.world(worldQuery);
+  }
+
+  async function names(): Promise<string[]> {
+    return (await world()).entities.map((item) => item.name).sort();
+  }
+
+  function overlayFile(): { version: number; edits: OverlayEdit[] } {
+    return JSON.parse(readFileSync(worldOverlayFile(folder), 'utf8'));
+  }
+
+  beforeEach(async () => {
+    await seedMerged();
+  });
+
+  it('has no orphans and no overlay file before any edit', async () => {
+    expect((await world()).orphans).toEqual([]);
+    expect(() => readFileSync(worldOverlayFile(folder))).toThrow();
+  });
+
+  it('saves a rename in world-overlay.json and shows it in the world', async () => {
+    await service.edit(editRequest({ kind: 'entity-rename', entityId: 'm', name: 'Mai' } as never));
+    expect(overlayFile()).toEqual({ version: 1, edits: [{ kind: 'entity-rename', entityId: 'm', name: 'Mai' }] });
+    expect(await names()).toEqual(['Hanoi', 'Lan', 'Mai']);
+    expect((await world()).entities.find((item) => item.id === 'm')?.overlay).toBe(true);
+  });
+
+  it('adds an entity, adds an alias and deletes an entity', async () => {
+    await service.edit(
+      editRequest({ kind: 'entity-add', entity: { id: 'n1', type: 'Persona', name: 'New' } } as never),
+    );
+    await service.edit(editRequest({ kind: 'entity-add-alias', entityId: 'l', alias: 'Lanny' } as never));
+    await service.edit(editRequest({ kind: 'entity-delete', entityId: 'm' } as never));
+    const result = await world();
+    expect(result.entities.map((item) => item.name).sort()).toEqual(['Hanoi', 'Lan', 'New']);
+    expect(result.entities.find((item) => item.id === 'l')?.aliases).toEqual(['Lanny']);
+  });
+
+  it('removes the edits of an entity with entity-reset', async () => {
+    await service.edit(editRequest({ kind: 'entity-rename', entityId: 'm', name: 'Mai' } as never));
+    await service.edit(editRequest({ kind: 'entity-reset', entityId: 'm' } as never));
+    expect(overlayFile().edits).toEqual([]);
+    expect(await names()).toEqual(['Hanoi', 'Lan', 'Mai Linh']);
+  });
+
+  it('restores a deleted entity with its earlier edits and keeps a compact overlay', async () => {
+    const rename: OverlayEdit = { kind: 'entity-rename', entityId: 'm', name: 'Mai' };
+    await service.edit(editRequest(rename as never));
+    await service.edit(editRequest({ kind: 'entity-delete', entityId: 'm' } as never));
+    expect(await names()).toEqual(['Hanoi', 'Lan']);
+    await service.edit(editRequest({ kind: 'entity-restore', entityId: 'm' } as never));
+    expect(overlayFile().edits).toEqual([rename]);
+    expect(await names()).toEqual(['Hanoi', 'Lan', 'Mai']);
+  });
+
+  it('refuses an invalid edit with ANALYSIS_EDIT_INVALID and saves nothing', async () => {
+    const invalid: unknown[] = [
+      { kind: 'entity-rename', entityId: 'zz', name: 'X' },
+      { kind: 'entity-rename', entityId: 'm', name: ' ' },
+      { kind: 'entity-add', entity: { id: 'n1', type: 'Dragon', name: 'X' } },
+      { kind: 'entity-add', entity: { id: 'm', type: 'Persona', name: 'X' } },
+    ];
+    for (const edit of invalid)
+      await expect(service.edit(editRequest(edit as never))).rejects.toMatchObject({
+        code: ErrorCode.AnalysisEditInvalid,
+      });
+    expect(() => readFileSync(worldOverlayFile(folder))).toThrow();
+  });
+
+  it('refuses a new fact with a quote that is not in the chapter', async () => {
+    const added = (text: string): OverlayEdit => ({
+      kind: 'fact-add',
+      chapterIndex: 2,
+      fact: fact('u1', { predicate: 'friend_of', subjectId: 'l', objectId: 'm', quote: text, addedByUser: true }),
+    });
+    await expect(service.edit(editRequest(added('Never said.') as never))).rejects.toMatchObject({
+      code: ErrorCode.AnalysisQuoteNotFound,
+    });
+    await service.edit(editRequest(added('mai linh HATED lan.') as never));
+    const link = (await world()).links.find((item) => item.predicate === 'friend_of');
+    expect(link).toMatchObject({ source: 'l', target: 'm', overlay: true });
+  });
+
+  it('stores the base of the merged fact in a fact-edit and applies the patch', async () => {
+    const patch = { quote: 'Lan lived in Hanoi' };
+    await service.edit(editRequest({ kind: 'fact-edit', factId: 'f1', chapterIndex: 2, patch } as never));
+    expect(overlayFile().edits[0]).toMatchObject({
+      kind: 'fact-edit',
+      base: { predicate: 'located_in', subjectId: 'l', objectId: 'h', quote },
+    });
+    expect((await world()).links[0].quotes).toEqual([patch.quote]);
+  });
+
+  it('saves a second edit of the same merged fact and shows it without an orphan', async () => {
+    await service.edit(
+      editRequest({
+        kind: 'fact-edit',
+        factId: 'f1',
+        chapterIndex: 2,
+        patch: { quote: 'Lan lived in Hanoi' },
+      } as never),
+    );
+    await service.edit(
+      editRequest({
+        kind: 'fact-edit',
+        factId: 'f1',
+        chapterIndex: 2,
+        patch: { quote: 'mai linh HATED lan.' },
+      } as never),
+    );
+    expect(overlayFile().edits).toHaveLength(2);
+    const result = await world();
+    expect(result.links[0].quotes).toEqual(['mai linh HATED lan.']);
+    expect(result.orphans).toEqual([]);
+  });
+
+  it('refuses overlay edits with NOVEL_LOCKED while the novel is locked', async () => {
+    activeRuns.list = [{ id: 'r1', novelId, type: 'analysis', label: 'x', status: 'running' }];
+    await expect(
+      service.edit(editRequest({ kind: 'entity-rename', entityId: 'm', name: 'Mai' } as never)),
+    ).rejects.toMatchObject({ code: ErrorCode.NovelLocked });
+    expect(() => readFileSync(worldOverlayFile(folder))).toThrow();
+  });
+
+  it('keeps an edit after a re-analysis and a merge', async () => {
+    await service.edit(editRequest({ kind: 'entity-rename', entityId: 'm', name: 'Mai' } as never));
+    await seedMerged();
+    expect(await names()).toEqual(['Hanoi', 'Lan', 'Mai']);
+    expect((await world()).orphans).toEqual([]);
+  });
+
+  it('lists an edit as an orphan, not applied, when its entity left the merged world', async () => {
+    const edit: OverlayEdit = { kind: 'entity-rename', entityId: 'm', name: 'Mai' };
+    await service.edit(editRequest(edit as never));
+    await seedMerged(true);
+    const result = await world();
+    expect(result.orphans).toEqual([edit]);
+    expect(result.entities.map((item) => item.name).sort()).toEqual(['Hanoi', 'Lan', 'Someone']);
+  });
+
+  it('lists a fact edit as an orphan when the fact content changed', async () => {
+    await service.edit(editRequest({ kind: 'fact-delete', factId: 'f1', chapterIndex: 2 } as never));
+    expect((await world()).links).toEqual([]);
+    const changed = fact('f1', { subjectId: 'l', objectId: 'h', quote: 'Mai Linh hated Lan.' });
+    await seedChapter(2, 'clean', [entity('l', 'Lan'), entity('h', 'Hanoi', { type: 'Location' })], [changed]);
+    await service.merge(novelId);
+    const result = await world();
+    expect(result.orphans).toHaveLength(1);
+    expect(result.links).toHaveLength(1);
+  });
+});
+
+describe('findQuote', () => {
+  it('gives one match per chapter containing the quote, with a fold', async () => {
+    const result = await service.findQuote({ novelId, quote: '  mai LINH  ' });
+    expect(result.map((item) => item.chapterIndex)).toEqual([1, 2]);
+    expect(result[0]).toMatchObject({ chapterTitle: 'Chapter 1' });
+    expect(result[0].context.match).toBe('Mai Linh');
+  });
+
+  it('gives an empty list for an empty or missing quote', async () => {
+    expect(await service.findQuote({ novelId, quote: '   ' })).toEqual([]);
+    expect(await service.findQuote({ novelId, quote: 'dragon' })).toEqual([]);
+  });
+
+  it('refuses an unknown novel with NOVEL_NOT_FOUND', async () => {
+    await expect(
+      service.findQuote({ novelId: '99999999-1234-4abc-8def-1234567890ab', quote: 'Mai' }),
+    ).rejects.toMatchObject({ code: ErrorCode.NovelNotFound });
   });
 });

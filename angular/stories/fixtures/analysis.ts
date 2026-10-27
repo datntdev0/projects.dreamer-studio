@@ -792,6 +792,7 @@ export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): OverlayEdit[
         addedByUser: true,
       },
     },
+    { kind: 'entity-rename', entityId: 'removed-in-rerun', name: edition === 'zh' ? '旧名' : 'Old Name' },
   ];
 }
 

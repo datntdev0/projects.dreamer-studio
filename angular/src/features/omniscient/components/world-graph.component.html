@@ -16,6 +16,22 @@
     [description]="'analysis.graph.emptyHint' | t"
   />
 }
+@if (predicateOptions().length) {
+  <span class="ds-select ds-world-graph-filter">
+    <select
+      class="ds-input"
+      data-testid="world-relationship-filter"
+      [attr.aria-label]="'analysis.world.filterRelationship' | t"
+      (change)="onPredicateChange($event)"
+    >
+      <option value="all" [selected]="predicate() === 'all'">{{ 'analysis.world.allRelationships' | t }}</option>
+      @for (option of predicateOptions(); track option) {
+        <option [value]="option" [selected]="option === predicate()">{{ option }}</option>
+      }
+    </select>
+    <ds-icon name="chevron-down" size="sm" />
+  </span>
+}
 <div class="ds-world-graph-tools" role="toolbar" [attr.aria-label]="'analysis.graph.tools' | t">
   <button
     dsBtn
@@ -68,7 +84,4 @@
       <span class="ds-world-graph-dash"></span>{{ 'analysis.graph.hostile' | t }}
     </li>
   </ul>
-  @if (mergedAt()) {
-    <p class="meta" data-testid="world-graph-merged">{{ 'analysis.world.merged' | t: { date: mergedAt() } }}</p>
-  }
 </div>

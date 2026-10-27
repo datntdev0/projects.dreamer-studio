@@ -123,6 +123,14 @@ ds-entity-list {
   }
 }
 
+.ds-world-entities-queue.is-warning {
+  color: var(--color-warning);
+
+  &:hover {
+    color: var(--color-warning);
+  }
+}
+
 .ds-world-entities-list {
   flex: 1;
   min-height: 0;
@@ -314,8 +322,24 @@ ds-entity-table {
     font-weight: 500;
   }
 
+  .ds-world-table-name,
   .ds-world-table-aliases {
-    max-width: var(--right-w);
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ds-world-table-name {
+    width: 40%;
+  }
+
+  .ds-world-table-aliases {
+    width: 30%;
     color: var(--color-text-secondary);
+  }
+
+  .ds-world-table-edited {
+    text-align: center;
   }
 }

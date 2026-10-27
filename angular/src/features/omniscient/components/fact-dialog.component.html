@@ -34,27 +34,36 @@
         />
       </ds-field>
     }
-    <ds-field
-      controlId="world-fact-predicate"
-      required
-      [label]="'analysis.world.predicate' | t"
-      [hint]="'analysis.entity.predicateHint' | t"
-    >
-      <input
-        id="world-fact-predicate"
-        class="ds-input mono"
-        list="world-fact-predicates"
-        data-testid="world-fact-predicate"
-        autofocus
-        [value]="predicate()"
-        (input)="predicate.set($any($event.target).value)"
-      />
-      <datalist id="world-fact-predicates">
-        @for (item of predicates(); track item) {
-          <option [value]="item"></option>
-        }
-      </datalist>
+    <ds-field controlId="world-fact-predicate" required [label]="'analysis.world.predicate' | t">
+      <span class="ds-select">
+        <select
+          id="world-fact-predicate"
+          class="ds-input mono"
+          data-testid="world-fact-predicate"
+          autofocus
+          (change)="setPredicate($any($event.target).value)"
+        >
+          @if (!selectedPredicate()) {
+            <option value="" selected>{{ predicate() }}</option>
+          }
+          @for (item of predicates(); track item.name) {
+            <option [value]="item.name" [selected]="item.name === predicate()">{{ item.name }}</option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
     </ds-field>
+    @if (labeled()) {
+      <ds-field controlId="world-fact-label" required [label]="'analysis.review.prop.label' | t">
+        <input
+          id="world-fact-label"
+          class="ds-input"
+          data-testid="world-fact-label"
+          [value]="label()"
+          (input)="label.set($any($event.target).value)"
+        />
+      </ds-field>
+    }
     @if (kind() === 'relationship') {
       <ds-field controlId="world-fact-object" required [label]="'analysis.world.object' | t">
         <span class="ds-select">
@@ -105,7 +114,7 @@
             }
             @case ('pick') {
               <span class="ds-world-quote-status meta num">{{
-                'analysis.entity.quotePick' | t: { count: pickable().length }
+                pluralKey('quotePick', pickable().length) | t: { count: pickable().length }
               }}</span>
             }
             @case ('found') {

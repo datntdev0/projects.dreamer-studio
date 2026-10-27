@@ -50,11 +50,11 @@
         @if (scalars().length) {
           <fieldset>
             <legend>{{ 'analysis.entity.moveValues' | t }}</legend>
-            @for (scalar of scalars(); track scalar.factId) {
+            @for (scalar of scalars(); track scalar.ref.factId + ':' + scalar.ref.chapterIndex) {
               <ds-checkbox
                 [attr.data-testid]="'world-split-value-' + $index"
-                [checked]="facts().includes(scalar.factId)"
-                (checkedChange)="toggleFacts([scalar.factId], $event)"
+                [checked]="hasFacts([scalar.ref])"
+                (checkedChange)="toggleFacts([scalar.ref], $event)"
                 >{{ scalar.predicate }}: {{ scalar.quote }}
                 <span class="meta num"
                   >&middot; {{ 'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex } }}</span
@@ -69,13 +69,13 @@
             @for (link of links(); track $index) {
               <ds-checkbox
                 [attr.data-testid]="'world-split-relation-' + $index"
-                [checked]="hasLink(link.factIds ?? [])"
-                (checkedChange)="toggleFacts(link.factIds ?? [], $event)"
+                [checked]="hasFacts(link.factRefs ?? [])"
+                (checkedChange)="toggleFacts(link.factRefs ?? [], $event)"
                 >{{ link.predicate }} &middot; {{ store.entityName(store.otherId(link, current.id)) }}
                 <span class="meta num"
                   >&middot; {{ 'analysis.entity.chapterShort' | t: { chapter: link.chapters[0] } }}
                   @if (link.chapters.length > 1) {
-                    &middot; {{ 'analysis.entity.inChapters' | t: { count: link.chapters.length } }}
+                    &middot; {{ pluralKey('inChapters', link.chapters.length) | t: { count: link.chapters.length } }}
                   }
                 </span></ds-checkbox
               >

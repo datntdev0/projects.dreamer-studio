@@ -30,11 +30,12 @@ export type OmniscientView = 'graph' | 'table' | 'review';
 export type OmniscientDialog =
   | { kind: 'run' }
   | { kind: 'ontology' }
+  | { kind: 'orphans' }
   | { kind: 'fix'; item: ReviewItem; items?: ReviewItem[] }
   | { kind: 'entity'; mode: 'add' | 'rename' | 'type'; entityId: string | null }
   | { kind: 'merge'; entityIds: string[] }
   | { kind: 'split'; entityId: string }
-  | { kind: 'fact'; entityId: string; factId: string | null };
+  | { kind: 'fact'; entityId: string; factId: string | null; chapterIndex: number | null };
 
 export interface MergeBlock {
   key: string;
@@ -172,6 +173,7 @@ export class OmniscientStore {
   readonly selected = computed<WorldEntity | null>(
     () => this.entities().find((item) => item.id === this.selectedId()) ?? null,
   );
+  readonly orphans = computed(() => this.world()?.orphans ?? []);
   readonly openReviewCount = computed(() => this.merge()?.openIssues ?? 0);
 
   constructor() {

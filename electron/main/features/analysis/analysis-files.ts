@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { AnalysisIndexFile, ChapterResult, WorldFile } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexFile, ChapterResult, OverlayFile, WorldFile } from '@dreamer/shared/models/analysis';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 import { chapterPath, NovelFolder } from '../library/library-files';
@@ -19,6 +19,10 @@ export function analysisIndexFile(folder: NovelFolder): string {
 
 export function worldFile(folder: NovelFolder): string {
   return join(folder.analysis, 'world.json');
+}
+
+export function worldOverlayFile(folder: NovelFolder): string {
+  return join(folder.analysis, 'world-overlay.json');
 }
 
 export function chapterResultFile(folder: NovelFolder, file: string): string {
@@ -100,6 +104,29 @@ export async function writeWorldFile(folder: NovelFolder, world: WorldFile): Pro
   }
 }
 
+export function readWorldOverlay(folder: NovelFolder): OverlayFile | null {
+  const file: string = worldOverlayFile(folder);
+  const parsed: unknown = readJson(file);
+  if (parsed === undefined) return null;
+  if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.edits)) {
+    logger.warn(`analysis world overlay invalid: ${file}`);
+    return null;
+  }
+  return parsed as unknown as OverlayFile;
+}
+
+export async function writeWorldOverlay(folder: NovelFolder, overlay: OverlayFile): Promise<void> {
+  try {
+    await writeFileAtomic(
+      worldOverlayFile(folder),
+      `${JSON.stringify(overlay, null, 2)}
+`,
+    );
+  } catch (error: unknown) {
+    asWriteError(error);
+  }
+}
+
 export async function readChapterParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
   const path: string = chapterPath(folder, file);
   const details = await stat(path).catch((): null => null);
@@ -115,5 +142,14 @@ export async function writeChapterResult(folder: NovelFolder, result: ChapterRes
     await writeFileAtomic(chapterResultFile(folder, result.file), `${JSON.stringify(result, null, 2)}\n`);
   } catch (error: unknown) {
     asWriteError(error);
+  }
+}
+
+export async function readReviewParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
+  try {
+    return await readChapterParagraphs(folder, file);
+  } catch (error) {
+    if (error instanceof CodedError && error.code === ErrorCode.ChapterFileMissing) return [];
+    throw error;
   }
 }

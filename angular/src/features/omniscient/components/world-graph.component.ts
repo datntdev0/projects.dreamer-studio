@@ -16,8 +16,6 @@ import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { formatDateTime } from '@core/format';
-import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { EntityType, World, WorldEntity } from '@dreamer/shared/models/analysis';
 import ForceGraph from 'force-graph';
@@ -81,7 +79,10 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
   readonly highlightQuery = input<string>('');
   readonly entityTypes = input<EntityType[]>([]);
   readonly predicates = input<string[]>([]);
+  readonly predicateOptions = input<string[]>([]);
+  readonly predicate = input<string>('all');
   readonly selectEntity = output<string | null>();
+  readonly predicateChange = output<string>();
 
   protected readonly types = ENTITY_TYPES;
   protected readonly typeKeys = entityTypeKeys;
@@ -89,14 +90,9 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     const types = this.entityTypes();
     return this.world().entities.filter((entity) => !types.length || types.includes(entity.type)).length;
   });
-  protected readonly mergedAt = computed(() => {
-    const iso = this.world().mergedAt;
-    return iso ? formatDateTime(iso, this.i18n.language()) : '';
-  });
 
   private readonly container = viewChild.required<ElementRef<HTMLElement>>('graphContainer');
   private readonly zone = inject(NgZone);
-  private readonly i18n = inject(I18nService);
   private graph: ForceGraph<GraphNode, GraphLink> | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private themeObserver: MutationObserver | null = null;
@@ -192,6 +188,10 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     this.themeMedia?.removeEventListener('change', this.onThemeMediaChange);
     this.graph?._destructor();
     this.graph = null;
+  }
+
+  protected onPredicateChange(event: Event): void {
+    this.predicateChange.emit((event.target as HTMLSelectElement).value);
   }
 
   zoomIn(): void {

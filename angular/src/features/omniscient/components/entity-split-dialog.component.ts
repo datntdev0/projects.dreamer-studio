@@ -6,9 +6,13 @@ import { FieldComponent } from '@components/form/field.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { EntityType } from '@dreamer/shared/models/analysis';
-import { ENTITY_TYPES, entityTypeKeys } from '../omniscient-labels';
+import type { EntityType, FactRef } from '@dreamer/shared/models/analysis';
+import { ENTITY_TYPES, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
+
+function sameRef(a: FactRef, b: FactRef): boolean {
+  return a.factId === b.factId && a.chapterIndex === b.chapterIndex;
+}
 
 @Component({
   selector: 'ds-entity-split-dialog',
@@ -21,10 +25,11 @@ export class EntitySplitDialogComponent {
 
   protected readonly types = ENTITY_TYPES;
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly pluralKey = pluralKey;
   protected readonly name = signal('');
   protected readonly type = signal<EntityType>('Character');
   protected readonly aliases = signal<string[]>([]);
-  protected readonly facts = signal<string[]>([]);
+  protected readonly facts = signal<FactRef[]>([]);
   protected readonly error = signal('');
 
   protected readonly request = computed(() => {
@@ -35,17 +40,19 @@ export class EntitySplitDialogComponent {
     () => this.store.entities().find((item) => item.id === this.request()?.entityId) ?? null,
   );
   protected readonly scalars = computed(() =>
-    (this.entity()?.scalars ?? []).flatMap((item) => (item.factId ? [{ ...item, factId: item.factId }] : [])),
+    (this.entity()?.scalars ?? []).flatMap((item) =>
+      item.factId ? [{ ...item, ref: { factId: item.factId, chapterIndex: item.chapterIndex } }] : [],
+    ),
   );
   protected readonly links = computed(() => {
     const id = this.entity()?.id;
-    return id ? this.store.linksOf(id).filter((link) => !!link.factIds?.length) : [];
+    return id ? this.store.linksOf(id).filter((link) => !!link.factRefs?.length) : [];
   });
   protected readonly selectedCount = computed(
     () =>
       this.aliases().length +
-      this.scalars().filter((item) => this.facts().includes(item.factId)).length +
-      this.links().filter((link) => this.hasLink(link.factIds ?? [])).length,
+      this.scalars().filter((item) => this.hasFacts([item.ref])).length +
+      this.links().filter((link) => this.hasFacts(link.factRefs ?? [])).length,
   );
   protected readonly sameName = computed(
     () => this.name().trim().toLocaleLowerCase() === this.entity()?.name.toLocaleLowerCase(),
@@ -84,16 +91,19 @@ export class EntitySplitDialogComponent {
     });
   }
 
-  protected hasLink(factIds: string[]): boolean {
-    return factIds.some((id) => this.facts().includes(id));
+  protected hasFacts(refs: FactRef[]): boolean {
+    return refs.some((ref) => this.facts().some((item) => sameRef(item, ref)));
   }
 
   protected toggleAlias(alias: string, checked: boolean): void {
     this.aliases.update((items) => (checked ? [...items, alias] : items.filter((item) => item !== alias)));
   }
 
-  protected toggleFacts(ids: string[], checked: boolean): void {
-    this.facts.update((items) => [...items.filter((item) => !ids.includes(item)), ...(checked ? ids : [])]);
+  protected toggleFacts(refs: FactRef[], checked: boolean): void {
+    this.facts.update((items) => [
+      ...items.filter((item) => !refs.some((ref) => sameRef(item, ref))),
+      ...(checked ? refs : []),
+    ]);
   }
 
   protected setType(event: Event): void {
@@ -113,7 +123,7 @@ export class EntitySplitDialogComponent {
       entityId: entity.id,
       newEntity: { id, type: this.type(), name: this.name().trim() },
       aliases: this.aliases(),
-      factIds: this.facts(),
+      facts: this.facts(),
     });
     if (!ok) {
       this.error.set(this.store.error() || this.i18n.t('analysis.entity.saveFailed'));

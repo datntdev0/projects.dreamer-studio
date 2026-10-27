@@ -36,7 +36,7 @@
           <p class="meta num">
             @if (entity.chapters.length) {
               {{ 'analysis.entity.firstSeen' | t: { chapter: entity.chapters[0] } }} &middot;
-              {{ 'analysis.entity.chapterCount' | t: { count: entity.chapters.length } }}
+              {{ pluralKey('entityChapters', entity.chapters.length) | t: { count: entity.chapters.length } }}
             } @else {
               {{ 'analysis.entity.notInChapters' | t }}
             }
@@ -203,7 +203,7 @@
                         [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: scalar.predicate }"
                         [dsTooltip]="'analysis.world.edit' | t"
                         [disabled]="store.locked() || !scalar.factId"
-                        (click)="openFact(entity, scalar.factId ?? null)"
+                        (click)="openFact(entity, scalarRef(scalar))"
                       >
                         <ds-icon name="pencil" size="sm" />
                       </button>
@@ -223,6 +223,20 @@
                           <ds-icon name="undo" size="sm" />
                         </button>
                       }
+                      <button
+                        dsBtn
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        [iconOnly]="true"
+                        [attr.data-testid]="'world-entity-value-delete-' + (scalar.factId ?? $index)"
+                        [attr.aria-label]="'analysis.entity.deleteFact' | t: { predicate: scalar.predicate }"
+                        [dsTooltip]="'analysis.world.delete' | t"
+                        [disabled]="store.locked() || !scalar.factId"
+                        (click)="deleteScalar(scalar)"
+                      >
+                        <ds-icon name="trash" size="sm" />
+                      </button>
                     </div>
                     @if (scalar.quote) {
                       <blockquote class="serif">{{ scalar.quote }}</blockquote>
@@ -294,7 +308,7 @@
                 <span class="meta num"
                   >{{ 'analysis.entity.chapterShort' | t: { chapter: firstChapter(link) } }}
                   @if (link.chapters.length > 1) {
-                    &middot; {{ 'analysis.entity.inChapters' | t: { count: link.chapters.length } }}
+                    &middot; {{ pluralKey('inChapters', link.chapters.length) | t: { count: link.chapters.length } }}
                   }
                 </span>
                 <span class="ds-spacer"></span>
@@ -323,12 +337,12 @@
                   [attr.data-testid]="'world-entity-relation-edit-' + $index"
                   [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: link.predicate }"
                   [dsTooltip]="'analysis.world.edit' | t"
-                  [disabled]="store.locked() || !link.factIds?.length"
-                  (click)="openFact(entity, link.factIds?.[0] ?? null)"
+                  [disabled]="store.locked() || !link.factRefs?.length"
+                  (click)="openFact(entity, link.factRefs?.[0] ?? null)"
                 >
                   <ds-icon name="pencil" size="sm" />
                 </button>
-                @if (link.overlay && link.factIds?.length) {
+                @if (link.overlay && link.factRefs?.length) {
                   <button
                     dsBtn
                     variant="ghost"
@@ -344,6 +358,20 @@
                     <ds-icon name="undo" size="sm" />
                   </button>
                 }
+                <button
+                  dsBtn
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  [iconOnly]="true"
+                  [attr.data-testid]="'world-entity-relation-delete-' + $index"
+                  [attr.aria-label]="'analysis.entity.deleteFact' | t: { predicate: link.predicate }"
+                  [dsTooltip]="'analysis.world.delete' | t"
+                  [disabled]="store.locked() || !link.factRefs?.length"
+                  (click)="deleteLink(link)"
+                >
+                  <ds-icon name="trash" size="sm" />
+                </button>
               </div>
               @if (link.overlay || !link.quotes.length || link.stale) {
                 <div class="ds-world-detail-tags">

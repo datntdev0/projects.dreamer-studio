@@ -37,6 +37,20 @@ ds-world-graph {
   }
 }
 
+.ds-world-graph-filter {
+  position: absolute;
+  top: var(--sp-md);
+  left: var(--sp-md);
+  z-index: 1;
+  width: auto;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-1);
+
+  select {
+    font-size: var(--font-size-small);
+  }
+}
+
 .ds-world-graph-tools,
 .ds-world-graph-legend {
   position: absolute;

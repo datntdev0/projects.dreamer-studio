@@ -17,7 +17,9 @@
             <ds-icon [name]="typeIcons[item.type]" size="sm" />
             <span class="ds-world-detail-pick-name">{{ item.name }}</span>
             <span class="meta">{{ typeKeys[item.type] | t }}</span>
-            <span class="meta num">{{ 'analysis.entity.chapterCount' | t: { count: item.chapters.length } }}</span>
+            <span class="meta num">{{
+              pluralKey('entityChapters', item.chapters.length) | t: { count: item.chapters.length }
+            }}</span>
             <button
               dsBtn
               variant="ghost"

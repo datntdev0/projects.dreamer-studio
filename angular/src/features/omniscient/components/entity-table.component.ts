@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { IconComponent } from '@components/icon/icon.component';
+import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { WorldEntity } from '@dreamer/shared/models/analysis';
 import { entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
@@ -36,7 +37,7 @@ interface EntityColumn {
 
 @Component({
   selector: 'ds-entity-table',
-  imports: [IconComponent, TranslatePipe],
+  imports: [IconComponent, TooltipDirective, TranslatePipe],
   templateUrl: './entity-table.component.html',
 })
 export class EntityTableComponent {

@@ -8,8 +8,15 @@ import {
   issueCounts,
 } from '@dreamer/shared/core/analysis-review';
 import { reviewEntityOptions, reviewItems } from '@dreamer/shared/core/analysis-review';
-import { buildWorld, isReviewEdit } from '@dreamer/shared/core/world';
-import { findTextContext } from '@dreamer/shared/core/text-match';
+import {
+  activeOverlay,
+  buildWorld,
+  entityOccurrences,
+  findQuoteMatches,
+  isReviewEdit,
+  overlayOrphans,
+} from '@dreamer/shared/core/world';
+import { checkOverlayEdit } from '@dreamer/shared/core/world-overlay-checks';
 import type {
   AnalysisChanged,
   AnalysisChapterDetail,
@@ -267,12 +274,11 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   }
 
   override async analysisWorld(query: WorldQuery): Promise<World | null> {
+    const merged = this.merged.get(query.novelId) ?? [];
+    const overlay = this.overlay.get(query.novelId) ?? [];
     return {
-      ...buildWorld(
-        this.merged.get(query.novelId) ?? [],
-        { chapter: query.chapter, only: query.only },
-        this.overlay.get(query.novelId) ?? [],
-      ),
+      ...buildWorld(merged, { chapter: query.chapter, only: query.only }, overlay),
+      orphans: overlayOrphans(merged, overlay),
       mergedAt: this.mergedAt.get(query.novelId) ?? null,
     };
   }
@@ -292,14 +298,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
     const entity = world?.entities.find((item) => item.id === query.entityId);
     if (!entity) return [];
     const chapters = this.chapters.get(query.novelId) ?? [];
-    return entity.chapters.map((index) => {
-      const chapter = chapters.find((item) => item.index === index);
-      const context =
-        [entity.name, ...entity.aliases]
-          .map((needle) => findTextContext(chapter?.paragraphs ?? [], needle))
-          .find((item) => item !== null) ?? null;
-      return { chapterIndex: index, chapterTitle: chapter?.title ?? '', context };
-    });
+    return entityOccurrences(entity, chapters);
   }
 
   override async analysisEdit(request: AnalysisEditRequest): Promise<void> {
@@ -314,8 +313,20 @@ export class FakeAnalysisApi extends FakePipelinesApi {
         this.reviewEdits.set(novelId, edits);
         throw error;
       }
-    } else this.overlay.set(novelId, [...(this.overlay.get(novelId) ?? []), edit]);
+    } else await this.saveOverlayEdit(novelId, edit);
     this.emitChanged(novelId);
+  }
+
+  private async saveOverlayEdit(novelId: string, edit: OverlayEdit): Promise<void> {
+    const world = await this.analysisWorld({ novelId, chapter: null, only: false });
+    const code = checkOverlayEdit({
+      edit,
+      world: world ?? { entities: [], links: [] },
+      ontology: DEFAULT_ONTOLOGY,
+      chapters: this.chapters.get(novelId) ?? [],
+    });
+    if (code) throw new CodedError(code, `Edit ${edit.kind} is not valid`);
+    this.overlay.set(novelId, activeOverlay([...(this.overlay.get(novelId) ?? []), edit]));
   }
 
   override async analysisMerge(novelId: string): Promise<void> {
@@ -329,12 +340,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   }
 
   override async analysisFindQuote(query: QuoteQuery): Promise<QuoteMatch[]> {
-    const quote = query.quote.trim();
-    if (!quote) return [];
-    return (this.chapters.get(query.novelId) ?? []).flatMap((chapter) => {
-      const context = findTextContext(chapter.paragraphs, quote);
-      return context ? [{ chapterIndex: chapter.index, chapterTitle: chapter.title, context }] : [];
-    });
+    return findQuoteMatches(this.chapters.get(query.novelId) ?? [], query.quote);
   }
 
   override async analysisOntologyOpen(): Promise<void> {}

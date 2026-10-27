@@ -9,7 +9,7 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { AnalysisFact, QuoteMatch, WorldEdit, WorldLink, WorldScalar } from '@dreamer/shared/models/analysis';
-import { ENTITY_TYPES, entityTypeKeys } from '../omniscient-labels';
+import { ENTITY_TYPES, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
 type FactKind = AnalysisFact['kind'];
@@ -35,8 +35,10 @@ export class FactDialogComponent {
   private readonly i18n = inject(I18nService);
 
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly pluralKey = pluralKey;
   protected readonly kind = signal<FactKind>('relationship');
   protected readonly predicate = signal('');
+  protected readonly label = signal('');
   protected readonly objectId = signal('');
   protected readonly chapterIndex = signal<number | null>(null);
   protected readonly quote = signal('');
@@ -52,11 +54,18 @@ export class FactDialogComponent {
   protected readonly target = computed<FactTarget | null>(() => {
     const request = this.request();
     const factId = request?.factId;
-    if (!request || !factId) return null;
-    const scalar = this.store.selected()?.scalars.find((item) => item.factId === factId) ?? null;
-    if (scalar) return { factId, subjectId: request.entityId, chapterIndex: scalar.chapterIndex, scalar, link: null };
-    const link = this.store.links().find((item) => item.factIds?.[0] === factId) ?? null;
-    return link ? { factId, subjectId: link.source, chapterIndex: link.chapters[0] ?? 0, scalar: null, link } : null;
+    const chapterIndex = request?.chapterIndex;
+    if (!request || !factId || chapterIndex === null || chapterIndex === undefined) return null;
+    const scalar =
+      this.store.selected()?.scalars.find((item) => item.factId === factId && item.chapterIndex === chapterIndex) ??
+      null;
+    if (scalar) return { factId, subjectId: request.entityId, chapterIndex, scalar, link: null };
+    const link =
+      this.store
+        .links()
+        .find((item) => item.factRefs?.some((ref) => ref.factId === factId && ref.chapterIndex === chapterIndex)) ??
+      null;
+    return link ? { factId, subjectId: link.source, chapterIndex, scalar: null, link } : null;
   });
   protected readonly subject = computed(() => {
     const id = this.target()?.subjectId ?? this.request()?.entityId;
@@ -66,24 +75,28 @@ export class FactDialogComponent {
     { value: 'relationship', label: this.i18n.t('analysis.world.relationship'), icon: 'network' },
     { value: 'scalar', label: this.i18n.t('analysis.world.scalar'), icon: 'hash' },
   ]);
-  protected readonly objectGroups = computed(() =>
-    ENTITY_TYPES.map((type) => ({
-      type,
-      items: this.store
-        .entities()
-        .filter((item) => item.type === type && item.id !== this.subject()?.id)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    })).filter((group) => group.items.length),
+  protected readonly predicates = computed(() => {
+    const type = this.subject()?.type;
+    return (this.store.ontology()?.predicates ?? [])
+      .filter((item) => item.kind === this.kind() && !!type && item.subjectTypes.includes(type))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+  protected readonly selectedPredicate = computed(() =>
+    this.predicates().find((item) => item.name === this.predicate()),
   );
-  protected readonly predicates = computed(() =>
-    [
-      ...new Set(
-        this.kind() === 'scalar'
-          ? this.store.entities().flatMap((item) => item.scalars.map((scalar) => scalar.predicate))
-          : this.store.predicates(),
-      ),
-    ].sort(),
-  );
+  protected readonly labeled = computed(() => this.selectedPredicate()?.labeled === true);
+  protected readonly objectGroups = computed(() => {
+    const types = this.selectedPredicate()?.objectTypes ?? ENTITY_TYPES;
+    return types
+      .map((type) => ({
+        type,
+        items: this.store
+          .entities()
+          .filter((item) => item.type === type && item.id !== this.subject()?.id)
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .filter((group) => group.items.length);
+  });
   protected readonly quoteText = computed(() => this.quote().trim());
   protected readonly pickable = computed(() => (this.matches() ?? []).filter((match) => this.canPick(match)));
   protected readonly shownMatches = computed(() => (this.matches() ?? []).slice(0, MATCH_LIMIT));
@@ -104,7 +117,8 @@ export class FactDialogComponent {
   protected readonly canSave = computed(
     () =>
       !!this.subject() &&
-      !!this.predicate().trim() &&
+      !!this.selectedPredicate() &&
+      (!this.labeled() || !!this.label().trim()) &&
       this.chapter() !== null &&
       (this.kind() === 'relationship' ? !!this.objectId() : !!this.quoteText()) &&
       !this.store.busy() &&
@@ -120,7 +134,13 @@ export class FactDialogComponent {
 
   protected setKind(kind: string): void {
     this.kind.set(kind as FactKind);
-    if (!this.predicates().includes(this.predicate())) this.predicate.set('');
+    this.setPredicate(this.predicates()[0]?.name ?? '');
+  }
+
+  protected setPredicate(name: string): void {
+    this.predicate.set(name);
+    if (!this.objectGroups().some((group) => group.items.some((item) => item.id === this.objectId())))
+      this.objectId.set(this.objectGroups()[0]?.items[0]?.id ?? '');
   }
 
   protected setObject(event: Event): void {
@@ -173,16 +193,17 @@ export class FactDialogComponent {
     const chapterIndex = this.chapter();
     if (!subject || chapterIndex === null || !this.canSave()) return;
     const kind = this.kind();
-    const predicate = this.predicate().trim();
+    const predicate = this.predicate();
     const quote = this.quoteText() || null;
     const object = kind === 'relationship' ? { objectId: this.objectId() } : {};
+    const label = this.labeled() ? { label: this.label().trim() } : {};
     const target = this.target();
     const edit: WorldEdit = target
       ? {
           kind: 'fact-edit',
           factId: target.factId,
           chapterIndex: target.chapterIndex,
-          patch: { predicate, quote, ...object },
+          patch: { predicate, quote, ...object, ...label },
         }
       : {
           kind: 'fact-add',
@@ -194,6 +215,7 @@ export class FactDialogComponent {
             subjectId: subject.id,
             quote,
             ...object,
+            ...label,
             status: 'verified',
             addedByUser: true,
           },
@@ -211,8 +233,10 @@ export class FactDialogComponent {
     const asOf = this.store.asOfChapter();
     const firstSeen = this.subject()?.chapters[0];
     this.kind.set(target?.scalar ? 'scalar' : 'relationship');
-    this.predicate.set(target?.scalar?.predicate ?? target?.link?.predicate ?? '');
-    this.objectId.set(target?.link?.target ?? this.objectGroups()[0]?.items[0]?.id ?? '');
+    this.predicate.set(target?.scalar?.predicate ?? target?.link?.predicate ?? this.predicates()[0]?.name ?? '');
+    this.label.set(target?.link?.label ?? '');
+    this.objectId.set(target?.link?.target ?? '');
+    this.setPredicate(this.predicate());
     const quote = target?.scalar?.quote ?? target?.link?.quotes[0] ?? '';
     this.quote.set(quote);
     this.matches.set(null);

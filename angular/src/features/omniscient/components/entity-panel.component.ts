@@ -6,13 +6,21 @@ import { AreaStateComponent } from '@components/state/area-state.component';
 import { PillComponent } from '@components/status/pill.component';
 import { TabsComponent } from '@components/tabs/tabs.component';
 import type { TabItem } from '@components/tabs/tabs.component';
+import { ToastService } from '@components/toast/toast.service';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { hasProperty } from '@dreamer/shared/core/ontology-rules';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import type { Occurrence, WorldEntity, WorldLink, WorldScalar } from '@dreamer/shared/models/analysis';
-import { entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
+import type {
+  FactRef,
+  Occurrence,
+  WorldEdit,
+  WorldEntity,
+  WorldLink,
+  WorldScalar,
+} from '@dreamer/shared/models/analysis';
+import { entityTypeIcons, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
 type EntityTab = 'entity' | 'relations' | 'occurrences';
@@ -29,6 +37,18 @@ interface OccurrenceResult {
 }
 
 const OCCURRENCE_PAGE = 50;
+const REMOVAL_KEYS = {
+  reset: {
+    title: 'analysis.entity.resetAddedTitle',
+    message: 'analysis.entity.resetAddedMessage',
+    confirm: 'analysis.entity.resetAddedConfirm',
+  },
+  delete: {
+    title: 'analysis.entity.deleteFactTitle',
+    message: 'analysis.entity.deleteFactMessage',
+    confirm: 'analysis.world.delete',
+  },
+};
 
 @Component({
   selector: 'ds-entity-panel',
@@ -47,10 +67,12 @@ const OCCURRENCE_PAGE = 50;
 export class EntityPanelComponent {
   protected readonly store = inject(OmniscientStore);
   private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
   private occurrenceRequest = 0;
 
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly pluralKey = pluralKey;
   protected readonly typeIcons = entityTypeIcons;
   protected readonly tab = signal<EntityTab>('entity');
   protected readonly alias = signal('');
@@ -133,8 +155,17 @@ export class EntityPanelComponent {
     this.store.dialog.set({ kind: 'merge', entityIds: [entity.id, ...others] });
   }
 
-  protected openFact(entity: WorldEntity, factId: string | null): void {
-    this.store.dialog.set({ kind: 'fact', entityId: entity.id, factId });
+  protected openFact(entity: WorldEntity, ref: FactRef | null): void {
+    this.store.dialog.set({
+      kind: 'fact',
+      entityId: entity.id,
+      factId: ref?.factId ?? null,
+      chapterIndex: ref?.chapterIndex ?? null,
+    });
+  }
+
+  protected scalarRef(scalar: WorldScalar): FactRef | null {
+    return scalar.factId ? { factId: scalar.factId, chapterIndex: scalar.chapterIndex } : null;
   }
 
   protected async addAlias(entity: WorldEntity): Promise<void> {
@@ -147,8 +178,10 @@ export class EntityPanelComponent {
     void this.store.edit({ kind: 'entity-remove-alias', entityId: entity.id, alias });
   }
 
-  protected resetEntity(entity: WorldEntity): void {
-    void this.store.edit({ kind: 'entity-reset', entityId: entity.id });
+  protected async resetEntity(entity: WorldEntity): Promise<void> {
+    if (!entity.chapters.length && !(await this.confirmRemoval('reset', entity.name))) return;
+    if ((await this.store.edit({ kind: 'entity-reset', entityId: entity.id })) && !entity.chapters.length)
+      this.store.select(null);
   }
 
   protected resetScalar(scalar: WorldScalar): void {
@@ -157,8 +190,45 @@ export class EntityPanelComponent {
   }
 
   protected resetLink(link: WorldLink): void {
-    const factId = link.factIds?.[0];
-    if (factId) void this.store.edit({ kind: 'fact-reset', factId, chapterIndex: firstChapter(link) });
+    void this.store.editMany((link.factRefs ?? []).map((ref) => ({ kind: 'fact-reset', ...ref })));
+  }
+
+  protected async deleteScalar(scalar: WorldScalar): Promise<void> {
+    const ref = this.scalarRef(scalar);
+    if (ref && (await this.confirmRemoval('delete', scalar.predicate))) await this.deleteFacts([ref], scalar.predicate);
+  }
+
+  protected async deleteLink(link: WorldLink): Promise<void> {
+    const name = link.label ?? link.predicate;
+    if (await this.confirmRemoval('delete', name)) await this.deleteFacts(link.factRefs ?? [], name);
+  }
+
+  private async deleteFacts(refs: FactRef[], name: string): Promise<void> {
+    const deleted = await this.store.editMany(refs.map((ref) => ({ kind: 'fact-delete', ...ref })));
+    if (deleted)
+      this.offerUndo(
+        name,
+        refs.map((ref) => ({ kind: 'fact-restore', ...ref })),
+      );
+  }
+
+  private offerUndo(name: string, edits: WorldEdit[]): void {
+    this.toast.show({
+      kind: 'success',
+      title: this.i18n.t('analysis.entity.deletedToast', { name }),
+      action: { label: this.i18n.t('analysis.entity.undo'), run: () => void this.store.editMany(edits) },
+    });
+  }
+
+  private confirmRemoval(kind: 'reset' | 'delete', name: string): Promise<boolean> {
+    const keys = REMOVAL_KEYS[kind];
+    return this.confirm.confirm({
+      title: this.i18n.t(keys.title, { name }),
+      message: this.i18n.t(keys.message),
+      confirmLabel: this.i18n.t(keys.confirm),
+      cancelLabel: this.i18n.t('common.cancel'),
+      danger: true,
+    });
   }
 
   protected async deleteEntity(entity: WorldEntity): Promise<void> {
@@ -169,7 +239,9 @@ export class EntityPanelComponent {
       cancelLabel: this.i18n.t('common.cancel'),
       danger: true,
     });
-    if (confirmed && (await this.store.edit({ kind: 'entity-delete', entityId: entity.id }))) this.store.select(null);
+    if (!confirmed || !(await this.store.edit({ kind: 'entity-delete', entityId: entity.id }))) return;
+    this.store.select(null);
+    this.offerUndo(entity.name, [{ kind: 'entity-restore', entityId: entity.id }]);
   }
 
   protected firstChapter(link: WorldLink): number {

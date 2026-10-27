@@ -171,8 +171,14 @@ export interface WorldEntity {
   staleChapters: number[];
 }
 
+export interface FactRef {
+  factId: string;
+  chapterIndex: number;
+}
+
 export interface WorldLink {
   factIds?: string[];
+  factRefs?: FactRef[];
   source: string;
   target: string;
   predicate: string;
@@ -188,6 +194,7 @@ export interface World {
   entities: WorldEntity[];
   links: WorldLink[];
   mergedAt?: string | null;
+  orphans?: OverlayEdit[];
 }
 
 export interface AnalysisIssueCounts {
@@ -401,14 +408,28 @@ export type OverlayEdit =
       entityId: string;
       newEntity: { id: string; type: EntityType; name: string };
       aliases: string[];
-      factIds: string[];
+      facts: FactRef[];
     }
   | { kind: 'entity-delete'; entityId: string }
   | { kind: 'entity-reset'; entityId: string }
+  | { kind: 'entity-restore'; entityId: string }
   | { kind: 'fact-add'; fact: AnalysisFact; chapterIndex: number }
-  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: Partial<AnalysisFact> }
-  | { kind: 'fact-delete'; factId: string; chapterIndex: number }
-  | { kind: 'fact-reset'; factId: string; chapterIndex: number };
+  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: Partial<AnalysisFact>; base?: FactBase }
+  | { kind: 'fact-delete'; factId: string; chapterIndex: number; base?: FactBase }
+  | { kind: 'fact-reset'; factId: string; chapterIndex: number }
+  | { kind: 'fact-restore'; factId: string; chapterIndex: number };
+
+export interface FactBase {
+  predicate: string;
+  subjectId: string;
+  objectId?: string;
+  quote: string | null;
+}
+
+export interface OverlayFile {
+  version: 1;
+  edits: OverlayEdit[];
+}
 
 export type WorldEdit = ReviewEdit | OverlayEdit;
 

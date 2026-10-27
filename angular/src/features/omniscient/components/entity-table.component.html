@@ -44,10 +44,12 @@
           <td class="ds-world-table-aliases">{{ entity.aliases.join(', ') }}</td>
           <td class="num">{{ entity.chapters.length }}</td>
           <td class="num">{{ entity.degree }}</td>
-          <td>
+          <td class="ds-world-table-edited">
             @if (entity.overlay) {
-              <span class="ds-world-edited"
-                ><ds-icon name="pencil" size="sm" />{{ 'analysis.world.editedByYou' | t }}</span
+              <span class="ds-world-entity-edited" [dsTooltip]="'analysis.world.editedByYou' | t"
+                ><ds-icon name="pencil" size="sm" /><span class="visually-hidden">{{
+                  'analysis.world.editedByYou' | t
+                }}</span></span
               >
             }
           </td>

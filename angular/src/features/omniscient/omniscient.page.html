@@ -148,6 +148,9 @@
           [highlightQuery]="store.query()"
           [entityTypes]="store.graphTypes()"
           [predicates]="store.graphPredicates()"
+          [predicateOptions]="store.predicates()"
+          [predicate]="store.predicateFilter()"
+          (predicateChange)="store.predicateFilter.set($event)"
           (selectEntity)="store.select($event)"
         />
       }
@@ -191,6 +194,7 @@
 }
 <ds-run-analysis-dialog />
 <ds-ontology-problems-dialog />
+<ds-overlay-orphans-dialog />
 <ds-fix-item-dialog />
 <ds-entity-dialog />
 <ds-entity-merge-dialog />

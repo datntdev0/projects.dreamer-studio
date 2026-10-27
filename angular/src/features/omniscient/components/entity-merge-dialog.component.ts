@@ -7,7 +7,7 @@ import { IconComponent } from '@components/icon/icon.component';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { EntityType, WorldEntity } from '@dreamer/shared/models/analysis';
-import { ENTITY_TYPES, entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
+import { ENTITY_TYPES, entityTypeIcons, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
 const CANDIDATE_LIMIT = 8;
@@ -24,6 +24,7 @@ export class EntityMergeDialogComponent {
 
   protected readonly types = ENTITY_TYPES;
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly pluralKey = pluralKey;
   protected readonly typeIcons = entityTypeIcons;
   protected readonly ids = signal<string[]>([]);
   protected readonly keepId = signal('');
@@ -64,11 +65,13 @@ export class EntityMergeDialogComponent {
     );
     if (keep) names.delete(keep.name.toLocaleLowerCase());
     const links = this.store.links().filter((link) => ids.includes(link.source) !== ids.includes(link.target));
+    const values = items.reduce((sum, item) => sum + item.scalars.length, 0);
+    const chapters = new Set(items.flatMap((item) => item.chapters)).size;
     return {
-      aliases: names.size,
-      values: items.reduce((sum, item) => sum + item.scalars.length, 0),
-      relations: links.length,
-      chapters: new Set(items.flatMap((item) => item.chapters)).size,
+      aliases: this.i18n.t(pluralKey('mergeAliases', names.size), { count: names.size }),
+      values: this.i18n.t(pluralKey('mergeValues', values), { count: values }),
+      relations: this.i18n.t(pluralKey('mergeRelations', links.length), { count: links.length }),
+      chapters: this.i18n.t(pluralKey('entityChapters', chapters), { count: chapters }),
     };
   });
   protected readonly canSave = computed(
@@ -111,8 +114,9 @@ export class EntityMergeDialogComponent {
     const keep = this.keep();
     if (!keep || !this.canSave()) return;
     const sourceIds = this.items().map((item) => item.id);
+    const others = sourceIds.length - 1;
     const confirmed = await this.confirm.confirm({
-      title: this.i18n.t('analysis.entity.mergeConfirmTitle', { count: sourceIds.length, name: keep.name }),
+      title: this.i18n.t(pluralKey('mergeConfirm', others), { count: others, name: keep.name }),
       message: this.i18n.t('analysis.entity.mergeConfirmMessage', { name: keep.name }),
       confirmLabel: this.i18n.t('analysis.entity.mergeAction'),
       cancelLabel: this.i18n.t('common.cancel'),

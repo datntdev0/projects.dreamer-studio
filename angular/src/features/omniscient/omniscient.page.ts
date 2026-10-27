@@ -18,6 +18,7 @@ import { FactDialogComponent } from './components/fact-dialog.component';
 import { FixItemDialogComponent } from './components/fix-item-dialog.component';
 import { MergeButtonComponent } from './components/merge-button.component';
 import { OntologyProblemsDialogComponent } from './components/ontology-problems-dialog.component';
+import { OverlayOrphansDialogComponent } from './components/overlay-orphans-dialog.component';
 import { ReviewViewComponent } from './components/review-view.component';
 import { RunAnalysisDialogComponent } from './components/run-analysis-dialog.component';
 import { RunPillComponent } from './components/run-pill.component';
@@ -43,6 +44,7 @@ import type { OmniscientView } from './omniscient.store';
     IconComponent,
     MergeButtonComponent,
     OntologyProblemsDialogComponent,
+    OverlayOrphansDialogComponent,
     PageTitleDirective,
     PanelDirective,
     ReviewViewComponent,

@@ -7,7 +7,7 @@ import { BadgeComponent } from '@components/status/badge.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { ENTITY_TYPE_FILTERS, entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
+import { ENTITY_TYPE_FILTERS, entityTypeIcons, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import type { EntityTypeFilter } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 import { sortEntities } from './entity-table.component';
@@ -29,6 +29,7 @@ export class EntityListComponent {
   private readonly i18n = inject(I18nService);
   private readonly listbox = viewChild<ElementRef<HTMLElement>>('listbox');
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly pluralKey = pluralKey;
   protected readonly typeIcons = entityTypeIcons;
   protected readonly activeId = signal<string | null>(null);
   protected readonly entities = computed(() => sortEntities(this.store.visibleEntities(), 'chapters', 'desc'));

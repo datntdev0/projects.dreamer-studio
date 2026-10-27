@@ -1,7 +1,7 @@
 """Create _docs files and flow plans from .claude/templates and serve them locally.
 
 Usage:
-  python .claude/scripts/docs.py new architecture-decision
+  python .claude/scripts/docs.py new requirements-analysis
   python .claude/scripts/docs.py new architecture-overview
   python .claude/scripts/docs.py new solution TH01-03 --title "Application Shell and Homepage"
   python .claude/scripts/docs.py new plan TH01-03 --title "Application Shell and Homepage"
@@ -16,7 +16,7 @@ from common import ROOT, TEMPLATES, fail
 
 # template name -> (template file, output path pattern from the repo root)
 DOC_TYPES = {
-    "architecture-decision": ("architecture-decision.html", "_docs/0.architecture-decision.html"),
+    "requirements-analysis": ("requirements-analysis.html", "_docs/0.requirements-analysis.html"),
     "architecture-overview": ("architecture-overview.html", "_docs/1.architecture-overview.html"),
     "solution": ("solution.html", "_docs/{id}.solution.html"),
     "plan": ("plan.md", ".claude/flows/{id}/plan.md"),

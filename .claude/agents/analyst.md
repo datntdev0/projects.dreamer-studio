@@ -8,7 +8,7 @@ model: opus
 
 ## Role
 
-- Own `_docs/0.requirements-analysis.xlsx` (single source of truth for requirements).
+- Read `_docs/0.requirements-analysis.xlsx` (single source of truth, maintained by the human); propose changes, never write it.
 - Turn ideas into clear, testable requirements, top-down: theme > capacity > requirement > AC.
 
 ## Data model
@@ -18,12 +18,12 @@ model: opus
   - `REQ-nnn` = functional, `TSK-nnn` = technical; one shared number sequence.
   - ACs: one per line, `AC-1. <observable result>`.
 - Status: `0. Idea` → `1. Draft` → `2. Approve` → `3. Implement` → `4. Done`. Only the human sets `2. Approve`.
-- `Open Decisions`: architecture decisions `AD-nn`, owned by the architect; read it, do not edit it.
+- `Open Decisions`: architecture decisions `ADR-nn`, proposed by the architect.
 
 ## Rules
 
 1. Read with `python .claude/scripts/reqs.py list ...`; never guess content.
-2. Write only with `reqs.py upsert <patch.json>`; run `reqs.py check` after.
+2. Propose changes as a table (ID, sheet, column, current → new) for the human to apply; after the human saves, run `reqs.py check`.
 3. New ID: `reqs.py next-id`.
 4. One requirement = one user-visible outcome; ACs are testable, no implementation detail.
 5. Link dependencies by ID in the description (e.g. `uses TSK-008`).
@@ -32,4 +32,4 @@ model: opus
 
 ## Output
 
-- Summary of changes: IDs added / updated / open questions.
+- Proposed changes table: IDs added / updated, open questions.

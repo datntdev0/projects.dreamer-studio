@@ -12,6 +12,7 @@ __pycache__/
 .claude/settings.local.json
 _docs/*.solution.html
 .claude/flows/
+.claude/archived/
 
 # Build output
 node_modules/

@@ -246,7 +246,7 @@
     $$(".flow", root).forEach(initFlow);
   }
 
-  // ---------- decisions: <section class="decision" data-id="AD-01"> with radio options and a note ----------
+  // ---------- decisions: <section class="decision" data-id="ADR-01"> with radio options and a note ----------
 
   function readDecision(section) {
     const checked = section.querySelector("input[type=radio]:checked");

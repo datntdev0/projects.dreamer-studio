@@ -27,7 +27,7 @@
 ### Step N — docs
 
 - Commit: `docs(<scope>): <summary> [{{ID}}]`
-- Covers: docs, ADs and requirement status match the final code (after fix; all ACs pass)
+- Covers: docs, ADRs and requirement status match the final code (after fix; all ACs pass)
 - Done when: `reqs.py check` passes
 
 ## Progress

@@ -7,49 +7,94 @@
   <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
   <script src="../.claude/templates/assets/doc.js"></script>
   <style>
-    .stats { display: flex; gap: var(--sp-md); flex-wrap: wrap; margin: var(--sp-md) 0; }
-    .stat { padding: var(--sp-sm) var(--sp-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-raised); }
-    .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+    /* Requirement status ramp: one green hue, light -> dark with progress (OKLCH, hue 160). */
+    :root { --status-0: #c2e9d3; --status-1: #7bcba1; --status-2: #23ac74; --status-3: #008554; --status-4: #005d39; }
+    :root[data-theme="dark"] { --status-0: #224c37; --status-1: #2b7351; --status-2: #339c6d; --status-3: #47c58c; --status-4: #85e9b6; }
+
+    .summary { display: grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: var(--sp-md); margin: var(--sp-lg) 0; }
+    .summary .card { margin: 0; }
+    .hero { display: flex; flex-direction: column; gap: var(--sp-sm); }
+    .hero-value { font-size: 48px; font-weight: 600; line-height: 1; letter-spacing: -1px; }
+    .meter { display: flex; height: 8px; border-radius: var(--radius-full); background: var(--status-0); overflow: hidden; }
+    .meter span { background: var(--status-4); border-radius: var(--radius-full); }
+    .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-md); }
+    .tile { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: var(--sp-md) var(--sp-lg); color: inherit; text-decoration: none; }
+    .tile b { font-size: 24px; font-weight: 600; }
+    a.tile:hover { border-color: var(--color-border-strong); }
+
+    .chart-card > header { display: flex; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
+    .chart-card h2 { margin: 0; padding: 0; border: 0; font-size: 15px; flex: 1; }
+    .legend { display: flex; gap: var(--sp-lg); flex-wrap: wrap; margin: var(--sp-md) 0; font-size: 12px; color: var(--color-text-secondary); }
+    .legend span { display: inline-flex; align-items: center; gap: var(--sp-xs); }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; }
+    .bars { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: var(--sp-sm) var(--sp-lg); align-items: center; }
+    .bar-row { display: contents; }
+    .bar-label { font-size: 13px; white-space: nowrap; }
+    .bar-row.row-link:hover .bar-label { color: var(--color-link); text-decoration: underline; }
+    .bar-line { display: flex; align-items: center; gap: var(--sp-sm); min-width: 0; }
+    .bar { display: flex; gap: 2px; height: 20px; }
+    .bar i { min-width: 3px; }
+    .bar i:last-child { border-radius: 0 4px 4px 0; }
+    .bar-total { font-size: 12px; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+    .tip { position: fixed; z-index: 20; pointer-events: none; padding: var(--sp-xs) var(--sp-sm); border-radius: var(--radius-sm); background: var(--color-surface-raised); border: 1px solid var(--color-border); box-shadow: var(--shadow-1); font-size: 12px; }
+    @media (max-width: 900px) { .summary { grid-template-columns: 1fr; } }
     .req { margin: var(--sp-sm) 0; }
-    .req header { display: flex; gap: var(--sp-sm); align-items: center; flex-wrap: wrap; }
-    .req header b { flex: 1; }
-    .req ol { margin: var(--sp-xs) 0 0; padding-left: var(--sp-xl); }
-    .cap-row { cursor: pointer; }
+    .req header, .decided > summary { display: flex; gap: var(--sp-sm); align-items: center; flex-wrap: wrap; }
+    .req header b, .decided > summary b { flex: 1; }
+    .req ol, .decided ol { margin: var(--sp-xs) 0 0; padding-left: var(--sp-xl); }
+    .row-link { cursor: pointer; }
+    td.num { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
+  <!--
+    AGENT GUIDE — view only; never edit data in this page.
+    1. Source of truth: _docs/0.requirements-analysis.xlsx, maintained by the human. Agents read it (`reqs.py list | decisions | check`) and never write it.
+    2. Requirements: sheet "Capacity Catalog" + one sheet per theme (owner: analyst).
+    3. Decisions: sheet "Open Decisions" (owner: architect); Status Open | Decided | Deferred.
+       Open: Decision lists the options, one per line "<title> — <details>"; Recommended holds an option title.
+       Decided: Decision holds the choice; a grouped ADR has one "<topic>: <text>" line per topic in Context and Decision.
+       Affects: capacity IDs only.
+  -->
   <header class="doc-header">
     <span class="brand">Dreamer Studio</span>
     <span class="muted">Requirements Analysis</span>
-    <span class="pill info">View only</span>
     <span class="spacer"></span>
     <span class="meta" data-xlsx-source></span>
     <button class="btn" data-action="reload-xlsx">Reload</button>
     <button class="btn" data-action="toggle-theme">Theme</button>
   </header>
 
-  <main class="doc-main wide">
-    <p class="muted">Reads <code>_docs/0.requirements-analysis.xlsx</code>. Edit the xlsx (or run <code>/solo-analysis</code>), then Reload.</p>
+  <div class="doc-layout">
+    <nav class="doc-nav" id="nav"></nav>
+    <main class="doc-main wide">
+      <h1 id="view-title">Requirements Analysis</h1>
+      <div class="doc-meta"><span>Source: _docs/0.requirements-analysis.xlsx</span><span>Maintained by the human</span></div>
 
-    <section data-xlsx-picker hidden></section>
+      <section data-xlsx-picker hidden></section>
 
-    <section id="content" hidden>
-      <div class="stats" id="stats"></div>
-      <div class="toolbar">
-        <input class="input" id="search" type="search" placeholder="Search ID, name, text…" size="32">
-        <select class="input" id="release"><option value="">All releases</option></select>
-        <select class="input" id="status"><option value="">All statuses</option></select>
-      </div>
-      <div class="tabs" id="tabs"></div>
-      <div id="panels"></div>
-    </section>
-  </main>
+      <section id="content" hidden>
+        <div class="toolbar" id="toolbar">
+          <input class="input" id="search" type="search" placeholder="Search ID, name, text…" size="32">
+          <select class="input" id="release"></select>
+          <select class="input" id="status"></select>
+        </div>
+        <div id="view"></div>
+      </section>
+      <div class="tip" id="tip" role="tooltip" hidden></div>
+    </main>
+  </div>
 
   <script>
     const CATALOG_SHEET = "Capacity Catalog";
-    const DECISIONS_SHEET = "Open Decisions";  // shown in 0.architecture-decision.html
-    const { $$, escapeHtml, sheetRows } = window.Doc;
-    let data = { capacities: [], themes: [] };
+    const DECISIONS_SHEET = "Open Decisions";
+    const OPTION_SEPARATOR = " — ";
+    const STATUSES = ["0. Idea", "1. Draft", "2. Approve", "3. Implement", "4. Done"];
+    const STATUS_KIND = { 0: "", 1: "warning", 2: "info", 3: "info", 4: "success", Open: "warning", Decided: "success", Deferred: "" };
+    const VIEW_KEY = "doc:requirements-analysis:view";
+    const { $$, escapeHtml, storage, sheetRows } = window.Doc;
+    let data = { capacities: [], themes: [], decisions: [] };
+    let current = location.hash.slice(1) || storage(VIEW_KEY) || "overview";
 
     // ---------- load ----------
 
@@ -58,119 +103,280 @@
         capacities: sheetRows(workbook, CATALOG_SHEET),
         themes: workbook.SheetNames.filter((name) => ![CATALOG_SHEET, DECISIONS_SHEET].includes(name))
           .map((name) => ({ name, requirements: sheetRows(workbook, name) })),
+        decisions: sheetRows(workbook, DECISIONS_SHEET),
       };
       document.getElementById("content").hidden = false;
-      fillFilters();
       render();
+    }
+
+    // ---------- helpers ----------
+
+    const requirements = () => data.themes.flatMap((theme) => theme.requirements);
+    const openDecisions = () => data.decisions.filter((row) => row.Status === "Open");
+    const lines = (text) => String(text).split("\n").map((line) => line.trim()).filter(Boolean);
+
+    function statusPill(status) {
+      const kind = STATUS_KIND[status] ?? STATUS_KIND[String(status).charAt(0)] ?? "";
+      return `<span class="pill ${kind}">${escapeHtml(status || "No status")}</span>`;
+    }
+
+    function countBy(rows, key) {
+      const counts = {};
+      rows.forEach((row) => (counts[row[key] || "—"] = (counts[row[key] || "—"] || 0) + 1));
+      return counts;
+    }
+
+    function views() {
+      return [
+        { key: "overview", group: "Requirements", label: "Overview", render: renderOverview },
+        { key: "catalog", label: CATALOG_SHEET, count: data.capacities.length, rows: data.capacities, render: renderCatalog },
+        ...data.themes.map((theme, index) => ({
+          key: `theme-${index}`, label: theme.name, count: theme.requirements.length, rows: theme.requirements, render: renderTheme,
+        })),
+        { key: "decisions", group: "Architecture", label: "Decisions", count: openDecisions().length, countLabel: "open",
+          rows: data.decisions, render: renderDecisions },
+      ];
     }
 
     // ---------- filters ----------
 
-    function allRows() {
-      return [...data.capacities, ...data.themes.flatMap((theme) => theme.requirements)];
-    }
-
-    function fillFilters() {
-      const fill = (id, values, label) => {
-        const select = document.getElementById(id);
-        const current = select.value;
-        select.innerHTML = `<option value="">${label}</option>` +
-          [...new Set(values)].filter(Boolean).sort().map((v) => `<option>${escapeHtml(v)}</option>`).join("");
-        select.value = current;
-      };
-      fill("release", allRows().map((row) => row.Release), "All releases");
-      fill("status", allRows().map((row) => row.Status), "All statuses");
+    function fillSelect(id, values, label) {
+      const select = document.getElementById(id);
+      const selected = select.value;
+      const options = [...new Set(values)].filter(Boolean).sort();
+      select.innerHTML = `<option value="">${label}</option>` + options.map((v) => `<option>${escapeHtml(v)}</option>`).join("");
+      select.value = options.includes(selected) ? selected : "";
     }
 
     function visible(row) {
       const query = document.getElementById("search").value.trim().toLowerCase();
       const release = document.getElementById("release").value;
       const status = document.getElementById("status").value;
-      return (!release || row.Release === release)
+      return (!release || current === "decisions" || row.Release === release)
         && (!status || row.Status === status)
         && (!query || Object.values(row).join(" ").toLowerCase().includes(query));
     }
 
-    // ---------- render ----------
-
-    function statusPill(status) {
-      const kind = { "2": "success", "1": "info", "0": "" }[String(status).charAt(0)] ?? "warning";
-      return `<span class="pill ${kind}">${escapeHtml(status || "No status")}</span>`;
-    }
-
-    function criteriaList(text) {
-      const items = String(text).split("\n").map((line) => line.trim()).filter(Boolean);
-      return items.length ? `<ol>${items.map((line) => `<li>${escapeHtml(line.replace(/^AC-\d+\.\s*/, ""))}</li>`).join("")}</ol>` : "";
-    }
+    // ---------- requirement views ----------
 
     function requirementCard(req) {
+      const criteria = lines(req["Acceptance Criteria"]).map((line) => `<li>${escapeHtml(line.replace(/^AC-\d+\.\s*/, ""))}</li>`).join("");
       return `<article class="card req">
         <header><code>${escapeHtml(req["Req ID"])}</code><b>${escapeHtml(req["Req Name"])}</b>
           <span class="pill">${escapeHtml(req.Release)}</span>${statusPill(req.Status)}</header>
         <p><b>Purpose:</b> ${escapeHtml(req.Purpose)}</p>
-        <p class="muted">${escapeHtml(req.Description)}</p>
-        <h4>Acceptance criteria</h4>${criteriaList(req["Acceptance Criteria"])}
+        <p class="muted pre-line">${escapeHtml(req.Description)}</p>
+        ${criteria ? `<h4>Acceptance criteria</h4><ol>${criteria}</ol>` : ""}
       </article>`;
     }
 
-    function requirementsOf(capacityName) {
-      return data.themes.flatMap((theme) => theme.requirements).filter((req) => req["Capacity Name"] === capacityName);
+    // ---------- overview ----------
+
+    function tile(label, value, note, view) {
+      const open = view ? `<a class="card tile" href="#${view}">` : `<div class="card tile">`;
+      return `${open}<span class="meta">${escapeHtml(label)}</span><b>${value}</b><span class="meta">${escapeHtml(note)}</span>${view ? "</a>" : "</div>"}`;
     }
 
-    function renderCatalog() {
-      const rows = data.capacities.filter(visible).map((cap) => {
-        const reqs = requirementsOf(cap["Capacity Full Name"]);
-        return `<tr class="cap-row" data-id="${escapeHtml(cap.ID)}">
+    function statusColor(status) {
+      return `var(--status-${STATUSES.indexOf(status)})`;
+    }
+
+    function progressBar(group, max) {
+      const counts = countBy(group.rows, "Status");
+      const segments = STATUSES.filter((status) => counts[status]).map((status) => {
+        const tip = `${group.label} · ${status}: ${counts[status]} of ${group.rows.length}`;
+        return `<i style="flex: ${counts[status]}; background: ${statusColor(status)}" data-tip="${escapeHtml(tip)}"></i>`;
+      }).join("");
+      const link = group.view ? ` row-link" data-go="${group.view}` : "";
+      return `<div class="bar-row${link}"><span class="bar-label">${escapeHtml(group.label)}</span>
+        <span class="bar-line"><span class="bar" style="width: ${(group.rows.length / max) * 100}%">${segments}</span>
+        <span class="bar-total">${group.rows.length}</span></span></div>`;
+    }
+
+    function countTable(column, groups) {
+      const body = groups.map((group) => {
+        const counts = countBy(group.rows, "Status");
+        return `<tr><td>${escapeHtml(group.label)}</td><td class="num">${group.rows.length}</td>
+          ${STATUSES.map((status) => `<td class="num">${counts[status] || ""}</td>`).join("")}</tr>`;
+      }).join("");
+      return `<table hidden data-chart-table><thead><tr><th>${column}</th><th>Total</th>
+        ${STATUSES.map((status) => `<th>${escapeHtml(status)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
+    }
+
+    function chartCard(title, column, groups) {
+      const max = Math.max(1, ...groups.map((group) => group.rows.length));
+      const legend = STATUSES.map((status) => `<span><i style="background: ${statusColor(status)}"></i>${escapeHtml(status)}</span>`).join("");
+      return `<section class="card chart-card"><header><h2>${title}</h2><button class="btn" data-toggle-table>Table</button></header>
+        <div class="legend">${legend}</div>
+        <div class="bars">${groups.map((group) => progressBar(group, max)).join("")}</div>
+        ${countTable(column, groups)}</section>`;
+    }
+
+    function renderOverview() {
+      const reqs = requirements();
+      const counts = countBy(reqs, "Status");
+      const count = (...indexes) => indexes.reduce((sum, index) => sum + (counts[STATUSES[index]] || 0), 0);
+      const percent = reqs.length ? Math.round((count(4) / reqs.length) * 100) : 0;
+      const decisions = countBy(data.decisions, "Status");
+      const releases = [...new Set(reqs.map((req) => req.Release).filter(Boolean))].sort();
+      return `<div class="summary">
+          <div class="card hero"><span class="meta">Requirements done</span><span class="hero-value">${percent}%</span>
+            <span class="meter" role="img" aria-label="${percent}% done"><span style="width: ${percent}%"></span></span>
+            <span class="meta">${count(4)} of ${reqs.length} requirements</span></div>
+          <div class="tiles">
+            ${tile("Capacities", data.capacities.length, `${data.themes.length} themes with requirements`, "catalog")}
+            ${tile("Approved, not done", count(2, 3), `${count(3)} in implementation`)}
+            ${tile("Ideas and drafts", count(0, 1), "waiting for analysis or approval")}
+            ${tile("Decisions", data.decisions.length, `${decisions.Open || 0} open · ${decisions.Deferred || 0} deferred`, "decisions")}
+          </div>
+        </div>
+        ${chartCard("Progress by release", "Release", releases.map((release) => ({ label: release, rows: reqs.filter((req) => req.Release === release) })))}
+        ${chartCard("Progress by theme", "Theme", data.themes.map((theme, index) => ({ label: theme.name, rows: theme.requirements, view: `theme-${index}` })))}`;
+    }
+
+    function renderCatalog(rows) {
+      const body = rows.map((cap) => {
+        const reqs = requirements().filter((req) => req["Capacity Name"] === cap["Capacity Full Name"]);
+        return `<tr class="row-link" data-toggle="${escapeHtml(cap.ID)}">
             <td><code>${escapeHtml(cap.ID)}</code></td><td>${escapeHtml(cap["Capacity Full Name"])}</td>
             <td>${escapeHtml(cap.Purpose)}</td><td>${escapeHtml(cap.Release)}</td><td>${statusPill(cap.Status)}</td>
-            <td class="meta">${reqs.length}</td></tr>
+            <td class="num">${reqs.length}</td></tr>
           <tr data-detail="${escapeHtml(cap.ID)}" hidden><td colspan="6">
-            <p>${escapeHtml(cap.Description)}</p>
+            <p class="pre-line">${escapeHtml(cap.Description)}</p>
             <h4>Expectation</h4><p class="pre-line">${escapeHtml(cap.Expectation)}</p>
-            ${reqs.length ? `<h4>Requirements</h4>${reqs.map(requirementCard).join("")}` : ""}
+            ${reqs.map(requirementCard).join("")}
           </td></tr>`;
       }).join("");
       return `<table><thead><tr><th>ID</th><th>Capacity</th><th>Purpose</th><th>Release</th><th>Status</th><th>Reqs</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="6" class="muted">No capacity matches the filters.</td></tr>`}</tbody></table>`;
+        <tbody>${body || `<tr><td colspan="6" class="muted">No capacity matches the filters.</td></tr>`}</tbody></table>`;
     }
 
-    function renderTheme(theme) {
+    function renderTheme(rows) {
       const groups = {};
-      theme.requirements.filter(visible).forEach((req) => (groups[req["Capacity Name"]] ||= []).push(req));
-      const html = Object.entries(groups).map(([capacity, reqs]) =>
+      rows.forEach((req) => (groups[req["Capacity Name"]] ||= []).push(req));
+      return Object.entries(groups).map(([capacity, reqs]) =>
         `<details open><summary>${escapeHtml(capacity)} <span class="meta">(${reqs.length})</span></summary>
-          ${reqs.map(requirementCard).join("")}</details>`).join("");
-      return html || `<p class="muted">No requirement matches the filters.</p>`;
+          ${reqs.map(requirementCard).join("")}</details>`).join("")
+        || `<p class="muted">No requirement matches the filters.</p>`;
     }
 
-    function renderStats() {
-      const reqs = data.themes.flatMap((theme) => theme.requirements);
-      const byStatus = {};
-      reqs.forEach((req) => (byStatus[req.Status || "No status"] = (byStatus[req.Status || "No status"] || 0) + 1));
-      const stat = (label, value) => `<div class="stat"><b>${value}</b><span class="meta">${escapeHtml(label)}</span></div>`;
-      document.getElementById("stats").innerHTML = stat("Capacities", data.capacities.length) + stat("Requirements", reqs.length) +
-        Object.entries(byStatus).sort().map(([status, count]) => stat(status, count)).join("");
+    // ---------- decisions view ----------
+
+    function optionsOf(row) {
+      return lines(row.Decision).map((line) => {
+        const [title, ...details] = line.split(OPTION_SEPARATOR);
+        return { title: title.trim(), details: details.join(OPTION_SEPARATOR) };
+      });
+    }
+
+    function affects(row) {
+      return row.Affects ? `<p class="meta">Affects: ${escapeHtml(row.Affects)}</p>` : "";
+    }
+
+    function openSection(row) {
+      const id = escapeHtml(row["Decision ID"]);
+      const options = optionsOf(row).map((option) => `
+        <div class="option${option.title === row.Recommended ? " recommended" : ""}">
+          <span>•</span><span><span class="title">${escapeHtml(option.title)}</span><br><span class="muted">${escapeHtml(option.details)}</span></span>
+        </div>`).join("");
+      return `<section class="decision" data-id="${id}">
+        <header><h3>${id} · ${escapeHtml(row.Title)}</h3><span class="pill warning">Open</span></header>
+        <p class="muted pre-line">${escapeHtml(row.Context)}</p>${affects(row)}${options}
+      </section>`;
+    }
+
+    function numbered(text) {
+      const items = lines(text);
+      return items.length > 1 ? `<ol>${items.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ol>`
+        : `<p class="muted">${escapeHtml(text)}</p>`;
+    }
+
+    function decidedItem(row) {
+      const count = lines(row.Decision).length;
+      return `<details class="decided"><summary><code>${escapeHtml(row["Decision ID"])}</code><b>${escapeHtml(row.Title)}</b>
+          <span class="muted">${count > 1 ? `${count} decisions` : escapeHtml(row.Decision)}</span><span class="meta">${escapeHtml(row["Decided On"])}</span></summary>
+        ${count > 1 ? `<h4>Decisions</h4>${numbered(row.Decision)}` : ""}
+        <h4>Context</h4>${numbered(row.Context)}${affects(row)}
+      </details>`;
+    }
+
+    function deferredItem(row) {
+      return `<li><b>${escapeHtml(row["Decision ID"])} · ${escapeHtml(row.Title)}</b> — ${escapeHtml(row.Context)}${row.Affects ? ` <span class="meta">(${escapeHtml(row.Affects)})</span>` : ""}</li>`;
+    }
+
+    function renderDecisions(rows) {
+      const byStatus = (status) => rows.filter((row) => row.Status === status);
+      const open = byStatus("Open");
+      const deferred = byStatus("Deferred");
+      const decided = byStatus("Decided");
+      const html = (open.length ? `<h2>Open questions</h2>
+            ${open.map(openSection).join("")}` : "")
+        + (deferred.length ? `<h2>Deferred</h2><p class="muted">Not needed yet; decided in the solution of the capacity.</p><ul>${deferred.map(deferredItem).join("")}</ul>` : "")
+        + (decided.length ? `<h2>Decided</h2>${decided.map(decidedItem).join("")}` : "");
+      return html || `<p class="muted">No decision matches the filters.</p>`;
+    }
+
+    // ---------- render ----------
+
+    function renderNav(all) {
+      document.getElementById("nav").innerHTML = all.map((view) => {
+        const group = view.group ? `<p class="nav-group">${view.group}</p>` : "";
+        const count = view.count === undefined ? "" : view.countLabel
+          ? (view.count ? `<span class="pill warning">${view.count} ${view.countLabel}</span>` : "")
+          : `<span class="meta">${view.count}</span>`;
+        const active = view.key === current ? ' aria-current="page"' : "";
+        return `${group}<a href="#${view.key}"${active}><span>${escapeHtml(view.label)}</span>${count}</a>`;
+      }).join("");
     }
 
     function render() {
-      renderStats();
-      const tabs = document.getElementById("tabs");
-      const selected = tabs.querySelector('[aria-selected="true"]')?.dataset.tab;
-      const panels = [{ key: "catalog", label: CATALOG_SHEET, html: renderCatalog() },
-        ...data.themes.map((theme, index) => ({ key: `theme-${index}`, label: theme.name, html: renderTheme(theme) }))];
-      tabs.innerHTML = panels.map((p) => `<button data-tab="${p.key}">${escapeHtml(p.label)}</button>`).join("");
-      document.getElementById("panels").innerHTML = panels.map((p) => `<div data-tab-panel="${p.key}">${p.html}</div>`).join("");
-      window.Doc.initTabs(document.getElementById("content"));
-      if (selected) tabs.querySelector(`[data-tab="${selected}"]`)?.click();
-      $$(".cap-row").forEach((row) => row.addEventListener("click", () => {
-        const detail = document.querySelector(`[data-detail="${row.dataset.id}"]`);
+      const all = views();
+      const view = all.find((item) => item.key === current) || all[0];
+      current = view.key;
+      storage(VIEW_KEY, current);
+      renderNav(all);
+      document.getElementById("view-title").textContent = view.label;
+      document.getElementById("toolbar").hidden = !view.rows;
+      document.getElementById("release").hidden = current === "decisions";
+      fillSelect("release", requirements().concat(data.capacities).map((row) => row.Release), "All releases");
+      fillSelect("status", (view.rows || []).map((row) => row.Status), "All statuses");
+
+      const container = document.getElementById("view");
+      container.innerHTML = view.render((view.rows || []).filter(visible));
+      $$("[data-toggle]", container).forEach((row) => row.addEventListener("click", () => {
+        const detail = container.querySelector(`[data-detail="${row.dataset.toggle}"]`);
         detail.hidden = !detail.hidden;
       }));
+      $$("[data-go]", container).forEach((row) => row.addEventListener("click", () => (location.hash = row.dataset.go)));
+      $$("[data-toggle-table]", container).forEach((button) => button.addEventListener("click", () => {
+        const card = button.closest(".chart-card");
+        const table = card.querySelector("[data-chart-table]");
+        table.hidden = !table.hidden;
+        card.querySelector(".bars").hidden = !table.hidden;
+        button.textContent = table.hidden ? "Table" : "Chart";
+      }));
+    }
+
+    function showTip(event) {
+      const tip = document.getElementById("tip");
+      const target = event.target.closest("[data-tip]");
+      tip.hidden = !target;
+      if (!target) return;
+      tip.textContent = target.dataset.tip;
+      tip.style.left = `${event.clientX + 12}px`;
+      tip.style.top = `${event.clientY + 12}px`;
     }
 
     // ---------- events ----------
 
+    window.addEventListener("hashchange", () => {
+      current = location.hash.slice(1);
+      document.getElementById("status").value = "";
+      render();
+    });
     ["search", "release", "status"].forEach((id) => document.getElementById(id).addEventListener("input", render));
+    document.getElementById("view").addEventListener("mousemove", showTip);
+    document.getElementById("view").addEventListener("mouseleave", () => (document.getElementById("tip").hidden = true));
     window.Doc.loadRequirementsWorkbook(showWorkbook);
   </script>
 </body>

@@ -1,0 +1,154 @@
+name: dreamer-package-format
+version: 1
+updated: 2026-10-28
+# schema_*: structure, data types, constants and ranges; checked generically by code.
+# constraints: rules the schema cannot express; listed here, checked by code.
+# workflows: step order of each feature; listed here, run by code.
+
+schema_package:
+  type: zip
+  extension: .zip
+  encrypted: false
+  maxBytes: 209715200 # 200 MB
+  maxUnpackedBytes: 524288000 # 500 MB, sum of uncompressed entry sizes
+  maxEntries: 20000
+  entries:
+    metadata:
+      path: metadata.json
+      required: true
+      extension: .json
+      encoding: utf-8
+      maxBytes: 5242880 # 5 MB
+    chapter:
+      dir: chapters/
+      encoding: utf-8
+      maxBytes: 5242880 # 5 MB
+      listedBy: metadata.chapters[].file
+    cover:
+      required: false
+      mime: [image/jpeg, image/png]
+      maxBytes: 10485760 # 10 MB
+      listedBy: metadata.cover
+    other:
+      ignored: true
+
+schema_metadata_json:
+  type: object
+  unknownFields: ignored
+  fields:
+    formatVersion:
+      type: number
+      required: true
+      const: 1
+    type:
+      type: string
+      required: true
+      enum: [novel]
+    originalTitle:
+      type: string
+      required: true
+      minLength: 1
+    title:
+      type: string
+      default: ''
+    author:
+      type: string
+      default: ''
+    description:
+      type: string
+      default: ''
+    tags:
+      type: array
+      items: { type: string }
+      default: []
+    language:
+      type: string
+      required: true
+      minLength: 1
+    publication:
+      type: string
+      enum: [ongoing, completed]
+      default: ongoing
+    cover:
+      type: [string, 'null']
+      default: null
+    chapters:
+      type: array
+      required: true
+      minItems: 0
+      items:
+        type: object
+        fields:
+          file:
+            type: string
+            required: true
+            pattern: '^chapters/'
+          title:
+            type: string
+            default: ''
+
+schema_chapter_text:
+  encoding: utf-8
+  bom: removed
+  lineEnding: lf # CRLF and lone CR become LF
+  paragraph: line # one non-empty, trimmed line
+  exportSeparator: "\n\n" # export writes a blank line between paragraphs
+  stats:
+    paragraphs: number # normalized non-empty lines
+    chars: number # Unicode code points, line breaks excluded
+    hash: string # lowercase hex SHA-256 of the normalized UTF-8 text
+
+constraints:
+  # Stops reading at once. The params follow each code.
+  refusal:
+    - notZip # {} · not a regular .zip file, the ZIP cannot be opened, or an entry is encrypted
+    - unsafePath # {entry} · name starts with /, has a drive letter, a .. segment, \ or NUL; or repeats a name case-insensitively
+    - unsupportedType # {type} · metadata type is a string other than novel
+    - tooLarge # {limit, size, max, file?} · a maxBytes or maxEntries is exceeded; declared sizes first, then bytes counted while inflating
+    - problems # {count} · one or more problems below were found
+  # Collected, then refused together as problems.
+  problem:
+    - metadataMissing # {} · metadata.json is absent at the root, or is a symlink
+    - metadataInvalid # {line} · not valid JSON or not a JSON object; line of the parse error
+    - versionUnsupported # {version} · formatVersion is not 1; checked before every other field
+    - fieldMissing # {field} · a required field is absent, or a required string is blank after trim
+    - fieldInvalid # {field} · wrong type or value; a bad chapter item uses field chapters[i]
+    - languageInvalid # {value} · Intl.getCanonicalLocales rejects the language
+    - chapterListedTwice # {file} · the same chapter file is listed twice, compared case-insensitively
+    - chapterFileMissing # {index, file} · a listed chapter entry is absent, a directory or a symlink
+    - notUtf8 # {file} · metadata.json or a chapter has invalid UTF-8 bytes (strict decode)
+    - coverInvalid # {file} · the listed cover is absent, a symlink, or lacks JPEG (FF D8 FF) or PNG (89 50 4E 47 0D 0A 1A 0A) magic bytes
+  # Never block import.
+  warning:
+    - chapterEmpty # {index} · zero paragraphs after normalization
+    - sameText # {index, sameAs} · same text hash as an earlier non-empty chapter
+    - ignoredFile # {file} · a file that is not metadata, a listed chapter or the listed cover; symlinks too
+
+workflows:
+  # Preview a package before import. Reads only; never writes, creates or deletes files.
+  preview:
+    - checkPackageFile # regular file, .zip extension, maxBytes
+    - checkPackageEntries # maxEntries, encrypted, unsafe or duplicate names, maxUnpackedBytes
+    - readMetadata # metadata.json present, maxBytes, UTF-8, JSON object; stops on failure
+    - checkMetadataGate # formatVersion, then type; stops on failure
+    - checkMetadataFields # schema_metadata_json; collects every problem
+    - normalizeMetadata # trim strings, drop empty and duplicate tags, canonical language, defaults
+    - checkChapters # listed twice, entry present, maxBytes, UTF-8, normalize text, stats, hash
+    - checkCover # entry present, maxBytes, magic bytes
+    - refuseOnProblems # any problem refuses with problems {count}
+    - collectWarnings # chapterEmpty, sameText, ignoredFile
+    - buildPreview
+  # Import a previewed package into the library.
+  import:
+    - checkUnchanged # size and modified time equal the preview; preview runs again and must pass
+    - checkChoices # every chosen chapter index is in the preview
+    - extractChapters # chosen chapters only; decode and normalize again
+    - extractCover # from the package, a picked file, or none
+    - saveNovel # build library metadata, write it to staging, move staging into the library
+  # Export a novel from the library to a package.
+  export:
+    - snapshotNovel # novel exists; its cover and chapter files exist
+    - buildMetadata # library metadata to schema_metadata_json; chapters/0001.txt, 0002.txt, ...
+    - verifyMetadata # planned: check the built metadata against schema_metadata_json
+    - writePackage # metadata.json, cover at the root, chapters with exportSeparator; to a temp file
+    - finishExport # rename the temp file to the output path

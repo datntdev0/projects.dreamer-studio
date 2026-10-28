@@ -1,3 +1,5 @@
+import type { Language } from '../i18n/translate';
+
 export const ENTITY_TYPES = ['Character', 'Persona', 'Location', 'Organization', 'Artifact', 'Glossary'] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 export type EntityTypeName = EntityType | 'unknown';
@@ -75,6 +77,7 @@ export interface OntologyPredicate {
   symmetric?: boolean;
   labeled?: boolean;
   description?: string;
+  display?: Partial<Record<Language, string>>;
 }
 
 export interface EntityProperty {
@@ -102,12 +105,12 @@ export type OntologyProblemCode =
   | 'version-unsupported'
   | 'section-missing'
   | 'section-not-list'
+  | 'section-not-map'
   | 'item-not-map'
   | 'unknown-key'
   | 'text-invalid'
   | 'flag-invalid'
   | 'entity-type-unknown'
-  | 'entity-type-duplicate'
   | 'entity-type-not-listed'
   | 'predicate-name-invalid'
   | 'predicate-duplicate'
@@ -118,7 +121,6 @@ export type OntologyProblemCode =
   | 'has-persona-missing'
   | 'persona-missing'
   | 'property-unknown'
-  | 'property-duplicate'
   | 'name-property-invalid'
   | 'property-not-multiple';
 

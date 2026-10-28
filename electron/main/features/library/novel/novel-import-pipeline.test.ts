@@ -1,11 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
-import { appendFileSync, createWriteStream, Dirent, existsSync, mkdtempSync, promises as fs } from 'node:fs';
+import { appendFileSync, copyFileSync, Dirent, existsSync, mkdtempSync, promises as fs } from 'node:fs';
 import { readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
-import yazl from 'yazl';
 import { contentHash } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { ImportCoverChoice, ImportPreview } from '@dreamer/shared/models/novel-package';
@@ -16,7 +15,7 @@ import { abortError, PipelineStep, StepContext } from '../../pipelines/pipeline-
 import { importStagingDir, novelFolder } from '../library-files';
 import { readMetadata } from './novel-files';
 import { importParams, novelImportPipeline } from './novel-import-pipeline';
-import { readPackage } from '../package-reader';
+import { openPackageArchive, PackageArchive, readPackage } from '../package-reader';
 
 vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));
 vi.mock('../../../logging/logger', () => ({
@@ -31,42 +30,25 @@ interface TestRun {
   setNovelId: Mock<(id: string) => void>;
 }
 
-const fixtureFolder: string = join(__dirname, '../../../../fixtures/sample-novel');
+const fixtureZip: string = join(__dirname, '../../../../fixtures/sample-novel.zip');
 let tempDir: string;
 let paths: AppPaths;
 let packagePath: string;
 let preview: ImportPreview;
 
-function fixtureFiles(folder: string, prefix: string = ''): Array<{ path: string; name: string }> {
-  const files: Array<{ path: string; name: string }> = [];
-  readdirSync(folder, { withFileTypes: true }).forEach((entry: Dirent): void => {
-    const path: string = join(folder, entry.name);
-    const name: string = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) {
-      files.push(...fixtureFiles(path, name));
-    } else {
-      files.push({ path, name });
-    }
-  });
-  return files;
+function buildSamplePackage(): string {
+  const path: string = join(tempDir, 'sample.zip');
+  copyFileSync(fixtureZip, path);
+  return path;
 }
 
-async function buildSamplePackage(name: string = 'sample.zip'): Promise<string> {
-  const path: string = join(tempDir, name);
-  const zip: yazl.ZipFile = new yazl.ZipFile();
-  fixtureFiles(fixtureFolder).forEach((file: { path: string; name: string }): void =>
-    zip.addFile(file.path, file.name),
-  );
-  const complete: Promise<void> = new Promise((resolve: () => void, reject: (reason?: unknown) => void): void => {
-    const output: ReturnType<typeof createWriteStream> = createWriteStream(path);
-    output.on('close', resolve);
-    output.on('error', reject);
-    zip.outputStream.on('error', reject);
-    zip.outputStream.pipe(output);
-  });
-  zip.end();
-  await complete;
-  return path;
+async function sampleCover(): Promise<Buffer> {
+  const archive: PackageArchive = await openPackageArchive(fixtureZip);
+  try {
+    return Buffer.from(await archive.read('cover.png', 'cover', PACKAGE_LIMITS.coverBytes));
+  } finally {
+    archive.close();
+  }
 }
 
 async function readPreview(path: string): Promise<ImportPreview> {
@@ -162,7 +144,7 @@ function expectCode(error: unknown, code: ErrorCode): void {
 beforeEach(async () => {
   tempDir = mkdtempSync(join(tmpdir(), 'dreamer-novel-import-'));
   paths = resolveAppPaths(join(tempDir, 'app-data'));
-  packagePath = await buildSamplePackage();
+  packagePath = buildSamplePackage();
   preview = await readPreview(packagePath);
 });
 
@@ -201,9 +183,7 @@ describe('novel import pipeline', () => {
       expect(existsSync(path)).toBe(true);
       await expect(contentHash(readFileSync(path, 'utf8'))).resolves.toBe(chapter.file);
     }
-    expect(readFileSync(join(paths.library, ids[0], 'cover.png'))).toEqual(
-      readFileSync(join(fixtureFolder, 'cover.png')),
-    );
+    expect(readFileSync(join(paths.library, ids[0], 'cover.png'))).toEqual(await sampleCover());
   });
 
   it('AC-10: importing the same package twice creates different novel ids', async () => {
@@ -286,7 +266,7 @@ describe('novel import pipeline', () => {
 
   it('stores a valid replacement cover file', async () => {
     const coverPath: string = join(tempDir, 'replacement.png');
-    writeFileSync(coverPath, readFileSync(join(fixtureFolder, 'cover.png')));
+    writeFileSync(coverPath, await sampleCover());
     const run: TestRun = await execute(requestFor({ kind: 'file', path: coverPath }));
     const id: string = run.setNovelId.mock.calls[0][0] as string;
     const metadata: NovelMetadata | null = readMetadata(novelFolder(paths, id));

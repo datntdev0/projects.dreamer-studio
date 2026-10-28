@@ -6,8 +6,7 @@
       "Bash(playwright-cli:*)"
     ],
     "deny": [
-      "Edit(_docs/0.requirements-analysis.xlsx)",
-      "Write(_docs/0.requirements-analysis.xlsx)"
+      "Edit(_docs/0.requirements-analysis.xlsx)"
     ]
   }
 }

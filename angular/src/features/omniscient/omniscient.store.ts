@@ -5,6 +5,7 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { LlmStore } from '@core/stores/llm-store';
 import { SettingsStore } from '@core/stores/settings-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { DEFAULT_LANGUAGE } from '@dreamer/shared/i18n/translate';
 import { formatLlmChoice, LLM_CLIS, resolveLlm } from '@dreamer/shared/models/llm';
 import type { LlmProblem } from '@dreamer/shared/models/llm';
 import type {
@@ -115,6 +116,15 @@ export class OmniscientStore {
   });
   readonly ontology = computed(() => this.status()?.ontology ?? null);
   readonly ontologyProblems = computed<OntologyProblem[]>(() => this.status()?.ontologyProblems ?? []);
+  readonly predicateLabels = computed<ReadonlyMap<string, string>>(() => {
+    const language = this.i18n.language();
+    return new Map(
+      (this.ontology()?.predicates ?? []).map((item) => [
+        item.name,
+        item.display?.[language] ?? item.display?.[DEFAULT_LANGUAGE] ?? item.name,
+      ]),
+    );
+  });
   readonly llm = computed<OmniscientLlm | null>(() => {
     const statuses = this.llmStore.statuses();
     const settings = this.settings.settings()?.llm;
@@ -373,6 +383,10 @@ export class OmniscientStore {
       await this.api.analysisOntologyReset(novelId);
       await this.reload();
     });
+  }
+
+  predicateLabel(name: string): string {
+    return this.predicateLabels().get(name) ?? name;
   }
 
   entityName(id: string): string {

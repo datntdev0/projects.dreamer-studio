@@ -59,6 +59,6 @@ export function migrationsDir(): string {
 
 export function ontologyDefaultFile(): string {
   return app.isPackaged
-    ? join(process.resourcesPath, 'ontology.default.yml')
-    : join(app.getAppPath(), 'resources', 'ontology.default.yml');
+    ? join(process.resourcesPath, 'ontology.format.yml')
+    : join(app.getAppPath(), 'resources', 'ontology.format.yml');
 }

@@ -87,6 +87,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
   readonly entityTypes = input<EntityType[]>([]);
   readonly predicates = input<string[]>([]);
   readonly predicateOptions = input<string[]>([]);
+  readonly predicateLabels = input<ReadonlyMap<string, string>>(new Map());
   readonly predicate = input<string>('all');
   readonly selectEntity = output<string | null>();
   readonly predicateChange = output<string>();
@@ -146,7 +147,8 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
       const world = this.world();
       const entityTypes = this.entityTypes();
       const predicates = this.predicates();
-      if (this.graph) untracked(() => this.setData(world, entityTypes, predicates));
+      const labels = this.predicateLabels();
+      if (this.graph) untracked(() => this.setData(world, entityTypes, predicates, labels));
     });
     effect(() => {
       const selectedId = this.selectedId();
@@ -194,7 +196,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
       this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       this.themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
       this.themeMedia.addEventListener('change', this.onThemeMediaChange);
-      this.setData(this.world(), this.entityTypes(), this.predicates());
+      this.setData(this.world(), this.entityTypes(), this.predicates(), this.predicateLabels());
       this.updateFocus(this.selectedId(), this.highlightQuery());
     });
   }
@@ -232,7 +234,12 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     }, FIT_MS);
   }
 
-  private setData(world: World, entityTypes: EntityType[], predicates: string[]): void {
+  private setData(
+    world: World,
+    entityTypes: EntityType[],
+    predicates: string[],
+    labels: ReadonlyMap<string, string>,
+  ): void {
     const typeFilter = new Set<string>(entityTypes);
     const predicateFilter = new Set(predicates);
     this.nodes = world.entities
@@ -246,7 +253,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
         source: link.source,
         target: link.target,
         predicate: link.predicate,
-        text: link.label ?? link.predicate,
+        text: link.label ?? labels.get(link.predicate) ?? link.predicate,
         issue: link.issue,
       }));
     this.neighbours = new Map(this.nodes.map((node) => [node.id, new Set<string>()]));

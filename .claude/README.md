@@ -70,8 +70,6 @@ _docs/
   0.requirements-analysis.xlsx   requirements + Open Decisions sheet (source of truth)
   0.requirements-analysis.html   read-only viewer: overview, capacities, themes, decisions
   1.architecture-overview.html   architecture
-  2.dreamer-package-format.html  Dreamer package (.zip) format
-  3.ontology-format.html         ontology.yml format (World Analysis)
   <ID>.solution.html             solution per capacity / requirement (gitignored)
 ```
 

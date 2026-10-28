@@ -1,0 +1,236 @@
+name: novel-ontology
+version: 1 # must be 1
+# This file tells World Analysis which entities and facts to extract from a novel.
+# schema_*: the entity types, their properties, and the predicates (facts) between them.
+# constraints: extraction rules sent to the LLM, and structure rules checked when the file is loaded.
+# workflows: the analysis steps and the task sent to the LLM.
+#
+# How to edit:
+#   - Every description and example is sent to the LLM. Write them as clear instructions.
+#   - display names are shown in the app only; they are never sent to the LLM.
+#   - schema_scalars and schema_connections may be empty ({}); schema_entities may not.
+#   - After saving, click Re-check. Any problem blocks analysis until it is fixed.
+#   - Changes apply from the next analysis. Earlier results do not change.
+
+# Entity types. Each key is one of: Character, Persona, Location, Organization, Artifact, Glossary.
+# Keys of a type:
+#   description  text for the LLM
+#   examples     list of example names from the novel
+#   properties   name (required: true), alias and title (multiple: true); name is mandatory
+#                property keys: required, multiple (true or false), description
+schema_entities:
+  Character:
+    description: >
+      The abstract person or sentient being behind one or more personas. It has no scalars and no
+      connections except has_persona.
+    examples: [Tiêu Viêm, Dược Lão]
+    properties:
+      name: { required: true, description: The proper name the narrator introduces. }
+  Persona:
+    description: >
+      One identity under which a character appears in the story, such as the true self, a disguise,
+      an alias identity or a reincarnation. All attributes and relations of a character belong to its personas.
+    examples: [Tiêu Viêm, Nham Kiêu]
+    properties:
+      name: { required: true, description: The name of this identity. }
+      alias: { multiple: true, description: Another name or nickname the text uses for this identity. }
+      title: { multiple: true, description: A position or honorific title of this identity. }
+  Location:
+    description: A named place or structure such as a country, city, mountain or building.
+    examples: [Ô Thản Thành]
+    properties:
+      name: { required: true, description: The name of the place. }
+  Organization:
+    description: A family, sect, kingdom, guild or faction.
+    examples: [Tiêu gia]
+    properties:
+      name: { required: true, description: The name of the organization. }
+  Artifact:
+    description: A named object, weapon, treasure, pill or material.
+    examples: [Huyền Trọng Xích]
+    properties:
+      name: { required: true, description: The name of the artifact. }
+  Glossary:
+    description: >
+      A named thing of the novel world that is not covered by other types, such as a concept,
+      technique, cultivation level, title or term.
+    examples: [Đấu Khí, Phần Quyết, Đấu Giả]
+    properties:
+      name: { required: true, description: The term as written in the text. }
+
+# Scalars: attributes of one entity. A scalar fact has no value; it is the quote that describes it.
+# Keys of a scalar:
+#   display      the name shown in the app, per language: en, vi (default: the key)
+#   domain       non-empty list of entity types that may have it
+#   description  text for the LLM
+schema_scalars:
+  gender:
+    display: { en: Gender, vi: Giới tính }
+    domain: [Persona]
+    description: The persona's gender, when stated.
+  age:
+    display: { en: Age, vi: Tuổi }
+    domain: [Persona]
+    description: Age as stated in the text (e.g. "16", "middle-aged").
+  status:
+    display: { en: Status, vi: Tình trạng }
+    domain: [Persona]
+    description: Whether the persona is alive, dead or missing.
+  appearance:
+    display: { en: Appearance, vi: Ngoại hình }
+    domain: [Persona]
+    description: A short description of how the persona looks.
+  personality:
+    display: { en: Personality, vi: Tính cách }
+    domain: [Persona]
+    description: A short description of the persona's character traits.
+  category:
+    display: { en: Category, vi: Phân loại }
+    domain: [Location, Organization, Artifact, Glossary]
+    description: The sub-kind of the entity (e.g. city, sect, weapon, pill, technique).
+
+# Connections: relations from a subject entity to an object entity.
+# Keys of a connection:
+#   display          the name shown in the app, per language: en, vi (default: the key)
+#   subject, object  non-empty lists of entity types
+#   symmetric        true when A to B also means B to A; subject and object must match (default false)
+#   labeled          true when each fact needs a label that names the relation (default false)
+#   description      text for the LLM
+schema_connections:
+  # Identity
+  has_persona:
+    display: { en: Has persona, vi: Có danh tính }
+    subject: [Character]
+    object: [Persona]
+    description: The persona is one identity of the character.
+  # Family and personal
+  parent_of:
+    display: { en: Parent of, vi: Cha mẹ của }
+    subject: [Persona]
+    object: [Persona]
+    description: The subject is a parent of the object.
+  sibling_of:
+    display: { en: Sibling of, vi: Anh chị em }
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas are siblings.
+  spouse_of:
+    display: { en: Spouse of, vi: Vợ chồng }
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas are married.
+  master_of:
+    display: { en: Master of, vi: Sư phụ của }
+    subject: [Persona]
+    object: [Persona]
+    description: The subject teaches or mentors the object.
+  lover_of:
+    display: { en: Lover of, vi: Người yêu }
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas love each other.
+  friend_of:
+    display: { en: Friend of, vi: Bạn bè }
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    description: The two personas are friends.
+  other_relation:
+    display: { en: Other relation, vi: Quan hệ khác }
+    subject: [Persona]
+    object: [Persona]
+    symmetric: true
+    labeled: true
+    description: Any other relation between two personas. The label names the relation.
+  # Sides
+  ally_of:
+    display: { en: Ally of, vi: Đồng minh }
+    subject: [Persona, Organization]
+    object: [Persona, Organization]
+    symmetric: true
+    description: The two sides cooperate as allies.
+  enemy_of:
+    display: { en: Enemy of, vi: Kẻ thù }
+    subject: [Persona, Organization]
+    object: [Persona, Organization]
+    symmetric: true
+    description: The two sides are opposed to each other.
+  # Organizations
+  member_of:
+    display: { en: Member of, vi: Thành viên của }
+    subject: [Persona]
+    object: [Organization]
+    description: The persona belongs to the organization.
+  leads:
+    display: { en: Leads, vi: Lãnh đạo }
+    subject: [Persona]
+    object: [Organization]
+    description: The persona leads the organization.
+  serves:
+    display: { en: Serves, vi: Phục vụ }
+    subject: [Persona]
+    object: [Persona, Organization]
+    description: The persona works for or obeys the object without being a member.
+  # Places
+  located_in:
+    display: { en: Located in, vi: Nằm ở }
+    subject: [Persona, Organization, Location]
+    object: [Location]
+    description: The subject is situated in the location.
+  born_in:
+    display: { en: Born in, vi: Sinh ra ở }
+    subject: [Persona]
+    object: [Location]
+    description: The persona was born in the location.
+  # Ownership
+  owns:
+    display: { en: Owns, vi: Sở hữu }
+    subject: [Persona, Organization]
+    object: [Artifact]
+    description: The subject owns or carries the item.
+
+constraints:
+  # Sent to the LLM in every prompt. Add, edit or remove freely.
+  extraction:
+    - Extract only facts stated explicitly in the text. Do not infer or guess.
+    - Copy every name exactly as it is written in the text.
+    - Use one entry per entity. Put the other names of a persona in its aliases instead of creating new entities.
+    - Every Character has at least one Persona. Its true self is a Persona with the same name as the Character.
+    - A character's attributes and relations belong to its personas, never to the character itself.
+    - Every fact needs a quote that is a sentence copied exactly from the chapter and states the fact.
+    - A scalar fact is the quote that describes the attribute; it has no separate value.
+  # Checked when the file is loaded. Each problem shows its line; the code is in the comment.
+  structure:
+    - The file is valid YAML with no repeated key in one map. # yaml-syntax
+    - Only the keys described in this file are used. # unknown-key
+    - version is 1. # version-unsupported
+    - schema_entities lists at least one type; every type is a known type. # entity-type-unknown
+    - Every text is a non-empty string; every flag is true or false. # text-invalid, flag-invalid
+    - Every type has name with required true; alias and title have multiple true. # name-property-invalid, property-not-multiple
+    - Only name, alias and title are properties. # property-unknown
+    - domain, subject and object are non-empty lists of types listed in schema_entities. # type-list-invalid, entity-type-not-listed
+    - A predicate name is used once across schema_scalars and schema_connections. # predicate-duplicate
+    - A symmetric connection lists the same types as subject and object. # symmetric-types-differ
+    - Character appears only in has_persona. # character-outside-has-persona
+    - has_persona is subject [Character], object [Persona], not symmetric. # has-persona-invalid
+    - When Character is listed, Persona and has_persona are listed too. # persona-missing, has-persona-missing
+
+workflows:
+  # One World Analysis run, chapter batch by chapter batch.
+  analysis:
+    task: >
+      You receive chapters from one novel. Extract the entities that appear in the chapters and their
+      predicates. There are two kinds of predicates: scalars (attributes of one entity) and connections
+      (relations between two entities). Use only the entity types and predicates defined in this
+      ontology. Return the result in the JSON format given in the request.
+    steps:
+      - check # load this file; any structure problem blocks the run
+      - candidates # per batch: extract entities of schema_entities with their properties
+      - predicates # per chapter: extract facts of schema_scalars and schema_connections, each with a quote
+      - save # store the chapter's entities and facts
+    # candidates and predicates check every answer against this file and the extraction rules,
+    # for example a Character without a same-name Persona or a quote not found in the chapter.
+    # On a problem the LLM is asked again with the problems listed, up to 3 attempts.

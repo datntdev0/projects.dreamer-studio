@@ -3,7 +3,9 @@ import { createWriteStream, Dirent, mkdtempSync, readdirSync, readFileSync, rmSy
 import { statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, relative } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Readable } from 'node:stream';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import yauzl from 'yauzl';
 import yazl from 'yazl';
 import { ImportPreview, PACKAGE_LIMITS, PackageLimits, PackageReadResult } from '@dreamer/shared/models/novel-package';
 import { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
@@ -22,8 +24,9 @@ interface SampleOverrides {
   replace?: ZipEntry[];
 }
 
-const fixtureFolder: string = join(__dirname, '../../../fixtures/sample-novel');
+const fixtureZip: string = join(__dirname, '../../../fixtures/sample-novel.zip');
 const utf8: BufferEncoding = 'utf8';
+let sampleEntries: ZipEntry[];
 let tempFolder: string;
 let zipNumber: number;
 
@@ -47,19 +50,50 @@ function limits(overrides: Partial<PackageLimits>): PackageLimits {
   return { ...PACKAGE_LIMITS, ...overrides };
 }
 
-function fixtureZipEntries(folder: string, prefix: string = ''): ZipEntry[] {
-  const entries: ZipEntry[] = [];
-  const children: Dirent[] = readdirSync(folder, { withFileTypes: true });
-  children.forEach((child: Dirent): void => {
-    const filePath: string = join(folder, child.name);
-    const entryName: string = prefix ? `${prefix}/${child.name}` : child.name;
-    if (child.isDirectory()) {
-      entries.push(...fixtureZipEntries(filePath, entryName));
-    } else {
-      entries.push(zipEntry(entryName, readFileSync(filePath)));
-    }
+function readStream(stream: Readable): Promise<Buffer> {
+  return new Promise((resolve: (data: Buffer) => void, reject: (reason?: unknown) => void): void => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk: Buffer): void => {
+      chunks.push(chunk);
+    });
+    stream.once('error', reject);
+    stream.once('end', (): void => resolve(Buffer.concat(chunks)));
   });
-  return entries;
+}
+
+function readZipEntries(path: string): Promise<ZipEntry[]> {
+  return new Promise((resolve: (entries: ZipEntry[]) => void, reject: (reason?: unknown) => void): void => {
+    yauzl.open(path, { lazyEntries: true }, (openError: Error | null, zip: yauzl.ZipFile): void => {
+      if (openError) {
+        reject(openError);
+        return;
+      }
+      const entries: ZipEntry[] = [];
+      zip.on('entry', (entry: yauzl.Entry): void => {
+        zip.openReadStream(entry, (streamError: Error | null, stream: Readable): void => {
+          if (streamError) {
+            reject(streamError);
+            return;
+          }
+          readStream(stream).then((data: Buffer): void => {
+            entries.push(zipEntry(entry.fileName, data));
+            zip.readEntry();
+          }, reject);
+        });
+      });
+      zip.once('error', reject);
+      zip.once('end', (): void => resolve(entries));
+      zip.readEntry();
+    });
+  });
+}
+
+function sampleEntry(name: string): Buffer {
+  const entry: ZipEntry | undefined = sampleEntries.find((candidate: ZipEntry): boolean => candidate.name === name);
+  if (!entry) {
+    throw new Error(`Sample entry not found: ${name}`);
+  }
+  return entry.data;
 }
 
 async function buildZip(entries: ZipEntry[], fileName?: string): Promise<string> {
@@ -93,9 +127,7 @@ async function buildSampleZip(overrides: SampleOverrides = {}): Promise<string> 
   const replacements: Map<string, ZipEntry> = new Map(
     (overrides.replace ?? []).map((entry: ZipEntry): [string, ZipEntry] => [entry.name, entry]),
   );
-  let entries: ZipEntry[] = fixtureZipEntries(fixtureFolder).filter(
-    (entry: ZipEntry): boolean => !removed.has(entry.name),
-  );
+  let entries: ZipEntry[] = sampleEntries.filter((entry: ZipEntry): boolean => !removed.has(entry.name));
   entries = entries.map((entry: ZipEntry): ZipEntry => replacements.get(entry.name) ?? entry);
   replacements.forEach((entry: ZipEntry, name: string): void => {
     if (!entries.some((candidate: ZipEntry): boolean => candidate.name === name)) {
@@ -175,6 +207,10 @@ async function readOk(path: string, customLimits?: PackageLimits): Promise<Impor
   return result.preview;
 }
 
+beforeAll(async () => {
+  sampleEntries = await readZipEntries(fixtureZip);
+});
+
 beforeEach(() => {
   tempFolder = mkdtempSync(join(tmpdir(), 'dreamer-package-reader-'));
   zipNumber = 0;
@@ -199,7 +235,7 @@ describe('package reader', () => {
       file: 'cover.png',
       size: 101,
       mime: 'image/png',
-      url: `data:image/png;base64,${readFileSync(join(fixtureFolder, 'cover.png')).toString('base64')}`,
+      url: `data:image/png;base64,${sampleEntry('cover.png').toString('base64')}`,
     });
     expect(preview.chapters).toHaveLength(4);
     expect(preview.chapters.map((chapter: PreviewChapter): string => chapter.title)).toEqual([

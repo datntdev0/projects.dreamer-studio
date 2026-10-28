@@ -88,7 +88,7 @@
           <h3>{{ 'analysis.entity.values' | t }}</h3>
           @for (group of scalarGroups(); track group.predicate) {
             <div class="ds-world-detail-group">
-              <h4>{{ group.predicate }}</h4>
+              <h4>{{ store.predicateLabel(group.predicate) }}</h4>
               <ul class="ds-world-detail-list">
                 @for (scalar of group.values; track scalar.factId) {
                   <li class="ds-world-detail-item" [attr.data-testid]="'world-entity-value-' + scalar.factId">
@@ -162,7 +162,7 @@
                 <span class="visually-hidden">{{
                   (link.source === entity.id ? 'analysis.entity.outgoing' : 'analysis.entity.incoming') | t
                 }}</span>
-                <span class="ds-world-detail-predicate">{{ link.label ?? link.predicate }}</span>
+                <span class="ds-world-detail-predicate">{{ link.label ?? store.predicateLabel(link.predicate) }}</span>
                 <button
                   type="button"
                   class="ds-world-detail-link"
@@ -217,7 +217,9 @@
                   type="button"
                   [iconOnly]="true"
                   [attr.data-testid]="'world-entity-relation-edit-' + $index"
-                  [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: link.predicate }"
+                  [attr.aria-label]="
+                    'analysis.entity.editFact' | t: { predicate: store.predicateLabel(link.predicate) }
+                  "
                   [dsTooltip]="'analysis.world.edit' | t"
                   [disabled]="store.locked()"
                   (click)="editRelation(entity, link)"

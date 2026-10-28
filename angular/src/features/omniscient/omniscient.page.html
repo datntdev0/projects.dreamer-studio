@@ -148,6 +148,7 @@
           [entityTypes]="store.graphTypes()"
           [predicates]="store.graphPredicates()"
           [predicateOptions]="store.predicates()"
+          [predicateLabels]="store.predicateLabels()"
           [predicate]="store.predicateFilter()"
           (predicateChange)="store.predicateFilter.set($event)"
           (selectEntity)="store.select($event)"

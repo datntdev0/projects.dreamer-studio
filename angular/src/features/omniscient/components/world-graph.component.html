@@ -29,7 +29,9 @@
     >
       <option value="all" [selected]="predicate() === 'all'">{{ 'analysis.world.allRelationships' | t }}</option>
       @for (option of predicateOptions(); track option) {
-        <option [value]="option" [selected]="option === predicate()">{{ option }}</option>
+        <option [value]="option" [selected]="option === predicate()">
+          {{ predicateLabels().get(option) ?? option }}
+        </option>
       }
     </select>
     <ds-icon name="chevron-down" size="sm" />

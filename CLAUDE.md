@@ -21,9 +21,9 @@ Quick path: `/solo-prototype <idea>` (no docs, no gates in between).
 - Requirements and decisions: `python .claude/scripts/reqs.py list | decisions | check | next-id` (read-only)
 - Docs: `python .claude/scripts/docs.py new <type> [ID]`, `python .claude/scripts/docs.py serve`
 - First run: `pnpm install`, then `pnpm py:setup` (creates `backend/.venv`).
-- App: `pnpm dev | lint | format | format:check | test | test:coverage | check` (`lint` runs `scripts/check-i18n.mjs` first; `check` = lint + format:check + test; `test:coverage` → `coverage/<electron|angular|python>`).
+- App: `pnpm dev | lint | format | format:check | test | test:coverage | check` (`lint` runs `scripts/check-i18n.mjs` first; `check` = lint + format:check + test; `test:coverage` → `.testing/coverage/<electron|angular|python>`).
 - Design system: `pnpm storybook` (port 6006), `pnpm storybook:build`; stories in `angular/stories`, components imported via `@components/*`.
-- Build and package: `node scripts/build.mjs build` (no `pnpm build` script), `pnpm start` (builds, then runs the app), `pnpm package` → `dist/DreamerStudio-<version>-win-x64.zip`, or `-linux-<arch>.AppImage` when run on Ubuntu (overview › Build and Release).
+- Build and package: `node scripts/build.mjs build` (no `pnpm build` script), `pnpm start` (builds, then runs the app), `pnpm package` → `.output/DreamerStudio-<version>-win-x64.zip`, or `-linux-<arch>.AppImage` when run on Ubuntu (overview › Build and Release).
 - Dev machine: Node 26.10, pnpm 11.10, Python 3.14.6, pip 26.1.
 
 ## Conventions

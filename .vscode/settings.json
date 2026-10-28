@@ -2,12 +2,12 @@
   "files.exclude": {
     "**/node_modules": true,
     "**/dist": true,
+    ".output": true,
     "**/.angular": true,
     "backend/.venv": true,
     "**/__pycache__": true,
     "**/.ruff_cache": true,
-    "**/.pytest_cache": true,
-    ".playwright-cli": true
+    "**/.pytest_cache": true
   },
   "search.exclude": {
     "pnpm-lock.yaml": true,
@@ -16,6 +16,7 @@
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/dist/**": true,
+    ".output/**": true,
     "**/.angular/**": true,
     "backend/.venv/**": true,
     "worktree/**": true

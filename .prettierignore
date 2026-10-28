@@ -1,14 +1,14 @@
 node_modules
-dist
+.output
+**/dist
 out
-coverage
+.testing
 .angular
 backend
 _docs
 .claude
 worktree
 .data
-.playwright-cli
 pnpm-lock.yaml
 *.md
 storybook-static

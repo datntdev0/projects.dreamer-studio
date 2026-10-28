@@ -32,7 +32,7 @@ prototype   (quick path: idea ──► working code, no docs)
 | `/solo-solution <ID>` | architect | analyst, designers (slice specs), coders (build slices), human | `_docs/*`, source code |
 | `/solo-implement <ID>` | architect | coder, tester, human | commits, `.claude/flows/<ID>/` (plan, evidence), report |
 | `/solo-prototype <idea>` | main session | Explore (haiku), coder, tester, human | uncommitted code, report |
-| `tool-playwright` | tester / coder | — | UI checks with `playwright-cli` |
+| `tool-playwright` | tester / coder | — | UI checks with `playwright-cli`; artifacts in `.testing/.playwright-cli/` |
 
 ### Agents (`.claude/agents/`)
 

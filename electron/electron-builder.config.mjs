@@ -6,7 +6,7 @@ export default {
   executableName: 'DreamerStudio',
   artifactName: 'DreamerStudio-${version}-${os}-${arch}.${ext}',
   extraMetadata: { version: readAppVersion() },
-  directories: { output: '../dist' },
+  directories: { output: '../.output' },
   files: ['dist/**', 'package.json'],
   extraResources: [
     { from: '../angular/dist/browser', to: 'renderer' },

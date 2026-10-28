@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 
 # playwright-cli output
-.playwright-cli/
+.testing/.playwright-cli/
 
 # Excel lock files
 ~$*.xlsx
@@ -17,15 +17,16 @@ _docs/*.solution.html
 # Build output
 node_modules/
 .data/
-dist/
+.output/
+**/dist/
 out/
 .angular/
 backend/.venv/
 backend/build/
 .ruff_cache/
 .pytest_cache/
-coverage/
-.logs/
+.testing/coverage/
+.testing/logs/
 .coverage
 worktree/
 storybook-static/

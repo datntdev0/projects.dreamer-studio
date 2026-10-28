@@ -29,5 +29,5 @@ jobs:
         if: always()
         with:
           name: coverage-html
-          path: coverage
+          path: .testing/coverage
           if-no-files-found: error

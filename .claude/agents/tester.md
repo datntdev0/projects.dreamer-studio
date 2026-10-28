@@ -23,7 +23,7 @@ model: sonnet
 - One AC → at least one test or one manual check with evidence.
 - Do not change production code; report bugs to the architect instead.
 - Bug report: steps, expected, actual, evidence (log, screenshot path).
-- In `/solo-implement`: save results and screenshots in `.claude/flows/<id>/` (gitignored).
+- In `/solo-implement`: save results in `.claude/flows/<id>/` (gitignored); Playwright CLI screenshots and artifacts go in `.testing/.playwright-cli/`.
 - Otherwise save temp files in the scratchpad.
 - One task per session: if the task turns out bigger than assigned (many files or rounds), stop and report a proposed split instead of going on.
 

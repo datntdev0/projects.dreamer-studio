@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     coverage: {
       reporter: ['text-summary', 'html'],
-      reportsDirectory: '../coverage/angular',
+      reportsDirectory: '../.testing/coverage/angular',
     },
   },
 });

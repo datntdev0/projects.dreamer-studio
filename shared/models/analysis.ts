@@ -1,9 +1,9 @@
 export const ENTITY_TYPES = ['Character', 'Persona', 'Location', 'Organization', 'Artifact', 'Glossary'] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
+export type EntityTypeName = EntityType | 'unknown';
 export const ENTITY_PROPERTIES = ['name', 'alias', 'title'] as const;
 export type EntityPropertyName = (typeof ENTITY_PROPERTIES)[number];
-export type ChapterAnalysisStatus = 'not-analysed' | 'clean' | 'has-issues' | 'reviewed' | 'stale' | 'failed';
-export type ItemStatus = 'verified' | 'failed' | 'accepted' | 'rejected';
+export type ChapterAnalysisStatus = 'not-analysed' | 'analysed' | 'stale' | 'failed';
 export type FailReason =
   | 'words-not-found'
   | 'quote-not-found'
@@ -14,18 +14,14 @@ export type FailReason =
   | 'label-missing'
   | 'name-conflict'
   | 'alias-conflict';
+export type IssueSeverity = 'error' | 'warning';
 
 export interface AnalysisEntity {
   id: string;
-  type: EntityType | 'unknown';
+  type: EntityTypeName;
   name: string;
   aliases: string[];
   titles?: string[];
-  wordsFound: string[];
-  status: ItemStatus;
-  reason?: FailReason;
-  issue?: FailReason;
-  edited?: boolean;
 }
 
 export interface AnalysisFact {
@@ -38,20 +34,11 @@ export interface AnalysisFact {
   objectName?: string;
   label?: string;
   quote: string | null;
-  status: ItemStatus;
-  reason?: FailReason;
-  issue?: FailReason;
-  edited?: boolean;
-  addedByUser?: boolean;
 }
 
 export interface ChapterAnalysisCounts {
   entities: number;
   facts: number;
-  verified: number;
-  failed: number;
-  accepted: number;
-  rejected: number;
 }
 
 export interface ChapterAnalysisSummary {
@@ -61,7 +48,6 @@ export interface ChapterAnalysisSummary {
   resultFile?: string;
   status: ChapterAnalysisStatus;
   counts: ChapterAnalysisCounts;
-  pending: boolean;
   error?: string;
 }
 
@@ -71,7 +57,6 @@ export interface AnalysisChapterDetail extends ChapterAnalysisSummary {
   facts: AnalysisFact[];
 }
 
-export type ChapterAnalysis = AnalysisChapterDetail;
 export type AnalysisStep = 'preparation' | 'candidates' | 'predicates' | 'verification';
 
 export interface AnalysisRun {
@@ -148,18 +133,87 @@ export interface OntologyParseResult {
   problems: OntologyProblem[];
 }
 
+export interface FactRef {
+  factId: string;
+  chapterIndex: number;
+}
+
+export interface WorldIssue {
+  key: string;
+  reason: FailReason;
+  severity: IssueSeverity;
+  entityIds: string[];
+  fact?: FactRef;
+  chapters: number[];
+  params: Record<string, string>;
+}
+
+export interface WorldEditEntity {
+  id: string;
+  type: EntityTypeName;
+  name: string;
+  aliases: string[];
+  titles: string[];
+  chapters: number[];
+}
+
+export interface WorldFact {
+  id: string;
+  chapterIndex: number;
+  kind: 'relationship' | 'scalar';
+  predicate: string;
+  subjectId: string;
+  objectId?: string;
+  subjectName?: string;
+  objectName?: string;
+  label?: string;
+  quote: string | null;
+}
+
+export type EntityPatch = Partial<Pick<WorldEditEntity, 'name' | 'type' | 'aliases' | 'titles'>>;
+export type FactPatch = Partial<Pick<WorldFact, 'subjectId' | 'predicate' | 'objectId' | 'label' | 'quote'>>;
+
+export type WorldDraftEdit =
+  | { kind: 'entity-add'; entity: WorldEditEntity }
+  | { kind: 'entity-edit'; entityId: string; patch: EntityPatch }
+  | { kind: 'entity-delete'; entityId: string }
+  | { kind: 'entity-merge'; sourceIds: string[]; targetId: string }
+  | { kind: 'entity-split'; entityId: string; newEntity: WorldEditEntity; aliases: string[]; facts: FactRef[] }
+  | { kind: 'fact-add'; fact: WorldFact }
+  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: FactPatch }
+  | { kind: 'fact-delete'; factId: string; chapterIndex: number };
+
+export interface OverlayFile {
+  version: 2;
+  edits: WorldDraftEdit[];
+}
+
+export interface WorldEditScope {
+  issue: WorldIssue | null;
+  entities: WorldEditEntity[];
+  facts: WorldFact[];
+  catalog: WorldEditEntity[];
+  focus: string[];
+}
+
+export interface WorldEditPreview {
+  resolved: boolean;
+  added: WorldIssue[];
+}
+
 export interface WorldScalar {
-  factId?: string;
+  factId: string;
   predicate: string;
   chapterIndex: number;
   quote: string | null;
   overlay?: boolean;
   stale?: boolean;
+  issue?: IssueSeverity;
 }
 
 export interface WorldEntity {
   id: string;
-  type: EntityType;
+  type: EntityTypeName;
   name: string;
   aliases: string[];
   titles: string[];
@@ -169,16 +223,11 @@ export interface WorldEntity {
   overlay?: boolean;
   stale?: boolean;
   staleChapters: number[];
-}
-
-export interface FactRef {
-  factId: string;
-  chapterIndex: number;
+  issue?: IssueSeverity;
 }
 
 export interface WorldLink {
-  factIds?: string[];
-  factRefs?: FactRef[];
+  factRefs: FactRef[];
   source: string;
   target: string;
   predicate: string;
@@ -188,25 +237,18 @@ export interface WorldLink {
   overlay?: boolean;
   stale?: boolean;
   staleChapters: number[];
+  issue?: IssueSeverity;
 }
 
 export interface World {
   entities: WorldEntity[];
   links: WorldLink[];
-  mergedAt?: string | null;
-  orphans?: OverlayEdit[];
+  orphans: WorldDraftEdit[];
 }
 
 export interface AnalysisIssueCounts {
-  open: number;
   errors: number;
-}
-
-export interface AnalysisMergeState {
-  pending: number;
-  openIssues: number;
-  openErrors: number;
-  mergedAt: string | null;
+  warnings: number;
 }
 
 export interface AnalysisLastRun {
@@ -221,7 +263,7 @@ export interface AnalysisStatus {
   novelId: string;
   chapters: ChapterAnalysisSummary[];
   run: AnalysisRun | null;
-  merge: AnalysisMergeState;
+  issues: AnalysisIssueCounts;
   ontology: Ontology;
   ontologyProblems: OntologyProblem[];
   lastRun: AnalysisLastRun | null;
@@ -241,33 +283,15 @@ export interface ChapterResult {
 export interface AnalysisIndexEntry {
   index: number;
   file: string;
-  status: 'clean' | 'has-issues' | 'reviewed' | 'failed';
   counts: ChapterAnalysisCounts;
   error?: string;
   analysedAt: string;
-  updatedAt?: string;
 }
 
 export interface AnalysisIndexFile {
   version: 1;
   chapters: AnalysisIndexEntry[];
   lastRun: AnalysisLastRun | null;
-  mergedAt: string | null;
-  issues?: AnalysisIssueCounts;
-}
-
-export interface WorldFileChapter {
-  index: number;
-  file: string;
-  title: string;
-  entities: AnalysisEntity[];
-  facts: AnalysisFact[];
-}
-
-export interface WorldFile {
-  version: 1;
-  mergedAt: string;
-  chapters: WorldFileChapter[];
 }
 
 export interface CandidateOutput {
@@ -322,44 +346,41 @@ export interface TextContext {
   after: string;
 }
 
-export type ReviewStatusFilter = ItemStatus | 'open' | 'all';
-
 export interface ReviewQuery {
   novelId: string;
-  status: ReviewStatusFilter;
   chapterIndex: number | null;
   itemKind: 'entity' | 'fact' | 'all';
 }
 
-export interface ReviewRelated {
-  name: string;
-  type: EntityType | 'unknown';
-  chapters: number[];
-}
-
 export interface ReviewItem {
+  issue: WorldIssue;
+  entities: WorldEditEntity[];
+  fact: WorldFact | null;
   chapterIndex: number;
   chapterTitle: string;
-  itemKind: 'entity' | 'fact';
-  entity?: AnalysisEntity;
-  fact?: AnalysisFact;
-  subjectName?: string;
-  objectName?: string;
   context: TextContext | null;
-  issueKey?: string;
-  related?: ReviewRelated[];
-}
-
-export interface ReviewEntityOption {
-  id: string;
-  name: string;
-  type: EntityType | 'unknown';
 }
 
 export interface ReviewPage {
   items: ReviewItem[];
-  openCount: number;
-  entities: Record<number, ReviewEntityOption[]>;
+  counts: AnalysisIssueCounts;
+}
+
+export interface WorldScopeRequest {
+  novelId: string;
+  issueKey: string | null;
+  entityIds: string[];
+}
+
+export interface WorldPreviewRequest {
+  novelId: string;
+  issueKey: string | null;
+  edits: WorldDraftEdit[];
+}
+
+export interface AnalysisEditRequest {
+  novelId: string;
+  edits: WorldDraftEdit[];
 }
 
 export interface QuoteQuery {
@@ -384,60 +405,6 @@ export interface Occurrence {
   context: TextContext | null;
 }
 
-export type ReviewEdit =
-  | { kind: 'review-reject'; chapterIndex: number; itemKind: 'entity' | 'fact'; itemId: string }
-  | {
-      kind: 'review-fix';
-      chapterIndex: number;
-      itemKind: 'entity' | 'fact';
-      itemId: string;
-      entity?: Partial<AnalysisEntity>;
-      fact?: Partial<AnalysisFact>;
-    }
-  | { kind: 'review-accept'; chapterIndex: number; itemKind: 'entity' | 'fact'; itemId: string };
-
-export type OverlayEdit =
-  | { kind: 'entity-add'; entity: { id: string; type: EntityType; name: string; aliases?: string[] } }
-  | { kind: 'entity-rename'; entityId: string; name: string }
-  | { kind: 'entity-change-type'; entityId: string; entityType: EntityType }
-  | { kind: 'entity-add-alias'; entityId: string; alias: string }
-  | { kind: 'entity-remove-alias'; entityId: string; alias: string }
-  | { kind: 'entity-merge'; sourceIds: string[]; targetId: string }
-  | {
-      kind: 'entity-split';
-      entityId: string;
-      newEntity: { id: string; type: EntityType; name: string };
-      aliases: string[];
-      facts: FactRef[];
-    }
-  | { kind: 'entity-delete'; entityId: string }
-  | { kind: 'entity-reset'; entityId: string }
-  | { kind: 'entity-restore'; entityId: string }
-  | { kind: 'fact-add'; fact: AnalysisFact; chapterIndex: number }
-  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: Partial<AnalysisFact>; base?: FactBase }
-  | { kind: 'fact-delete'; factId: string; chapterIndex: number; base?: FactBase }
-  | { kind: 'fact-reset'; factId: string; chapterIndex: number }
-  | { kind: 'fact-restore'; factId: string; chapterIndex: number };
-
-export interface FactBase {
-  predicate: string;
-  subjectId: string;
-  objectId?: string;
-  quote: string | null;
-}
-
-export interface OverlayFile {
-  version: 1;
-  edits: OverlayEdit[];
-}
-
-export type WorldEdit = ReviewEdit | OverlayEdit;
-
-export interface AnalysisEditRequest {
-  novelId: string;
-  edit: WorldEdit;
-}
-
 export interface AnalysisProgress {
   novelId: string;
   chapter: number | null;
@@ -449,62 +416,4 @@ export interface AnalysisProgress {
 
 export interface AnalysisChanged {
   novelId: string;
-}
-
-export interface WorldIssue {
-  key: string;
-  reason: FailReason;
-  severity: 'error' | 'warning';
-  entityIds: string[];
-  fact?: FactRef;
-  chapters: number[];
-  params: Record<string, string>;
-}
-
-export interface WorldEditEntity {
-  id: string;
-  type: EntityType;
-  name: string;
-  aliases: string[];
-  titles: string[];
-  chapters: number[];
-}
-
-export interface WorldFact {
-  id: string;
-  chapterIndex: number;
-  kind: 'relationship' | 'scalar';
-  predicate: string;
-  subjectId: string;
-  objectId?: string;
-  subjectName?: string;
-  objectName?: string;
-  label?: string;
-  quote: string | null;
-}
-
-export type EntityPatch = Partial<Pick<WorldEditEntity, 'name' | 'type' | 'aliases' | 'titles'>>;
-export type FactPatch = Partial<Pick<WorldFact, 'subjectId' | 'predicate' | 'objectId' | 'label' | 'quote'>>;
-
-export type WorldDraftEdit =
-  | { kind: 'entity-add'; entity: WorldEditEntity }
-  | { kind: 'entity-edit'; entityId: string; patch: EntityPatch }
-  | { kind: 'entity-delete'; entityId: string }
-  | { kind: 'entity-merge'; sourceIds: string[]; targetId: string }
-  | { kind: 'entity-split'; entityId: string; newEntity: WorldEditEntity; aliases: string[]; facts: FactRef[] }
-  | { kind: 'fact-add'; fact: WorldFact }
-  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: FactPatch }
-  | { kind: 'fact-delete'; factId: string; chapterIndex: number };
-
-export interface WorldEditScope {
-  issue: WorldIssue | null;
-  entities: WorldEditEntity[];
-  facts: WorldFact[];
-  catalog: WorldEditEntity[];
-  focus: string[];
-}
-
-export interface WorldEditPreview {
-  resolved: boolean;
-  added: WorldIssue[];
 }

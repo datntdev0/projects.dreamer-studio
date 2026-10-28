@@ -17,7 +17,7 @@ export interface ChapterMatch<T> {
 }
 
 function emptyCounts(): ChapterAnalysisCounts {
-  return { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
+  return { entities: 0, facts: 0 };
 }
 
 export function matchChapters<T extends { index: number; file: string }>(
@@ -29,7 +29,7 @@ export function matchChapters<T extends { index: number; file: string }>(
     if (!positions.has(chapter.file)) positions.set(chapter.file, position + 1);
   });
   const claimed: Set<number> = new Set<number>(
-    entries.flatMap((entry: T): number[] => positions.get(entry.file) ?? []),
+    entries.flatMap((entry: T): number[] => (positions.has(entry.file) ? [positions.get(entry.file)!] : [])),
   );
   const matches: ChapterMatch<T>[] = [];
   for (const entry of entries) {
@@ -70,7 +70,7 @@ export function chapterStatuses(
     const status: ChapterAnalysisStatus = current
       ? current.error
         ? 'failed'
-        : current.status
+        : 'analysed'
       : previous
         ? 'stale'
         : 'not-analysed';
@@ -82,22 +82,12 @@ export function chapterStatuses(
       counts: previous?.counts ?? emptyCounts(),
       ...(current?.error ? { error: current.error } : {}),
       ...(previous && status !== 'failed' ? { resultFile: previous.file } : {}),
-      pending: isPending(status, current, index?.mergedAt ?? null),
     };
   });
 }
 
-function isPending(
-  status: ChapterAnalysisStatus,
-  entry: AnalysisIndexEntry | undefined,
-  mergedAt: string | null,
-): boolean {
-  if (!entry || !isUpToDate(status)) return false;
-  return mergedAt === null || (entry.updatedAt ?? entry.analysedAt) > mergedAt;
-}
-
 export function isUpToDate(status: ChapterAnalysisStatus): boolean {
-  return status === 'clean' || status === 'has-issues' || status === 'reviewed';
+  return status === 'analysed';
 }
 
 export function planRun(options: AnalysisRunOptions, chapters: ChapterAnalysisSummary[]): AnalysisRunQueue {
@@ -133,5 +123,5 @@ export function upsertIndexEntry(index: AnalysisIndexFile, entry: AnalysisIndexE
 }
 
 export function emptyIndex(): AnalysisIndexFile {
-  return { version: 1, chapters: [], lastRun: null, mergedAt: null };
+  return { version: 1, chapters: [], lastRun: null };
 }

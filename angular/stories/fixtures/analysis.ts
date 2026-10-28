@@ -1,19 +1,19 @@
 import type { LibraryNovel } from '../../src/features/library/library.models';
 import { NOVELS, makeChapters } from './library';
 
+import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
 import type {
+  AnalysisChapterDetail,
   AnalysisEntity,
   AnalysisFact,
-  ChapterAnalysis,
-  ChapterAnalysisCounts,
   ChapterAnalysisStatus,
   EntityType,
-  ItemStatus,
   Ontology,
   OntologyProblem,
-  OverlayEdit,
-  ReviewEdit,
+  WorldDraftEdit,
 } from '@dreamer/shared/models/analysis';
+
+export type ChapterAnalysis = AnalysisChapterDetail;
 
 export const DEFAULT_ONTOLOGY: Ontology = {
   name: 'novel-ontology',
@@ -539,31 +539,11 @@ function genericScene(index: number, edition: JadeRiverEdition): Scene {
   };
 }
 
-function countsFor(entities: AnalysisEntity[], facts: AnalysisFact[]): ChapterAnalysisCounts {
-  const items: { status: ItemStatus }[] = [...entities, ...facts];
-  return {
-    entities: entities.length,
-    facts: facts.length,
-    verified: items.filter((item) => item.status === 'verified').length,
-    failed: items.filter((item) => item.status === 'failed').length,
-    accepted: items.filter((item) => item.status === 'accepted').length,
-    rejected: items.filter((item) => item.status === 'rejected').length,
-  };
-}
-
 function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterAnalysis {
   const scene = index <= 4 ? openingScene(index, edition) : genericScene(index, edition);
   const status: ChapterAnalysisStatus =
-    index <= 25
-      ? 'clean'
-      : index <= 28
-        ? 'has-issues'
-        : index <= 30
-          ? 'stale'
-          : index <= 32
-            ? 'failed'
-            : 'not-analysed';
-  const hasResult = status === 'clean' || status === 'has-issues' || status === 'stale';
+    index <= 25 ? 'analysed' : index <= 30 ? 'stale' : index <= 32 ? 'failed' : 'not-analysed';
+  const hasResult = status === 'analysed' || status === 'stale';
   const ids = new Set<string>();
   if (hasResult) {
     for (const link of scene.links) {
@@ -592,9 +572,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         type: 'unknown',
         name: edition === 'zh' ? '青铜冠' : 'bronze crown',
         aliases: [],
-        wordsFound: [edition === 'zh' ? '青铜冠' : 'bronze crown'],
-        status: 'failed',
-        reason: 'entity-not-in-ontology',
       };
     }
     if (id === 'silent-oracle') {
@@ -603,14 +580,11 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         type: 'Character',
         name: edition === 'zh' ? '无声先知' : 'Silent Oracle',
         aliases: [],
-        wordsFound: [],
-        status: 'failed',
-        reason: 'words-not-found',
       };
     }
     if (id === 'ash-court-place') {
       const name = nameOf('ash-court', edition);
-      return { id, type: 'Location', name, aliases: [], wordsFound: [name], status: 'verified' };
+      return { id, type: 'Location', name, aliases: [] };
     }
     const seed = BY_ID.get(id)!;
     const name = nameOf(id, edition);
@@ -621,8 +595,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
       type: seed.type,
       name,
       aliases: [...aliases, ...extra],
-      wordsFound: [name],
-      status: 'verified',
     };
   });
   const facts: AnalysisFact[] = hasResult
@@ -634,7 +606,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
           subjectId: link.subjectId,
           objectId: link.objectId,
           quote: link.quote,
-          status: 'verified' as const,
         })),
         ...scene.scalars.map((scalar, position) => ({
           id: `c${index}-s${position + 1}`,
@@ -642,7 +613,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
           predicate: scalar.predicate,
           subjectId: scalar.subjectId,
           quote: scalar.quote,
-          status: 'verified' as const,
         })),
       ]
     : [];
@@ -657,8 +627,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         edition === 'zh'
           ? '一条银龙从河中升起，称他们为盟友。'
           : 'A silver dragon rose from the river and named them allies.',
-      status: 'failed',
-      reason: 'quote-not-found',
     });
     facts.push({
       id: 'c26-accepted-quote',
@@ -667,8 +635,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
       subjectId: scene.links[1].subjectId,
       objectId: scene.links[0].subjectId,
       quote: edition === 'zh' ? '他们在流星下缔结盟约。' : 'They sealed their pact beneath a falling star.',
-      status: 'failed',
-      reason: 'quote-not-found',
     });
   }
   if (index === 27) {
@@ -679,11 +645,26 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
       subjectId: scene.links[0].subjectId,
       objectId: scene.links[2].objectId,
       quote: null,
-      status: 'failed',
-      reason: 'predicate-not-in-ontology',
+    });
+    facts.push({
+      id: 'c27-missing-object',
+      kind: 'relationship',
+      predicate: 'ally_of',
+      subjectId: scene.links[0].subjectId,
+      objectId: 'ghost-ally',
+      objectName: edition === 'zh' ? '幽灵盟友' : 'Ghost Ally',
+      quote: scene.links[0].quote,
     });
   }
   if (index === 28) {
+    facts.push({
+      id: 'c28-wrong-type',
+      kind: 'relationship',
+      predicate: 'leads',
+      subjectId: scene.links[0].subjectId,
+      objectId: scene.links[0].objectId,
+      quote: scene.links[0].quote,
+    });
     facts.push({
       id: 'c28-invalid-rank',
       kind: 'scalar',
@@ -693,8 +674,6 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
         edition === 'zh'
           ? `${nameOf(scene.links[0].subjectId, edition)}称新境界为星君。`
           : `${nameOf(scene.links[0].subjectId, edition)} called the new rank star sovereign.`,
-      status: 'failed',
-      reason: 'quote-not-found',
     });
   }
   const paragraphs = [...scene.paragraphs];
@@ -735,8 +714,7 @@ function makeAnalysisChapter(index: number, edition: JadeRiverEdition): ChapterA
     file,
     ...(hasResult ? { resultFile: status === 'stale' ? `f${file.slice(1)}` : file } : {}),
     status,
-    counts: countsFor(entities, facts),
-    pending: false,
+    counts: chapterCounts(entities, facts),
     ...(status === 'failed'
       ? {
           error: index === 31 ? 'LLM_TIMEOUT' : 'ANALYSIS_LLM_OUTPUT_INVALID',
@@ -759,41 +737,36 @@ export const UNANALYSED_CHAPTERS: ChapterAnalysis[] = makeChapters(UNANALYSED_NO
   title: chapter.title,
   file: chapter.file,
   status: 'not-analysed',
-  counts: countsFor([], []),
-  pending: false,
+  counts: chapterCounts([], []),
   paragraphs: [],
   entities: [],
   facts: [],
 }));
 
-export const JADE_RIVER_PENDING = [26, 27, 28];
-
-export const JADE_RIVER_REVIEW_EDITS: ReviewEdit[] = [
-  { kind: 'review-reject', chapterIndex: 26, itemKind: 'fact', itemId: 'c26-accepted-quote' },
-  { kind: 'review-reject', chapterIndex: 27, itemKind: 'fact', itemId: 'c27-rejected-predicate' },
-  { kind: 'review-reject', chapterIndex: 28, itemKind: 'entity', itemId: 'silent-oracle' },
-  { kind: 'review-reject', chapterIndex: 28, itemKind: 'fact', itemId: 'c28-invalid-rank' },
-];
-
-export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): OverlayEdit[] {
+export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): WorldDraftEdit[] {
+  const yue = BY_ID.get('lin-yue')!;
   return [
-    { kind: 'entity-add-alias', entityId: 'lin-yue', alias: edition === 'zh' ? '小月' : 'Little Yue' },
+    {
+      kind: 'entity-edit',
+      entityId: 'lin-yue',
+      patch: {
+        aliases: [...(edition === 'zh' ? yue.zhAliases : yue.aliases), edition === 'zh' ? '小月' : 'Little Yue'],
+      },
+    },
     {
       kind: 'fact-add',
-      chapterIndex: 4,
       fact: {
         id: 'c4-user-alliance',
+        chapterIndex: 4,
         kind: 'relationship',
         predicate: 'ally_of',
         subjectId: 'lin-yue',
         objectId: 'lady-bai',
-        quote: null,
-        status: 'verified',
-        addedByUser: true,
+        quote: openingScene(4, edition).links[0].quote,
       },
     },
-    { kind: 'entity-rename', entityId: 'removed-in-rerun', name: edition === 'zh' ? '旧名' : 'Old Name' },
+    { kind: 'entity-edit', entityId: 'removed-in-rerun', patch: { name: edition === 'zh' ? '旧名' : 'Old Name' } },
   ];
 }
 
-export const JADE_RIVER_OVERLAY: OverlayEdit[] = jadeRiverOverlay('en');
+export const JADE_RIVER_OVERLAY: WorldDraftEdit[] = jadeRiverOverlay('en');

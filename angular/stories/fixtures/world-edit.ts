@@ -1,10 +1,11 @@
 import { Component, input, signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
-import { nameKey } from '@dreamer/shared/core/analysis-checks';
-import { applyDraftEdits, factKey } from '@dreamer/shared/core/world-edit';
+import { previewEdits } from '@dreamer/shared/core/world';
+import type { WorldModel } from '@dreamer/shared/core/world';
+import { checkWorld } from '@dreamer/shared/core/world-checks';
 import type { DraftState } from '@dreamer/shared/core/world-edit';
 import type { EntityType, Ontology, WorldDraftEdit, WorldFact } from '@dreamer/shared/models/analysis';
-import type { WorldEditEntity, WorldEditPreview, WorldEditScope, WorldIssue } from '@dreamer/shared/models/analysis';
+import type { WorldEditEntity, WorldEditPreview, WorldEditScope } from '@dreamer/shared/models/analysis';
 import { WorldEditDialogComponent } from '../../src/features/omniscient/components/world-edit-dialog.component';
 import { DEFAULT_ONTOLOGY } from './analysis';
 
@@ -144,86 +145,14 @@ function withCatalog(state: DraftState, scope: WorldEditScope): DraftState {
   return { ...state, entities: [...state.entities, ...scope.catalog.filter((item) => !known.has(item.id))] };
 }
 
-function factIssues(state: DraftState, item: WorldFact, ontology: Ontology): WorldIssue[] {
-  const find = (id: string | undefined): WorldEditEntity | undefined =>
-    state.entities.find((candidate) => candidate.id === id);
-  const subject = find(item.subjectId);
-  const object = find(item.objectId);
-  const predicate = ontology.predicates.find((entry) => nameKey(entry.name) === nameKey(item.predicate));
-  const issue = (reason: WorldIssue['reason'], params: Record<string, string>): WorldIssue[] => [
-    {
-      key: `${reason}:fact:${factKey(item)}`,
-      reason,
-      severity: reason === 'label-missing' ? 'warning' : 'error',
-      entityIds: [subject?.id, object?.id].filter((id): id is string => !!id),
-      fact: { factId: item.id, chapterIndex: item.chapterIndex },
-      chapters: [item.chapterIndex],
-      params,
-    },
-  ];
-  if (!subject) return issue('entity-not-found', { name: item.subjectName ?? '' });
-  if (item.kind === 'relationship' && !object) return issue('entity-not-found', { name: item.objectName ?? '' });
-  if (!predicate) return issue('predicate-not-in-ontology', { predicate: item.predicate });
-  const roles = [
-    [subject, predicate.subjectTypes],
-    [object, predicate.objectTypes ?? []],
-  ] as const;
-  for (const [current, types] of roles)
-    if (current && !types.includes(current.type))
-      return issue('type-not-allowed', {
-        name: current.name,
-        type: current.type,
-        predicate: predicate.name,
-        allowed: types.join(', '),
-      });
-  if (predicate.labeled && !item.label?.trim()) return issue('label-missing', { predicate: predicate.name });
-  if (!item.quote?.trim()) return issue('quote-not-found', { chapter: String(item.chapterIndex) });
-  return [];
-}
-
-function entityIssues(state: DraftState): WorldIssue[] {
-  const issues: WorldIssue[] = [];
-  const groups = new Map<string, WorldEditEntity[]>();
-  for (const item of state.entities) groups.set(nameKey(item.name), [...(groups.get(nameKey(item.name)) ?? []), item]);
-  for (const [key, group] of groups) {
-    const types = [...new Set(group.map((item) => item.type))].sort();
-    if (types.length > 1 && types.join() !== 'Character,Persona')
-      issues.push({
-        key: `name-conflict:${key}`,
-        reason: 'name-conflict',
-        severity: 'warning',
-        entityIds: group.map((item) => item.id),
-        chapters: [...new Set(group.flatMap((item) => item.chapters))],
-        params: { name: group[0].name, types: types.join(', ') },
-      });
-  }
-  for (const item of state.entities) {
-    const alias = item.aliases.find((value) => nameKey(value) !== nameKey(item.name) && groups.has(nameKey(value)));
-    if (alias)
-      issues.push({
-        key: `alias-conflict:entity:${item.id}`,
-        reason: 'alias-conflict',
-        severity: 'warning',
-        entityIds: [item.id],
-        chapters: item.chapters,
-        params: { alias, name: item.name },
-      });
-  }
-  return issues;
-}
-
-export function fakeIssues(state: DraftState, scope: WorldEditScope, ontology: Ontology): WorldIssue[] {
-  const world = withCatalog(state, scope);
-  return [...state.facts.flatMap((item) => factIssues(world, item, ontology)), ...entityIssues(world)];
+function editModel(scope: WorldEditScope, ontology: Ontology): WorldModel {
+  const state = withCatalog(scope, scope);
+  const issues = checkWorld({ ...state, ontology, texts: [] });
+  return { state, issues, orphans: [], touched: { entities: [], facts: [] }, staleChapters: [] };
 }
 
 export function fakePreview(scope: WorldEditScope, edits: WorldDraftEdit[], ontology: Ontology): WorldEditPreview {
-  const before = new Set(fakeIssues(scope, scope, ontology).map((issue) => issue.key));
-  const after = fakeIssues(applyDraftEdits(scope, edits), scope, ontology);
-  return {
-    resolved: !after.some((issue) => issue.key === scope.issue?.key),
-    added: after.filter((issue) => !before.has(issue.key)),
-  };
+  return previewEdits(editModel(scope, ontology), { edits, issueKey: scope.issue?.key ?? null, ontology, texts: [] });
 }
 
 @Component({

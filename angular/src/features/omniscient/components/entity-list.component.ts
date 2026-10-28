@@ -10,6 +10,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ENTITY_TYPE_FILTERS, entityTypeIcons, entityTypeKeys, pluralKey } from '../omniscient-labels';
 import type { EntityTypeFilter } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
+import { issueIcons, issueLabelKeys } from '../omniscient-labels';
 import { sortEntities } from './entity-table.component';
 
 const MOVE_KEYS: Record<string, (index: number, last: number) => number> = {
@@ -31,6 +32,8 @@ export class EntityListComponent {
   protected readonly typeKeys = entityTypeKeys;
   protected readonly pluralKey = pluralKey;
   protected readonly typeIcons = entityTypeIcons;
+  protected readonly issueIcons = issueIcons;
+  protected readonly issueKeys = issueLabelKeys;
   protected readonly activeId = signal<string | null>(null);
   protected readonly entities = computed(() => sortEntities(this.store.visibleEntities(), 'chapters', 'desc'));
   protected readonly typeOptions = computed<SegmentedOption[]>(() => [
@@ -60,13 +63,17 @@ export class EntityListComponent {
     this.store.select(id);
   }
 
-  protected toggleMerge(id: string, event: Event): void {
+  protected toggleChecked(id: string, event: Event): void {
     event.stopPropagation();
-    if (!this.store.locked()) this.store.toggleMerge(id);
+    if (!this.store.locked()) this.store.toggleChecked(id);
   }
 
-  protected merge(): void {
-    this.store.dialog.set({ kind: 'merge', entityIds: this.store.mergeIds() });
+  protected add(): void {
+    void this.store.openEdit({ entityIds: [] });
+  }
+
+  protected editChecked(): void {
+    void this.store.openEdit({ entityIds: this.store.checkedIds() });
   }
 
   protected keydown(event: KeyboardEvent): void {
@@ -86,6 +93,6 @@ export class EntityListComponent {
     if (current < 0 || (event.key !== 'Enter' && event.key !== ' ')) return;
     event.preventDefault();
     if (event.key === 'Enter') this.open(items[current].id);
-    else this.toggleMerge(items[current].id, event);
+    else this.toggleChecked(items[current].id, event);
   }
 }

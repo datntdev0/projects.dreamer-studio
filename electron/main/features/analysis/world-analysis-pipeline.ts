@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { chapterCounts, checkChapter, hasIssues, mergeStageEntities } from '@dreamer/shared/core/analysis-checks';
+import { chapterCounts, mergeStageEntities } from '@dreamer/shared/core/analysis-checks';
 import { AnalysisRunQueue, chapterStatuses } from '@dreamer/shared/core/analysis-plan';
 import { isUpToDate, planRun, upsertIndexEntry } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
@@ -17,11 +17,11 @@ import { SettingsStore } from '../settings/settings-store';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { readAlignedIndex, readAnalysisIndex, readChapterParagraphs, readChapterResult } from './analysis-files';
-import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
+import { deleteLegacyWorldFile, writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { askCandidates, askPredicates, LlmChapter } from './analysis-llm';
 import { ensureOntology, loadOntology } from './analysis-ontology';
-import { recheckWorld } from './analysis-recheck';
 import { AnalysisRuns } from './analysis-runs';
+import { AnalysisSnapshots } from './analysis-snapshot';
 
 export interface WorldAnalysisDeps {
   llm: LlmService;
@@ -101,10 +101,10 @@ async function saveLastRun(
   runId: string,
   analysed: number,
   failed: number,
-  issues: number,
 ): Promise<void> {
   await withNovelLock(novel.id, async (): Promise<void> => {
-    await recheckWorld(folder, novel);
+    await deleteLegacyWorldFile(folder);
+    const issues: number = (await new AnalysisSnapshots().build(folder, novel)).model.issues.length;
     const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
     await writeAnalysisIndex(folder, {
       ...index,
@@ -153,16 +153,13 @@ async function failChapter(
   run: AnalysisRun,
 ): Promise<void> {
   const chapter: NovelChapterEntry = novel.chapters[index - 1];
-  const counts: ChapterAnalysisCounts = { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
-  const analysedAt: string = new Date().toISOString();
+  const counts: ChapterAnalysisCounts = { entities: 0, facts: 0 };
   await saveEntry(ctx.params.novelId as string, folder, novel.chapters, {
     index,
     file: chapter.file,
-    status: 'failed',
     counts,
     error: code,
-    analysedAt,
-    updatedAt: analysedAt,
+    analysedAt: new Date().toISOString(),
   });
   run.done++;
   run.failed++;
@@ -196,7 +193,6 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
   const ontology: Ontology = loadOntology(folder).ontology;
   const statuses = chapterStatuses(novel.chapters, readAnalysisIndex(folder));
   const run: AnalysisRun = { runningChapter: null, step: 'candidates', done: 0, total: check.plan.count, failed: 0 };
-  let issues: number = 0;
   let callNumber: number = 0;
   const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
     ctx.checkpoint();
@@ -224,15 +220,12 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
       ctx.checkpoint();
       run.step = 'verification';
       publish(deps, request.novelId, run, ctx);
-      const { entities: checkedEntities, facts } = checkChapter({ entities, facts: asked, ontology });
-      const counts: ChapterAnalysisCounts = chapterCounts(checkedEntities, facts);
-      const status: AnalysisIndexEntry['status'] = hasIssues(counts) ? 'has-issues' : 'clean';
       const analysedAt: string = new Date().toISOString();
       await saveEntry(
         request.novelId,
         folder,
         novel.chapters,
-        { index: chapter.index, file, status, counts, analysedAt, updatedAt: analysedAt },
+        { index: chapter.index, file, counts: chapterCounts(entities, asked), analysedAt },
         {
           version: 1,
           file,
@@ -240,12 +233,11 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
           title: chapter.title,
           analysedAt,
           llm: check.llmLabel,
-          entities: checkedEntities,
-          facts,
+          entities,
+          facts: asked,
         },
       );
-      ctx.log.info(`Chapter ${chapter.index} saved: ${status}`);
-      if (status === 'has-issues') issues++;
+      ctx.log.info(`Chapter ${chapter.index} saved`);
       run.done++;
       publish(deps, request.novelId, run, ctx);
     } catch (error: unknown) {
@@ -280,9 +272,9 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
       );
     }
     ctx.checkpoint();
-    await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed, issues);
+    await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed);
   } catch (error: unknown) {
-    if (isAbort(error)) await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed, issues);
+    if (isAbort(error)) await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed);
     throw error;
   }
 }

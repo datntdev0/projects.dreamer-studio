@@ -4,6 +4,9 @@
   data-testid="world-graph"
   role="img"
   [attr.aria-label]="'analysis.graph.label' | t"
+  [attr.aria-description]="
+    issueCounts().errors || issueCounts().warnings ? ('analysis.graph.issueSummary' | t: issueCounts()) : null
+  "
 ></div>
 @if (!visibleCount()) {
   <ds-area-state
@@ -80,6 +83,12 @@
         <span class="ds-world-type-dot" [attr.data-type]="type"></span>{{ typeKeys[type] | t }}
       </li>
     }
+    <li data-testid="world-legend-error">
+      <span class="ds-world-graph-ring" data-severity="error"></span>{{ issueKeys.error | t }}
+    </li>
+    <li data-testid="world-legend-warning">
+      <span class="ds-world-graph-ring" data-severity="warning"></span>{{ issueKeys.warning | t }}
+    </li>
     <li data-testid="world-legend-hostile">
       <span class="ds-world-graph-dash"></span>{{ 'analysis.graph.hostile' | t }}
     </li>

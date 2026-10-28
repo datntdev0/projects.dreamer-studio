@@ -21,6 +21,12 @@ import { AnalysisProgress, AnalysisRunRequest } from '@dreamer/shared/models/ana
 import { AnalysisStatus, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
 import { Occurrence, OccurrenceQuery, ReviewQuery, World, WorldQuery } from '@dreamer/shared/models/analysis';
 import { QuoteMatch, QuoteQuery } from '@dreamer/shared/models/analysis';
+import {
+  WorldEditPreview,
+  WorldEditScope,
+  WorldPreviewRequest,
+  WorldScopeRequest,
+} from '@dreamer/shared/models/analysis';
 import { AppDataCandidate, AppDataStatus, AppDataStep } from '@dreamer/shared/models/app-data';
 import { DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
 import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
@@ -143,7 +149,8 @@ const api: DreamerApi = {
     review: (query: ReviewQuery): Promise<ReviewPage> => call(AnalysisChannel.Review, query),
     occurrences: (query: OccurrenceQuery): Promise<Occurrence[]> => call(AnalysisChannel.Occurrences, query),
     edit: (request: AnalysisEditRequest): Promise<void> => call(AnalysisChannel.Edit, request),
-    merge: (novelId: string): Promise<void> => call(AnalysisChannel.Merge, novelId),
+    scope: (request: WorldScopeRequest): Promise<WorldEditScope> => call(AnalysisChannel.Scope, request),
+    preview: (request: WorldPreviewRequest): Promise<WorldEditPreview> => call(AnalysisChannel.Preview, request),
     findQuote: (query: QuoteQuery): Promise<QuoteMatch[]> => call(AnalysisChannel.FindQuote, query),
     ontologyOpen: (novelId: string): Promise<void> => call(AnalysisChannel.OntologyOpen, novelId),
     ontologyReset: (novelId: string): Promise<OntologyProblem[]> => call(AnalysisChannel.OntologyReset, novelId),

@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { alignIndex, emptyIndex } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { AnalysisIndexFile, ChapterResult, OverlayFile, WorldFile } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexFile, ChapterResult, OverlayFile } from '@dreamer/shared/models/analysis';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { createLogger, Logger } from '../../logging/logger';
 import { chapterPath, NovelFolder } from '../library/library-files';
@@ -18,7 +18,7 @@ export function analysisIndexFile(folder: NovelFolder): string {
   return join(folder.analysis, 'index.json');
 }
 
-export function worldFile(folder: NovelFolder): string {
+export function legacyWorldFile(folder: NovelFolder): string {
   return join(folder.analysis, 'world.json');
 }
 
@@ -53,7 +53,7 @@ export function readAnalysisIndex(folder: NovelFolder): AnalysisIndexFile | null
     logger.warn(`analysis index invalid: ${file}`);
     return null;
   }
-  return parsed as AnalysisIndexFile;
+  return parsed as unknown as AnalysisIndexFile;
 }
 
 export function readAlignedIndex(folder: NovelFolder, chapters: { file: string }[]): AnalysisIndexFile {
@@ -82,39 +82,15 @@ export function readChapterResult(folder: NovelFolder, file: string): ChapterRes
     logger.warn(`analysis chapter result invalid: ${path}`);
     return null;
   }
-  return parsed as ChapterResult;
-}
-
-export function readWorldFile(folder: NovelFolder): WorldFile | null {
-  const file: string = worldFile(folder);
-  const parsed: unknown = readJson(file);
-  if (parsed === undefined) return null;
-  if (
-    !isRecord(parsed) ||
-    parsed.version !== 1 ||
-    typeof parsed.mergedAt !== 'string' ||
-    !Array.isArray(parsed.chapters)
-  ) {
-    logger.warn(`analysis world file invalid: ${file}`);
-    return null;
-  }
-  return parsed as unknown as WorldFile;
-}
-
-export async function writeWorldFile(folder: NovelFolder, world: WorldFile): Promise<void> {
-  try {
-    await writeFileAtomic(worldFile(folder), `${JSON.stringify(world, null, 2)}\n`);
-  } catch (error: unknown) {
-    asWriteError(error);
-  }
+  return parsed as unknown as ChapterResult;
 }
 
 export function readWorldOverlay(folder: NovelFolder): OverlayFile | null {
   const file: string = worldOverlayFile(folder);
   const parsed: unknown = readJson(file);
   if (parsed === undefined) return null;
-  if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.edits)) {
-    logger.warn(`analysis world overlay invalid: ${file}`);
+  if (!isRecord(parsed) || parsed.version !== 2 || !Array.isArray(parsed.edits)) {
+    logger.warn(`analysis world overlay invalid or outdated: ${file}`);
     return null;
   }
   return parsed as unknown as OverlayFile;
@@ -130,6 +106,12 @@ export async function writeWorldOverlay(folder: NovelFolder, overlay: OverlayFil
   } catch (error: unknown) {
     asWriteError(error);
   }
+}
+
+export async function deleteLegacyWorldFile(folder: NovelFolder): Promise<void> {
+  await rm(legacyWorldFile(folder), { force: true }).catch((error: unknown): void =>
+    logger.warn(`legacy world file not deleted: ${errorMessage(error)}`),
+  );
 }
 
 export async function readChapterParagraphs(folder: NovelFolder, file: string): Promise<string[]> {

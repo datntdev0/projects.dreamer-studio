@@ -4,7 +4,7 @@ import { CheckboxComponent } from '@components/form/checkbox.component';
 import { RangeDirective } from '@components/form/range.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
-import { formatCount, formatDateTime } from '@core/format';
+import { formatCount } from '@core/format';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LayoutService } from '@shell/layout/layout.service';
@@ -41,10 +41,6 @@ export class WorldTimelineComponent {
         .at(-1) ?? null,
   );
   protected readonly next = computed(() => this.indexes().find((index) => index > this.value()) ?? null);
-  protected readonly mergedAt = computed(() => {
-    const iso = this.store.world()?.mergedAt;
-    return iso ? formatDateTime(iso, this.i18n.language()) : '';
-  });
   protected readonly counts = computed(() => {
     const summary = this.store.summary();
     const language = this.i18n.language();
@@ -53,7 +49,6 @@ export class WorldTimelineComponent {
       total: formatCount(summary.total, language),
       stale: formatCount(summary.stale, language),
       failed: formatCount(summary.failed, language),
-      pending: formatCount(this.store.merge()?.pending ?? 0, language),
       chapter: formatCount(this.value(), language),
     };
   });

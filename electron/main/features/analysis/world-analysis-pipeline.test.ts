@@ -316,26 +316,24 @@ describe('analyse', () => {
       expect(saved.index).toBe(position + 1);
       expect(saved.llm).toContain('Claude');
       expect(saved.facts).toHaveLength(1);
-      expect(saved.facts[0].status).toBe('verified');
+      expect(saved.facts[0].quote).toBe(quotes[position]);
     }
-    expect(indexEntries().map((item: AnalysisIndexEntry): string => item.status)).toEqual(['clean', 'clean', 'clean']);
-    expect(entry(1).counts).toMatchObject({ entities: 3, facts: 1, failed: 0 });
+    expect(indexEntries().map((item: AnalysisIndexEntry): string | undefined => item.error)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(entry(1).counts).toEqual({ entities: 3, facts: 1 });
     expect(readAnalysisIndex(folder)?.lastRun).toMatchObject({ runId: 'run-1', analysed: 3, failed: 0, issues: 0 });
   });
 
-  it('marks a chapter with failed items as has-issues and counts it', async () => {
+  it('saves the raw result of a chapter with a bad quote and counts the issue in lastRun', async () => {
     script.predicates = (chapter: number): Reply =>
       chapter === 3 ? { facts: [fact('located_in', 'Mai Linh', 'Hanoi', 'Never said.')] } : defaultPredicates(chapter);
     await runAll();
-    expect(entry(3).status).toBe('has-issues');
-    expect(entry(3).counts.failed).toBe(1);
-    const saved3 = readChapterResult(folder, entry(3).file)!;
-    expect(saved3.facts[0]).toMatchObject({ status: 'failed' });
-    expect(saved3.facts[0].issue).toBe(saved3.facts[0].reason);
-    expect(saved3.facts[0].issue).toBeDefined();
-    expect(readChapterResult(folder, entry(1).file)!.facts[0].issue).toBeUndefined();
-    expect(Number.isNaN(Date.parse(entry(3).updatedAt!))).toBe(false);
-    expect(entry(1).status).toBe('clean');
+    expect(entry(3).counts).toEqual({ entities: 2, facts: 1 });
+    expect(readChapterResult(folder, entry(3).file)!.facts[0]).toMatchObject({ quote: 'Never said.' });
+    expect(Number.isNaN(Date.parse(entry(3).analysedAt))).toBe(false);
     expect(callsOf('predicates').filter((call: Call): boolean => call.chapters[0] === 3)).toHaveLength(3);
     expect(readAnalysisIndex(folder)?.lastRun).toMatchObject({ analysed: 3, failed: 0, issues: 1 });
   });
@@ -344,9 +342,9 @@ describe('analyse', () => {
     script.predicates = (chapter: number): Reply =>
       chapter === 2 ? new CodedError(ErrorCode.LlmBadOutput, 'bad') : defaultPredicates(chapter);
     await runAll();
-    expect(entry(2)).toMatchObject({ status: 'failed', error: ErrorCode.AnalysisLlmOutputInvalid });
-    expect(entry(1).status).toBe('clean');
-    expect(entry(3).status).toBe('clean');
+    expect(entry(2)).toMatchObject({ error: ErrorCode.AnalysisLlmOutputInvalid });
+    expect(entry(1).error).toBeUndefined();
+    expect(entry(3).error).toBeUndefined();
     expect(readChapterResult(folder, entry(1).file)).not.toBeNull();
     expect(readChapterResult(folder, entry(2).file)).toBeNull();
     expect(readAnalysisIndex(folder)?.lastRun).toMatchObject({ analysed: 2, failed: 1 });
@@ -356,7 +354,11 @@ describe('analyse', () => {
     script.candidates = (chapters: number[]): Reply =>
       chapters.includes(1) ? new CodedError(ErrorCode.LlmBadOutput, 'bad') : defaultCandidates(chapters);
     await runAll();
-    expect([entry(1).status, entry(2).status, entry(3).status]).toEqual(['failed', 'failed', 'clean']);
+    expect([entry(1).error, entry(2).error, entry(3).error].map((error) => error !== undefined)).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 
   it('stops the run when the LLM is not signed in', async () => {
@@ -374,7 +376,6 @@ describe('analyse', () => {
       return defaultCandidates(chapters);
     };
     await expect(runAll(request({ batchSize: 1 }))).rejects.toMatchObject({ name: 'AbortError' });
-    expect(entry(1).status).toBe('clean');
     expect(readChapterResult(folder, entry(1).file)).not.toBeNull();
     expect(indexEntries()).toHaveLength(1);
     expect(readAnalysisIndex(folder)?.lastRun).toMatchObject({ analysed: 1, failed: 0 });

@@ -30,7 +30,11 @@ import type {
   ReviewPage,
   ReviewQuery,
   World,
+  WorldEditPreview,
+  WorldEditScope,
+  WorldPreviewRequest,
   WorldQuery,
+  WorldScopeRequest,
 } from '@dreamer/shared/models/analysis';
 import type { ChapterTranslation } from '@dreamer/shared/models/translation';
 import type { ContentRunPlan } from '@dreamer/shared/models/translation';
@@ -301,8 +305,12 @@ export class DesktopApi {
     if (window.dreamer) await window.dreamer.analysis.edit(request);
   }
 
-  async analysisMerge(novelId: string): Promise<void> {
-    if (window.dreamer) await window.dreamer.analysis.merge(novelId);
+  async analysisScope(request: WorldScopeRequest): Promise<WorldEditScope | null> {
+    return window.dreamer ? window.dreamer.analysis.scope(request) : null;
+  }
+
+  async analysisPreview(request: WorldPreviewRequest): Promise<WorldEditPreview | null> {
+    return window.dreamer ? window.dreamer.analysis.preview(request) : null;
   }
 
   async analysisFindQuote(query: QuoteQuery): Promise<QuoteMatch[]> {

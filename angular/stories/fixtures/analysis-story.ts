@@ -13,7 +13,6 @@ export const analysisStoryDecorators: Decorator<AnalysisStoryArgs>[] = shellStor
 
 export const analysisScenarioOptions: AnalysisScenario[] = [
   'normal',
-  'readyToMerge',
   'emptyLibrary',
   'notAnalysed',
   'noLlm',

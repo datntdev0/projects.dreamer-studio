@@ -35,10 +35,8 @@ const mai: AnalysisEntity = {
   type: 'Persona',
   name: 'Mai',
   aliases: [],
-  wordsFound: ['Mai'],
-  status: 'verified',
 };
-const hanoi: AnalysisEntity = { ...mai, id: 'Location:hanoi', type: 'Location', name: 'Hanoi', wordsFound: ['Hanoi'] };
+const hanoi: AnalysisEntity = { ...mai, id: 'Location:hanoi', type: 'Location', name: 'Hanoi' };
 const goodFacts: unknown = {
   facts: [
     {
@@ -97,14 +95,14 @@ describe('askCandidates', () => {
     expect(prompts[0]).not.toContain('previous answer had these problems');
     expect(prompts[1]).toContain('previous answer had these problems');
     expect(prompts[1]).toContain('type "dragon" is not allowed');
-    expect(result.get(1)?.[0].status).toBe('verified');
+    expect(result.get(1)?.[0].name).toBe('Mai');
   });
 
   it('returns the last result with failed items after three rule-error attempts', async () => {
     const { ask, prompts } = scripted([badCandidates]);
     const result: Map<number, AnalysisEntity[]> = await candidates(ask);
     expect(prompts).toHaveLength(3);
-    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'entity-not-in-ontology' });
+    expect(result.get(1)?.[0]).toMatchObject({ type: 'dragon' });
   });
 
   it('retries after LLM_BAD_OUTPUT', async () => {
@@ -125,7 +123,7 @@ describe('askCandidates', () => {
     const { ask, prompts } = scripted([badCandidates, badOutput(), badOutput()]);
     const result: Map<number, AnalysisEntity[]> = await candidates(ask);
     expect(prompts).toHaveLength(3);
-    expect(result.get(1)?.[0]).toMatchObject({ status: 'failed', reason: 'entity-not-in-ontology' });
+    expect(result.get(1)?.[0]).toMatchObject({ type: 'dragon' });
   });
 
   it.each<[string, Error]>([
@@ -170,7 +168,7 @@ describe('askPredicates', () => {
     const facts: AnalysisFact[] = await predicates(ask);
     expect(prompts).toHaveLength(1);
     expect(facts).toHaveLength(1);
-    expect(facts[0].status).toBe('verified');
+    expect(facts[0].predicate).toBe('located_in');
   });
 
   it('retries with the rule errors and keeps the last result after three attempts', async () => {
@@ -178,7 +176,7 @@ describe('askPredicates', () => {
     const facts: AnalysisFact[] = await predicates(ask);
     expect(prompts).toHaveLength(3);
     expect(prompts[1]).toContain('the quote is not in the chapter text');
-    expect(facts[0]).toMatchObject({ status: 'failed', reason: 'quote-not-found' });
+    expect(facts[0]).toMatchObject({ quote: 'Never said.' });
   });
 
   it('throws ANALYSIS_LLM_OUTPUT_INVALID after three bad outputs', async () => {

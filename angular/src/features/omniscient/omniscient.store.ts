@@ -15,13 +15,20 @@ import type {
 } from '@dreamer/shared/models/analysis';
 import type {
   EntityType,
+  EntityTypeName,
   Occurrence,
   OntologyProblem,
   QuoteMatch,
-  ReviewItem,
   ReviewPage,
 } from '@dreamer/shared/models/analysis';
-import type { ReviewStatusFilter, World, WorldEdit, WorldEntity, WorldLink } from '@dreamer/shared/models/analysis';
+import type {
+  ChapterAnalysisStatus,
+  World,
+  WorldDraftEdit,
+  WorldEditPreview,
+  WorldEditScope,
+} from '@dreamer/shared/models/analysis';
+import type { WorldEntity, WorldLink } from '@dreamer/shared/models/analysis';
 import type { LibraryChangedEvent } from '@dreamer/shared/models/novel';
 import { filterEntityTypes } from './omniscient-labels';
 import type { EntityTypeFilter } from './omniscient-labels';
@@ -29,18 +36,11 @@ import type { EntityTypeFilter } from './omniscient-labels';
 export type OmniscientView = 'graph' | 'table' | 'review';
 
 export type OmniscientDialog =
-  | { kind: 'run' }
-  | { kind: 'ontology' }
-  | { kind: 'orphans' }
-  | { kind: 'fix'; item: ReviewItem; items?: ReviewItem[] }
-  | { kind: 'entity'; mode: 'add' | 'rename' | 'type'; entityId: string | null }
-  | { kind: 'merge'; entityIds: string[] }
-  | { kind: 'split'; entityId: string }
-  | { kind: 'fact'; entityId: string; factId: string | null; chapterIndex: number | null };
+  { kind: 'run' } | { kind: 'ontology' } | { kind: 'orphans' } | { kind: 'edit'; scope: WorldEditScope };
 
-export interface MergeBlock {
-  key: string;
-  count: number;
+export interface EditRequest {
+  issueKey?: string | null;
+  entityIds?: string[];
 }
 
 export interface OmniscientLlm {
@@ -56,7 +56,8 @@ export interface AnalysisSummary {
   failed: number;
 }
 
-const EMPTY_WORLD: World = { entities: [], links: [] };
+const PREVIEW_DELAY_MS = 300;
+const EMPTY_WORLD: World = { entities: [], links: [], orphans: [] };
 const LLM_PROBLEM_KEYS: Record<LlmProblem, string> = {
   noDefault: 'settings.llm.features.problem.noDefault',
   defaultUnavailable: 'settings.llm.features.problem.defaultUnavailable',
@@ -75,6 +76,8 @@ export class OmniscientStore {
   private statusRequest = 0;
   private worldRequest = 0;
   private reviewRequest = 0;
+  private previewRequest = 0;
+  private previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly novelId = this.current.novelId;
   readonly novel = this.current.novel;
@@ -87,15 +90,16 @@ export class OmniscientStore {
   readonly busy = signal(false);
   readonly view = signal<OmniscientView>('graph');
   readonly dialog = signal<OmniscientDialog | null>(null);
+  readonly editPreview = signal<WorldEditPreview | null>(null);
+  readonly editChecking = signal(false);
 
   readonly asOfChapter = signal<number | null>(null);
   readonly onlyChapter = signal(false);
   readonly selectedId = signal<string | null>(null);
-  readonly mergeIds = signal<string[]>([]);
+  readonly checkedIds = signal<string[]>([]);
   readonly query = signal('');
   readonly typeFilter = signal<EntityTypeFilter>('all');
   readonly predicateFilter = signal('all');
-  readonly reviewStatus = signal<ReviewStatusFilter>('open');
   readonly reviewChapter = signal<number | null>(null);
   readonly reviewKind = signal<'entity' | 'fact' | 'all'>('all');
 
@@ -129,30 +133,20 @@ export class OmniscientStore {
   );
   readonly summary = computed<AnalysisSummary>(() => {
     const chapters = this.status()?.chapters ?? [];
-    const count = (...statuses: string[]): number => chapters.filter((item) => statuses.includes(item.status)).length;
+    const count = (status: ChapterAnalysisStatus): number => chapters.filter((item) => item.status === status).length;
     return {
       total: chapters.length,
-      analysed: count('clean', 'has-issues', 'reviewed'),
+      analysed: count('analysed'),
       stale: count('stale'),
       failed: count('failed'),
     };
   });
   readonly analysedChapters = computed(() =>
-    (this.status()?.chapters ?? []).filter((item) =>
-      ['clean', 'has-issues', 'reviewed', 'stale'].includes(item.status),
-    ),
+    (this.status()?.chapters ?? []).filter((item) => item.status === 'analysed' || item.status === 'stale'),
   );
   readonly reviewChapters = computed(() =>
-    (this.status()?.chapters ?? []).filter((item) => item.status === 'has-issues' || item.status === 'reviewed'),
+    (this.status()?.chapters ?? []).filter((item) => item.status === 'analysed'),
   );
-  readonly merge = computed(() => this.status()?.merge ?? null);
-  readonly mergeBlock = computed<MergeBlock | null>(() => {
-    const merge = this.merge();
-    if (this.run()) return { key: 'analysis.merge.blockedRunning', count: 0 };
-    if (this.novel()?.lock) return { key: 'analysis.merge.blockedLocked', count: 0 };
-    if (merge?.openErrors) return { key: 'analysis.merge.blockedIssues', count: merge.openErrors };
-    return merge?.pending ? null : { key: 'analysis.merge.nothing', count: 0 };
-  });
   readonly entities = computed(() => this.world()?.entities ?? []);
   readonly links = computed(() => this.world()?.links ?? []);
   readonly graphWorld = computed<World>(() => this.world() ?? EMPTY_WORLD);
@@ -164,7 +158,7 @@ export class OmniscientStore {
   readonly predicates = computed(() => [...new Set(this.links().map((item) => item.predicate))].sort());
   readonly visibleEntities = computed(() => {
     const query = this.query().trim().toLocaleLowerCase();
-    const types = this.graphTypes();
+    const types: EntityTypeName[] = this.graphTypes();
     return this.entities().filter(
       (entity) =>
         (!types.length || types.includes(entity.type)) &&
@@ -175,7 +169,9 @@ export class OmniscientStore {
     () => this.entities().find((item) => item.id === this.selectedId()) ?? null,
   );
   readonly orphans = computed(() => this.world()?.orphans ?? []);
-  readonly openReviewCount = computed(() => this.merge()?.openIssues ?? 0);
+  readonly openReviewCount = computed(
+    () => (this.status()?.issues.errors ?? 0) + (this.status()?.issues.warnings ?? 0),
+  );
 
   constructor() {
     void this.llmStore.load();
@@ -193,6 +189,8 @@ export class OmniscientStore {
       this.statusRequest++;
       this.worldRequest++;
       this.reviewRequest++;
+      this.previewRequest++;
+      clearTimeout(this.previewTimer);
       offProgress();
       offChanged();
       offLibraryChanged();
@@ -202,7 +200,7 @@ export class OmniscientStore {
       untracked(() => {
         this.progressValue.set(null);
         this.selectedId.set(null);
-        this.mergeIds.set([]);
+        this.checkedIds.set([]);
         this.asOfChapter.set(null);
         this.onlyChapter.set(false);
         this.reviewChapter.set(null);
@@ -243,7 +241,7 @@ export class OmniscientStore {
     if (request !== this.worldRequest) return;
     this.world.set(world);
     if (this.selectedId() && !world?.entities.some((item) => item.id === this.selectedId())) this.selectedId.set(null);
-    this.mergeIds.update((ids) => ids.filter((id) => world?.entities.some((entity) => entity.id === id)));
+    this.checkedIds.update((ids) => ids.filter((id) => world?.entities.some((entity) => entity.id === id)));
   }
 
   async loadReview(): Promise<void> {
@@ -252,7 +250,6 @@ export class OmniscientStore {
     if (!novelId) return;
     const review = await this.api.analysisReview({
       novelId,
-      status: this.reviewStatus(),
       chapterIndex: this.reviewChapter(),
       itemKind: this.reviewKind(),
     });
@@ -265,12 +262,7 @@ export class OmniscientStore {
     void this.loadWorld();
   }
 
-  setReviewFilter(filter: {
-    status?: ReviewStatusFilter;
-    chapter?: number | null;
-    kind?: 'entity' | 'fact' | 'all';
-  }): void {
-    if (filter.status !== undefined) this.reviewStatus.set(filter.status);
+  setReviewFilter(filter: { chapter?: number | null; kind?: 'entity' | 'fact' | 'all' }): void {
     if (filter.chapter !== undefined) this.reviewChapter.set(filter.chapter);
     if (filter.kind !== undefined) this.reviewKind.set(filter.kind);
     void this.loadReview();
@@ -285,8 +277,8 @@ export class OmniscientStore {
     this.selectedId.set(id);
   }
 
-  toggleMerge(id: string): void {
-    this.mergeIds.update((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]));
+  toggleChecked(id: string): void {
+    this.checkedIds.update((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]));
   }
 
   occurrences(entityId: string): Promise<Occurrence[]> {
@@ -306,19 +298,51 @@ export class OmniscientStore {
     });
   }
 
-  mergeWorld(): Promise<boolean> {
-    if (this.mergeBlock()) return Promise.resolve(false);
+  async openEdit(request: EditRequest): Promise<void> {
+    const novelId = this.novelId();
+    if (!novelId || this.locked()) return;
+    try {
+      const scope = await this.api.analysisScope({
+        novelId,
+        issueKey: request.issueKey ?? null,
+        entityIds: request.entityIds ?? [],
+      });
+      this.error.set('');
+      if (scope) {
+        this.resetPreview();
+        this.dialog.set({ kind: 'edit', scope });
+      }
+    } catch (error) {
+      this.error.set(errorMessage(error));
+    }
+  }
+
+  draftChanged(edits: WorldDraftEdit[]): void {
+    const dialog = this.dialog();
+    const request = ++this.previewRequest;
+    clearTimeout(this.previewTimer);
+    if (dialog?.kind !== 'edit' || !edits.length) {
+      this.editPreview.set(null);
+      this.editChecking.set(false);
+      return;
+    }
+    this.editChecking.set(true);
+    this.previewTimer = setTimeout(() => void this.loadPreview(request, dialog.scope, edits), PREVIEW_DELAY_MS);
+  }
+
+  saveEdits(edits: WorldDraftEdit[]): Promise<boolean> {
+    if (this.locked() || !edits.length) return Promise.resolve(false);
     return this.mutate(async (novelId) => {
-      await this.api.analysisMerge(novelId);
+      await this.api.analysisEdit({ novelId, edits });
+      this.checkedIds.set([]);
+      this.closeEdit();
       await this.reload();
     });
   }
 
-  async chapterParagraphs(index: number): Promise<string[] | null> {
-    const novelId = this.novelId();
-    const file = this.status()?.chapters.find((chapter) => chapter.index === index)?.file;
-    if (!novelId || !file) return null;
-    return (await this.api.getChapter({ novelId, file }))?.paragraphs ?? null;
+  closeEdit(): void {
+    this.resetPreview();
+    if (this.dialog()?.kind === 'edit') this.dialog.set(null);
   }
 
   findQuote(quote: string): Promise<QuoteMatch[]> {
@@ -329,22 +353,6 @@ export class OmniscientStore {
   cancel(): Promise<boolean> {
     return this.mutate(async (novelId) => {
       await this.api.cancelAnalysis(novelId);
-      await this.reload();
-    });
-  }
-
-  edit(edit: WorldEdit): Promise<boolean> {
-    if (this.locked()) return Promise.resolve(false);
-    return this.mutate(async (novelId) => {
-      await this.api.analysisEdit({ novelId, edit });
-      await this.reload();
-    });
-  }
-
-  editMany(edits: WorldEdit[]): Promise<boolean> {
-    if (this.locked() || !edits.length) return Promise.resolve(false);
-    return this.mutate(async (novelId) => {
-      for (const edit of edits) await this.api.analysisEdit({ novelId, edit });
       await this.reload();
     });
   }
@@ -377,6 +385,27 @@ export class OmniscientStore {
 
   linksOf(id: string): WorldLink[] {
     return this.links().filter((link) => link.source === id || link.target === id);
+  }
+
+  private resetPreview(): void {
+    this.previewRequest++;
+    clearTimeout(this.previewTimer);
+    this.editPreview.set(null);
+    this.editChecking.set(false);
+  }
+
+  private async loadPreview(request: number, scope: WorldEditScope, edits: WorldDraftEdit[]): Promise<void> {
+    const novelId = this.novelId();
+    if (!novelId) return;
+    try {
+      const preview = await this.api.analysisPreview({ novelId, issueKey: scope.issue?.key ?? null, edits });
+      if (request !== this.previewRequest) return;
+      this.editPreview.set(preview);
+    } catch (error) {
+      if (request !== this.previewRequest) return;
+      this.error.set(errorMessage(error));
+    }
+    if (request === this.previewRequest) this.editChecking.set(false);
   }
 
   private async mutate(action: (novelId: string) => Promise<void>): Promise<boolean> {

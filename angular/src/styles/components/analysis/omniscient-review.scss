@@ -53,43 +53,6 @@
   font-size: var(--font-size-meta);
 }
 
-.ds-world-review-gate {
-  display: flex;
-  flex: none;
-  gap: var(--sp-sm);
-  align-items: center;
-  min-height: var(--control-h);
-  margin: 0;
-  padding: var(--sp-sm) var(--sp-lg);
-  border-bottom: var(--gutter) solid var(--color-border);
-  color: var(--color-text);
-  font-size: var(--font-size-meta);
-
-  >ds-icon {
-    flex: none;
-  }
-
-  &[data-state='blocked'] {
-    background: color-mix(in srgb, var(--color-warning) 16%, transparent);
-
-    >ds-icon {
-      color: var(--color-warning);
-    }
-  }
-
-  &[data-state='ready'] {
-    background: color-mix(in srgb, var(--color-success) 14%, transparent);
-
-    >ds-icon {
-      color: var(--color-success);
-    }
-  }
-
-  &[data-state='merged'] {
-    color: var(--color-text-secondary);
-  }
-}
-
 .ds-world-review-body {
   display: flex;
   flex: 1;
@@ -123,15 +86,11 @@
     color: var(--color-text);
   }
 
-  &[data-open] {
-    color: var(--color-text);
-  }
-
-  &[data-severity='error']>ds-icon {
+  &[data-severity='error'] > ds-icon {
     color: var(--color-danger);
   }
 
-  &[data-severity='warning']>ds-icon {
+  &[data-severity='warning'] > ds-icon {
     color: var(--color-warning);
   }
 
@@ -155,7 +114,7 @@
   padding-bottom: var(--sp-md);
   border-bottom: var(--gutter) solid var(--color-border-strong);
 
-  >ds-icon {
+  > ds-icon {
     flex: none;
     margin-top: var(--sp-xxs);
     color: var(--color-text-secondary);
@@ -194,11 +153,11 @@
   border-bottom: var(--gutter) solid var(--color-border);
   border-left: var(--sp-xxs) solid transparent;
 
-  &[data-open] {
+  &[data-severity='warning'] {
     border-left-color: var(--color-warning);
   }
 
-  .ds-world-review-section[data-severity='error'] &[data-open] {
+  &[data-severity='error'] {
     border-left-color: var(--color-danger);
   }
 }
@@ -244,7 +203,7 @@
   min-width: 0;
   margin: 0;
 
-  >div {
+  > div {
     display: grid;
     gap: var(--sp-xxs);
     min-width: 0;
@@ -290,56 +249,6 @@
   }
 }
 
-.ds-world-review-missing-note {
-  display: flex;
-  gap: var(--sp-xs);
-  align-items: center;
-  color: var(--color-danger);
-  font-size: var(--font-size-meta);
-}
-
-.ds-world-review-variants {
-  width: 100%;
-  border-collapse: collapse;
-
-  th {
-    padding: 0 var(--sp-sm) var(--sp-xs) 0;
-    border-bottom: var(--gutter) solid var(--color-border);
-    color: var(--color-text-tertiary);
-    font-size: var(--font-size-small);
-    font-weight: 400;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  td {
-    padding: var(--sp-sm) var(--sp-sm) var(--sp-sm) 0;
-    border-bottom: var(--gutter) solid var(--color-border);
-    vertical-align: middle;
-  }
-
-  tr:last-child td {
-    border-bottom: 0;
-  }
-
-  td:last-child {
-    padding-right: 0;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  tr[data-status='rejected'] .ds-world-review-entity {
-    color: var(--color-text-tertiary);
-    text-decoration: line-through;
-  }
-}
-
-.ds-world-review-row-actions {
-  display: inline-flex;
-  gap: var(--sp-xs);
-  white-space: nowrap;
-}
-
 .ds-world-review-actions {
   display: flex;
   flex-wrap: wrap;
@@ -351,14 +260,6 @@
   }
 }
 
-.ds-world-fix-reason {
-  display: flex;
-  gap: var(--sp-xs);
-  align-items: center;
-  color: var(--color-danger);
-  font-size: var(--font-size-meta);
-}
-
 .ds-world-review-empty {
   display: flex;
   flex: 1;
@@ -368,19 +269,10 @@
   justify-content: center;
 }
 
-.ds-world-fix {
-  display: grid;
-  gap: var(--sp-md);
-
-  p {
-    margin: 0;
-  }
-}
-
 ds-world-edit-dialog dialog.ds-dialog {
   width: calc(var(--dialog-w) * 2);
 
-  >.body {
+  > .body {
     max-height: calc(100vh - 2 * var(--sp-huge) - 2 * var(--sp-xxl));
     overflow-y: auto;
   }
@@ -417,7 +309,7 @@ ds-world-edit-dialog dialog.ds-dialog {
     --edit-issue-color: var(--color-warning);
   }
 
-  >ds-icon {
+  > ds-icon {
     color: var(--edit-issue-color);
   }
 
@@ -468,7 +360,7 @@ ds-world-edit-dialog dialog.ds-dialog {
     }
   }
 
-  >.ds-world-edit-card-head {
+  > .ds-world-edit-card-head {
     display: flex;
     gap: var(--sp-xs);
     align-items: center;
@@ -539,8 +431,8 @@ ds-world-edit-dialog dialog.ds-dialog {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 
-  >ol,
-  >p {
+  > ol,
+  > p {
     padding-bottom: var(--sp-xs);
   }
 
@@ -551,7 +443,7 @@ ds-world-edit-dialog dialog.ds-dialog {
     padding-left: var(--sp-xxl);
   }
 
-  >p {
+  > p {
     padding-left: var(--sp-xl);
   }
 
@@ -559,7 +451,7 @@ ds-world-edit-dialog dialog.ds-dialog {
     padding: var(--sp-xxs) 0;
     color: var(--color-text);
 
-    >span {
+    > span {
       display: inline;
       margin-right: var(--sp-xs);
     }
@@ -604,7 +496,7 @@ ds-world-edit-dialog dialog.ds-dialog {
     align-items: center;
   }
 
-  >p:first-child {
+  > p:first-child {
     color: var(--edit-preview-color);
     font-weight: 600;
   }
@@ -619,7 +511,7 @@ ds-world-edit-dialog dialog.ds-dialog {
   }
 }
 
-.ds-world-edit-added>p,
+.ds-world-edit-added > p,
 .ds-world-edit-incomplete {
   color: var(--color-warning);
 }

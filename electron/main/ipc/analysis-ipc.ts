@@ -1,6 +1,7 @@
 import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
 import { isEntityType } from '@dreamer/shared/core/ontology-rules';
 import { AnalysisEditRequest, AnalysisPlan, AnalysisRunRequest, AnalysisStatus } from '@dreamer/shared/models/analysis';
+import { WorldDraftEdit } from '@dreamer/shared/models/analysis';
 import { Occurrence, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
 import {
   OccurrenceQuery,
@@ -9,6 +10,12 @@ import {
   ReviewQuery,
   World,
   WorldQuery,
+} from '@dreamer/shared/models/analysis';
+import {
+  WorldEditPreview,
+  WorldEditScope,
+  WorldPreviewRequest,
+  WorldScopeRequest,
 } from '@dreamer/shared/models/analysis';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { AnalysisService } from '../features/analysis/analysis-service';
@@ -51,30 +58,8 @@ function isReviewQuery(value: unknown): value is ReviewQuery {
   return (
     isPlainObject(value) &&
     isNovelIdValue(value.novelId) &&
-    (value.status === 'verified' ||
-      value.status === 'failed' ||
-      value.status === 'accepted' ||
-      value.status === 'rejected' ||
-      value.status === 'open' ||
-      value.status === 'all') &&
     isChapterIndex(value.chapterIndex) &&
     (value.itemKind === 'entity' || value.itemKind === 'fact' || value.itemKind === 'all')
-  );
-}
-
-const REVIEW_KINDS: string[] = ['review-reject', 'review-fix', 'review-accept'];
-
-function isReviewEditShape(value: Record<string, unknown>): boolean {
-  return (
-    typeof value.kind === 'string' &&
-    REVIEW_KINDS.includes(value.kind) &&
-    typeof value.chapterIndex === 'number' &&
-    Number.isInteger(value.chapterIndex) &&
-    value.chapterIndex >= 1 &&
-    (value.itemKind === 'entity' || value.itemKind === 'fact') &&
-    typeof value.itemId === 'string' &&
-    (value.entity === undefined || isPlainObject(value.entity)) &&
-    (value.fact === undefined || isPlainObject(value.fact))
   );
 }
 
@@ -86,66 +71,98 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === 'string');
 }
 
-function isNewEntity(value: unknown): boolean {
-  return (
-    isPlainObject(value) && isNonEmptyString(value.id) && isEntityType(value.type) && typeof value.name === 'string'
-  );
-}
-
 function isPositiveIndex(value: unknown): boolean {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1;
 }
 
-function isFactTarget(value: Record<string, unknown>): boolean {
-  return isNonEmptyString(value.factId) && isPositiveIndex(value.chapterIndex);
-}
-
-function isFactRefArray(value: unknown): boolean {
-  return Array.isArray(value) && value.every((item: unknown): boolean => isPlainObject(item) && isFactTarget(item));
-}
-
-function isEntityAddShape(value: Record<string, unknown>): boolean {
+function isEditEntity(value: unknown): boolean {
   return (
-    isNewEntity(value.entity) &&
-    (!isPlainObject(value.entity) || value.entity.aliases === undefined || isStringArray(value.entity.aliases))
+    isPlainObject(value) &&
+    isNonEmptyString(value.id) &&
+    isEntityType(value.type) &&
+    typeof value.name === 'string' &&
+    isStringArray(value.aliases) &&
+    isStringArray(value.titles) &&
+    Array.isArray(value.chapters) &&
+    value.chapters.every(isPositiveIndex)
   );
 }
 
-function isOverlayEditShape(value: Record<string, unknown>): boolean {
+function isFactRef(value: unknown): boolean {
+  return isPlainObject(value) && isNonEmptyString(value.factId) && isPositiveIndex(value.chapterIndex);
+}
+
+function isFactRefArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isFactRef);
+}
+
+function isWorldFact(value: unknown): boolean {
+  return (
+    isPlainObject(value) &&
+    isFactRef({ factId: value.id, chapterIndex: value.chapterIndex }) &&
+    (value.kind === 'relationship' || value.kind === 'scalar') &&
+    isNonEmptyString(value.predicate) &&
+    typeof value.subjectId === 'string' &&
+    (value.quote === null || typeof value.quote === 'string')
+  );
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
+}
+
+function isEntityPatch(value: unknown): boolean {
+  return (
+    isPlainObject(value) &&
+    isOptionalString(value.name) &&
+    (value.type === undefined || isEntityType(value.type)) &&
+    (value.aliases === undefined || isStringArray(value.aliases)) &&
+    (value.titles === undefined || isStringArray(value.titles))
+  );
+}
+
+function isFactPatch(value: unknown): boolean {
+  return (
+    isPlainObject(value) &&
+    isOptionalString(value.subjectId) &&
+    isOptionalString(value.predicate) &&
+    isOptionalString(value.objectId) &&
+    isOptionalString(value.label) &&
+    (value.quote === undefined || value.quote === null || typeof value.quote === 'string')
+  );
+}
+
+function isDraftEdit(value: unknown): value is WorldDraftEdit {
+  if (!isPlainObject(value)) return false;
   switch (value.kind) {
     case 'entity-add':
-      return isEntityAddShape(value);
-    case 'entity-rename':
-      return isNonEmptyString(value.entityId) && typeof value.name === 'string';
-    case 'entity-change-type':
-      return isNonEmptyString(value.entityId) && isEntityType(value.entityType);
-    case 'entity-add-alias':
-    case 'entity-remove-alias':
-      return isNonEmptyString(value.entityId) && typeof value.alias === 'string';
+      return isEditEntity(value.entity);
+    case 'entity-edit':
+      return isNonEmptyString(value.entityId) && isEntityPatch(value.patch);
+    case 'entity-delete':
+      return isNonEmptyString(value.entityId);
     case 'entity-merge':
       return isStringArray(value.sourceIds) && isNonEmptyString(value.targetId);
     case 'entity-split':
       return (
         isNonEmptyString(value.entityId) &&
-        isNewEntity(value.newEntity) &&
+        isEditEntity(value.newEntity) &&
         isStringArray(value.aliases) &&
         isFactRefArray(value.facts)
       );
-    case 'entity-delete':
-    case 'entity-reset':
-    case 'entity-restore':
-      return isNonEmptyString(value.entityId);
     case 'fact-add':
-      return isPlainObject(value.fact) && isPositiveIndex(value.chapterIndex);
+      return isWorldFact(value.fact);
     case 'fact-edit':
-      return isFactTarget(value) && isPlainObject(value.patch);
+      return isFactRef({ factId: value.factId, chapterIndex: value.chapterIndex }) && isFactPatch(value.patch);
     case 'fact-delete':
-    case 'fact-reset':
-    case 'fact-restore':
-      return isFactTarget(value);
+      return isFactRef({ factId: value.factId, chapterIndex: value.chapterIndex });
     default:
       return false;
   }
+}
+
+function isDraftEditArray(value: unknown): value is WorldDraftEdit[] {
+  return Array.isArray(value) && value.every(isDraftEdit);
 }
 
 function isQuoteQuery(value: unknown): value is QuoteQuery {
@@ -153,12 +170,25 @@ function isQuoteQuery(value: unknown): value is QuoteQuery {
 }
 
 function isAnalysisEditRequest(value: unknown): value is AnalysisEditRequest {
+  return isPlainObject(value) && isNovelIdValue(value.novelId) && isDraftEditArray(value.edits);
+}
+
+function isIssueKey(value: unknown): value is string | null {
+  return value === null || isNonEmptyString(value);
+}
+
+function isWorldScopeRequest(value: unknown): value is WorldScopeRequest {
   return (
     isPlainObject(value) &&
     isNovelIdValue(value.novelId) &&
-    isPlainObject(value.edit) &&
-    typeof value.edit.kind === 'string' &&
-    (REVIEW_KINDS.includes(value.edit.kind) ? isReviewEditShape(value.edit) : isOverlayEditShape(value.edit))
+    isIssueKey(value.issueKey) &&
+    isStringArray(value.entityIds)
+  );
+}
+
+function isWorldPreviewRequest(value: unknown): value is WorldPreviewRequest {
+  return (
+    isPlainObject(value) && isNovelIdValue(value.novelId) && isIssueKey(value.issueKey) && isDraftEditArray(value.edits)
   );
 }
 
@@ -186,7 +216,14 @@ export function registerAnalysisIpc(service: AnalysisService): void {
   handleValidated(AnalysisChannel.FindQuote, isQuoteQuery, (query: QuoteQuery): Promise<QuoteMatch[]> =>
     service.findQuote(query),
   );
-  handleValidated(AnalysisChannel.Merge, isNovelIdValue, (novelId: string): Promise<void> => service.merge(novelId));
+  handleValidated(AnalysisChannel.Scope, isWorldScopeRequest, (request: WorldScopeRequest): Promise<WorldEditScope> =>
+    service.scope(request),
+  );
+  handleValidated(
+    AnalysisChannel.Preview,
+    isWorldPreviewRequest,
+    (request: WorldPreviewRequest): Promise<WorldEditPreview> => service.preview(request),
+  );
   handleValidated(AnalysisChannel.OntologyOpen, isNovelIdValue, (novelId: string): Promise<void> =>
     service.ontologyOpen(novelId),
   );

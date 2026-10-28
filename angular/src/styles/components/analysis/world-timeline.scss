@@ -47,8 +47,7 @@ ds-world-timeline {
 }
 
 .ds-world-timeline-stale,
-.ds-world-timeline-failed,
-.ds-world-timeline-pending {
+.ds-world-timeline-failed {
   display: inline-flex;
   gap: var(--sp-xxs);
   align-items: center;
@@ -58,8 +57,7 @@ ds-world-timeline {
   color: var(--color-warning);
 }
 
-.ds-world-timeline-failed,
-.ds-world-timeline-pending {
+.ds-world-timeline-failed {
   padding: 0;
   border: 0;
   background: none;
@@ -71,8 +69,4 @@ ds-world-timeline {
   &:hover {
     text-decoration: none;
   }
-}
-
-.ds-world-timeline-pending {
-  color: var(--color-link);
 }

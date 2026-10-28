@@ -216,6 +216,16 @@ ds-entity-list {
   color: var(--color-text-tertiary);
 }
 
+.ds-world-issue {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-danger);
+
+  &[data-severity='warning'] {
+    color: var(--color-warning);
+  }
+}
+
 .ds-world-entity-count {
   flex: none;
   min-width: var(--badge-h);

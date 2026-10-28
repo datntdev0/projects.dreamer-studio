@@ -28,7 +28,3 @@ async function openReview(canvasElement: HTMLElement): Promise<void> {
 }
 
 export const Review: Story = { play: ({ canvasElement }) => openReview(canvasElement) };
-export const ReviewReadyToMerge: Story = {
-  args: { scenario: 'readyToMerge' },
-  play: ({ canvasElement }) => openReview(canvasElement),
-};

@@ -10,11 +10,11 @@
   <div class="ds-world-edit-layout" data-testid="world-edit-dialog">
     @if (issue(); as current) {
       <section class="ds-world-edit-issue" [attr.data-severity]="current.severity" data-testid="world-edit-issue">
-        <ds-icon [name]="current.severity === 'error' ? 'alert-circle' : 'alert-triangle'" />
+        <ds-icon [name]="issueIcons[current.severity]" />
         <div>
           <h3>{{ reasonKeys[current.reason] | t }}</h3>
           <p>{{ detail() }}</p>
-          <p class="meta">{{ 'analysis.edit.chapters' | t: { chapters: current.chapters.join(', ') } }}</p>
+          <p class="meta">{{ 'analysis.edit.chapters' | t: { chapters: chapterRanges(current.chapters) } }}</p>
         </div>
       </section>
     }
@@ -141,7 +141,7 @@
               <span class="ds-world-edit-title">{{ entityLabel(card.entity) }}</span>
               @if (card.entity.chapters.length) {
                 <span class="meta num">{{
-                  'analysis.edit.chapterList' | t: { chapters: card.entity.chapters.join(', ') }
+                  'analysis.edit.chapterList' | t: { chapters: chapterRanges(card.entity.chapters) }
                 }}</span>
               }
             </button>

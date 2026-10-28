@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
 import { ButtonDirective } from '@components/button/button.directive';
@@ -8,20 +8,15 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { PageTitleDirective } from '@shell/page-title.directive';
 import { PanelDirective } from '@shell/layout/panel.directive';
-import { EntityDialogComponent } from './components/entity-dialog.component';
 import { EntityListComponent } from './components/entity-list.component';
-import { EntityMergeDialogComponent } from './components/entity-merge-dialog.component';
 import { EntityPanelComponent } from './components/entity-panel.component';
-import { EntitySplitDialogComponent } from './components/entity-split-dialog.component';
 import { EntityTableComponent } from './components/entity-table.component';
-import { FactDialogComponent } from './components/fact-dialog.component';
-import { FixItemDialogComponent } from './components/fix-item-dialog.component';
-import { MergeButtonComponent } from './components/merge-button.component';
 import { OntologyProblemsDialogComponent } from './components/ontology-problems-dialog.component';
 import { OverlayOrphansDialogComponent } from './components/overlay-orphans-dialog.component';
 import { ReviewViewComponent } from './components/review-view.component';
 import { RunAnalysisDialogComponent } from './components/run-analysis-dialog.component';
 import { RunPillComponent } from './components/run-pill.component';
+import { WorldEditDialogComponent } from './components/world-edit-dialog.component';
 import { WorldGraphComponent } from './components/world-graph.component';
 import { WorldTimelineComponent } from './components/world-timeline.component';
 import { OmniscientStore } from './omniscient.store';
@@ -33,16 +28,10 @@ import type { OmniscientView } from './omniscient.store';
     BadgeComponent,
     BannerComponent,
     ButtonDirective,
-    EntityDialogComponent,
     EntityListComponent,
-    EntityMergeDialogComponent,
     EntityPanelComponent,
-    EntitySplitDialogComponent,
     EntityTableComponent,
-    FactDialogComponent,
-    FixItemDialogComponent,
     IconComponent,
-    MergeButtonComponent,
     OntologyProblemsDialogComponent,
     OverlayOrphansDialogComponent,
     PageTitleDirective,
@@ -53,6 +42,7 @@ import type { OmniscientView } from './omniscient.store';
     RunPillComponent,
     TooltipDirective,
     TranslatePipe,
+    WorldEditDialogComponent,
     WorldGraphComponent,
     WorldTimelineComponent,
   ],
@@ -62,6 +52,10 @@ import type { OmniscientView } from './omniscient.store';
 })
 export class OmniscientPage {
   protected readonly store = inject(OmniscientStore);
+  protected readonly editScope = computed(() => {
+    const dialog = this.store.dialog();
+    return dialog?.kind === 'edit' ? dialog.scope : null;
+  });
   protected readonly views: OmniscientView[] = ['graph', 'table', 'review'];
   protected readonly viewIcons: Record<OmniscientView, string> = { graph: 'network', table: 'list', review: 'tasks' };
   protected readonly viewKeys: Record<OmniscientView, string> = {

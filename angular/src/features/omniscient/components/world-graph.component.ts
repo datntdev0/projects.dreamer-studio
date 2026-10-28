@@ -17,9 +17,10 @@ import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import type { EntityType, World, WorldEntity } from '@dreamer/shared/models/analysis';
+import type { EntityType, IssueSeverity, World, WorldEntity } from '@dreamer/shared/models/analysis';
 import ForceGraph from 'force-graph';
 import { ENTITY_TYPES, entityTypeKeys } from '../omniscient-labels';
+import { issueLabelKeys } from '../omniscient-labels';
 
 const NEON_MAX_NODES = 1500;
 const NEON_BLUR = 8;
@@ -37,6 +38,9 @@ const FIT_MAX_ZOOM = 1.6;
 const HOSTILE_PREDICATES = new Set(['enemy_of']);
 const HOSTILE_DASH = [3, 2];
 const LABEL_POSITION = 0.6;
+const ISSUE_RING_GAP = 2;
+const ISSUE_RING_WIDTH = 1.5;
+const WARNING_RING_DASH = [2, 1.5];
 
 interface GraphNode extends WorldEntity {
   x?: number;
@@ -50,6 +54,7 @@ interface GraphLink {
   target: string | GraphNode;
   predicate: string;
   text: string;
+  issue?: IssueSeverity;
 }
 
 interface GravityForce {
@@ -65,7 +70,9 @@ interface GraphColors {
   labelMuted: string;
   focus: string;
   hostile: string;
-  types: Record<EntityType, string>;
+  danger: string;
+  warning: string;
+  types: Record<string, string>;
 }
 
 @Component({
@@ -86,9 +93,17 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
 
   protected readonly types = ENTITY_TYPES;
   protected readonly typeKeys = entityTypeKeys;
+  protected readonly issueKeys = issueLabelKeys;
+  protected readonly issueCounts = computed(() => {
+    const entities = this.world().entities;
+    return {
+      errors: entities.filter((entity) => entity.issue === 'error').length,
+      warnings: entities.filter((entity) => entity.issue === 'warning').length,
+    };
+  });
   protected readonly visibleCount = computed(() => {
     const types = this.entityTypes();
-    return this.world().entities.filter((entity) => !types.length || types.includes(entity.type)).length;
+    return this.world().entities.filter((entity) => !types.length || (types as string[]).includes(entity.type)).length;
   });
 
   private readonly container = viewChild.required<ElementRef<HTMLElement>>('graphContainer');
@@ -106,7 +121,9 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     labelMuted: 'GrayText',
     focus: 'Highlight',
     hostile: 'CanvasText',
-    types: Object.fromEntries(ENTITY_TYPES.map((type) => [type, 'CanvasText'])) as Record<EntityType, string>,
+    danger: 'CanvasText',
+    warning: 'CanvasText',
+    types: Object.fromEntries(ENTITY_TYPES.map((type) => [type, 'CanvasText'])) as Record<string, string>,
   };
   private nodes: GraphNode[] = [];
   private links: GraphLink[] = [];
@@ -155,7 +172,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
         })
         .linkColor((link) => this.linkColor(link))
         .linkWidth((link) => (this.isActiveLink(link) ? 1.5 : 0.75))
-        .linkLineDash((link) => (this.isHostile(link) ? HOSTILE_DASH : null))
+        .linkLineDash((link) => (link.issue || this.isHostile(link) ? HOSTILE_DASH : null))
         .linkCanvasObjectMode(() => 'after')
         .linkCanvasObject((link, context, scale) => this.drawLinkLabel(link, context, scale))
         .cooldownTicks(COOLDOWN_TICKS)
@@ -216,7 +233,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
   }
 
   private setData(world: World, entityTypes: EntityType[], predicates: string[]): void {
-    const typeFilter = new Set(entityTypes);
+    const typeFilter = new Set<string>(entityTypes);
     const predicateFilter = new Set(predicates);
     this.nodes = world.entities
       .filter((entity) => !typeFilter.size || typeFilter.has(entity.type))
@@ -230,6 +247,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
         target: link.target,
         predicate: link.predicate,
         text: link.label ?? link.predicate,
+        issue: link.issue,
       }));
     this.neighbours = new Map(this.nodes.map((node) => [node.id, new Set<string>()]));
     this.degrees = new Map(this.nodes.map((node) => [node.id, 0]));
@@ -310,9 +328,11 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
       labelMuted: token('--color-text-secondary', 'GrayText'),
       focus: token('--color-focus', 'Highlight'),
       hostile: token('--world-hostile', label),
+      danger: token('--color-danger', label),
+      warning: token('--color-warning', label),
       types: Object.fromEntries(
         ENTITY_TYPES.map((type) => [type, token(`--color-entity-${type.toLowerCase()}`, label)]),
-      ) as Record<EntityType, string>,
+      ) as Record<string, string>,
     };
     this.fontFamily = token('--font-sans', 'sans-serif');
     this.graph?.backgroundColor(this.colors.background);
@@ -343,6 +363,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     context.fillStyle = color;
     context.fill();
     context.shadowBlur = 0;
+    if (node.issue) this.drawIssueRing(node, context, radius, scale);
     const showLabel = scale >= LABEL_ZOOM || this.hubIds.has(node.id) || matched || (!!activeId && focused);
     if (showLabel) {
       context.font = `${isActive ? 600 : 400} ${Math.max(10 / scale, 4)}px ${this.fontFamily}`;
@@ -352,6 +373,17 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
       context.fillText(node.name, node.x, node.y + radius + 4 / scale);
     }
     context.restore();
+  }
+
+  private drawIssueRing(node: GraphNode, context: CanvasRenderingContext2D, radius: number, scale: number): void {
+    const error = node.issue === 'error';
+    context.beginPath();
+    context.arc(node.x ?? 0, node.y ?? 0, radius + ISSUE_RING_GAP / scale, 0, Math.PI * 2);
+    context.setLineDash(error ? [] : WARNING_RING_DASH.map((value) => value / scale));
+    context.lineWidth = ISSUE_RING_WIDTH / scale;
+    context.strokeStyle = error ? this.colors.danger : this.colors.warning;
+    context.stroke();
+    context.setLineDash([]);
   }
 
   private circle(context: CanvasRenderingContext2D, x: number, y: number, radius: number): void {
@@ -389,7 +421,7 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     const width = context.measureText(link.text).width;
     context.fillStyle = this.alphaColor(this.colors.background, 0.85);
     context.fillRect(x - width / 2 - padding, y - size / 2 - padding, width + padding * 2, size + padding * 2);
-    context.fillStyle = this.isHostile(link) ? this.colors.hostile : this.colors.labelMuted;
+    context.fillStyle = link.issue || this.isHostile(link) ? this.baseLinkColor(link, false) : this.colors.labelMuted;
     context.fillText(link.text, x, y);
     context.restore();
   }
@@ -401,8 +433,14 @@ export class WorldGraphComponent implements AfterViewInit, OnDestroy {
     const connected = this.isActiveLink(link);
     const matched = this.highlighted.has(source) && this.highlighted.has(target);
     const dimmed = activeId ? !connected : this.highlighted.size > 0 && !matched;
-    const base = this.isHostile(link) ? this.colors.hostile : connected ? this.colors.linkActive : this.colors.link;
+    const base = this.baseLinkColor(link, connected);
     return this.alphaColor(base, dimmed ? 0.12 : connected ? 0.95 : 0.7);
+  }
+
+  private baseLinkColor(link: GraphLink, connected: boolean): string {
+    if (link.issue) return link.issue === 'error' ? this.colors.danger : this.colors.warning;
+    if (this.isHostile(link)) return this.colors.hostile;
+    return connected ? this.colors.linkActive : this.colors.link;
   }
 
   private isActiveLink(link: GraphLink): boolean {

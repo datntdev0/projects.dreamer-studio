@@ -121,7 +121,6 @@ function predicateLine(predicate: OntologyPredicate): string {
 
 function predicatePrompt(chapter: LlmChapter, entities: AnalysisEntity[], ontology: Ontology): string {
   const names: string = entities
-    .filter((entity: AnalysisEntity): boolean => entity.status !== 'rejected')
     .map(
       (entity: AnalysisEntity): string =>
         `- ${entity.type}: ${entity.name}; aliases: ${entity.aliases.join(', ') || 'none'}`,

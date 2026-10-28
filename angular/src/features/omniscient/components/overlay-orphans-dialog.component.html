@@ -7,7 +7,7 @@
   (closed)="close()"
 >
   <div class="ds-world-ontology" data-testid="world-orphans-dialog">
-    <p class="ds-world-run-hint">{{ 'analysis.orphans.hint' | t }}</p>
+    <p class="ds-world-run-hint">{{ 'analysis.orphans.hintEdits' | t }}</p>
     <ul class="ds-world-orphans">
       @for (orphan of orphans(); track $index) {
         <li [attr.data-testid]="'world-orphan-' + $index">
@@ -15,21 +15,8 @@
             <span class="ds-world-orphan-kind">{{ kindKeys[orphan.kind] | t }}</span>
             <span class="ds-world-orphan-detail">{{ detail(orphan) }}</span>
           </span>
-          <button
-            dsBtn
-            size="sm"
-            type="button"
-            [attr.data-testid]="'world-orphan-discard-' + $index"
-            [disabled]="store.locked() || store.busy()"
-            (click)="discard(orphan)"
-          >
-            <ds-icon name="trash" size="sm" />{{ 'analysis.orphans.discard' | t }}
-          </button>
         </li>
       }
     </ul>
-    @if (store.editLockKey(); as lockKey) {
-      <p class="ds-world-run-hint">{{ lockKey | t }}</p>
-    }
   </div>
 </ds-dialog>

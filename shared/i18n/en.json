@@ -1791,8 +1791,6 @@
   "library.translation.glossary.status.user": "Edited",
   "library.translation.glossary.summary.count": "{total} names · {untranslated} untranslated",
   "library.translation.glossary.summary.allTranslated": "All {total} names are translated",
-  "library.translation.glossary.pending.heading": "{count} analysed chapters are not merged yet",
-  "library.translation.glossary.pending.message": "Names from those chapters appear here after you merge them in Omniscient.",
   "library.translation.glossary.table.caption": "Glossary",
   "library.translation.glossary.table.name": "Name",
   "library.translation.glossary.table.type": "Type",
@@ -1869,5 +1867,15 @@
   "analysis.edit.change.entityMerge": "Merge {sources} into {target}",
   "analysis.edit.change.entitySplit": "Split {entity} from {name}: {aliases} alias(es), {facts} fact(s)",
   "analysis.edit.preview.clean": "No new issues.",
-  "analysis.edit.preview.warn": "The changes cause new issues."
+  "analysis.edit.preview.warn": "The changes cause new issues.",
+  "analysis.pipeline.status.analysed": "Analysed",
+  "analysis.review.sectionTotal": "Issues: {total}",
+  "analysis.review.emptyHint": "No issue found. Change the filters to see more.",
+  "analysis.orphans.hintEdits": "These saved edits point to entities or facts that are not in the world any more, so they are not applied.",
+  "analysis.orphans.kind.entityEdit": "Edited entity",
+  "analysis.world.issue": "Issue",
+  "analysis.world.issueError": "Has an error",
+  "analysis.world.issueWarning": "Has a warning",
+  "analysis.world.editSelected": "Edit selected ({count})",
+  "analysis.graph.issueSummary": "{errors} with errors, {warnings} with warnings"
 }

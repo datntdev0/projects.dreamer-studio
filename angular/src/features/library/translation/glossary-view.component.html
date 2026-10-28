@@ -105,21 +105,6 @@
       <span data-testid="glossary-locked"><ds-icon name="lock" size="sm" />{{ lockReason() }}</span>
     }
   </div>
-  @if (page()!.pendingMerge > 0) {
-    <div class="glossary-pending" data-testid="glossary-pending-merge">
-      <ds-banner
-        variant="warning"
-        [dismissible]="false"
-        [dismissLabel]="'library.translation.glossary.dismiss' | t"
-        [heading]="'library.translation.glossary.pending.heading' | t: { count: number(page()!.pendingMerge) }"
-        [message]="'library.translation.glossary.pending.message' | t"
-      >
-        <a dsBtn variant="ghost" size="sm" routerLink="/omniscient" data-testid="glossary-open-omniscient">{{
-          'library.translation.glossary.openOmniscient' | t
-        }}</a>
-      </ds-banner>
-    </div>
-  }
   @if (!rows().length) {
     <div class="glossary-area" data-testid="glossary-empty">
       <ds-area-state

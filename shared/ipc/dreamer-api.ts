@@ -46,7 +46,11 @@ import {
   ReviewPage,
   ReviewQuery,
   World,
+  WorldEditPreview,
+  WorldEditScope,
+  WorldPreviewRequest,
   WorldQuery,
+  WorldScopeRequest,
 } from '../models/analysis';
 
 export interface DreamerApi {
@@ -131,7 +135,8 @@ export interface DreamerApi {
     review(query: ReviewQuery): Promise<ReviewPage>;
     occurrences(query: OccurrenceQuery): Promise<Occurrence[]>;
     edit(request: AnalysisEditRequest): Promise<void>;
-    merge(novelId: string): Promise<void>;
+    scope(request: WorldScopeRequest): Promise<WorldEditScope>;
+    preview(request: WorldPreviewRequest): Promise<WorldEditPreview>;
     findQuote(query: QuoteQuery): Promise<QuoteMatch[]>;
     ontologyOpen(novelId: string): Promise<void>;
     ontologyReset(novelId: string): Promise<OntologyProblem[]>;

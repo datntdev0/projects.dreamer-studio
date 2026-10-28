@@ -1,7 +1,6 @@
 import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BannerComponent } from '@components/banner/banner.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { SegmentedComponent } from '@components/form/segmented.component';
 import type { SegmentedOption } from '@components/form/segmented.component';
@@ -24,7 +23,6 @@ type RowStatus = GlossaryStatus | 'all';
   selector: 'ds-glossary-view',
   imports: [
     AreaStateComponent,
-    BannerComponent,
     ButtonDirective,
     CdkFixedSizeVirtualScroll,
     CdkVirtualForOf,

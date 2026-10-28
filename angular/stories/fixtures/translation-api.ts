@@ -253,12 +253,10 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   override async translationGlossary(query: InstructionRequest): Promise<GlossaryPage> {
     const rows = await this.worldRows(query.novelId, query.language);
     const world = await this.analysisWorld({ novelId: query.novelId, chapter: null, only: false });
-    const analysis = await this.analysisStatus(query.novelId);
     return {
       novelId: query.novelId,
       language: query.language,
       analysed: !!world?.entities.length,
-      pendingMerge: analysis?.merge.pending ?? 0,
       rows,
     };
   }

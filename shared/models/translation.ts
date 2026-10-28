@@ -31,7 +31,6 @@ export interface GlossaryPage {
   novelId: string;
   language: TargetLanguage;
   analysed: boolean;
-  pendingMerge: number;
   rows: GlossaryRow[];
 }
 

@@ -17,7 +17,7 @@ import type { DraftState } from '@dreamer/shared/core/world-edit';
 import type { EntityPatch, EntityType, FactRef, Ontology, WorldDraftEdit } from '@dreamer/shared/models/analysis';
 import type { WorldEditEntity, WorldEditPreview, WorldEditScope, WorldFact } from '@dreamer/shared/models/analysis';
 import type { WorldIssue } from '@dreamer/shared/models/analysis';
-import { entityTypeIcons, entityTypeKeys, reasonKeys } from '../omniscient-labels';
+import { entityTypeIcons, entityTypeKeys, issueDetailKeys, issueIcons, reasonKeys } from '../omniscient-labels';
 
 type ItemState = 'new' | 'edited' | 'deleted' | 'merged' | 'removed' | 'same';
 type PreviewState = 'idle' | 'checking' | 'resolved' | 'open' | 'clean' | 'warn';
@@ -88,18 +88,6 @@ const PREVIEW_ICONS: Record<PreviewState, string> = {
   warn: 'alert-triangle',
 };
 
-const DETAIL_KEYS: Record<WorldIssue['reason'], string> = {
-  'words-not-found': 'analysis.edit.detail.wordsNotFound',
-  'quote-not-found': 'analysis.edit.detail.quoteNotFound',
-  'entity-not-in-ontology': 'analysis.edit.detail.entityNotInOntology',
-  'predicate-not-in-ontology': 'analysis.edit.detail.predicateNotInOntology',
-  'entity-not-found': 'analysis.edit.detail.entityNotFound',
-  'type-not-allowed': 'analysis.edit.detail.typeNotAllowed',
-  'label-missing': 'analysis.edit.detail.labelMissing',
-  'name-conflict': 'analysis.edit.detail.nameConflict',
-  'alias-conflict': 'analysis.edit.detail.aliasConflict',
-};
-
 const FIELD_KEYS: Record<string, string> = {
   name: 'analysis.review.prop.entity',
   type: 'analysis.review.prop.entityType',
@@ -119,6 +107,26 @@ function sameJson(a: unknown, b: unknown): boolean {
 function toggled<T>(items: T[], item: T, on: boolean): T[] {
   const rest = items.filter((value) => !sameJson(value, item));
   return on ? [...rest, item] : rest;
+}
+
+export function chapterRanges(chapters: number[]): string {
+  const sorted = [...new Set(chapters)].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let end = start;
+
+  for (const chapter of sorted.slice(1)) {
+    if (chapter === end + 1) {
+      end = chapter;
+      continue;
+    }
+    ranges.push(start === end ? String(start) : `${start}-${end}`);
+    start = chapter;
+    end = chapter;
+  }
+
+  if (start !== undefined) ranges.push(start === end ? String(start) : `${start}-${end}`);
+  return ranges.join(',');
 }
 
 @Component({
@@ -160,6 +168,8 @@ export class WorldEditDialogComponent {
   protected readonly previewKeys = PREVIEW_KEYS;
   protected readonly previewIcons = PREVIEW_ICONS;
   protected readonly reasonKeys = reasonKeys;
+  protected readonly issueIcons = issueIcons;
+  protected readonly chapterRanges = chapterRanges;
 
   private readonly base = computed<DraftState>(() => this.scope() ?? EMPTY);
   private readonly current = computed<DraftState>(() => applyDraftEdits(this.base(), this.edits()));
@@ -168,7 +178,7 @@ export class WorldEditDialogComponent {
 
   protected readonly detail = computed(() => {
     const issue = this.issue();
-    return issue ? this.i18n.t(DETAIL_KEYS[issue.reason], this.withTypeLabel(issue.params)) : '';
+    return issue ? this.i18n.t(issueDetailKeys[issue.reason], this.withTypeLabel(issue.params)) : '';
   });
 
   protected readonly entityCards = computed<EntityCard[]>(() => {
@@ -391,7 +401,13 @@ export class WorldEditDialogComponent {
   }
 
   protected startSplit(entity: WorldEditEntity): void {
-    this.split.set({ entityId: entity.id, name: '', type: entity.type, aliases: [], facts: [] });
+    this.split.set({
+      entityId: entity.id,
+      name: '',
+      type: entity.type === 'unknown' ? this.types()[0] : entity.type,
+      aliases: [],
+      facts: [],
+    });
     this.expanded.update((keys) => new Set([...keys, entity.id]));
   }
 

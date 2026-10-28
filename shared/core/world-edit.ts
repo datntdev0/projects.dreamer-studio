@@ -64,30 +64,86 @@ function applySplit(state: DraftState, edit: Extract<WorldDraftEdit, { kind: 'en
   return { entities: [...state.entities, created], facts };
 }
 
-export function applyDraftEdits(base: DraftState, edits: WorldDraftEdit[]): DraftState {
+export interface OverlayResult {
+  state: DraftState;
+  orphans: WorldDraftEdit[];
+  touched: { entities: string[]; facts: string[] };
+}
+
+function hasEntity(state: DraftState, id: string | undefined): boolean {
+  return state.entities.some((entity) => entity.id === id);
+}
+
+function isOrphan(state: DraftState, edit: WorldDraftEdit): boolean {
+  if (edit.kind === 'entity-add') return hasEntity(state, edit.entity.id);
+  if (edit.kind === 'entity-edit' || edit.kind === 'entity-delete') return !hasEntity(state, edit.entityId);
+  if (edit.kind === 'entity-split') return !hasEntity(state, edit.entityId);
+  if (edit.kind === 'entity-merge')
+    return (
+      !hasEntity(state, edit.targetId) || !edit.sourceIds.some((id) => id !== edit.targetId && hasEntity(state, id))
+    );
+  if (edit.kind === 'fact-add')
+    return (
+      !hasEntity(state, edit.fact.subjectId) ||
+      (edit.fact.kind === 'relationship' && !hasEntity(state, edit.fact.objectId))
+    );
+  return !state.facts.some((fact) => isFact(fact, edit));
+}
+
+function applyEdit(state: DraftState, edit: WorldDraftEdit): DraftState {
+  if (edit.kind === 'entity-add') return { ...state, entities: [...state.entities, { ...edit.entity }] };
+  if (edit.kind === 'entity-edit')
+    return {
+      ...state,
+      entities: state.entities.map((entity) => (entity.id === edit.entityId ? { ...entity, ...edit.patch } : entity)),
+    };
+  if (edit.kind === 'entity-delete')
+    return {
+      entities: state.entities.filter((entity) => entity.id !== edit.entityId),
+      facts: state.facts.filter((fact) => !touchesEntity(fact, edit.entityId)),
+    };
+  if (edit.kind === 'entity-merge') return applyMerge(state, edit);
+  if (edit.kind === 'entity-split') return applySplit(state, edit);
+  if (edit.kind === 'fact-add') return { ...state, facts: [...state.facts, { ...edit.fact }] };
+  if (edit.kind === 'fact-edit')
+    return { ...state, facts: state.facts.map((fact) => (isFact(fact, edit) ? { ...fact, ...edit.patch } : fact)) };
+  return { ...state, facts: state.facts.filter((fact) => !isFact(fact, edit)) };
+}
+
+function snapshot<T>(items: T[], keyOf: (item: T) => string): Map<string, string> {
+  return new Map(items.map((item) => [keyOf(item), JSON.stringify(item)]));
+}
+
+function addChanged(touched: Set<string>, before: Map<string, string>, after: Map<string, string>): void {
+  for (const [key, value] of after) if (before.get(key) !== value) touched.add(key);
+  for (const key of before.keys()) if (!after.has(key)) touched.add(key);
+}
+
+const entityKey = (entity: WorldEditEntity): string => entity.id;
+
+export function applyOverlay(base: DraftState, edits: WorldDraftEdit[]): OverlayResult {
   let state: DraftState = {
     entities: base.entities.map((entity) => ({ ...entity, aliases: [...entity.aliases], titles: [...entity.titles] })),
     facts: base.facts.map((fact) => ({ ...fact })),
   };
+  const orphans: WorldDraftEdit[] = [];
+  const entities = new Set<string>();
+  const facts = new Set<string>();
   for (const edit of edits) {
-    if (edit.kind === 'entity-add') state.entities.push({ ...edit.entity });
-    else if (edit.kind === 'entity-edit')
-      state.entities = state.entities.map((entity) =>
-        entity.id === edit.entityId ? { ...entity, ...edit.patch } : entity,
-      );
-    else if (edit.kind === 'entity-delete')
-      state = {
-        entities: state.entities.filter((entity) => entity.id !== edit.entityId),
-        facts: state.facts.filter((fact) => !touchesEntity(fact, edit.entityId)),
-      };
-    else if (edit.kind === 'entity-merge') state = applyMerge(state, edit);
-    else if (edit.kind === 'entity-split') state = applySplit(state, edit);
-    else if (edit.kind === 'fact-add') state.facts.push({ ...edit.fact });
-    else if (edit.kind === 'fact-edit')
-      state.facts = state.facts.map((fact) => (isFact(fact, edit) ? { ...fact, ...edit.patch } : fact));
-    else state.facts = state.facts.filter((fact) => !isFact(fact, edit));
+    if (isOrphan(state, edit)) {
+      orphans.push(edit);
+      continue;
+    }
+    const before = { entities: snapshot(state.entities, entityKey), facts: snapshot(state.facts, factKey) };
+    state = applyEdit(state, edit);
+    addChanged(entities, before.entities, snapshot(state.entities, entityKey));
+    addChanged(facts, before.facts, snapshot(state.facts, factKey));
   }
-  return state;
+  return { state, orphans, touched: { entities: [...entities], facts: [...facts] } };
+}
+
+export function applyDraftEdits(base: DraftState, edits: WorldDraftEdit[]): DraftState {
+  return applyOverlay(base, edits).state;
 }
 
 function trimPatch<T extends object>(patch: Partial<T>, original: T): Partial<T> {

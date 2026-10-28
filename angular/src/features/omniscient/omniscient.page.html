@@ -34,7 +34,6 @@
   >
     <ds-icon name="nodes" />
   </button>
-  <ds-merge-button />
   @if (store.run()) {
     <ds-run-pill />
   } @else {
@@ -195,8 +194,14 @@
 <ds-run-analysis-dialog />
 <ds-ontology-problems-dialog />
 <ds-overlay-orphans-dialog />
-<ds-fix-item-dialog />
-<ds-entity-dialog />
-<ds-entity-merge-dialog />
-<ds-entity-split-dialog />
-<ds-fact-dialog />
+<ds-world-edit-dialog
+  [open]="!!editScope()"
+  [scope]="editScope()"
+  [ontology]="store.ontology()"
+  [preview]="store.editPreview()"
+  [checking]="store.editChecking()"
+  [busy]="store.busy()"
+  (draftChange)="store.draftChanged($event)"
+  (confirmed)="store.saveEdits($event)"
+  (closed)="store.closeEdit()"
+/>

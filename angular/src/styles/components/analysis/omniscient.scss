@@ -76,14 +76,6 @@
   }
 }
 
-.ds-world-merge-wrap {
-  display: inline-flex;
-
-  > .ds-btn:disabled {
-    pointer-events: none;
-  }
-}
-
 .ds-world-orphans {
   display: flex;
   flex-direction: column;

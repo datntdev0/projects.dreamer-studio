@@ -1791,8 +1791,6 @@
   "library.translation.glossary.status.user": "Đã sửa",
   "library.translation.glossary.summary.count": "{total} tên · {untranslated} chưa dịch",
   "library.translation.glossary.summary.allTranslated": "Đã dịch cả {total} tên",
-  "library.translation.glossary.pending.heading": "{count} chương đã phân tích chưa được gộp",
-  "library.translation.glossary.pending.message": "Tên trong các chương đó sẽ xuất hiện ở đây sau khi bạn gộp chúng trong Omniscient.",
   "library.translation.glossary.table.caption": "Bảng thuật ngữ",
   "library.translation.glossary.table.name": "Tên",
   "library.translation.glossary.table.type": "Loại",
@@ -1869,5 +1867,15 @@
   "analysis.edit.change.entityMerge": "Gộp {sources} vào {target}",
   "analysis.edit.change.entitySplit": "Tách {entity} từ {name}: {aliases} alias, {facts} fact",
   "analysis.edit.preview.clean": "Không phát sinh issue mới.",
-  "analysis.edit.preview.warn": "Thay đổi gây ra issue mới."
+  "analysis.edit.preview.warn": "Thay đổi gây ra issue mới.",
+  "analysis.pipeline.status.analysed": "Đã phân tích",
+  "analysis.review.sectionTotal": "Vấn đề: {total}",
+  "analysis.review.emptyHint": "Không có vấn đề nào. Đổi bộ lọc để xem thêm.",
+  "analysis.orphans.hintEdits": "Các chỉnh sửa đã lưu này trỏ tới thực thể hoặc dữ kiện không còn trong thế giới, nên không được áp dụng.",
+  "analysis.orphans.kind.entityEdit": "Thực thể đã sửa",
+  "analysis.world.issue": "Vấn đề",
+  "analysis.world.issueError": "Có lỗi",
+  "analysis.world.issueWarning": "Có cảnh báo",
+  "analysis.world.editSelected": "Sửa mục đã chọn ({count})",
+  "analysis.graph.issueSummary": "{errors} có lỗi, {warnings} có cảnh báo"
 }

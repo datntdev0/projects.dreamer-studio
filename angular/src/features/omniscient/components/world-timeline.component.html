@@ -82,9 +82,6 @@
     <span class="ds-spacer"></span>
     <p class="meta num" data-testid="world-timeline-summary">
       <span>{{ 'analysis.graph.analysed' | t: { analysed: counts().analysed, total: counts().total } }}</span>
-      @if (mergedAt()) {
-        <span data-testid="world-timeline-merged">{{ 'analysis.world.merged' | t: { date: mergedAt() } }}</span>
-      }
       @if (store.summary().stale) {
         <span class="ds-world-timeline-stale" data-testid="world-timeline-stale"
           ><ds-icon [name]="staleIcon" size="sm" />{{ 'analysis.graph.stale' | t: { count: counts().stale } }}</span
@@ -101,18 +98,6 @@
             (click)="store.dialog.set({ kind: 'run' })"
           >
             <ds-icon [name]="failedIcon" size="sm" />{{ 'analysis.graph.failed' | t: { count: counts().failed } }}
-          </button></span
-        >
-      }
-      @if (store.merge()?.pending) {
-        <span
-          ><button
-            type="button"
-            class="ds-world-timeline-pending"
-            data-testid="world-timeline-pending"
-            (click)="store.openReview()"
-          >
-            <ds-icon name="merge" size="sm" />{{ 'analysis.graph.pending' | t: { count: counts().pending } }}
           </button></span
         >
       }

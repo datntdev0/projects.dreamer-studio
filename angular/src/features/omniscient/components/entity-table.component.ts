@@ -5,8 +5,9 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { WorldEntity } from '@dreamer/shared/models/analysis';
 import { entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
+import { issueIcons, issueLabelKeys, issueRanks } from '../omniscient-labels';
 
-export type EntitySortKey = 'name' | 'type' | 'aliases' | 'chapters' | 'degree' | 'overlay';
+export type EntitySortKey = 'name' | 'type' | 'aliases' | 'chapters' | 'degree' | 'overlay' | 'issue';
 export type SortDirection = 'asc' | 'desc';
 
 const SORT_VALUES: Record<EntitySortKey, (entity: WorldEntity) => string | number> = {
@@ -16,6 +17,7 @@ const SORT_VALUES: Record<EntitySortKey, (entity: WorldEntity) => string | numbe
   chapters: (entity) => entity.chapters.length,
   degree: (entity) => entity.degree,
   overlay: (entity) => (entity.overlay ? 1 : 0),
+  issue: (entity) => issueRanks[entity.issue ?? 'none'],
 };
 
 export function sortEntities(entities: WorldEntity[], key: EntitySortKey, direction: SortDirection): WorldEntity[] {
@@ -44,12 +46,15 @@ export class EntityTableComponent {
   protected readonly store = inject(OmniscientStore);
   protected readonly typeKeys = entityTypeKeys;
   protected readonly typeIcons = entityTypeIcons;
+  protected readonly issueIcons = issueIcons;
+  protected readonly issueKeys = issueLabelKeys;
   protected readonly columns: EntityColumn[] = [
     { key: 'name', label: 'analysis.world.newName', numeric: false },
     { key: 'type', label: 'analysis.world.typeLabel', numeric: false },
     { key: 'aliases', label: 'analysis.world.aliases', numeric: false },
     { key: 'chapters', label: 'analysis.entities.chapters', numeric: true },
     { key: 'degree', label: 'analysis.world.degree', numeric: true },
+    { key: 'issue', label: 'analysis.world.issue', numeric: false },
     { key: 'overlay', label: 'analysis.world.edited', numeric: false },
   ];
   protected readonly sortKey = signal<EntitySortKey>('chapters');

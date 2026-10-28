@@ -23,15 +23,15 @@ let paths: AppPaths;
 let folder: NovelFolder;
 let index: LibraryIndex;
 
-function entry(position: number, status: AnalysisIndexEntry['status'], file: string): AnalysisIndexEntry {
-  const counts = { entities: 0, facts: 0, verified: 0, failed: 0, accepted: 0, rejected: 0 };
-  return { index: position, file, status, counts, analysedAt: '2026-10-20T10:00:00.000Z' };
+function entry(position: number, file: string): AnalysisIndexEntry {
+  const counts = { entities: 0, facts: 0 };
+  return { index: position, file, counts, analysedAt: '2026-10-20T10:00:00.000Z' };
 }
 
 function writeAnalysisIndex(chapters: AnalysisIndexEntry[]): void {
   const file: string = join(folder.analysis, 'index.json');
   mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify({ version: 1, chapters, lastRun: null, mergedAt: null }));
+  writeFileSync(file, JSON.stringify({ version: 1, chapters, lastRun: null }));
 }
 
 beforeEach(() => {
@@ -71,11 +71,11 @@ afterEach(() => {
 describe('LibraryIndex analysis summary', () => {
   it('REQ-032 AC-6: counts only up-to-date chapters', () => {
     writeAnalysisIndex([
-      entry(1, 'clean', files[0]),
-      entry(2, 'has-issues', files[1]),
-      entry(3, 'reviewed', files[2]),
-      { ...entry(4, 'failed', files[3]), error: 'boom' },
-      entry(5, 'clean', 'e'.repeat(64)),
+      entry(1, files[0]),
+      entry(2, files[1]),
+      entry(3, files[2]),
+      { ...entry(4, files[3]), error: 'boom' },
+      entry(5, 'e'.repeat(64)),
     ]);
 
     expect(index.list()[0].analysis).toEqual({ analysed: 3, total: 6 });
@@ -89,7 +89,7 @@ describe('LibraryIndex analysis summary', () => {
   it('REQ-032 AC-6: reads the analysis index again on every call', () => {
     expect(index.list()[0].analysis.analysed).toBe(0);
 
-    writeAnalysisIndex([entry(1, 'clean', files[0])]);
+    writeAnalysisIndex([entry(1, files[0])]);
 
     expect(index.list()[0].analysis.analysed).toBe(1);
   });

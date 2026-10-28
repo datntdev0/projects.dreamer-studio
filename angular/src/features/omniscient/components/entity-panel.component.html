@@ -24,6 +24,11 @@
             <ds-pill [icon]="typeIcons[entity.type]" data-testid="world-entity-type">{{
               typeKeys[entity.type] | t
             }}</ds-pill>
+            @if (entity.issue; as issue) {
+              <ds-pill [kind]="issueKinds[issue]" [icon]="issueIcons[issue]" data-testid="world-entity-issue">{{
+                issueKeys[issue] | t
+              }}</ds-pill>
+            }
             @if (entity.overlay) {
               <ds-pill kind="warning" icon="pencil" data-testid="world-entity-edited">{{
                 'analysis.world.editedByYou' | t
@@ -45,68 +50,15 @@
         <div class="ds-world-detail-actions" role="group" [attr.aria-label]="'analysis.entity.actions' | t">
           <button
             dsBtn
+            variant="primary"
             size="sm"
             type="button"
-            data-testid="world-entity-rename"
+            data-testid="world-entity-edit"
             [disabled]="store.locked()"
-            (click)="openDialog('rename', entity)"
+            (click)="edit(entity)"
           >
-            <ds-icon name="pencil" size="sm" />{{ 'analysis.world.rename' | t }}
+            <ds-icon name="pencil" size="sm" />{{ 'analysis.world.edit' | t }}
           </button>
-          <button
-            dsBtn
-            size="sm"
-            type="button"
-            data-testid="world-entity-change-type"
-            [disabled]="store.locked()"
-            (click)="openDialog('type', entity)"
-          >
-            <ds-icon name="tag" size="sm" />{{ 'analysis.world.changeType' | t }}
-          </button>
-          <button
-            dsBtn
-            size="sm"
-            type="button"
-            data-testid="world-entity-merge"
-            [disabled]="store.locked()"
-            (click)="openMerge(entity)"
-          >
-            <ds-icon name="merge" size="sm" />{{ 'analysis.world.merge' | t }}
-          </button>
-          <button
-            dsBtn
-            size="sm"
-            type="button"
-            data-testid="world-entity-split"
-            [disabled]="store.locked()"
-            (click)="store.dialog.set({ kind: 'split', entityId: entity.id })"
-          >
-            <ds-icon name="scissors" size="sm" />{{ 'analysis.world.split' | t }}
-          </button>
-          <button
-            dsBtn
-            variant="danger"
-            size="sm"
-            type="button"
-            data-testid="world-entity-delete"
-            [disabled]="store.locked()"
-            (click)="deleteEntity(entity)"
-          >
-            <ds-icon name="trash" size="sm" />{{ 'analysis.world.delete' | t }}
-          </button>
-          @if (entity.overlay) {
-            <button
-              dsBtn
-              variant="ghost"
-              size="sm"
-              type="button"
-              data-testid="world-entity-reset"
-              [disabled]="store.locked()"
-              (click)="resetEntity(entity)"
-            >
-              <ds-icon name="undo" size="sm" />{{ 'analysis.world.reset' | t }}
-            </button>
-          }
         </div>
         @if (entity.titles.length) {
           <section class="ds-world-detail-section" data-testid="world-entity-titles">
@@ -120,61 +72,16 @@
             </ul>
           </section>
         }
-        @if (hasAliases() || entity.aliases.length) {
+        @if (entity.aliases.length) {
           <section class="ds-world-detail-section" data-testid="world-entity-aliases">
             <h3>
               {{ 'analysis.world.aliases' | t }} <span class="meta num">{{ entity.aliases.length }}</span>
             </h3>
-            @if (entity.aliases.length) {
-              <ul class="ds-world-detail-chips">
-                @for (alias of entity.aliases; track alias) {
-                  <li>
-                    {{ alias
-                    }}<button
-                      type="button"
-                      [attr.aria-label]="'analysis.entity.removeAlias' | t: { alias }"
-                      [attr.data-testid]="'world-entity-alias-remove-' + $index"
-                      [disabled]="store.locked()"
-                      (click)="removeAlias(entity, alias)"
-                    >
-                      <ds-icon name="x" size="sm" />
-                    </button>
-                  </li>
-                }
-              </ul>
-            } @else {
-              <p class="meta">{{ 'analysis.entity.noAliases' | t }}</p>
-            }
-            <div class="ds-world-detail-inline">
-              <input
-                class="ds-input"
-                data-testid="world-entity-alias-input"
-                [attr.aria-label]="'analysis.entity.addAlias' | t"
-                [attr.aria-invalid]="aliasExists() || null"
-                [placeholder]="'analysis.world.newAlias' | t"
-                [value]="alias()"
-                [disabled]="store.locked()"
-                (input)="alias.set($any($event.target).value)"
-                (keydown.enter)="addAlias(entity)"
-              />
-              <button
-                dsBtn
-                type="button"
-                [iconOnly]="true"
-                data-testid="world-entity-alias-add"
-                [attr.aria-label]="'analysis.entity.addAlias' | t"
-                [dsTooltip]="'analysis.entity.addAlias' | t"
-                [disabled]="store.locked() || !alias().trim() || aliasExists()"
-                (click)="addAlias(entity)"
-              >
-                <ds-icon name="plus" size="sm" />
-              </button>
-            </div>
-            @if (aliasExists()) {
-              <p class="ds-world-detail-error" role="alert">
-                <ds-icon name="alert-circle" size="sm" />{{ 'analysis.entity.aliasExists' | t }}
-              </p>
-            }
+            <ul class="ds-world-detail-chips">
+              @for (alias of entity.aliases; track alias) {
+                <li>{{ alias }}</li>
+              }
+            </ul>
           </section>
         }
         <section class="ds-world-detail-section" data-testid="world-entity-values">
@@ -183,60 +90,24 @@
             <div class="ds-world-detail-group">
               <h4>{{ group.predicate }}</h4>
               <ul class="ds-world-detail-list">
-                @for (scalar of group.values; track scalar.factId ?? $index) {
-                  <li
-                    class="ds-world-detail-item"
-                    [attr.data-testid]="'world-entity-value-' + (scalar.factId ?? $index)"
-                  >
+                @for (scalar of group.values; track scalar.factId) {
+                  <li class="ds-world-detail-item" [attr.data-testid]="'world-entity-value-' + scalar.factId">
                     <div class="ds-world-detail-row">
                       <span class="meta num">{{
                         'analysis.entity.chapterShort' | t: { chapter: scalar.chapterIndex }
                       }}</span>
                       <span class="ds-spacer"></span>
-                      <button
-                        dsBtn
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        [iconOnly]="true"
-                        [attr.data-testid]="'world-entity-value-edit-' + (scalar.factId ?? $index)"
-                        [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: scalar.predicate }"
-                        [dsTooltip]="'analysis.world.edit' | t"
-                        [disabled]="store.locked() || !scalar.factId"
-                        (click)="openFact(entity, scalarRef(scalar))"
-                      >
-                        <ds-icon name="pencil" size="sm" />
-                      </button>
-                      @if (scalar.overlay && scalar.factId) {
-                        <button
-                          dsBtn
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          [iconOnly]="true"
-                          [attr.data-testid]="'world-entity-value-reset-' + scalar.factId"
-                          [attr.aria-label]="'analysis.entity.resetFact' | t: { predicate: scalar.predicate }"
-                          [dsTooltip]="'analysis.world.reset' | t"
-                          [disabled]="store.locked()"
-                          (click)="resetScalar(scalar)"
+                      @if (scalar.issue; as issue) {
+                        <span
+                          class="ds-world-issue"
+                          [attr.data-severity]="issue"
+                          [attr.data-testid]="'world-entity-value-issue-' + scalar.factId"
+                          [dsTooltip]="issueKeys[issue] | t"
+                          ><ds-icon [name]="issueIcons[issue]" size="sm" /><span class="visually-hidden">{{
+                            issueKeys[issue] | t
+                          }}</span></span
                         >
-                          <ds-icon name="undo" size="sm" />
-                        </button>
                       }
-                      <button
-                        dsBtn
-                        variant="ghost"
-                        size="sm"
-                        type="button"
-                        [iconOnly]="true"
-                        [attr.data-testid]="'world-entity-value-delete-' + (scalar.factId ?? $index)"
-                        [attr.aria-label]="'analysis.entity.deleteFact' | t: { predicate: scalar.predicate }"
-                        [dsTooltip]="'analysis.world.delete' | t"
-                        [disabled]="store.locked() || !scalar.factId"
-                        (click)="deleteScalar(scalar)"
-                      >
-                        <ds-icon name="trash" size="sm" />
-                      </button>
                     </div>
                     @if (scalar.quote) {
                       <blockquote class="serif">{{ scalar.quote }}</blockquote>
@@ -272,7 +143,7 @@
             type="button"
             data-testid="world-entity-add-relation"
             [disabled]="store.locked()"
-            (click)="openFact(entity, null)"
+            (click)="edit(entity)"
           >
             <ds-icon name="plus" size="sm" />{{ 'analysis.entity.addRelation' | t }}
           </button>
@@ -328,6 +199,17 @@
                     <ds-icon [name]="open ? 'chevron-up' : 'chevron-down'" size="sm" />
                   </button>
                 }
+                @if (link.issue; as issue) {
+                  <span
+                    class="ds-world-issue"
+                    [attr.data-severity]="issue"
+                    [attr.data-testid]="'world-entity-relation-issue-' + $index"
+                    [dsTooltip]="issueKeys[issue] | t"
+                    ><ds-icon [name]="issueIcons[issue]" size="sm" /><span class="visually-hidden">{{
+                      issueKeys[issue] | t
+                    }}</span></span
+                  >
+                }
                 <button
                   dsBtn
                   variant="ghost"
@@ -337,40 +219,10 @@
                   [attr.data-testid]="'world-entity-relation-edit-' + $index"
                   [attr.aria-label]="'analysis.entity.editFact' | t: { predicate: link.predicate }"
                   [dsTooltip]="'analysis.world.edit' | t"
-                  [disabled]="store.locked() || !link.factRefs?.length"
-                  (click)="openFact(entity, link.factRefs?.[0] ?? null)"
+                  [disabled]="store.locked()"
+                  (click)="editRelation(entity, link)"
                 >
                   <ds-icon name="pencil" size="sm" />
-                </button>
-                @if (link.overlay && link.factRefs?.length) {
-                  <button
-                    dsBtn
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    [iconOnly]="true"
-                    [attr.data-testid]="'world-entity-relation-reset-' + $index"
-                    [attr.aria-label]="'analysis.entity.resetFact' | t: { predicate: link.predicate }"
-                    [dsTooltip]="'analysis.world.reset' | t"
-                    [disabled]="store.locked()"
-                    (click)="resetLink(link)"
-                  >
-                    <ds-icon name="undo" size="sm" />
-                  </button>
-                }
-                <button
-                  dsBtn
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  [iconOnly]="true"
-                  [attr.data-testid]="'world-entity-relation-delete-' + $index"
-                  [attr.aria-label]="'analysis.entity.deleteFact' | t: { predicate: link.predicate }"
-                  [dsTooltip]="'analysis.world.delete' | t"
-                  [disabled]="store.locked() || !link.factRefs?.length"
-                  (click)="deleteLink(link)"
-                >
-                  <ds-icon name="trash" size="sm" />
                 </button>
               </div>
               @if (link.overlay || !link.quotes.length || link.stale) {

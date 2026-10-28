@@ -1,7 +1,7 @@
 <div class="ds-world-review-head">
   <h2>{{ 'analysis.review.title' | t }}</h2>
   <span class="meta num" data-testid="world-review-total">{{
-    'analysis.review.severityCount' | t: { errors: severityCount().errors, warnings: severityCount().warnings }
+    'analysis.review.severityCount' | t: { errors: counts().errors, warnings: counts().warnings }
   }}</span>
   <span class="ds-spacer"></span>
   <div class="ds-world-review-filters">
@@ -11,19 +11,6 @@
         <select class="ds-input" data-testid="world-review-severity" (change)="setSeverity($event)">
           @for (option of severityFilters; track option) {
             <option [value]="option" [selected]="severity() === option">{{ severityKeys[option] | t }}</option>
-          }
-        </select>
-        <ds-icon name="chevron-down" size="sm" />
-      </span>
-    </label>
-    <label class="ds-world-review-filter">
-      <span>{{ 'analysis.pipeline.statusFilter' | t }}</span>
-      <span class="ds-select">
-        <select class="ds-input" data-testid="world-review-status" (change)="setStatus($event)">
-          @for (status of statusFilters; track status) {
-            <option [value]="status" [selected]="store.reviewStatus() === status">
-              {{ statusFilterKeys[status] | t }}
-            </option>
           }
         </select>
         <ds-icon name="chevron-down" size="sm" />
@@ -58,29 +45,6 @@
     </label>
   </div>
 </div>
-@if (store.merge(); as merge) {
-  @if (merge.openErrors) {
-    <p class="ds-world-review-gate" data-state="blocked" data-testid="world-review-gate">
-      <ds-icon name="alert-triangle" size="sm" />{{
-        'analysis.merge.gateBlocked' | t: { count: merge.openErrors, warnings: merge.openIssues - merge.openErrors }
-      }}
-    </p>
-  } @else if (merge.pending) {
-    <div class="ds-world-review-gate" data-state="ready" data-testid="world-review-gate">
-      <ds-icon name="check" size="sm" />
-      <span>{{
-        (merge.openIssues ? 'analysis.merge.gateReadyWarnings' : 'analysis.merge.gateReady')
-          | t: { count: merge.pending, warnings: merge.openIssues }
-      }}</span>
-      <span class="ds-spacer"></span>
-      <ds-merge-button variant="primary" testId="world-review-merge" />
-    </div>
-  } @else {
-    <p class="ds-world-review-gate" data-state="merged" data-testid="world-review-gate">
-      <ds-icon name="merge" size="sm" />{{ 'analysis.merge.upToDate' | t: { date: mergedAt() } }}
-    </p>
-  }
-}
 @if (lockReason()) {
   <p class="ds-world-review-locked" id="world-review-locked" data-testid="world-review-locked">
     <ds-icon name="lock" size="sm" />{{ lockReason() | t }}
@@ -97,12 +61,11 @@
             class="ds-world-review-toc-item"
             [href]="'#world-review-section-' + section.reason"
             [attr.data-severity]="section.severity"
-            [attr.data-open]="section.open > 0 || null"
             [attr.data-testid]="'world-review-toc-' + section.reason"
           >
             <ds-icon [name]="severityIcons[section.severity]" size="sm" />
             <span>{{ reasonLabel(section.reason) }}</span>
-            <span class="num">{{ section.open }}/{{ section.issues.length }}</span>
+            <span class="num">{{ section.items.length }}</span>
           </a>
         }
       </nav>
@@ -124,154 +87,79 @@
                 severityKeys[section.severity] | t
               }}</ds-pill>
             </h3>
-            <p class="meta">{{ reasonHintKeys[section.reason] | t }}</p>
           </div>
           <span class="ds-spacer"></span>
-          <span class="meta num">{{
-            'analysis.review.sectionCount' | t: { open: section.open, total: section.issues.length }
-          }}</span>
+          <span class="meta num">{{ 'analysis.review.sectionTotal' | t: { total: section.items.length } }}</span>
         </div>
         <ul class="ds-world-review-list">
-          @for (issue of section.issues; track issue.key) {
+          @for (item of section.items; track item.issue.key) {
             <li
               class="ds-world-review-issue"
-              [attr.data-kind]="issue.kind"
-              [attr.data-open]="issue.open || null"
-              [attr.data-testid]="'world-review-issue-' + issue.key"
+              [attr.data-severity]="item.issue.severity"
+              [attr.data-testid]="'world-review-issue-' + item.issue.key"
             >
-              @if (issue.kind === 'entity') {
-                @if (issue.variants) {
-                  <p class="ds-world-review-title">{{ issue.items[0].entity?.name }}</p>
-                  <table class="ds-world-review-variants" [attr.data-testid]="'world-review-variants-' + issue.key">
-                    <thead>
-                      <tr>
-                        <th scope="col">{{ 'analysis.review.prop.entity' | t }}</th>
-                        <th scope="col">{{ 'analysis.review.prop.aliases' | t }}</th>
-                        <th scope="col">{{ 'analysis.pipeline.statusFilter' | t }}</th>
-                        <th scope="col">
-                          <span class="visually-hidden">{{ 'analysis.review.actions' | t }}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of issue.rows; track row.key) {
-                        <tr
-                          [attr.data-status]="row.status"
-                          [attr.data-testid]="'world-review-row-' + rowId(issue, row)"
-                        >
-                          <td>
-                            @if (entityOf(row); as entity) {
-                              <ng-container
-                                [ngTemplateOutlet]="entityName"
-                                [ngTemplateOutletContext]="{ type: entity.type, name: entity.name }"
-                              />
-                            }
-                          </td>
-                          <td class="meta">{{ entityOf(row)?.aliases?.join(', ') || '—' }}</td>
-                          <td><ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row }" /></td>
-                          <td>
-                            <ng-container [ngTemplateOutlet]="actions" [ngTemplateOutletContext]="{ issue, row }" />
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                } @else {
-                  @if (entityOf(issue.rows[0]); as entity) {
-                    <div class="ds-world-review-line">
-                      <ng-container
-                        [ngTemplateOutlet]="entityName"
-                        [ngTemplateOutletContext]="{ type: entity.type, name: entity.name }"
-                      />
-                      @if (entity.aliases.length) {
-                        <span class="ds-world-review-aliases">
-                          <span class="ds-world-review-key">{{ 'analysis.review.prop.aliases' | t }}</span>
-                          {{ entity.aliases.join(', ') }}
-                        </span>
-                      }
-                      @if (entity.titles?.length) {
-                        <span class="ds-world-review-aliases">
-                          <span class="ds-world-review-key">{{ 'analysis.review.prop.titles' | t }}</span>
-                          {{ entity.titles.join(', ') }}
-                        </span>
-                      }
-                      <span class="ds-spacer"></span>
-                      <ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row: issue.rows[0] }" />
+              <p class="ds-world-review-title">{{ detail(item) }}</p>
+              @if (item.fact) {
+                <dl class="ds-world-review-props">
+                  @for (prop of factProps(item); track prop.key) {
+                    <div>
+                      <dt>{{ prop.key | t }}</dt>
+                      <dd>
+                        @if (prop.type) {
+                          <ng-container
+                            [ngTemplateOutlet]="entityName"
+                            [ngTemplateOutletContext]="{ type: prop.type, name: prop.value }"
+                          />
+                        } @else {
+                          {{ prop.value }}
+                        }
+                      </dd>
                     </div>
                   }
-                  @if (relatedOf(issue).length) {
-                    <div class="ds-world-review-line">
-                      <span class="ds-world-review-key">{{ 'analysis.review.prop.alsoNameOf' | t }}</span>
-                      @for (related of relatedOf(issue); track related.type + related.name) {
-                        <ng-container
-                          [ngTemplateOutlet]="entityName"
-                          [ngTemplateOutletContext]="{ type: related.type, name: related.name }"
-                        />
-                      }
-                    </div>
-                  }
-                }
+                </dl>
               } @else {
                 <div class="ds-world-review-line">
-                  <dl class="ds-world-review-props">
-                    @for (prop of factProps(issue); track prop.key) {
-                      <div>
-                        <dt>{{ prop.key | t }}</dt>
-                        <dd>
-                          @if (prop.type) {
-                            <ng-container
-                              [ngTemplateOutlet]="entityName"
-                              [ngTemplateOutletContext]="{ type: prop.type, name: prop.value }"
-                            />
-                          } @else {
-                            {{ prop.value }}
-                          }
-                        </dd>
-                      </div>
+                  @for (entity of item.entities; track entity.id) {
+                    <ng-container
+                      [ngTemplateOutlet]="entityName"
+                      [ngTemplateOutletContext]="{ type: entity.type, name: entity.name }"
+                    />
+                    @if (entity.aliases.length) {
+                      <span class="ds-world-review-aliases">
+                        <span class="ds-world-review-key">{{ 'analysis.review.prop.aliases' | t }}</span>
+                        {{ entity.aliases.join(', ') }}
+                      </span>
                     }
-                  </dl>
-                  <span class="ds-spacer"></span>
-                  <ng-container [ngTemplateOutlet]="status" [ngTemplateOutletContext]="{ row: issue.rows[0] }" />
-                </div>
-                <div class="ds-world-review-fact">
-                  <span class="ds-world-review-key">{{ 'analysis.review.prop.fact' | t }}</span>
-                  <ng-container
-                    [ngTemplateOutlet]="fact"
-                    [ngTemplateOutletContext]="{ item: contextOf(issue.rows[0]) }"
-                  />
+                  }
                 </div>
               }
+              <div class="ds-world-review-fact">
+                <span class="ds-world-review-quote">
+                  <span class="meta">{{
+                    'analysis.review.chapter' | t: { index: item.chapterIndex, title: item.chapterTitle }
+                  }}</span>
+                  @if (item.context; as context) {
+                    <q
+                      >{{ context.before }}<mark>{{ context.match }}</mark
+                      >{{ context.after }}</q
+                    >
+                  } @else if (item.fact?.quote) {
+                    <q>{{ item.fact.quote }}</q>
+                  }
+                </span>
+              </div>
               <div class="ds-world-review-actions">
-                @if (issue.open && issue.reason === 'alias-conflict' && clashingAlias(issue); as alias) {
-                  <button
-                    dsBtn
-                    size="sm"
-                    type="button"
-                    [attr.data-testid]="'world-review-remove-alias-' + issue.key"
-                    [disabled]="disabled()"
-                    (click)="removeAlias(issue, alias)"
-                  >
-                    <ds-icon name="minus" size="sm" />{{ 'analysis.review.removeAlias' | t: { alias } }}
-                  </button>
-                }
-                @if (issue.open && canKeepAll(issue)) {
-                  <button
-                    dsBtn
-                    size="sm"
-                    type="button"
-                    [attr.data-testid]="'world-review-keep-all-' + issue.key"
-                    [disabled]="disabled()"
-                    (click)="keep(issue.rows)"
-                  >
-                    <ds-icon name="layers" size="sm" />{{ 'analysis.review.keepAll' | t }}
-                  </button>
-                }
-                @if (!issue.variants) {
-                  <ng-container
-                    [ngTemplateOutlet]="actions"
-                    [ngTemplateOutletContext]="{ issue, row: issue.rows[0] }"
-                  />
-                }
+                <button
+                  dsBtn
+                  size="sm"
+                  type="button"
+                  [attr.data-testid]="'world-review-fix-' + item.issue.key"
+                  [disabled]="disabled()"
+                  [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
+                  (click)="fix(item)"
+                >
+                  <ds-icon name="pencil" size="sm" />{{ 'analysis.pipeline.fix' | t }}
+                </button>
               </div>
             </li>
           }
@@ -281,18 +169,11 @@
       <div class="ds-world-review-empty" data-testid="world-review-empty">
         <ds-area-state
           kind="empty"
-          [icon]="store.reviewStatus() === 'open' ? 'check' : 'filter'"
+          icon="check"
           [heading]="'analysis.review.empty' | t"
-          [description]="
-            (store.reviewStatus() === 'open' ? 'analysis.review.emptyOpenHint' : 'analysis.review.emptyFilterHint') | t
-          "
+          [description]="'analysis.review.emptyHint' | t"
         />
-        @if (
-          severity() !== 'all' ||
-          store.reviewStatus() !== 'open' ||
-          store.reviewKind() !== 'all' ||
-          store.reviewChapter() !== null
-        ) {
+        @if (severity() !== 'all' || store.reviewKind() !== 'all' || store.reviewChapter() !== null) {
           <button dsBtn size="sm" type="button" data-testid="world-review-reset-filters" (click)="resetFilters()">
             {{ 'analysis.review.resetFilters' | t }}
           </button>
@@ -307,73 +188,5 @@
     <span class="ds-world-type" [attr.data-type]="type" [dsTooltip]="typeLabel(type)"
       ><ds-icon size="sm" [name]="typeIcon(type)" /><span class="visually-hidden">{{ typeLabel(type) }}</span></span
     >{{ name }}
-  </span>
-</ng-template>
-
-<ng-template #fact let-item="item">
-  <span class="ds-world-review-quote">
-    <span class="meta">{{
-      'analysis.review.chapter' | t: { index: item.chapterIndex, title: item.chapterTitle }
-    }}</span>
-    @if (item.context; as context) {
-      <q
-        >{{ context.before }}<mark>{{ context.match }}</mark
-        >{{ context.after }}</q
-      >
-    } @else if (item.fact?.quote) {
-      <q>{{ item.fact.quote }}</q>
-    } @else {
-      <span class="ds-world-review-missing-note">
-        <ds-icon name="alert-circle" size="sm" />{{ 'analysis.pipeline.noQuote' | t }}
-      </span>
-    }
-  </span>
-</ng-template>
-
-<ng-template #status let-row="row">
-  <ds-pill [kind]="statusKind(row.status)" [icon]="statusIcon(row.status)">{{ statusLabel(row.status) }}</ds-pill>
-</ng-template>
-
-<ng-template #actions let-issue="issue" let-row="row">
-  <span class="ds-world-review-row-actions">
-    @if (row.status !== 'rejected') {
-      <button
-        dsBtn
-        size="sm"
-        variant="ghost"
-        type="button"
-        [attr.data-testid]="'world-review-reject-' + rowId(issue, row)"
-        [disabled]="disabled()"
-        [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
-        (click)="reject(row)"
-      >
-        <ds-icon name="x" size="sm" />{{ 'analysis.pipeline.reject' | t }}
-      </button>
-    }
-    <button
-      dsBtn
-      size="sm"
-      variant="ghost"
-      type="button"
-      [attr.data-testid]="'world-review-fix-' + rowId(issue, row)"
-      [disabled]="disabled()"
-      [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
-      (click)="fix(row)"
-    >
-      <ds-icon name="pencil" size="sm" />{{ 'analysis.pipeline.fix' | t }}
-    </button>
-    @if (canKeep(row)) {
-      <button
-        dsBtn
-        size="sm"
-        type="button"
-        [attr.data-testid]="'world-review-accept-' + rowId(issue, row)"
-        [disabled]="disabled()"
-        [attr.aria-describedby]="lockReason() ? 'world-review-locked' : null"
-        (click)="keep([row])"
-      >
-        <ds-icon name="check" size="sm" />{{ 'analysis.pipeline.accept' | t }}
-      </button>
-    }
   </span>
 </ng-template>

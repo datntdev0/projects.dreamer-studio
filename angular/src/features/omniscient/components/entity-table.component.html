@@ -45,6 +45,19 @@
           <td class="num">{{ entity.chapters.length }}</td>
           <td class="num">{{ entity.degree }}</td>
           <td class="ds-world-table-edited">
+            @if (entity.issue; as issue) {
+              <span
+                class="ds-world-issue"
+                [attr.data-severity]="issue"
+                [attr.data-testid]="'world-table-issue-' + entity.id"
+                [dsTooltip]="issueKeys[issue] | t"
+                ><ds-icon [name]="issueIcons[issue]" size="sm" /><span class="visually-hidden">{{
+                  issueKeys[issue] | t
+                }}</span></span
+              >
+            }
+          </td>
+          <td class="ds-world-table-edited">
             @if (entity.overlay) {
               <span class="ds-world-entity-edited" [dsTooltip]="'analysis.world.editedByYou' | t"
                 ><ds-icon name="pencil" size="sm" /><span class="visually-hidden">{{
@@ -56,7 +69,7 @@
         </tr>
       } @empty {
         <tr>
-          <td class="ds-table-empty" colspan="6" data-testid="world-table-empty">
+          <td class="ds-table-empty" colspan="7" data-testid="world-table-empty">
             @if (!store.entities().length) {
               <strong>{{ 'analysis.entities.empty' | t }}</strong>
               <div>{{ 'analysis.entities.emptyHint' | t }}</div>

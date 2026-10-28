@@ -1,16 +1,12 @@
 import { Component, computed, effect, inject, untracked } from '@angular/core';
-import { ButtonDirective } from '@components/button/button.directive';
 import { DialogComponent } from '@components/dialog/dialog.component';
-import { IconComponent } from '@components/icon/icon.component';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { overlayResetEdit } from '@dreamer/shared/core/world';
-import type { OverlayEdit } from '@dreamer/shared/models/analysis';
 import { orphanDetail, orphanKindKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 
 @Component({
   selector: 'ds-overlay-orphans-dialog',
-  imports: [ButtonDirective, DialogComponent, IconComponent, TranslatePipe],
+  imports: [DialogComponent, TranslatePipe],
   templateUrl: './overlay-orphans-dialog.component.html',
 })
 export class OverlayOrphansDialogComponent {
@@ -28,10 +24,5 @@ export class OverlayOrphansDialogComponent {
 
   protected close(): void {
     if (this.open()) this.store.dialog.set(null);
-  }
-
-  protected discard(orphan: OverlayEdit): void {
-    const reset = overlayResetEdit(orphan);
-    if (reset) void this.store.edit(reset);
   }
 }

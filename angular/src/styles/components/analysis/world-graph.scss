@@ -108,6 +108,19 @@ ds-world-graph {
   border-top: var(--sp-xxs) dashed var(--world-hostile);
 }
 
+.ds-world-graph-ring {
+  flex: none;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border: var(--sp-xxs) solid var(--color-danger);
+  border-radius: var(--radius-full);
+
+  &[data-severity='warning'] {
+    border-style: dashed;
+    border-color: var(--color-warning);
+  }
+}
+
 .ds-world-graph-empty {
   position: absolute;
   inset: 0;

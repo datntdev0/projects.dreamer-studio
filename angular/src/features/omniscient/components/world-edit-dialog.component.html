@@ -1,0 +1,608 @@
+<ds-dialog
+  class="ds-world-edit-dialog"
+  [icon]="issue() ? 'pencil' : 'nodes'"
+  [open]="open()"
+  [heading]="(issue() ? 'analysis.edit.fixTitle' : 'analysis.edit.title') | t"
+  [dismissible]="!busy()"
+  [closeLabel]="'analysis.pipeline.close' | t"
+  (closed)="close()"
+>
+  <div class="ds-world-edit-layout" data-testid="world-edit-dialog">
+    @if (issue(); as current) {
+      <section class="ds-world-edit-issue" [attr.data-severity]="current.severity" data-testid="world-edit-issue">
+        <ds-icon [name]="current.severity === 'error' ? 'alert-circle' : 'alert-triangle'" />
+        <div>
+          <h3>{{ reasonKeys[current.reason] | t }}</h3>
+          <p>{{ detail() }}</p>
+          <p class="meta">{{ 'analysis.edit.chapters' | t: { chapters: current.chapters.join(', ') } }}</p>
+        </div>
+      </section>
+    }
+
+    <section class="ds-world-edit-group" data-testid="world-edit-entities">
+      <div class="ds-world-edit-head">
+        <h4>{{ 'analysis.edit.entities' | t: { count: entityCards().length } }}</h4>
+        <span class="ds-spacer"></span>
+        <button dsBtn size="sm" variant="ghost" type="button" data-testid="world-edit-add-entity" (click)="addEntity()">
+          <ds-icon name="plus" size="sm" />{{ 'analysis.edit.addEntity' | t }}
+        </button>
+      </div>
+
+      @if (selectedCards().length) {
+        <div class="ds-world-edit-selection" data-testid="world-edit-selection">
+          <div class="ds-world-edit-selection-bar">
+            <span class="num">{{ 'analysis.edit.selected' | t: { count: selectedCards().length } }}</span>
+            <span class="ds-spacer"></span>
+            <button
+              dsBtn
+              size="sm"
+              type="button"
+              data-testid="world-edit-merge"
+              [disabled]="selectedCards().length < 2 || !!mergeTarget()"
+              (click)="startMerge()"
+            >
+              <ds-icon name="merge" size="sm" />{{ 'analysis.edit.merge' | t }}
+            </button>
+            <button
+              dsBtn
+              size="sm"
+              variant="danger"
+              type="button"
+              data-testid="world-edit-delete-selected"
+              (click)="deleteSelected()"
+            >
+              <ds-icon name="trash" size="sm" />{{ 'analysis.edit.deleteSelected' | t }}
+            </button>
+            <button
+              dsBtn
+              size="sm"
+              variant="ghost"
+              type="button"
+              data-testid="world-edit-clear"
+              (click)="clearSelection()"
+            >
+              {{ 'analysis.edit.clearSelection' | t }}
+            </button>
+          </div>
+          @if (mergeTarget(); as target) {
+            <div class="ds-world-edit-merge" data-testid="world-edit-merge-form">
+              <ds-field controlId="world-edit-merge-target" [label]="'analysis.edit.mergeKeep' | t">
+                <span class="ds-select">
+                  <select
+                    id="world-edit-merge-target"
+                    class="ds-input"
+                    data-testid="world-edit-merge-target"
+                    (change)="setMergeTarget($event)"
+                  >
+                    @for (card of selectedCards(); track card.key) {
+                      <option [value]="card.key" [selected]="card.key === target">
+                        {{ entityLabel(card.entity) }}
+                      </option>
+                    }
+                  </select>
+                  <ds-icon name="chevron-down" size="sm" />
+                </span>
+              </ds-field>
+              <p class="meta">{{ 'analysis.edit.mergeHint' | t }}</p>
+              <div class="ds-world-edit-actions">
+                <button
+                  dsBtn
+                  size="sm"
+                  type="button"
+                  data-testid="world-edit-merge-cancel"
+                  (click)="mergeTarget.set(null)"
+                >
+                  {{ 'analysis.pipeline.cancel' | t }}
+                </button>
+                <button
+                  dsBtn
+                  size="sm"
+                  variant="primary"
+                  type="button"
+                  data-testid="world-edit-merge-apply"
+                  (click)="applyMerge()"
+                >
+                  <ds-icon name="merge" size="sm" />{{ 'analysis.edit.applyMerge' | t }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @for (card of entityCards(); track card.key) {
+        <article
+          class="ds-world-edit-card"
+          [attr.data-state]="card.state"
+          [attr.data-involved]="card.involved || null"
+          [attr.data-testid]="'world-edit-entity-' + card.key"
+        >
+          <div class="ds-world-edit-card-head">
+            <ds-checkbox
+              [checked]="selected().includes(card.key)"
+              [disabled]="!isPresent(card)"
+              [attr.data-testid]="'world-edit-select-' + card.key"
+              (checkedChange)="select(card.key, $event)"
+              ><span class="visually-hidden">{{
+                'analysis.edit.select' | t: { name: card.entity.name }
+              }}</span></ds-checkbox
+            >
+            <button
+              type="button"
+              class="ds-world-edit-toggle"
+              [attr.aria-expanded]="isExpanded(card.key)"
+              [disabled]="!isPresent(card)"
+              (click)="toggle(card.key)"
+            >
+              <ds-icon [name]="isExpanded(card.key) ? 'chevron-down' : 'chevron-right'" size="sm" />
+              <span class="ds-world-type" [attr.data-type]="card.entity.type">
+                <ds-icon [name]="typeIcons[card.entity.type]" size="sm" />
+              </span>
+              <span class="ds-world-edit-title">{{ entityLabel(card.entity) }}</span>
+              @if (card.entity.chapters.length) {
+                <span class="meta num">{{
+                  'analysis.edit.chapterList' | t: { chapters: card.entity.chapters.join(', ') }
+                }}</span>
+              }
+            </button>
+            @if (card.involved) {
+              <ds-pill kind="danger" icon="flag">{{ 'analysis.edit.state.involved' | t }}</ds-pill>
+            }
+            @if (card.state !== 'same') {
+              <ds-pill [kind]="statePills[card.state]">{{
+                stateKeys[card.state] | t: { name: card.mergedInto }
+              }}</ds-pill>
+            }
+            @if (card.state === 'deleted') {
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [attr.data-testid]="'world-edit-entity-restore-' + card.key"
+                (click)="restoreEntity(card.key)"
+              >
+                <ds-icon name="undo" size="sm" />{{ 'analysis.edit.restore' | t }}
+              </button>
+            } @else if (isPresent(card)) {
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [iconOnly]="true"
+                [attr.aria-label]="'analysis.edit.split' | t"
+                [dsTooltip]="'analysis.edit.split' | t"
+                [attr.data-testid]="'world-edit-entity-split-' + card.key"
+                (click)="startSplit(card.entity)"
+              >
+                <ds-icon name="scissors" size="sm" />
+              </button>
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [iconOnly]="true"
+                [attr.aria-label]="'analysis.edit.deleteEntity' | t"
+                [dsTooltip]="'analysis.edit.deleteEntity' | t"
+                [attr.data-testid]="'world-edit-entity-delete-' + card.key"
+                (click)="deleteEntity(card.key)"
+              >
+                <ds-icon name="trash" size="sm" />
+              </button>
+            }
+          </div>
+
+          @if (isExpanded(card.key) && isPresent(card)) {
+            @if (split()?.entityId === card.key) {
+              <div class="ds-world-edit-body" data-testid="world-edit-split-form">
+                <ds-field
+                  required
+                  controlId="world-edit-split-name"
+                  [label]="'analysis.edit.splitName' | t"
+                  [error]="split()?.name?.trim() ? '' : ('analysis.review.required' | t)"
+                >
+                  <input
+                    id="world-edit-split-name"
+                    class="ds-input"
+                    data-testid="world-edit-split-name"
+                    [value]="split()?.name ?? ''"
+                    (input)="splitText('name', $event)"
+                  />
+                </ds-field>
+                <ds-field controlId="world-edit-split-type" [label]="'analysis.review.prop.entityType' | t">
+                  <span class="ds-select">
+                    <select
+                      id="world-edit-split-type"
+                      class="ds-input"
+                      data-testid="world-edit-split-type"
+                      (change)="splitText('type', $event)"
+                    >
+                      @for (type of types(); track type) {
+                        <option [value]="type" [selected]="split()?.type === type">{{ typeLabel(type) }}</option>
+                      }
+                    </select>
+                    <ds-icon name="chevron-down" size="sm" />
+                  </span>
+                </ds-field>
+                <fieldset class="ds-world-edit-pick span-full">
+                  <legend>{{ 'analysis.edit.splitAliases' | t }}</legend>
+                  @for (alias of card.entity.aliases; track alias) {
+                    <ds-checkbox
+                      [checked]="split()?.aliases?.includes(alias) ?? false"
+                      [attr.data-testid]="'world-edit-split-alias-' + $index"
+                      (checkedChange)="splitAlias(alias, $event)"
+                      >{{ alias }}</ds-checkbox
+                    >
+                  } @empty {
+                    <p class="meta">{{ 'analysis.edit.splitNone' | t }}</p>
+                  }
+                </fieldset>
+                <fieldset class="ds-world-edit-pick span-full">
+                  <legend>{{ 'analysis.edit.splitFacts' | t }}</legend>
+                  @for (fact of splitFacts(card.key); track $index) {
+                    <ds-checkbox
+                      [checked]="splitHas(fact)"
+                      [attr.data-testid]="'world-edit-split-fact-' + $index"
+                      (checkedChange)="splitFact(fact, $event)"
+                      >{{ factText(fact) }}
+                      <span class="meta num">{{
+                        'analysis.edit.chapterList' | t: { chapters: fact.chapterIndex }
+                      }}</span></ds-checkbox
+                    >
+                  } @empty {
+                    <p class="meta">{{ 'analysis.edit.splitNone' | t }}</p>
+                  }
+                </fieldset>
+                <div class="ds-world-edit-actions span-full">
+                  <button dsBtn size="sm" type="button" data-testid="world-edit-split-cancel" (click)="split.set(null)">
+                    {{ 'analysis.pipeline.cancel' | t }}
+                  </button>
+                  <button
+                    dsBtn
+                    size="sm"
+                    variant="primary"
+                    type="button"
+                    data-testid="world-edit-split-apply"
+                    [disabled]="!split()?.name?.trim()"
+                    (click)="applySplit()"
+                  >
+                    <ds-icon name="scissors" size="sm" />{{ 'analysis.edit.applySplit' | t }}
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <div class="ds-world-edit-body">
+                <ds-field
+                  required
+                  [controlId]="'world-edit-name-' + card.key"
+                  [label]="'analysis.review.prop.entity' | t"
+                  [error]="card.entity.name.trim() ? '' : ('analysis.review.required' | t)"
+                >
+                  <input
+                    class="ds-input"
+                    [id]="'world-edit-name-' + card.key"
+                    [attr.data-testid]="'world-edit-name-' + card.key"
+                    [value]="card.entity.name"
+                    (input)="setEntityText(card.key, 'name', $event)"
+                  />
+                </ds-field>
+                <ds-field [controlId]="'world-edit-type-' + card.key" [label]="'analysis.review.prop.entityType' | t">
+                  <span class="ds-select">
+                    <select
+                      class="ds-input"
+                      [id]="'world-edit-type-' + card.key"
+                      [attr.data-testid]="'world-edit-type-' + card.key"
+                      (change)="setEntityText(card.key, 'type', $event)"
+                    >
+                      @for (type of types(); track type) {
+                        <option [value]="type" [selected]="card.entity.type === type">{{ typeLabel(type) }}</option>
+                      }
+                    </select>
+                    <ds-icon name="chevron-down" size="sm" />
+                  </span>
+                </ds-field>
+                @if (hasField(card.entity, 'alias')) {
+                  <ds-field
+                    span="full"
+                    [controlId]="'world-edit-aliases-' + card.key"
+                    [label]="'analysis.review.prop.aliases' | t"
+                  >
+                    <ds-chip-input
+                      removeLabel="analysis.edit.removeTag"
+                      [inputId]="'world-edit-aliases-' + card.key"
+                      [testId]="'world-edit-aliases-' + card.key"
+                      [placeholder]="'analysis.edit.addTag' | t"
+                      [values]="card.entity.aliases"
+                      (valuesChange)="setEntity(card.key, { aliases: $event })"
+                    />
+                  </ds-field>
+                }
+                @if (hasField(card.entity, 'title')) {
+                  <ds-field
+                    span="full"
+                    [controlId]="'world-edit-titles-' + card.key"
+                    [label]="'analysis.review.prop.titles' | t"
+                  >
+                    <ds-chip-input
+                      removeLabel="analysis.edit.removeTag"
+                      [inputId]="'world-edit-titles-' + card.key"
+                      [testId]="'world-edit-titles-' + card.key"
+                      [placeholder]="'analysis.edit.addTag' | t"
+                      [values]="card.entity.titles"
+                      (valuesChange)="setEntity(card.key, { titles: $event })"
+                    />
+                  </ds-field>
+                }
+              </div>
+            }
+          }
+        </article>
+      }
+    </section>
+
+    <section class="ds-world-edit-group" data-testid="world-edit-facts">
+      <div class="ds-world-edit-head">
+        <h4>{{ 'analysis.edit.facts' | t: { count: factCards().length } }}</h4>
+        <span class="ds-spacer"></span>
+        <button dsBtn size="sm" variant="ghost" type="button" data-testid="world-edit-add-fact" (click)="addFact()">
+          <ds-icon name="plus" size="sm" />{{ 'analysis.edit.addFact' | t }}
+        </button>
+      </div>
+
+      @for (card of factCards(); track card.key) {
+        <article
+          class="ds-world-edit-card"
+          [attr.data-state]="card.state"
+          [attr.data-involved]="card.involved || null"
+          [attr.data-testid]="'world-edit-fact-' + card.key"
+        >
+          <div class="ds-world-edit-card-head">
+            <button
+              type="button"
+              class="ds-world-edit-toggle"
+              [attr.aria-expanded]="isExpanded(card.key)"
+              [disabled]="!isPresent(card)"
+              (click)="toggle(card.key)"
+            >
+              <ds-icon [name]="isExpanded(card.key) ? 'chevron-down' : 'chevron-right'" size="sm" />
+              <ds-icon name="nodes" size="sm" />
+              <span class="ds-world-edit-title">
+                <span [class.ds-world-edit-missing]="!hasEntity(card.fact.subjectId)">{{
+                  entityName(card.fact.subjectId, card.fact.subjectName)
+                }}</span>
+                <span class="ds-world-edit-predicate">{{ card.fact.predicate }}</span>
+                @if (card.fact.kind === 'relationship') {
+                  <span [class.ds-world-edit-missing]="!hasEntity(card.fact.objectId)">{{
+                    entityName(card.fact.objectId, card.fact.objectName)
+                  }}</span>
+                }
+              </span>
+              <span class="meta num">{{ 'analysis.edit.chapterList' | t: { chapters: card.fact.chapterIndex } }}</span>
+            </button>
+            @if (card.involved) {
+              <ds-pill kind="danger" icon="flag">{{ 'analysis.edit.state.involved' | t }}</ds-pill>
+            }
+            @if (card.state !== 'same') {
+              <ds-pill [kind]="statePills[card.state]">{{ stateKeys[card.state] | t }}</ds-pill>
+            }
+            @if (card.state === 'deleted') {
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [attr.data-testid]="'world-edit-fact-restore-' + card.key"
+                (click)="restoreFact(card.fact)"
+              >
+                <ds-icon name="undo" size="sm" />{{ 'analysis.edit.restore' | t }}
+              </button>
+            } @else if (isPresent(card)) {
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [iconOnly]="true"
+                [attr.aria-label]="'analysis.edit.deleteFact' | t"
+                [dsTooltip]="'analysis.edit.deleteFact' | t"
+                [attr.data-testid]="'world-edit-fact-delete-' + card.key"
+                (click)="deleteFact(card.fact)"
+              >
+                <ds-icon name="trash" size="sm" />
+              </button>
+            }
+          </div>
+          @if (isExpanded(card.key) && isPresent(card)) {
+            <div class="ds-world-edit-body fact">
+              <ds-field [controlId]="'world-edit-subject-' + card.key" [label]="'analysis.review.prop.subject' | t">
+                <span class="ds-select">
+                  <select
+                    class="ds-input"
+                    [id]="'world-edit-subject-' + card.key"
+                    [attr.data-testid]="'world-edit-subject-' + card.key"
+                    (change)="setFact(card.fact, $event, 'subjectId')"
+                  >
+                    @if (!hasEntity(card.fact.subjectId)) {
+                      <option value="" selected disabled>
+                        {{ 'analysis.edit.missingEntity' | t: { name: card.fact.subjectName ?? '' } }}
+                      </option>
+                    }
+                    @for (option of entityOptions(); track option.id) {
+                      <option [value]="option.id" [selected]="card.fact.subjectId === option.id">
+                        {{ option.label }}
+                      </option>
+                    }
+                  </select>
+                  <ds-icon name="chevron-down" size="sm" />
+                </span>
+              </ds-field>
+              <ds-field [controlId]="'world-edit-predicate-' + card.key" [label]="'analysis.review.prop.predicate' | t">
+                <span class="ds-select">
+                  <select
+                    class="ds-input"
+                    [id]="'world-edit-predicate-' + card.key"
+                    [attr.data-testid]="'world-edit-predicate-' + card.key"
+                    (change)="setPredicate(card.fact, $event)"
+                  >
+                    @for (option of predicatesOf(card.fact, card.state === 'new'); track option) {
+                      <option [value]="option" [selected]="card.fact.predicate === option">{{ option }}</option>
+                    }
+                  </select>
+                  <ds-icon name="chevron-down" size="sm" />
+                </span>
+              </ds-field>
+              @if (card.fact.kind === 'relationship') {
+                <ds-field [controlId]="'world-edit-object-' + card.key" [label]="'analysis.review.prop.object' | t">
+                  <span class="ds-select">
+                    <select
+                      class="ds-input"
+                      [id]="'world-edit-object-' + card.key"
+                      [attr.data-testid]="'world-edit-object-' + card.key"
+                      (change)="setFact(card.fact, $event, 'objectId')"
+                    >
+                      @if (!hasEntity(card.fact.objectId)) {
+                        <option value="" selected disabled>
+                          {{ 'analysis.edit.missingEntity' | t: { name: card.fact.objectName ?? '' } }}
+                        </option>
+                      }
+                      @for (option of entityOptions(); track option.id) {
+                        <option [value]="option.id" [selected]="card.fact.objectId === option.id">
+                          {{ option.label }}
+                        </option>
+                      }
+                    </select>
+                    <ds-icon name="chevron-down" size="sm" />
+                  </span>
+                </ds-field>
+              }
+              @if (labeled(card.fact)) {
+                <ds-field [controlId]="'world-edit-label-' + card.key" [label]="'analysis.review.prop.label' | t">
+                  <input
+                    class="ds-input"
+                    [id]="'world-edit-label-' + card.key"
+                    [attr.data-testid]="'world-edit-label-' + card.key"
+                    [value]="card.fact.label ?? ''"
+                    (input)="setFact(card.fact, $event, 'label')"
+                  />
+                </ds-field>
+              }
+              @if (isNewFact(card.fact)) {
+                <ds-field [controlId]="'world-edit-chapter-' + card.key" [label]="'analysis.edit.chapter' | t">
+                  <input
+                    class="ds-input num"
+                    type="number"
+                    min="1"
+                    [id]="'world-edit-chapter-' + card.key"
+                    [attr.data-testid]="'world-edit-chapter-' + card.key"
+                    [value]="card.fact.chapterIndex"
+                    (change)="setChapter(card.fact, $event)"
+                  />
+                </ds-field>
+              }
+              <ds-field
+                span="full"
+                [controlId]="'world-edit-quote-' + card.key"
+                [label]="'analysis.review.prop.fact' | t"
+                [hint]="'analysis.review.quoteHint' | t"
+              >
+                <textarea
+                  class="ds-input"
+                  rows="2"
+                  [id]="'world-edit-quote-' + card.key"
+                  [attr.data-testid]="'world-edit-quote-' + card.key"
+                  [value]="card.fact.quote ?? ''"
+                  (input)="setFact(card.fact, $event, 'quote')"
+                ></textarea>
+              </ds-field>
+            </div>
+          }
+        </article>
+      } @empty {
+        <p class="meta">{{ 'analysis.edit.noFacts' | t }}</p>
+      }
+    </section>
+
+    <section class="ds-world-edit-changes" data-testid="world-edit-changes">
+      <button
+        type="button"
+        class="ds-world-edit-toggle"
+        aria-controls="world-edit-changes-list"
+        data-testid="world-edit-changes-toggle"
+        [attr.aria-expanded]="changesOpen()"
+        (click)="changesOpen.set(!changesOpen())"
+      >
+        <ds-icon [name]="changesOpen() ? 'chevron-down' : 'chevron-right'" size="sm" />
+        <span class="ds-world-edit-changes-title">{{ 'analysis.edit.changes' | t: { count: changes().length } }}</span>
+      </button>
+      @if (changesOpen() && changes().length) {
+        <ol id="world-edit-changes-list">
+          @for (change of changes(); track $index) {
+            <li [attr.data-testid]="'world-edit-change-' + $index">
+              <span>{{ change.text }}</span>
+              <button
+                dsBtn
+                size="sm"
+                variant="ghost"
+                type="button"
+                [iconOnly]="true"
+                [attr.aria-label]="'analysis.edit.undo' | t"
+                [attr.data-testid]="'world-edit-undo-' + $index"
+                (click)="undo(change.edit)"
+              >
+                <ds-icon name="undo" size="sm" />
+              </button>
+            </li>
+          }
+        </ol>
+      } @else if (changesOpen()) {
+        <p class="meta">{{ 'analysis.edit.noChanges' | t }}</p>
+      }
+    </section>
+
+    <section
+      class="ds-world-edit-preview"
+      role="status"
+      [attr.data-state]="previewState()"
+      data-testid="world-edit-preview"
+    >
+      <p><ds-icon [name]="previewIcons[previewState()]" size="sm" />{{ previewKeys[previewState()] | t }}</p>
+      @if (preview()?.added?.length && previewState() !== 'checking' && previewState() !== 'idle') {
+        <div class="ds-world-edit-added" data-testid="world-edit-added">
+          <p>
+            <ds-icon name="alert-triangle" size="sm" />{{
+              'analysis.edit.preview.added' | t: { count: preview()!.added.length }
+            }}
+          </p>
+          <ul>
+            @for (added of preview()!.added; track added.key) {
+              <li [attr.data-severity]="added.severity">{{ issueText(added) }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (incomplete()) {
+        <p class="ds-world-edit-incomplete">
+          <ds-icon name="alert-circle" size="sm" />{{ 'analysis.edit.preview.incomplete' | t }}
+        </p>
+      }
+    </section>
+  </div>
+  <ng-container dialogFooter>
+    <button dsBtn type="button" data-testid="world-edit-cancel" [disabled]="busy()" (click)="close()">
+      {{ 'analysis.pipeline.cancel' | t }}
+    </button>
+    <button
+      dsBtn
+      variant="primary"
+      type="button"
+      data-testid="world-edit-confirm"
+      [loading]="busy()"
+      [disabled]="!canConfirm()"
+      (click)="confirm()"
+    >
+      <ds-icon name="check" size="sm" />{{ (issue() ? 'analysis.edit.confirmFix' : 'analysis.edit.confirm') | t }}
+    </button>
+  </ng-container>
+</ds-dialog>

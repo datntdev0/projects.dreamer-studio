@@ -450,3 +450,61 @@ export interface AnalysisProgress {
 export interface AnalysisChanged {
   novelId: string;
 }
+
+export interface WorldIssue {
+  key: string;
+  reason: FailReason;
+  severity: 'error' | 'warning';
+  entityIds: string[];
+  fact?: FactRef;
+  chapters: number[];
+  params: Record<string, string>;
+}
+
+export interface WorldEditEntity {
+  id: string;
+  type: EntityType;
+  name: string;
+  aliases: string[];
+  titles: string[];
+  chapters: number[];
+}
+
+export interface WorldFact {
+  id: string;
+  chapterIndex: number;
+  kind: 'relationship' | 'scalar';
+  predicate: string;
+  subjectId: string;
+  objectId?: string;
+  subjectName?: string;
+  objectName?: string;
+  label?: string;
+  quote: string | null;
+}
+
+export type EntityPatch = Partial<Pick<WorldEditEntity, 'name' | 'type' | 'aliases' | 'titles'>>;
+export type FactPatch = Partial<Pick<WorldFact, 'subjectId' | 'predicate' | 'objectId' | 'label' | 'quote'>>;
+
+export type WorldDraftEdit =
+  | { kind: 'entity-add'; entity: WorldEditEntity }
+  | { kind: 'entity-edit'; entityId: string; patch: EntityPatch }
+  | { kind: 'entity-delete'; entityId: string }
+  | { kind: 'entity-merge'; sourceIds: string[]; targetId: string }
+  | { kind: 'entity-split'; entityId: string; newEntity: WorldEditEntity; aliases: string[]; facts: FactRef[] }
+  | { kind: 'fact-add'; fact: WorldFact }
+  | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: FactPatch }
+  | { kind: 'fact-delete'; factId: string; chapterIndex: number };
+
+export interface WorldEditScope {
+  issue: WorldIssue | null;
+  entities: WorldEditEntity[];
+  facts: WorldFact[];
+  catalog: WorldEditEntity[];
+  focus: string[];
+}
+
+export interface WorldEditPreview {
+  resolved: boolean;
+  added: WorldIssue[];
+}

@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { CoverMime, PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
+import { CoverMime } from '@dreamer/shared/models/novel-package';
+import { packageFormat } from './package-format';
 import { coverMime } from './package-reader';
 
 export interface CoverImage {
@@ -9,12 +10,13 @@ export interface CoverImage {
 }
 
 export async function readCoverImage(path: string): Promise<CoverImage> {
+  const maxBytes: number = packageFormat().coverMaxBytes;
   const details: Awaited<ReturnType<typeof stat>> = await stat(path);
-  if (details.size > PACKAGE_LIMITS.coverBytes) {
+  if (details.size > maxBytes) {
     throw new CodedError(ErrorCode.CoverInvalid, `Cover image is too large: ${path}`);
   }
   const bytes: Uint8Array = await readFile(path);
-  if (bytes.byteLength > PACKAGE_LIMITS.coverBytes) {
+  if (bytes.byteLength > maxBytes) {
     throw new CodedError(ErrorCode.CoverInvalid, `Cover image is too large: ${path}`);
   }
   const mime: CoverMime | null = coverMime(bytes);

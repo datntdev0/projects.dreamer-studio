@@ -1,9 +1,29 @@
 name: dreamer-package-format
 version: 1
 updated: 2026-10-28
+# The app reads this file at start; import and export check packages against it.
 # schema_*: structure, data types, constants and ranges; checked generically by code.
-# constraints: rules the schema cannot express; listed here, checked by code.
+# constraints: rules the schema cannot express; listed here, checked by code. The code lists must
+#   match the app, otherwise the app refuses to load this file.
 # workflows: step order of each feature; listed here, run by code.
+#
+# Keys of a schema_metadata_json field:
+#   type         string, number, array, object or null; a list allows several
+#   required     true: absent, or a blank string after trim, is fieldMissing
+#   default      value used when the field is absent or invalid
+#   const, enum  allowed values; another value is fieldInvalid
+#   minLength    minimum length of a trimmed string
+#   minItems     minimum number of items of an array
+#   pattern      regular expression a string must match
+#   format       bcp47: the value is a language tag (Intl.getCanonicalLocales), else languageInvalid
+#   items        schema of each array item; an invalid object item is fieldInvalid field[i] and
+#                skipped, an invalid scalar item makes the whole field fieldInvalid; string items
+#                are trimmed and empty ones dropped
+#   uniqueItems  true: repeated items, compared case-insensitively, are dropped
+#   fields       schema of each key of an object
+#   gate         {code, param}: checked first, in file order; absent is fieldMissing, any other
+#                mismatch stops reading with this refusal or problem code, with the value as param
+# Every string is trimmed; keys not listed here are ignored.
 
 schema_package:
   type: zip
@@ -40,14 +60,15 @@ schema_metadata_json:
       type: number
       required: true
       const: 1
+      gate: { code: versionUnsupported, param: version }
     type:
       type: string
       required: true
       enum: [novel]
+      gate: { code: unsupportedType, param: type }
     originalTitle:
       type: string
-      required: true
-      minLength: 1
+      default: ''
     title:
       type: string
       default: ''
@@ -60,11 +81,12 @@ schema_metadata_json:
     tags:
       type: array
       items: { type: string }
+      uniqueItems: true
       default: []
     language:
       type: string
       required: true
-      minLength: 1
+      format: bcp47
     publication:
       type: string
       enum: [ongoing, completed]
@@ -103,14 +125,14 @@ constraints:
   refusal:
     - notZip # {} · not a regular .zip file, the ZIP cannot be opened, or an entry is encrypted
     - unsafePath # {entry} · name starts with /, has a drive letter, a .. segment, \ or NUL; or repeats a name case-insensitively
-    - unsupportedType # {type} · metadata type is a string other than novel
+    - unsupportedType # {type} · metadata type is not in schema_metadata_json.type.enum
     - tooLarge # {limit, size, max, file?} · a maxBytes or maxEntries is exceeded; declared sizes first, then bytes counted while inflating
     - problems # {count} · one or more problems below were found
   # Collected, then refused together as problems.
   problem:
     - metadataMissing # {} · metadata.json is absent at the root, or is a symlink
     - metadataInvalid # {line} · not valid JSON or not a JSON object; line of the parse error
-    - versionUnsupported # {version} · formatVersion is not 1; checked before every other field
+    - versionUnsupported # {version} · formatVersion is not schema_metadata_json.formatVersion.const; checked first
     - fieldMissing # {field} · a required field is absent, or a required string is blank after trim
     - fieldInvalid # {field} · wrong type or value; a bad chapter item uses field chapters[i]
     - languageInvalid # {value} · Intl.getCanonicalLocales rejects the language
@@ -130,7 +152,7 @@ workflows:
     - checkPackageFile # regular file, .zip extension, maxBytes
     - checkPackageEntries # maxEntries, encrypted, unsafe or duplicate names, maxUnpackedBytes
     - readMetadata # metadata.json present, maxBytes, UTF-8, JSON object; stops on failure
-    - checkMetadataGate # formatVersion, then type; stops on failure
+    - checkMetadataGate # fields with a gate, in file order (formatVersion, then type); stops on failure
     - checkMetadataFields # schema_metadata_json; collects every problem
     - normalizeMetadata # trim strings, drop empty and duplicate tags, canonical language, defaults
     - checkChapters # listed twice, entry present, maxBytes, UTF-8, normalize text, stats, hash
@@ -149,6 +171,6 @@ workflows:
   export:
     - snapshotNovel # novel exists; its cover and chapter files exist
     - buildMetadata # library metadata to schema_metadata_json; chapters/0001.txt, 0002.txt, ...
-    - verifyMetadata # planned: check the built metadata against schema_metadata_json
+    - verifyMetadata # check the built metadata against schema_metadata_json
     - writePackage # metadata.json, cover at the root, chapters with exportSeparator; to a temp file
     - finishExport # rename the temp file to the output path

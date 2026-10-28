@@ -43,7 +43,6 @@ function isMetadata(value: unknown): value is NovelPackage.ImportMetadata {
   return (
     isRecord(value) &&
     typeof value.originalTitle === 'string' &&
-    value.originalTitle.trim().length > 0 &&
     typeof value.title === 'string' &&
     typeof value.author === 'string' &&
     typeof value.description === 'string' &&

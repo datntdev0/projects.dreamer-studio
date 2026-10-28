@@ -3,7 +3,7 @@ import { mkdir, rm, stat } from 'node:fs/promises';
 import { decodeUtf8 } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { PACKAGE_LIMITS, type ImportChapterChoice } from '@dreamer/shared/models/novel-package';
+import { type ImportChapterChoice } from '@dreamer/shared/models/novel-package';
 import type { ImportPreview, NovelImportRequest, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import { NOVEL_STORE_VERSION, normalizeTags, type NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import type { NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
@@ -13,6 +13,7 @@ import { readCoverImage } from '../cover-image';
 import { asWriteError, renameWithRetry } from '../library-io';
 import { importStagingDir, NovelFolder, novelFolder, novelFolderAt } from '../library-files';
 import { writeChapter, writeCover, writeMetadata, WrittenChapter } from './novel-files';
+import { packageFormat } from '../package-format';
 import { openPackageArchive, PackageArchive, readPackage } from '../package-reader';
 
 interface ImportState {
@@ -105,7 +106,7 @@ async function extractChapter(
   selected: SelectedChapter,
   position: number,
 ): Promise<void> {
-  const bytes: Uint8Array = await archive.read(selected.preview.file, 'chapter', PACKAGE_LIMITS.chapterBytes);
+  const bytes: Uint8Array = await archive.read(selected.preview.file, 'chapter', packageFormat().chapterMaxBytes);
   const text: string | null = decodeUtf8(bytes);
   if (text === null) {
     throw packageChanged(`Chapter is no longer UTF-8: ${selected.preview.file}`);
@@ -121,7 +122,7 @@ async function extractPackageCover(archive: PackageArchive, state: ImportState):
     state.cover = null;
     return;
   }
-  const bytes: Uint8Array = await archive.read(state.preview.cover.file, 'cover', PACKAGE_LIMITS.coverBytes);
+  const bytes: Uint8Array = await archive.read(state.preview.cover.file, 'cover', packageFormat().coverMaxBytes);
   state.cover = await writeCover(state.staging, bytes, state.preview.cover.mime);
 }
 

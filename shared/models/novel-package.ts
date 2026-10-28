@@ -1,32 +1,18 @@
-export const PACKAGE_FORMAT_VERSION: number = 1;
-
-export const PACKAGE_TYPE_NOVEL: string = 'novel';
-
-export const PACKAGE_METADATA_FILE: string = 'metadata.json';
-
-export const PACKAGE_CHAPTERS_DIR: string = 'chapters/';
-
-export const MB: number = 1024 * 1024;
-
-export interface PackageLimits {
-  zipBytes: number;
-  unpackedBytes: number;
-  entries: number;
-  chapterBytes: number;
-  coverBytes: number;
-}
-
-export const PACKAGE_LIMITS: PackageLimits = {
-  zipBytes: 200 * MB,
-  unpackedBytes: 500 * MB,
-  entries: 20000,
-  chapterBytes: 5 * MB,
-  coverBytes: 10 * MB,
-};
+export const PACKAGE_METADATA_FIELDS: string[] = [
+  'formatVersion',
+  'type',
+  'originalTitle',
+  'title',
+  'author',
+  'description',
+  'tags',
+  'language',
+  'publication',
+  'cover',
+  'chapters',
+];
 
 export type Publication = 'ongoing' | 'completed';
-
-export const DEFAULT_PUBLICATION: Publication = 'ongoing';
 
 export interface PackageChapter {
   file: string;
@@ -47,23 +33,30 @@ export interface PackageMetadata {
   chapters: PackageChapter[];
 }
 
-export type PackageRefusal = 'notZip' | 'unsafePath' | 'unsupportedType' | 'tooLarge' | 'problems';
+export const PACKAGE_REFUSALS = ['notZip', 'unsafePath', 'unsupportedType', 'tooLarge', 'problems'] as const;
 
-export type PackageLimit = 'zip' | 'unpacked' | 'entries' | 'chapter' | 'cover';
+export type PackageRefusal = (typeof PACKAGE_REFUSALS)[number];
 
-export type PackageProblemCode =
-  | 'metadataMissing'
-  | 'metadataInvalid'
-  | 'versionUnsupported'
-  | 'fieldMissing'
-  | 'fieldInvalid'
-  | 'languageInvalid'
-  | 'chapterListedTwice'
-  | 'chapterFileMissing'
-  | 'notUtf8'
-  | 'coverInvalid';
+export type PackageLimit = 'zip' | 'unpacked' | 'entries' | 'metadata' | 'chapter' | 'cover';
 
-export type PackageWarningCode = 'chapterEmpty' | 'sameText' | 'ignoredFile';
+export const PACKAGE_PROBLEM_CODES = [
+  'metadataMissing',
+  'metadataInvalid',
+  'versionUnsupported',
+  'fieldMissing',
+  'fieldInvalid',
+  'languageInvalid',
+  'chapterListedTwice',
+  'chapterFileMissing',
+  'notUtf8',
+  'coverInvalid',
+] as const;
+
+export type PackageProblemCode = (typeof PACKAGE_PROBLEM_CODES)[number];
+
+export const PACKAGE_WARNING_CODES = ['chapterEmpty', 'sameText', 'ignoredFile'] as const;
+
+export type PackageWarningCode = (typeof PACKAGE_WARNING_CODES)[number];
 
 export type PackageParams = Record<string, string | number>;
 

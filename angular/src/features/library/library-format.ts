@@ -11,9 +11,9 @@ export interface LanguageOption {
   label: string;
 }
 
-export type RequiredField = 'originalTitle' | 'title' | 'language';
+export type RequiredField = 'title' | 'language';
 
-export type TextField = RequiredField | 'author' | 'description';
+export type TextField = RequiredField | 'originalTitle' | 'author' | 'description';
 
 export type TranslationLevel = 'full' | 'partial';
 

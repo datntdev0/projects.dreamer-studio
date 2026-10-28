@@ -19,7 +19,7 @@ interface CoverView {
   url: string | null;
 }
 
-const REQUIRED_FIELDS: RequiredField[] = ['originalTitle', 'title', 'language'];
+const REQUIRED_FIELDS: RequiredField[] = ['title', 'language'];
 const VERTICAL_LANGUAGES: string[] = ['zh', 'ja'];
 
 @Component({
@@ -50,7 +50,7 @@ export class ImportMetadataComponent implements OnInit {
     const touched: RequiredField[] = this.touched();
     const isMissing: (field: RequiredField) => boolean = (field: RequiredField): boolean =>
       touched.includes(field) && !metadata[field].trim();
-    return { originalTitle: isMissing('originalTitle'), title: isMissing('title'), language: isMissing('language') };
+    return { title: isMissing('title'), language: isMissing('language') };
   });
   protected readonly languages: Signal<LanguageOption[]> = computed(() =>
     languageOptions(this.current().language, this.i18n.language()),

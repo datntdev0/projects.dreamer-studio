@@ -5,7 +5,6 @@ import { IconComponent } from '@components/icon/icon.component';
 import { ProgressComponent } from '@components/status/progress.component';
 import { ToastService } from '@components/toast/toast.service';
 import type { TranslateParams } from '@dreamer/shared/i18n/translate';
-import { PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
 import type { PackageLimit, PackageProblem, PackageProblemCode } from '@dreamer/shared/models/novel-package';
 import type { PackageReadResult, PackageRefusal } from '@dreamer/shared/models/novel-package';
 import { formatBytes, formatCount } from '@core/format';
@@ -49,6 +48,7 @@ const TOO_LARGE_KEYS: Record<PackageLimit, string> = {
   zip: 'library.import.source.refused.tooLarge.zip',
   unpacked: 'library.import.source.refused.tooLarge.unpacked',
   entries: 'library.import.source.refused.tooLarge.entries',
+  metadata: 'library.import.source.refused.tooLarge.metadata',
   chapter: 'library.import.source.refused.tooLarge.chapter',
   cover: 'library.import.source.refused.tooLarge.cover',
 };
@@ -67,7 +67,8 @@ const PROBLEM_KEYS: Record<PackageProblemCode, string> = {
 };
 
 function packageLimit(value: string | number | undefined): PackageLimit {
-  if (value === 'unpacked' || value === 'entries' || value === 'chapter' || value === 'cover') return value;
+  if (value === 'unpacked' || value === 'entries' || value === 'metadata' || value === 'chapter' || value === 'cover')
+    return value;
   return 'zip';
 }
 
@@ -123,7 +124,7 @@ export class ImportSourceComponent {
     const source: TranslateParams = result?.status === 'refused' ? result.params : {};
     const limit: PackageLimit = packageLimit(source['limit']);
     const size: number = typeof source['size'] === 'number' ? source['size'] : (this.store.file()?.size ?? 0);
-    const max: number = typeof source['max'] === 'number' ? source['max'] : PACKAGE_LIMITS.zipBytes;
+    const max: number = typeof source['max'] === 'number' ? source['max'] : 0;
     return {
       ...source,
       file: source['file'] ?? this.store.file()?.name ?? '',

@@ -36,8 +36,10 @@ interface MetadataDraft {
   description: string;
 }
 
-const REQUIRED_FIELDS: RequiredField[] = ['originalTitle', 'title', 'language'];
-const FIELD_IDS: Record<RequiredField, string> = {
+const REQUIRED_FIELDS: RequiredField[] = ['title', 'language'];
+type FieldWithId = RequiredField | 'originalTitle';
+
+const FIELD_IDS: Record<FieldWithId, string> = {
   originalTitle: 'insp-edit-original',
   title: 'insp-edit-display',
   language: 'insp-edit-language',
@@ -84,7 +86,7 @@ export class NovelMetadataFormComponent implements OnInit {
   private readonly coverPatch = signal<NovelCoverPatch>('keep');
   private readonly coverError = signal<boolean>(false);
 
-  protected readonly fieldIds: Record<RequiredField, string> = FIELD_IDS;
+  protected readonly fieldIds: Record<FieldWithId, string> = FIELD_IDS;
   protected readonly coverPalette = coverPalette;
   protected readonly draft = signal<MetadataDraft>({
     originalTitle: '',
@@ -109,7 +111,7 @@ export class NovelMetadataFormComponent implements OnInit {
     const draft: MetadataDraft = this.draft();
     const touched: RequiredField[] = this.touched();
     const missing = (field: RequiredField): boolean => touched.includes(field) && !draft[field].trim();
-    return { originalTitle: missing('originalTitle'), title: missing('title'), language: missing('language') };
+    return { title: missing('title'), language: missing('language') };
   });
   protected readonly languages: Signal<LanguageOption[]> = computed(() =>
     languageOptions(this.draft().language, this.i18n.language()),
@@ -238,7 +240,7 @@ export class NovelMetadataFormComponent implements OnInit {
     return this.coverPatch() !== 'remove' && (this.novel().hasCover || !!this.picked());
   }
 
-  private focusField(field: RequiredField): void {
+  private focusField(field: FieldWithId): void {
     this.host.querySelector<HTMLElement>(`#${FIELD_IDS[field]}`)?.focus();
   }
 

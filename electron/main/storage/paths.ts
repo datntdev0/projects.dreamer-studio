@@ -57,8 +57,14 @@ export function migrationsDir(): string {
     : join(app.getAppPath(), 'main', 'storage', 'migrations');
 }
 
+function resourceFile(name: string): string {
+  return app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'resources', name);
+}
+
 export function ontologyDefaultFile(): string {
-  return app.isPackaged
-    ? join(process.resourcesPath, 'ontology.format.yml')
-    : join(app.getAppPath(), 'resources', 'ontology.format.yml');
+  return resourceFile('ontology.format.yml');
+}
+
+export function packageFormatFile(): string {
+  return resourceFile('package.format.yml');
 }

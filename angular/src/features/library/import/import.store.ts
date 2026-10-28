@@ -56,12 +56,7 @@ export class ImportStore {
   );
   readonly canImport: Signal<boolean> = computed(() => {
     const metadata: ImportMetadata | null = this.metadata();
-    return (
-      metadata !== null &&
-      metadata.originalTitle.trim().length > 0 &&
-      metadata.title.trim().length > 0 &&
-      metadata.language.trim().length > 0
-    );
+    return metadata !== null && metadata.title.trim().length > 0 && metadata.language.trim().length > 0;
   });
 
   async pickPackage(): Promise<void> {

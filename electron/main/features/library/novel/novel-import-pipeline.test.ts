@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { contentHash } from '@dreamer/shared/core/novel-text';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { ImportCoverChoice, ImportPreview } from '@dreamer/shared/models/novel-package';
-import { NovelImportRequest, PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
+import { NovelImportRequest } from '@dreamer/shared/models/novel-package';
+import { packageFormat } from '../package-format';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { AppPaths, resolveAppPaths } from '@storage/paths';
 import { abortError, PipelineStep, StepContext } from '../../pipelines/pipeline-definition';
@@ -17,7 +18,13 @@ import { readMetadata } from './novel-files';
 import { importParams, novelImportPipeline } from './novel-import-pipeline';
 import { openPackageArchive, PackageArchive, readPackage } from '../package-reader';
 
-vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged: false } }));
+vi.mock('electron', () => ({
+  app: {
+    getPath: (): string => 'appData',
+    getAppPath: (): string => join(__dirname, '../../../..'),
+    isPackaged: false,
+  },
+}));
 vi.mock('../../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
@@ -45,7 +52,7 @@ function buildSamplePackage(): string {
 async function sampleCover(): Promise<Buffer> {
   const archive: PackageArchive = await openPackageArchive(fixtureZip);
   try {
-    return Buffer.from(await archive.read('cover.png', 'cover', PACKAGE_LIMITS.coverBytes));
+    return Buffer.from(await archive.read('cover.png', 'cover', packageFormat().coverMaxBytes));
   } finally {
     archive.close();
   }
@@ -286,7 +293,7 @@ describe('novel import pipeline', () => {
   });
 
   it.each<[string, Buffer]>([
-    ['too large', Buffer.alloc(PACKAGE_LIMITS.coverBytes + 1, 1)],
+    ['too large', Buffer.alloc(packageFormat().coverMaxBytes + 1, 1)],
     ['not an image', Buffer.from('not an image')],
   ])('rejects a replacement cover that is %s', async (_case: string, bytes: Buffer) => {
     const coverPath: string = join(tempDir, 'bad-cover.bin');

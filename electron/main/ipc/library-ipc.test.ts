@@ -61,12 +61,6 @@ describe('isImportRequest', () => {
     ['negative mtime', changed((request: Record<string, unknown>): void => void (request.modifiedMs = -1))],
     ['missing metadata', changed((request: Record<string, unknown>): void => void delete request.metadata)],
     [
-      'empty original title',
-      changed((request: Record<string, unknown>): void => {
-        (request.metadata as Record<string, unknown>).originalTitle = ' ';
-      }),
-    ],
-    [
       'empty language',
       changed((request: Record<string, unknown>): void => {
         (request.metadata as Record<string, unknown>).language = '';

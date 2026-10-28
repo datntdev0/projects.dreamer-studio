@@ -4,16 +4,15 @@ import { basename, extname } from 'node:path';
 import { Readable } from 'node:stream';
 import yauzl from 'yauzl';
 import { chapterStats, contentHash, decodeUtf8, normalizeChapterText } from '@dreamer/shared/core/novel-text';
-import { DEFAULT_PUBLICATION, PACKAGE_CHAPTERS_DIR } from '@dreamer/shared/models/novel-package';
-import { PACKAGE_FORMAT_VERSION, PACKAGE_LIMITS } from '@dreamer/shared/models/novel-package';
-import { PACKAGE_METADATA_FILE, PACKAGE_TYPE_NOVEL } from '@dreamer/shared/models/novel-package';
+import { checkFields, checkGates, FieldProblem, FieldsCheck } from '@dreamer/shared/core/package-format';
+import { GateCheck, PackageFormat } from '@dreamer/shared/core/package-format';
 import { ImportPreview, PackageChapter, PackageCover, PackageFile } from '@dreamer/shared/models/novel-package';
-import { PackageLimit, PackageLimits, PackageMetadata, PackageParams } from '@dreamer/shared/models/novel-package';
-import { PackageProblem, PackageReadResult, PackageRefusal } from '@dreamer/shared/models/novel-package';
-import { PackageRefused } from '@dreamer/shared/models/novel-package';
-import { PackageWarning, PreviewChapter, Publication } from '@dreamer/shared/models/novel-package';
-import { normalizeTags } from '@dreamer/shared/models/novel-store';
+import { PackageLimit, PackageMetadata, PackageParams } from '@dreamer/shared/models/novel-package';
+import { PackageProblem, PackageProblemCode, PackageReadResult } from '@dreamer/shared/models/novel-package';
+import { PACKAGE_REFUSALS, PackageRefusal, PackageRefused } from '@dreamer/shared/models/novel-package';
+import { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
 import { createLogger, Logger } from '../../logging/logger';
+import { packageFormat } from './package-format';
 
 const logger: Logger = createLogger('library');
 
@@ -36,11 +35,6 @@ interface MetadataCheck {
   metadata: PackageMetadata;
   chapterIndexes: number[];
   problems: PackageProblem[];
-}
-
-interface CheckedChapters {
-  chapters: PackageChapter[];
-  indexes: number[];
 }
 
 interface ChapterCheck {
@@ -104,8 +98,8 @@ function warning(code: PackageWarning['code'], params: PackageParams, where: str
   return { code, params, where };
 }
 
-function metadataWhere(field: string): string {
-  return `${PACKAGE_METADATA_FILE} · ${field}`;
+function metadataWhere(format: PackageFormat, field: string): string {
+  return `${format.metadataFile} · ${field}`;
 }
 
 async function packageFile(path: string): Promise<PackageFileInspection> {
@@ -272,119 +266,25 @@ function parseMetadata(text: string): ParsedMetadata {
   }
 }
 
-function requiredString(value: Record<string, unknown>, field: string, problems: PackageProblem[]): string {
-  const candidate: unknown = value[field];
-  if (typeof candidate !== 'string' || candidate.trim().length === 0) {
-    problems.push(problem('fieldMissing', { field }, metadataWhere(field)));
-    return '';
-  }
-  return candidate.trim();
+function fieldProblem(format: PackageFormat, item: FieldProblem): PackageProblem {
+  const params: PackageParams = item.code === 'languageInvalid' ? item.params : { field: item.field };
+  return problem(item.code, params, metadataWhere(format, item.field));
 }
 
-function optionalString(value: Record<string, unknown>, field: string, problems: PackageProblem[]): string {
-  const candidate: unknown = value[field];
-  if (candidate === undefined) {
-    return '';
-  }
-  if (typeof candidate !== 'string') {
-    problems.push(problem('fieldInvalid', { field }, metadataWhere(field)));
-    return '';
-  }
-  return candidate.trim();
-}
-
-function checkTags(value: unknown, problems: PackageProblem[]): string[] {
-  if (value === undefined) {
-    return [];
-  }
-  if (!Array.isArray(value) || value.some((tag: unknown): boolean => typeof tag !== 'string')) {
-    problems.push(problem('fieldInvalid', { field: 'tags' }, metadataWhere('tags')));
-    return [];
-  }
-  return normalizeTags(value);
-}
-
-function checkPublication(value: unknown, problems: PackageProblem[]): Publication {
-  if (value === undefined) {
-    return DEFAULT_PUBLICATION;
-  }
-  if (value !== 'ongoing' && value !== 'completed') {
-    problems.push(problem('fieldInvalid', { field: 'publication' }, metadataWhere('publication')));
-    return DEFAULT_PUBLICATION;
-  }
-  return value;
-}
-
-function checkCover(value: unknown, problems: PackageProblem[]): string | null {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  if (typeof value !== 'string') {
-    problems.push(problem('fieldInvalid', { field: 'cover' }, metadataWhere('cover')));
-    return null;
-  }
-  return value;
-}
-
-function checkChapters(value: unknown, problems: PackageProblem[]): CheckedChapters {
-  if (value === undefined) {
-    problems.push(problem('fieldMissing', { field: 'chapters' }, metadataWhere('chapters')));
-    return { chapters: [], indexes: [] };
-  }
-  if (!Array.isArray(value)) {
-    problems.push(problem('fieldInvalid', { field: 'chapters' }, metadataWhere('chapters')));
-    return { chapters: [], indexes: [] };
-  }
-  const chapters: PackageChapter[] = [];
-  const indexes: number[] = [];
-  value.forEach((item: unknown, index: number): void => {
-    const field: string = `chapters[${index}]`;
-    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
-      problems.push(problem('fieldInvalid', { field }, metadataWhere(field)));
-      return;
-    }
-    const chapter: Record<string, unknown> = item as Record<string, unknown>;
-    const validTitle: boolean = chapter.title === undefined || typeof chapter.title === 'string';
-    if (typeof chapter.file !== 'string' || !chapter.file.startsWith(PACKAGE_CHAPTERS_DIR) || !validTitle) {
-      problems.push(problem('fieldInvalid', { field }, metadataWhere(field)));
-      return;
-    }
-    chapters.push({ file: chapter.file, title: typeof chapter.title === 'string' ? chapter.title.trim() : '' });
-    indexes.push(index);
-  });
-  return { chapters, indexes };
-}
-
-function checkMetadata(value: Record<string, unknown>): MetadataCheck {
-  const problems: PackageProblem[] = [];
-  const originalTitle: string = requiredString(value, 'originalTitle', problems);
-  const suppliedLanguage: string = requiredString(value, 'language', problems);
-  const checkedChapters: CheckedChapters = checkChapters(value.chapters, problems);
-  let language: string = suppliedLanguage;
-  if (suppliedLanguage) {
-    try {
-      language = Intl.getCanonicalLocales(suppliedLanguage)[0];
-    } catch {
-      problems.push(problem('languageInvalid', { value: suppliedLanguage }, metadataWhere('language')));
-    }
-  }
-  const metadata: PackageMetadata = {
-    formatVersion: PACKAGE_FORMAT_VERSION,
-    type: PACKAGE_TYPE_NOVEL,
-    originalTitle,
-    title: optionalString(value, 'title', problems),
-    author: optionalString(value, 'author', problems),
-    description: optionalString(value, 'description', problems),
-    tags: checkTags(value.tags, problems),
-    language,
-    publication: checkPublication(value.publication, problems),
-    cover: checkCover(value.cover, problems),
-    chapters: checkedChapters.chapters,
+function checkMetadata(format: PackageFormat, value: Record<string, unknown>): MetadataCheck {
+  const checked: FieldsCheck = checkFields(value, format.metadata);
+  return {
+    metadata: checked.value as unknown as PackageMetadata,
+    chapterIndexes: checked.kept.get('chapters') ?? [],
+    problems: checked.problems.map((item: FieldProblem): PackageProblem => fieldProblem(format, item)),
   };
-  return { metadata, chapterIndexes: checkedChapters.indexes, problems };
 }
 
-function checkListedTwice(chapters: PackageChapter[], chapterIndexes: number[]): PackageProblem[] {
+function checkListedTwice(
+  format: PackageFormat,
+  chapters: PackageChapter[],
+  chapterIndexes: number[],
+): PackageProblem[] {
   const problems: PackageProblem[] = [];
   const firstByFile: Map<string, number> = new Map();
   chapters.forEach((chapter: PackageChapter, index: number): void => {
@@ -398,7 +298,7 @@ function checkListedTwice(chapters: PackageChapter[], chapterIndexes: number[]):
       problem(
         'chapterListedTwice',
         { file: chapter.file },
-        `${PACKAGE_METADATA_FILE} · chapters[${chapterIndexes[first]}], chapters[${chapterIndexes[index]}]`,
+        metadataWhere(format, `chapters[${chapterIndexes[first]}], chapters[${chapterIndexes[index]}]`),
       ),
     );
   });
@@ -408,12 +308,12 @@ function checkListedTwice(chapters: PackageChapter[], chapterIndexes: number[]):
 async function checkChapterFiles(
   zip: yauzl.ZipFile,
   directory: CentralDirectory,
+  format: PackageFormat,
   metadata: PackageMetadata,
   chapterIndexes: number[],
-  limit: number,
 ): Promise<ChapterCheck> {
   const chapters: PreviewChapter[] = [];
-  const problems: PackageProblem[] = checkListedTwice(metadata.chapters, chapterIndexes);
+  const problems: PackageProblem[] = checkListedTwice(format, metadata.chapters, chapterIndexes);
   const warnings: PackageWarning[] = [];
   const firstByHash: Map<string, number> = new Map();
   for (let offset: number = 0; offset < metadata.chapters.length; offset += 1) {
@@ -423,15 +323,11 @@ async function checkChapterFiles(
     const indexed: IndexedEntry | null = availableEntry(directory, chapter.file);
     if (!indexed) {
       problems.push(
-        problem(
-          'chapterFileMissing',
-          { index, file: chapter.file },
-          `${PACKAGE_METADATA_FILE} · chapters[${sourceIndex}]`,
-        ),
+        problem('chapterFileMissing', { index, file: chapter.file }, metadataWhere(format, `chapters[${sourceIndex}]`)),
       );
       continue;
     }
-    const bytes: Uint8Array = await readEntryBytes(zip, indexed, 'chapter', limit);
+    const bytes: Uint8Array = await readEntryBytes(zip, indexed, 'chapter', format.chapterMaxBytes);
     const decoded: string | null = decodeUtf8(bytes);
     if (decoded === null) {
       problems.push(problem('notUtf8', { file: chapter.file }, chapter.file));
@@ -466,7 +362,7 @@ async function checkChapterFiles(
   return { chapters, problems, warnings };
 }
 
-export function coverMime(bytes: Uint8Array): PackageCover['mime'] | null {
+function detectMime(bytes: Uint8Array): PackageCover['mime'] | null {
   const jpeg: boolean = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (jpeg) {
     return 'image/jpeg';
@@ -474,6 +370,11 @@ export function coverMime(bytes: Uint8Array): PackageCover['mime'] | null {
   const pngSignature: number[] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
   const png: boolean = pngSignature.every((byte: number, index: number): boolean => bytes[index] === byte);
   return png ? 'image/png' : null;
+}
+
+export function coverMime(bytes: Uint8Array, format: PackageFormat = packageFormat()): PackageCover['mime'] | null {
+  const mime: PackageCover['mime'] | null = detectMime(bytes);
+  return mime !== null && format.coverMimes.includes(mime) ? mime : null;
 }
 
 export interface PackageArchive {
@@ -504,8 +405,8 @@ export async function openPackageArchive(path: string): Promise<PackageArchive> 
 async function checkCoverFile(
   zip: yauzl.ZipFile,
   directory: CentralDirectory,
+  format: PackageFormat,
   file: string | null,
-  limit: number,
 ): Promise<CoverCheck> {
   if (file === null) {
     return { cover: null, problem: null };
@@ -514,8 +415,8 @@ async function checkCoverFile(
   if (!indexed) {
     return { cover: null, problem: problem('coverInvalid', { file }, file) };
   }
-  const bytes: Uint8Array = await readEntryBytes(zip, indexed, 'cover', limit);
-  const mime: PackageCover['mime'] | null = coverMime(bytes);
+  const bytes: Uint8Array = await readEntryBytes(zip, indexed, 'cover', format.coverMaxBytes);
+  const mime: PackageCover['mime'] | null = coverMime(bytes, format);
   if (mime === null) {
     return { cover: null, problem: problem('coverInvalid', { file }, file) };
   }
@@ -523,9 +424,9 @@ async function checkCoverFile(
   return { cover: { file, size: bytes.byteLength, mime, url }, problem: null };
 }
 
-function ignoredFiles(directory: CentralDirectory, metadata: PackageMetadata): string[] {
+function ignoredFiles(directory: CentralDirectory, format: PackageFormat, metadata: PackageMetadata): string[] {
   const used: Set<string> = new Set([
-    PACKAGE_METADATA_FILE,
+    format.metadataFile,
     ...metadata.chapters.map(({ file }: PackageChapter): string => file),
   ]);
   if (metadata.cover !== null) {
@@ -538,8 +439,8 @@ function ignoredFiles(directory: CentralDirectory, metadata: PackageMetadata): s
     .sort();
 }
 
-function checkDirectory(directory: CentralDirectory, file: PackageFile, limits: PackageLimits): PackageRefused | null {
-  if (directory.encrypted) {
+function checkDirectory(directory: CentralDirectory, file: PackageFile, format: PackageFormat): PackageRefused | null {
+  if (directory.encrypted && !format.encrypted) {
     return refused(file, 'notZip');
   }
   if (directory.unsafeName !== null) {
@@ -548,95 +449,91 @@ function checkDirectory(directory: CentralDirectory, file: PackageFile, limits: 
   if (directory.duplicateName !== null) {
     return refused(file, 'unsafePath', { entry: directory.duplicateName });
   }
-  if (directory.unpackedBytes > limits.unpackedBytes) {
+  if (directory.unpackedBytes > format.maxUnpackedBytes) {
     return refused(file, 'tooLarge', {
       limit: 'unpacked',
       size: directory.unpackedBytes,
-      max: limits.unpackedBytes,
+      max: format.maxUnpackedBytes,
     });
   }
   return null;
+}
+
+function refusedProblem(
+  file: PackageFile,
+  code: PackageProblemCode,
+  params: PackageParams,
+  where: string,
+): PackageRefused {
+  return refusedProblems(file, [problem(code, params, where)]);
+}
+
+function gateRefusal(file: PackageFile, format: PackageFormat, gate: GateCheck): PackageRefused | null {
+  if (gate.status === 'ok') {
+    return null;
+  }
+  const where: string = metadataWhere(format, gate.field);
+  if (gate.status === 'missing') {
+    return refusedProblem(file, 'fieldMissing', { field: gate.field }, where);
+  }
+  const params: PackageParams = { [gate.gate.param]: gate.value };
+  if ((PACKAGE_REFUSALS as readonly string[]).includes(gate.gate.code)) {
+    return refused(file, gate.gate.code as PackageRefusal, params);
+  }
+  return refusedProblem(file, gate.gate.code as PackageProblemCode, params, where);
 }
 
 async function readMetadataValue(
   zip: yauzl.ZipFile,
   directory: CentralDirectory,
   file: PackageFile,
-  limit: number,
+  format: PackageFormat,
 ): Promise<MetadataValue | PackageRefused> {
-  const metadataEntry: IndexedEntry | null = availableEntry(directory, PACKAGE_METADATA_FILE);
+  const metadataFile: string = format.metadataFile;
+  const metadataEntry: IndexedEntry | null = availableEntry(directory, metadataFile);
   if (!metadataEntry) {
-    const problems: PackageProblem[] = [problem('metadataMissing', {}, PACKAGE_METADATA_FILE)];
-    return refusedProblems(file, problems);
+    return refusedProblem(file, 'metadataMissing', {}, metadataFile);
   }
-
-  const metadataBytes: Uint8Array = await readEntryBytes(zip, metadataEntry, 'chapter', limit);
+  const metadataBytes: Uint8Array = await readEntryBytes(zip, metadataEntry, 'metadata', format.metadataMaxBytes);
   const metadataText: string | null = decodeUtf8(metadataBytes);
   if (metadataText === null) {
-    const problems: PackageProblem[] = [problem('notUtf8', { file: PACKAGE_METADATA_FILE }, PACKAGE_METADATA_FILE)];
-    return refusedProblems(file, problems);
+    return refusedProblem(file, 'notUtf8', { file: metadataFile }, metadataFile);
   }
   const parsed: ParsedMetadata = parseMetadata(metadataText);
   if (parsed.value === null) {
-    const problems: PackageProblem[] = [problem('metadataInvalid', { line: parsed.line }, PACKAGE_METADATA_FILE)];
-    return refusedProblems(file, problems);
+    return refusedProblem(file, 'metadataInvalid', { line: parsed.line }, metadataFile);
   }
-
-  const versionValue: unknown = parsed.value.formatVersion;
-  if (versionValue === undefined) {
-    const problems: PackageProblem[] = [
-      problem('fieldMissing', { field: 'formatVersion' }, metadataWhere('formatVersion')),
-    ];
-    return refusedProblems(file, problems);
-  }
-  if (versionValue !== PACKAGE_FORMAT_VERSION) {
-    const version: string | number = typeof versionValue === 'number' ? versionValue : String(versionValue);
-    const problems: PackageProblem[] = [problem('versionUnsupported', { version }, metadataWhere('formatVersion'))];
-    return refusedProblems(file, problems);
-  }
-  if (typeof parsed.value.type !== 'string') {
-    const problems: PackageProblem[] = [problem('fieldMissing', { field: 'type' }, metadataWhere('type'))];
-    return refusedProblems(file, problems);
-  }
-  if (parsed.value.type !== PACKAGE_TYPE_NOVEL) {
-    return refused(file, 'unsupportedType', { type: parsed.value.type });
-  }
-  return { value: parsed.value };
+  return gateRefusal(file, format, checkGates(parsed.value, format.metadata)) ?? { value: parsed.value };
 }
 
 async function readPackageContents(
   zip: yauzl.ZipFile,
   file: PackageFile,
-  limits: PackageLimits,
+  format: PackageFormat,
 ): Promise<PackageReadResult> {
-  if (zip.entryCount > limits.entries) {
-    return refused(file, 'tooLarge', { limit: 'entries', size: zip.entryCount, max: limits.entries });
+  if (zip.entryCount > format.maxEntries) {
+    return refused(file, 'tooLarge', { limit: 'entries', size: zip.entryCount, max: format.maxEntries });
   }
   const directory: CentralDirectory = await listEntries(zip);
-  const directoryRefusal: PackageRefused | null = checkDirectory(directory, file, limits);
+  const directoryRefusal: PackageRefused | null = checkDirectory(directory, file, format);
   if (directoryRefusal !== null) {
     return directoryRefusal;
   }
-  const metadataValue: MetadataValue | PackageRefused = await readMetadataValue(
-    zip,
-    directory,
-    file,
-    limits.chapterBytes,
-  );
+  const metadataValue: MetadataValue | PackageRefused = await readMetadataValue(zip, directory, file, format);
   if ('status' in metadataValue) {
     return metadataValue;
   }
 
-  const checkedMetadata: MetadataCheck = checkMetadata(metadataValue.value);
+  const checkedMetadata: MetadataCheck = checkMetadata(format, metadataValue.value);
   const metadata: PackageMetadata = checkedMetadata.metadata;
   const chapterCheck: ChapterCheck = await checkChapterFiles(
     zip,
     directory,
+    format,
     metadata,
     checkedMetadata.chapterIndexes,
-    limits.chapterBytes,
   );
-  const coverCheck: CoverCheck = await checkCoverFile(zip, directory, metadata.cover, limits.coverBytes);
+  const coverCheck: CoverCheck = await checkCoverFile(zip, directory, format, metadata.cover);
   const problems: PackageProblem[] = [...checkedMetadata.problems, ...chapterCheck.problems];
   if (coverCheck.problem !== null) {
     problems.push(coverCheck.problem);
@@ -645,13 +542,13 @@ async function readPackageContents(
     return refusedProblems(file, problems);
   }
 
-  const ignored: string[] = ignoredFiles(directory, metadata);
+  const ignored: string[] = ignoredFiles(directory, format, metadata);
   const ignoredWarnings: PackageWarning[] = ignored.map((ignoredFile: string): PackageWarning =>
     warning('ignoredFile', { file: ignoredFile }, ignoredFile),
   );
   const preview: ImportPreview = {
     file,
-    formatVersion: PACKAGE_FORMAT_VERSION,
+    formatVersion: metadata.formatVersion,
     metadata,
     cover: coverCheck.cover,
     chapters: chapterCheck.chapters,
@@ -661,20 +558,20 @@ async function readPackageContents(
   return { status: 'ok', preview };
 }
 
-export async function readPackage(path: string, limits: PackageLimits = PACKAGE_LIMITS): Promise<PackageReadResult> {
+export async function readPackage(path: string, format: PackageFormat = packageFormat()): Promise<PackageReadResult> {
   const inspected: PackageFileInspection = await packageFile(path);
   const file: PackageFile = inspected.file;
-  if (!inspected.regular || extname(path).toLocaleLowerCase('en-US') !== '.zip') {
+  if (!inspected.regular || extname(path).toLocaleLowerCase('en-US') !== format.extension) {
     return refused(file, 'notZip');
   }
-  if (file.size > limits.zipBytes) {
-    return refused(file, 'tooLarge', { limit: 'zip', size: file.size, max: limits.zipBytes });
+  if (file.size > format.maxBytes) {
+    return refused(file, 'tooLarge', { limit: 'zip', size: file.size, max: format.maxBytes });
   }
 
   let zip: yauzl.ZipFile | null = null;
   try {
     zip = await openZip(path);
-    return await readPackageContents(zip, file, limits);
+    return await readPackageContents(zip, file, format);
   } catch (error: unknown) {
     if (error instanceof EntryTooLargeError) {
       return refused(file, 'tooLarge', {

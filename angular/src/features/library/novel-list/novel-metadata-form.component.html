@@ -38,22 +38,17 @@
     </div>
   </ds-field>
   <ds-field
-    required
     [label]="'library.novel.info.originalTitle' | t"
     [controlId]="fieldIds.originalTitle"
     [hint]="'library.novel.form.originalTitleHint' | t"
-    [error]="errors().originalTitle ? ('library.novel.form.required' | t) : ''"
   >
     <input
       class="ds-input"
-      required
       data-testid="insp-edit-original"
       [id]="fieldIds.originalTitle"
       [attr.lang]="draft().language || null"
       [value]="draft().originalTitle"
-      [attr.aria-invalid]="errors().originalTitle || null"
       (input)="setText('originalTitle', $event)"
-      (blur)="touch('originalTitle')"
     />
   </ds-field>
   <ds-field

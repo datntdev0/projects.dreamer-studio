@@ -60,7 +60,7 @@ describe('novel store metadata', () => {
   it.each<[string, unknown]>([
     ['formatVersion', 2],
     ['id', '1234'],
-    ['originalTitle', ''],
+    ['originalTitle', null],
     ['title', null],
     ['author', 10],
     ['description', false],

@@ -38,7 +38,7 @@ function mergeMetadata(current: NovelMetadata, patch: NovelPatch): NovelMetadata
     tags: normalizeTags(patch.tags ?? current.tags),
     description: (patch.description ?? current.description).trim(),
   };
-  if (!next.originalTitle || !next.title || !next.language) {
+  if (!next.title || !next.language) {
     throw metadataInvalid(current.id);
   }
   return next;

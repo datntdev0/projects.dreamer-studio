@@ -586,6 +586,7 @@
   "library.import.source.refused.tooLarge.entries": "Gói này chứa {size} mục. Mỗi gói được phép chứa tối đa {max} mục.",
   "library.import.source.refused.tooLarge.unpacked": "Gói này có kích thước {size} sau khi giải nén. Nội dung giải nén được phép nặng tối đa {max}.",
   "library.import.source.refused.tooLarge.zip": "Tệp này nặng {size}. Gói lớn nhất có thể nhập là {max}.",
+  "library.import.source.refused.tooLarge.metadata": "Tệp metadata {file} nặng {size}. Tệp metadata được phép nặng tối đa {max}.",
   "library.import.source.refused.tooLarge.title": "Gói quá lớn",
   "library.import.source.refused.unsafePath.message": "Có một mục trỏ ra ngoài gói, nên chưa giải nén gì cả.",
   "library.import.source.refused.unsafePath.title": "Gói bị từ chối vì lý do an toàn",

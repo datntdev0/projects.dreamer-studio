@@ -10,18 +10,13 @@
       [label]="'library.import.metadata.originalTitle' | t"
       controlId="import-metadata-original-title"
       [hint]="'library.import.metadata.originalTitleHint' | t"
-      [error]="errors().originalTitle ? ('library.import.metadata.required' | t) : ''"
-      required
     >
       <input
         id="import-metadata-original-title"
         class="ds-input"
-        required
         [value]="current().originalTitle"
-        [attr.aria-invalid]="errors().originalTitle || null"
         data-testid="import-metadata-original-title"
         (input)="setText('originalTitle', $event)"
-        (blur)="touch('originalTitle')"
       />
     </ds-field>
     <ds-field

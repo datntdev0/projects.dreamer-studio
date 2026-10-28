@@ -64,7 +64,7 @@ export function parseNovelMetadata(value: unknown): NovelMetadata | null {
     value.formatVersion !== NOVEL_STORE_VERSION ||
     typeof value.id !== 'string' ||
     !isNovelId(value.id) ||
-    !isNonEmptyString(value.originalTitle) ||
+    typeof value.originalTitle !== 'string' ||
     typeof value.title !== 'string' ||
     typeof value.author !== 'string' ||
     typeof value.description !== 'string' ||

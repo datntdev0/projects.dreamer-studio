@@ -4,12 +4,16 @@ import { statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, relative } from 'node:path';
 import { Readable } from 'node:stream';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
-import { ImportPreview, PACKAGE_LIMITS, PackageLimits, PackageReadResult } from '@dreamer/shared/models/novel-package';
+import { PackageFormat } from '@dreamer/shared/core/package-format';
+import { ImportPreview, PackageReadResult } from '@dreamer/shared/models/novel-package';
 import { PackageWarning, PreviewChapter } from '@dreamer/shared/models/novel-package';
+import { packageFormat } from './package-format';
 import { readPackage } from './package-reader';
+
+vi.mock('electron', () => ({ app: { isPackaged: false, getAppPath: (): string => join(__dirname, '../../..') } }));
 
 interface ZipEntry {
   name: string;
@@ -46,8 +50,8 @@ function metadata(overrides: Record<string, unknown> = {}): Buffer {
   return Buffer.from(JSON.stringify(value), utf8);
 }
 
-function limits(overrides: Partial<PackageLimits>): PackageLimits {
-  return { ...PACKAGE_LIMITS, ...overrides };
+function limits(overrides: Partial<PackageFormat>): PackageFormat {
+  return { ...packageFormat(), ...overrides };
 }
 
 function readStream(stream: Readable): Promise<Buffer> {
@@ -198,7 +202,7 @@ function folderSnapshot(folder: string): Record<string, string> {
   return snapshot;
 }
 
-async function readOk(path: string, customLimits?: PackageLimits): Promise<ImportPreview> {
+async function readOk(path: string, customLimits?: PackageFormat): Promise<ImportPreview> {
   const result: PackageReadResult = await readPackage(path, customLimits);
   expect(result.status).toBe('ok');
   if (result.status !== 'ok') {
@@ -328,7 +332,7 @@ describe('package reader', () => {
     const path: string = await buildPackageZip();
     const size: number = statSync(path).size;
 
-    await expect(readPackage(path, limits({ zipBytes: size - 1 }))).resolves.toMatchObject({
+    await expect(readPackage(path, limits({ maxBytes: size - 1 }))).resolves.toMatchObject({
       status: 'refused',
       refusal: 'tooLarge',
       params: { limit: 'zip', size, max: size - 1 },
@@ -338,7 +342,7 @@ describe('package reader', () => {
   it('enforces the entry count limit', async () => {
     const path: string = await buildPackageZip({}, [zipEntry('extra.txt', 'extra')]);
 
-    await expect(readPackage(path, limits({ entries: 1 }))).resolves.toMatchObject({
+    await expect(readPackage(path, limits({ maxEntries: 1 }))).resolves.toMatchObject({
       status: 'refused',
       refusal: 'tooLarge',
       params: { limit: 'entries', size: 2, max: 1 },
@@ -351,7 +355,7 @@ describe('package reader', () => {
     const unpackedSize: number = metadataBytes.length + extra.length;
     const path: string = await buildZip([zipEntry('metadata.json', metadataBytes), zipEntry('extra.txt', extra)]);
 
-    await expect(readPackage(path, limits({ unpackedBytes: unpackedSize - 1 }))).resolves.toMatchObject({
+    await expect(readPackage(path, limits({ maxUnpackedBytes: unpackedSize - 1 }))).resolves.toMatchObject({
       status: 'refused',
       refusal: 'tooLarge',
       params: { limit: 'unpacked', size: unpackedSize, max: unpackedSize - 1 },
@@ -366,7 +370,7 @@ describe('package reader', () => {
       zipEntry('chapters/one.txt', chapter),
     ]);
 
-    await expect(readPackage(path, limits({ chapterBytes: metadataBytes.length }))).resolves.toMatchObject({
+    await expect(readPackage(path, limits({ chapterMaxBytes: metadataBytes.length }))).resolves.toMatchObject({
       status: 'refused',
       refusal: 'tooLarge',
       params: { limit: 'chapter', size: chapter.length, max: metadataBytes.length, file: 'chapters/one.txt' },
@@ -377,7 +381,7 @@ describe('package reader', () => {
     const cover: Buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const path: string = await buildPackageZip({ cover: 'cover.png' }, [zipEntry('cover.png', cover)]);
 
-    await expect(readPackage(path, limits({ coverBytes: cover.length - 1 }))).resolves.toMatchObject({
+    await expect(readPackage(path, limits({ coverMaxBytes: cover.length - 1 }))).resolves.toMatchObject({
       status: 'refused',
       refusal: 'tooLarge',
       params: { limit: 'cover', size: cover.length, max: cover.length - 1, file: 'cover.png' },
@@ -415,7 +419,7 @@ describe('package reader', () => {
     });
   });
 
-  it.each<[string]>([['originalTitle'], ['language']])('reports missing required field %s', async (field: string) => {
+  it.each<[string]>([['language']])('reports missing required field %s', async (field: string) => {
     const value: Record<string, unknown> = {
       formatVersion: 1,
       type: 'novel',
@@ -502,7 +506,7 @@ describe('package reader', () => {
       zipEntry(
         'metadata.json',
         metadata({
-          originalTitle: ' ',
+          originalTitle: 1,
           language: 'not_a_language',
           cover: 'cover.png',
           chapters: [{ file: 'chapters/missing.txt' }],
@@ -516,7 +520,7 @@ describe('package reader', () => {
     if (result.status === 'refused') {
       expect(result.problems).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ code: 'fieldMissing', params: { field: 'originalTitle' } }),
+          expect.objectContaining({ code: 'fieldInvalid', params: { field: 'originalTitle' } }),
           expect.objectContaining({ code: 'languageInvalid', params: { value: 'not_a_language' } }),
           expect.objectContaining({ code: 'chapterFileMissing', params: { file: 'chapters/missing.txt', index: 1 } }),
           expect.objectContaining({ code: 'coverInvalid', params: { file: 'cover.png' } }),

@@ -13,6 +13,7 @@ export default {
     { from: '../backend/dist/dreamer-backend', to: 'backend' },
     { from: 'main/storage/migrations', to: 'migrations' },
     { from: 'resources/ontology.format.yml', to: 'ontology.format.yml' },
+    { from: 'resources/package.format.yml', to: 'package.format.yml' },
   ],
   win: {
     icon: 'resources/icon.ico',

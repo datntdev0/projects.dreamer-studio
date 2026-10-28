@@ -586,6 +586,7 @@
   "library.import.source.refused.tooLarge.entries": "This package contains {size} entries. A package can contain at most {max}.",
   "library.import.source.refused.tooLarge.unpacked": "This package expands to {size}. Its unpacked contents can be at most {max}.",
   "library.import.source.refused.tooLarge.zip": "This file is {size}. The largest package that can be imported is {max}.",
+  "library.import.source.refused.tooLarge.metadata": "The metadata file {file} is {size}. It can be at most {max}.",
   "library.import.source.refused.tooLarge.title": "The package is too large",
   "library.import.source.refused.unsafePath.message": "An entry points outside the package, so nothing was extracted.",
   "library.import.source.refused.unsafePath.title": "Package refused for safety",

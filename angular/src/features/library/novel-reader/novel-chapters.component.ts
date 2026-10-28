@@ -3,6 +3,7 @@ import { CdkFixedSizeVirtualScroll } from '@angular/cdk/scrolling';
 import { CdkVirtualForOf } from '@angular/cdk/scrolling';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { computed } from '@angular/core';
 import { DestroyRef } from '@angular/core';
 import { effect } from '@angular/core';
@@ -17,7 +18,6 @@ import type { Signal } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { CheckboxComponent } from '@components/form/checkbox.component';
 import { IconComponent } from '@components/icon/icon.component';
-import { DotComponent } from '@components/status/dot.component';
 import { PillComponent } from '@components/status/pill.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import { ToastService } from '@components/toast/toast.service';
@@ -26,7 +26,6 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CHAPTER_TITLE_MAX } from '@dreamer/shared/models/novel';
 import type { ChapterTranslationSummary } from '@dreamer/shared/models/translation';
-import type { ChapterTranslationStatus } from '@dreamer/shared/models/translation';
 import type { TargetLanguage } from '@dreamer/shared/models/translation';
 import { isConsecutive } from '../library-format';
 import { chapterRef } from '../library-format';
@@ -42,6 +41,7 @@ import type { RenameState } from '../library.models';
 import type { TextParts } from '../library.models';
 import { NovelStore } from '../novel.store';
 import { TranslationStore } from '../translation.store';
+import { TranslationStatusComponent } from '../translation/translation-status.component';
 import type { NovelDetail } from '@dreamer/shared/models/novel';
 import type { NovelLock as DetailLock } from '@dreamer/shared/models/novel';
 import { chapterNumber } from '../library-format';
@@ -66,12 +66,13 @@ const SAVED_MS = 2000;
     CdkFixedSizeVirtualScroll,
     CdkVirtualForOf,
     CdkVirtualScrollViewport,
-    DotComponent,
     IconComponent,
     NgTemplateOutlet,
     PillComponent,
+    RouterLink,
     TooltipDirective,
     TranslatePipe,
+    TranslationStatusComponent,
   ],
   host: {
     class: 'library-chapters',
@@ -88,6 +89,10 @@ export class NovelChaptersComponent {
   readonly novel = input.required<NovelDetail>();
   readonly chapters = input.required<LibraryChapter[]>();
   readonly current = model<string | null>(null);
+  readonly organizable = input<boolean>(true);
+  readonly deselectable = input<boolean>(false);
+  readonly readerLink = input<boolean>(false);
+  readonly translatedTitles = input<boolean>(false);
   private readonly store: NovelStore = inject(NovelStore);
   private readonly translation: TranslationStore | null = inject(TranslationStore, { optional: true });
   private readonly i18n: I18nService = inject(I18nService);
@@ -104,6 +109,11 @@ export class NovelChaptersComponent {
   protected readonly translationLanguage: Signal<TargetLanguage | null> = computed(() =>
     this.translation?.status() ? this.translation.language() : null,
   );
+  private readonly showTranslatedTitle: Signal<boolean> = computed(
+    () =>
+      !!this.translation &&
+      (this.translatedTitles() || (!this.organizing() && this.translation.display() !== 'original')),
+  );
   protected readonly titleMax: number = CHAPTER_TITLE_MAX;
   protected readonly announcement = signal<string>('');
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
@@ -119,7 +129,9 @@ export class NovelChaptersComponent {
   private savedTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly novelId: Signal<string> = computed(() => this.novel().id);
   protected readonly locked: Signal<boolean> = computed(() => !!this.novel().lock);
-  protected readonly canOrganize: Signal<boolean> = computed(() => !this.locked() && this.chapters().length > 0);
+  protected readonly canOrganize: Signal<boolean> = computed(
+    () => this.organizable() && !this.locked() && this.chapters().length > 0,
+  );
   private readonly numberMode: Signal<boolean> = computed(() => NUMBER_QUERY.test(this.query().trim()));
   protected readonly shown: Signal<LibraryChapter[]> = computed(() => {
     const query: string = this.query().trim().toLowerCase();
@@ -248,20 +260,15 @@ export class NovelChaptersComponent {
     const run = this.translation?.run();
     return run?.kind === 'content' && run.runningChapter === position;
   }
-  protected statusLabel(summary: ChapterTranslationSummary, running: boolean): string {
-    const keys: Record<ChapterTranslationStatus, string> = {
-      'not-translated': 'notTranslated',
-      translated: 'translated',
-      'has-issues': summary.issues === 1 ? 'issuesOne' : 'issuesMany',
-      stale: summary.staleReason === 'glossary' ? 'staleGlossary' : 'staleSource',
-      failed: summary.error ? 'failedWith' : 'failed',
-    };
-    const key: string = running ? 'running' : keys[summary.status];
-    const label: string = this.i18n.t(`library.translation.status.${key}`, {
-      count: this.formatCount(summary.issues),
-      error: summary.error ?? '',
-    });
-    return summary.edited ? `${label}, ${this.i18n.t('library.translation.status.edited')}` : label;
+  protected rowTitle(chapter: LibraryChapter): string {
+    return this.showTranslatedTitle() && this.translation
+      ? this.translation.chapterTitle(chapter.position, chapter.title)
+      : chapter.title;
+  }
+  protected rowLanguage(chapter: LibraryChapter): string {
+    return this.showTranslatedTitle() && this.translation?.chapterTitleTranslated(chapter.position)
+      ? (this.translation.language() ?? this.novel().language)
+      : this.novel().language;
   }
   protected numberLabel(chapter: LibraryChapter): string {
     return chapterNumber(chapter);
@@ -322,6 +329,10 @@ export class NovelChaptersComponent {
   }
   protected openChapter(chapter: LibraryChapter): void {
     if (this.current() === chapter.id) {
+      if (this.deselectable()) {
+        this.current.set(null);
+        return;
+      }
       requestAnimationFrame(() => this.scrollToRow(chapter.id, 'nearest'));
       return;
     }

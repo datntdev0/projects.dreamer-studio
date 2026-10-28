@@ -1,5 +1,5 @@
 import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonDirective } from '@components/button/button.directive';
 import { SegmentedComponent } from '@components/form/segmented.component';
@@ -12,12 +12,20 @@ import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import type { EntityType } from '@dreamer/shared/models/analysis';
-import type { GlossaryKey, GlossaryRow, GlossaryStatus, TargetLanguage } from '@dreamer/shared/models/translation';
+import type {
+  GlossaryKey,
+  GlossaryRow,
+  GlossaryStatus,
+  GlossaryTermKind,
+  TargetLanguage,
+} from '@dreamer/shared/models/translation';
 import { ENTITY_TYPES, entityTypeIcons, entityTypeKeys } from '../../omniscient/omniscient-labels';
 import { fold } from '../library-format';
 import { TranslationStore } from '../translation.store';
 
 type RowStatus = GlossaryStatus | 'all';
+
+const KIND_ORDER: GlossaryTermKind[] = ['name', 'alias', 'title'];
 
 @Component({
   selector: 'ds-glossary-view',
@@ -56,30 +64,24 @@ export class GlossaryViewComponent {
     Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--control-h-lg')) || 36;
   protected readonly page = this.store.glossary;
   protected readonly rows = computed(() => this.page()?.rows ?? []);
-  protected readonly locked = computed(() => this.novelStore.novel()?.lock != null || this.store.running());
-  protected readonly lockReason = computed(() =>
-    this.i18n.t(this.store.running() ? 'library.translation.glossary.runningReason' : 'errors.NOVEL_LOCKED.message'),
-  );
-  protected readonly translateReason = computed(() => {
-    if (this.locked()) return this.lockReason();
-    const llm = this.store.status()?.llm.glossary;
-    return llm?.available ? '' : this.errorText(llm?.reason, 'library.translation.glossary.noLlm');
-  });
   protected readonly ordered = computed(() =>
     [...this.rows()].sort((a, b) => {
       const typeOrder = ENTITY_TYPES.indexOf(a.entityType) - ENTITY_TYPES.indexOf(b.entityType);
       if (typeOrder) return typeOrder;
       const nameOrder = a.entityName.localeCompare(b.entityName);
       if (nameOrder) return nameOrder;
-      return a.alias === null ? -1 : b.alias === null ? 1 : a.alias.localeCompare(b.alias);
+      const kindOrder = KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
+      return kindOrder || (a.term ?? '').localeCompare(b.term ?? '');
     }),
   );
   private readonly baseRows = computed(() => {
     const query = fold(this.query().trim());
+    const chapter = this.store.selectedChapter();
     return this.ordered().filter(
       (row) =>
+        (chapter === null || row.chapterIndexes.includes(chapter)) &&
         (this.type() === 'all' || row.entityType === this.type()) &&
-        (!query || [row.entityName, row.alias ?? '', row.translation ?? ''].some((text) => fold(text).includes(query))),
+        (!query || [row.entityName, row.term ?? '', row.translation ?? ''].some((text) => fold(text).includes(query))),
     );
   });
   protected readonly visible = computed(() =>
@@ -105,6 +107,14 @@ export class GlossaryViewComponent {
   private readonly pending = new Map<string, { value: string | null; language: TargetLanguage | null }>();
 
   constructor() {
+    effect(() => {
+      this.store.language();
+      untracked(() => this.resetDrafts());
+    });
+    effect(() => {
+      this.store.selectedChapter();
+      untracked(() => this.viewport()?.scrollToIndex(0));
+    });
     effect((onCleanup) => {
       const viewport = this.viewport();
       if (!viewport) return;
@@ -118,14 +128,14 @@ export class GlossaryViewComponent {
     return new Intl.NumberFormat(this.i18n.language()).format(value);
   }
   protected rowKey(row: GlossaryKey): string {
-    return `${row.entityType}:${row.entityName}:${row.alias ?? ''}`;
+    return `${row.entityType}:${row.entityName}:${row.kind}:${row.term ?? ''}`;
   }
   protected testKey(row: GlossaryKey): string {
     return this.rowKey(row).replace(/[^a-zA-Z0-9]/g, '-');
   }
   protected trackRow = (_index: number, row: GlossaryRow): string => this.rowKey(row);
   protected rowName(row: GlossaryRow): string {
-    return row.alias ?? row.entityName;
+    return row.term ?? row.entityName;
   }
   protected value(row: GlossaryRow): string {
     return this.drafts().get(this.rowKey(row)) ?? row.translation ?? '';
@@ -157,7 +167,7 @@ export class GlossaryViewComponent {
   }
 
   protected commit(row: GlossaryRow, explicit?: string | null): void {
-    if (this.locked()) return;
+    if (this.store.locked()) return;
     const key = this.rowKey(row);
     const value = explicit === undefined ? this.value(row).trim() || null : explicit;
     if (value === row.translation) {
@@ -181,7 +191,7 @@ export class GlossaryViewComponent {
           this.announcement.set(this.i18n.t('library.translation.glossary.table.saved'));
         } else {
           const errors = new Map(this.errors());
-          errors.set(key, this.errorText(this.store.error(), 'library.translation.glossary.table.saveFailed'));
+          errors.set(key, this.store.errorText(this.store.error(), 'library.translation.glossary.table.saveFailed'));
           this.errors.set(errors);
           this.announcement.set(errors.get(key) ?? '');
         }
@@ -205,13 +215,6 @@ export class GlossaryViewComponent {
     this.query.set((event.target as HTMLInputElement).value);
     this.viewport()?.scrollToIndex(0);
   }
-  protected setLanguage(event: Event): void {
-    this.store.setLanguage((event.target as HTMLSelectElement).value as TargetLanguage);
-    this.drafts.set(new Map());
-    this.errors.set(new Map());
-    this.saving.set(new Set());
-    this.pending.clear();
-  }
   protected setStatus(value: string): void {
     this.status.set(value as RowStatus);
     this.viewport()?.scrollToIndex(0);
@@ -220,7 +223,14 @@ export class GlossaryViewComponent {
     this.query.set('');
     this.type.set('all');
     this.status.set('all');
+    this.store.selectedChapter.set(null);
     this.viewport()?.scrollToIndex(0);
+  }
+  private resetDrafts(): void {
+    this.drafts.set(new Map());
+    this.errors.set(new Map());
+    this.saving.set(new Set());
+    this.pending.clear();
   }
   private focusInput(index: number): void {
     const row = this.visible()[index];
@@ -241,10 +251,5 @@ export class GlossaryViewComponent {
     const errors = new Map(this.errors());
     errors.delete(key);
     this.errors.set(errors);
-  }
-  private errorText(code: string | null | undefined, fallback: string): string {
-    return code && this.i18n.has(`errors.${code}.message`)
-      ? this.i18n.t(`errors.${code}.message`)
-      : this.i18n.t(fallback);
   }
 }

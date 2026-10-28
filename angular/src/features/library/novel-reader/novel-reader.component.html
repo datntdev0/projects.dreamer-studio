@@ -1,12 +1,14 @@
 @if (state() !== 'empty') {
   <div class="translation-reader-bar" data-testid="translation-reader-bar">
-    <ds-segmented
-      class="translation-reader-display"
-      [options]="displayOptions()"
-      [value]="display()"
-      [label]="'library.translation.reader.display.label' | t"
-      (valueChange)="setDisplay($event)"
-    />
+    @if (!untranslated()) {
+      <ds-segmented
+        class="translation-reader-display"
+        [options]="displayOptions()"
+        [value]="display()"
+        [label]="'library.translation.reader.display.label' | t"
+        (valueChange)="setDisplay($event)"
+      />
+    }
     @if (store.targets().length) {
       <span class="ds-select translation-reader-language">
         <select
@@ -26,6 +28,13 @@
       </span>
     }
     <span class="ds-spacer"></span>
+    @if (untranslated()) {
+      <ds-pill icon="languages" data-testid="translation-reader-status-not-translated">{{
+        'library.translation.reader.notTranslated.heading'
+          | t: { language: store.languageLabel(translation()!.language) }
+      }}</ds-pill>
+      <ng-container *ngTemplateOutlet="openTranslation" />
+    }
     @if (translation(); as translated) {
       @if (translated.issueList.length) {
         <button
@@ -125,31 +134,27 @@
               }}
             </p>
           } @else if (translation(); as translated) {
-            @if (translated.paragraphs.length && translated.status !== 'not-translated') {
-              @if (display() === 'translation') {
-                <h1
-                  [attr.lang]="store.language()"
-                  [class.translation-reader-issue]="translatedIssue(null)"
-                  [attr.data-testid]="translatedIssue(null) ? 'translation-reader-issue' : null"
-                >
-                  @if (translatedIssue(null)) {
-                    <ng-container *ngTemplateOutlet="issueIcon" />
-                  }
-                  <ng-container *ngTemplateOutlet="textParts; context: { $implicit: translatedTitleParts() }" />
-                </h1>
-                <p class="library-reader-meta num">
-                  {{
-                    'library.translation.reader.meta'
-                      | t
-                        : {
-                            paragraphs: count(translated.paragraphs.length),
-                            language: store.languageLabel(translated.language),
-                          }
-                  }}
-                </p>
-              }
-            } @else {
-              <h1 [attr.lang]="novel().language">{{ selected.title }}</h1>
+            @if (display() === 'translation') {
+              <h1
+                [attr.lang]="store.language()"
+                [class.translation-reader-issue]="translatedIssue(null)"
+                [attr.data-testid]="translatedIssue(null) ? 'translation-reader-issue' : null"
+              >
+                @if (translatedIssue(null)) {
+                  <ng-container *ngTemplateOutlet="issueIcon" />
+                }
+                <ng-container *ngTemplateOutlet="textParts; context: { $implicit: translatedTitleParts() }" />
+              </h1>
+              <p class="library-reader-meta num">
+                {{
+                  'library.translation.reader.meta'
+                    | t
+                      : {
+                          paragraphs: count(translated.paragraphs.length),
+                          language: store.languageLabel(translated.language),
+                        }
+                }}
+              </p>
             }
           }
         </header>
@@ -166,234 +171,160 @@
             </p>
           }
         } @else if (translation(); as translated) {
-          @if (!translated.paragraphs.length && translated.status === 'failed') {
-            <div class="translation-reader-state">
-              <ds-area-state
-                kind="error"
-                compact
-                data-testid="translation-reader-failed"
-                [heading]="'library.translation.reader.failed.heading' | t"
-                [description]="translated.error || ('library.translation.reader.failed.description' | t)"
-              >
-                <button
-                  dsBtn
-                  variant="primary"
-                  size="sm"
-                  type="button"
-                  data-testid="translation-reader-retry"
-                  (click)="translate(true)"
+          @if (translated.status === 'stale' || translated.status === 'failed' || translated.instructionChanged) {
+            <div class="translation-reader-notes" data-testid="translation-reader-notes">
+              @if (translated.status === 'stale') {
+                <ds-banner
+                  variant="warning"
+                  data-testid="translation-reader-stale"
+                  [dismissible]="false"
+                  [dismissLabel]="'common.dismiss' | t"
+                  [heading]="'library.translation.reader.stale.heading' | t"
+                  [message]="staleMessage()"
                 >
-                  <ds-icon name="retry" size="sm" />{{ 'library.translation.reader.retry' | t }}
-                </button>
-                <ng-container *ngTemplateOutlet="manualAction" />
-              </ds-area-state>
-            </div>
-          } @else if (translated.status === 'not-translated' || !translated.paragraphs.length) {
-            <div class="translation-reader-state">
-              <ds-area-state
-                kind="empty"
-                icon="languages"
-                compact
-                data-testid="translation-reader-not-translated"
-                [heading]="
-                  'library.translation.reader.notTranslated.heading'
-                    | t: { language: store.languageLabel(translated.language) }
-                "
-                [description]="'library.translation.reader.notTranslated.description' | t"
-              >
-                <button
-                  dsBtn
-                  variant="primary"
-                  size="sm"
-                  type="button"
-                  data-testid="translation-reader-translate"
-                  (click)="translate(false)"
-                >
-                  <ds-icon name="languages" size="sm" />{{ 'library.translation.reader.translate' | t }}
-                </button>
-                <ng-container *ngTemplateOutlet="manualAction" />
-              </ds-area-state>
-            </div>
-          } @else {
-            @if (translated.status === 'stale' || translated.status === 'failed' || translated.instructionChanged) {
-              <div class="translation-reader-notes" data-testid="translation-reader-notes">
-                @if (translated.status === 'stale') {
-                  <ds-banner
-                    variant="warning"
-                    data-testid="translation-reader-stale"
-                    [dismissible]="false"
-                    [dismissLabel]="'common.dismiss' | t"
-                    [heading]="'library.translation.reader.stale.heading' | t"
-                    [message]="staleMessage()"
-                  >
-                    <button
-                      dsBtn
-                      size="sm"
-                      type="button"
-                      data-testid="translation-reader-translate-again"
-                      (click)="translate(true)"
-                    >
-                      <ds-icon name="retry" size="sm" />{{ 'library.translation.reader.translateAgain' | t }}
-                    </button>
-                  </ds-banner>
-                }
-                @if (translated.status === 'failed') {
-                  <ds-banner
-                    variant="danger"
-                    data-testid="translation-reader-failed"
-                    [dismissible]="false"
-                    [dismissLabel]="'common.dismiss' | t"
-                    [heading]="'library.translation.reader.failed.heading' | t"
-                    [message]="translated.error || ('library.translation.reader.failed.description' | t)"
-                  >
-                    <button
-                      dsBtn
-                      size="sm"
-                      type="button"
-                      data-testid="translation-reader-retry"
-                      (click)="translate(true)"
-                    >
-                      <ds-icon name="retry" size="sm" />{{ 'library.translation.reader.retry' | t }}
-                    </button>
-                    <ng-container *ngTemplateOutlet="manualAction" />
-                  </ds-banner>
-                }
-                @if (translated.instructionChanged) {
-                  <ds-banner
-                    variant="info"
-                    data-testid="translation-reader-instruction"
-                    [dismissible]="false"
-                    [dismissLabel]="'common.dismiss' | t"
-                    [heading]="'library.translation.reader.instruction.heading' | t"
-                    [message]="'library.translation.reader.instruction.message' | t"
-                  />
-                }
-              </div>
-            }
-            @if (display() === 'translation') {
-              @for (parts of translatedParts(); track $index) {
-                <p
-                  [attr.lang]="store.language()"
-                  [class.translation-reader-issue]="translatedIssue($index)"
-                  [attr.data-testid]="translatedIssue($index) ? 'translation-reader-issue' : null"
-                >
-                  @if (translatedIssue($index)) {
-                    <ng-container *ngTemplateOutlet="issueIcon" />
-                  }
-                  <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
-                </p>
+                  <ng-container *ngTemplateOutlet="openTranslation" />
+                </ds-banner>
               }
-            } @else {
-              <div class="translation-reader-pairs" data-testid="translation-reader-pairs">
-                <div class="translation-reader-columns">
-                  <span>{{ 'library.translation.reader.columns.original' | t: { language: sourceLanguage() } }}</span
-                  ><span>{{ store.languageLabel(translated.language) }}</span>
+              @if (translated.status === 'failed') {
+                <ds-banner
+                  variant="danger"
+                  data-testid="translation-reader-failed"
+                  [dismissible]="false"
+                  [dismissLabel]="'common.dismiss' | t"
+                  [heading]="'library.translation.reader.failed.heading' | t"
+                  [message]="translated.error || ('library.translation.reader.failed.description' | t)"
+                >
+                  <ng-container *ngTemplateOutlet="openTranslation" />
+                  <ng-container *ngTemplateOutlet="manualAction" />
+                </ds-banner>
+              }
+              @if (translated.instructionChanged) {
+                <ds-banner
+                  variant="info"
+                  data-testid="translation-reader-instruction"
+                  [dismissible]="false"
+                  [dismissLabel]="'common.dismiss' | t"
+                  [heading]="'library.translation.reader.instruction.heading' | t"
+                  [message]="'library.translation.reader.instruction.message' | t"
+                />
+              }
+            </div>
+          }
+          @if (display() === 'translation') {
+            @for (parts of translatedParts(); track $index) {
+              <p
+                [attr.lang]="store.language()"
+                [class.translation-reader-issue]="translatedIssue($index)"
+                [attr.data-testid]="translatedIssue($index) ? 'translation-reader-issue' : null"
+              >
+                @if (translatedIssue($index)) {
+                  <ng-container *ngTemplateOutlet="issueIcon" />
+                }
+                <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
+              </p>
+            }
+          } @else {
+            <div class="translation-reader-pairs" data-testid="translation-reader-pairs">
+              <div class="translation-reader-columns">
+                <span>{{ 'library.translation.reader.columns.original' | t: { language: sourceLanguage() } }}</span
+                ><span>{{ store.languageLabel(translated.language) }}</span>
+              </div>
+              <div class="translation-reader-pair translation-reader-title-row">
+                <div>
+                  <h1
+                    [attr.lang]="novel().language"
+                    [class.translation-reader-issue]="sourceIssue(null)"
+                    [attr.data-testid]="sourceIssue(null) ? 'translation-reader-issue' : null"
+                  >
+                    @if (sourceIssue(null)) {
+                      <ng-container *ngTemplateOutlet="issueIcon" />
+                    }
+                    <ng-container *ngTemplateOutlet="textParts; context: { $implicit: titleParts() }" />
+                  </h1>
                 </div>
-                <div class="translation-reader-pair translation-reader-title-row">
+                <div class="translation-reader-translation-cell">
+                  <span class="translation-reader-cell-label">{{ store.languageLabel(translated.language) }}</span>
+                  <p
+                    class="translation-reader-title"
+                    [attr.lang]="translated.language"
+                    [class.translation-reader-issue]="translatedIssue(null)"
+                    [attr.data-testid]="translatedIssue(null) ? 'translation-reader-issue' : null"
+                  >
+                    @if (translatedIssue(null)) {
+                      <ng-container *ngTemplateOutlet="issueIcon" />
+                    }
+                    <ng-container *ngTemplateOutlet="textParts; context: { $implicit: translatedTitleParts() }" />
+                  </p>
+                </div>
+              </div>
+              @for (index of pairIndexes(); track index) {
+                <div class="translation-reader-pair" data-testid="translation-reader-pair">
                   <div>
-                    <h1
-                      [attr.lang]="novel().language"
-                      [class.translation-reader-issue]="sourceIssue(null)"
-                      [attr.data-testid]="sourceIssue(null) ? 'translation-reader-issue' : null"
-                    >
-                      @if (sourceIssue(null)) {
-                        <ng-container *ngTemplateOutlet="issueIcon" />
-                      }
-                      <ng-container *ngTemplateOutlet="textParts; context: { $implicit: titleParts() }" />
-                    </h1>
+                    @if (paragraphParts()[index]; as parts) {
+                      <p
+                        [attr.lang]="novel().language"
+                        [class.translation-reader-issue]="pairIssue(index)"
+                        [attr.data-testid]="pairIssue(index) ? 'translation-reader-issue' : null"
+                      >
+                        @if (pairIssue(index)) {
+                          <ng-container *ngTemplateOutlet="issueIcon" />
+                        }
+                        <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
+                      </p>
+                    } @else {
+                      <p
+                        class="translation-reader-missing"
+                        [class.translation-reader-issue]="pairIssue(index) || missingIssue()"
+                        [attr.data-testid]="
+                          pairIssue(index) || missingIssue() ? 'translation-reader-issue' : 'translation-reader-missing'
+                        "
+                      >
+                        <ds-icon name="alert-triangle" size="sm" />
+                        @if (pairIssue(index) || missingIssue()) {
+                          <span class="visually-hidden">{{ 'library.translation.reader.issue' | t }}</span>
+                        }
+                        <span
+                          [attr.data-testid]="pairIssue(index) || missingIssue() ? 'translation-reader-missing' : null"
+                          >{{ 'library.translation.reader.noSource' | t }}</span
+                        >
+                      </p>
+                    }
                   </div>
                   <div class="translation-reader-translation-cell">
                     <span class="translation-reader-cell-label">{{ store.languageLabel(translated.language) }}</span>
-                    <p
-                      class="translation-reader-title"
-                      [attr.lang]="translated.language"
-                      [class.translation-reader-issue]="translatedIssue(null)"
-                      [attr.data-testid]="translatedIssue(null) ? 'translation-reader-issue' : null"
-                    >
-                      @if (translatedIssue(null)) {
-                        <ng-container *ngTemplateOutlet="issueIcon" />
-                      }
-                      <ng-container *ngTemplateOutlet="textParts; context: { $implicit: translatedTitleParts() }" />
-                    </p>
+                    @if (translatedParts()[index]; as parts) {
+                      <p
+                        [attr.lang]="translated.language"
+                        [class.translation-reader-issue]="pairIssue(index)"
+                        [attr.data-testid]="pairIssue(index) ? 'translation-reader-issue' : null"
+                      >
+                        @if (pairIssue(index)) {
+                          <ng-container *ngTemplateOutlet="issueIcon" />
+                        }
+                        <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
+                      </p>
+                    } @else {
+                      <p
+                        class="translation-reader-missing"
+                        [class.translation-reader-issue]="pairIssue(index) || missingIssue()"
+                        [attr.data-testid]="
+                          pairIssue(index) || missingIssue() ? 'translation-reader-issue' : 'translation-reader-missing'
+                        "
+                      >
+                        <ds-icon name="alert-triangle" size="sm" />
+                        @if (pairIssue(index) || missingIssue()) {
+                          <span class="visually-hidden">{{ 'library.translation.reader.issue' | t }}</span>
+                        }
+                        <span
+                          [attr.data-testid]="pairIssue(index) || missingIssue() ? 'translation-reader-missing' : null"
+                          >{{ 'library.translation.reader.missing' | t }}</span
+                        >
+                      </p>
+                    }
                   </div>
                 </div>
-                @for (index of pairIndexes(); track index) {
-                  <div class="translation-reader-pair" data-testid="translation-reader-pair">
-                    <div>
-                      @if (paragraphParts()[index]; as parts) {
-                        <p
-                          [attr.lang]="novel().language"
-                          [class.translation-reader-issue]="pairIssue(index)"
-                          [attr.data-testid]="pairIssue(index) ? 'translation-reader-issue' : null"
-                        >
-                          @if (pairIssue(index)) {
-                            <ng-container *ngTemplateOutlet="issueIcon" />
-                          }
-                          <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
-                        </p>
-                      } @else {
-                        <p
-                          class="translation-reader-missing"
-                          [class.translation-reader-issue]="pairIssue(index) || missingIssue()"
-                          [attr.data-testid]="
-                            pairIssue(index) || missingIssue()
-                              ? 'translation-reader-issue'
-                              : 'translation-reader-missing'
-                          "
-                        >
-                          <ds-icon name="alert-triangle" size="sm" />
-                          @if (pairIssue(index) || missingIssue()) {
-                            <span class="visually-hidden">{{ 'library.translation.reader.issue' | t }}</span>
-                          }
-                          <span
-                            [attr.data-testid]="
-                              pairIssue(index) || missingIssue() ? 'translation-reader-missing' : null
-                            "
-                            >{{ 'library.translation.reader.noSource' | t }}</span
-                          >
-                        </p>
-                      }
-                    </div>
-                    <div class="translation-reader-translation-cell">
-                      <span class="translation-reader-cell-label">{{ store.languageLabel(translated.language) }}</span>
-                      @if (translatedParts()[index]; as parts) {
-                        <p
-                          [attr.lang]="translated.language"
-                          [class.translation-reader-issue]="pairIssue(index)"
-                          [attr.data-testid]="pairIssue(index) ? 'translation-reader-issue' : null"
-                        >
-                          @if (pairIssue(index)) {
-                            <ng-container *ngTemplateOutlet="issueIcon" />
-                          }
-                          <ng-container *ngTemplateOutlet="textParts; context: { $implicit: parts }" />
-                        </p>
-                      } @else {
-                        <p
-                          class="translation-reader-missing"
-                          [class.translation-reader-issue]="pairIssue(index) || missingIssue()"
-                          [attr.data-testid]="
-                            pairIssue(index) || missingIssue()
-                              ? 'translation-reader-issue'
-                              : 'translation-reader-missing'
-                          "
-                        >
-                          <ds-icon name="alert-triangle" size="sm" />
-                          @if (pairIssue(index) || missingIssue()) {
-                            <span class="visually-hidden">{{ 'library.translation.reader.issue' | t }}</span>
-                          }
-                          <span
-                            [attr.data-testid]="
-                              pairIssue(index) || missingIssue() ? 'translation-reader-missing' : null
-                            "
-                            >{{ 'library.translation.reader.missing' | t }}</span
-                          >
-                        </p>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
+              }
+            </div>
           }
         } @else {
           <div class="library-reader-skeleton" data-testid="translation-reader-loading" aria-busy="true">
@@ -424,6 +355,12 @@
     'library.translation.reader.issue' | t
   }}</span></ng-template
 >
+
+<ng-template #openTranslation>
+  <a dsBtn variant="primary" size="sm" routerLink="/translation" data-testid="translation-reader-open-translation">
+    <ds-icon name="languages" size="sm" />{{ 'library.translation.reader.openTranslation' | t }}
+  </a>
+</ng-template>
 
 <ng-template #manualAction>
   <button

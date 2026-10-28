@@ -33,7 +33,7 @@ export class RailComponent {
   protected readonly i18n: I18nService = inject(I18nService);
   readonly collapsed = input(false, { transform: booleanAttribute });
 
-  protected readonly topGroups: RailGroup[] = (['library', 'analysis', 'production'] as const).map(toGroup);
+  protected readonly topGroups: RailGroup[] = (['library', 'context', 'production'] as const).map(toGroup);
   protected readonly bottomGroups: RailGroup[] = [toGroup('system')];
   protected readonly homeId: string = HOME_MODULE_ID;
 

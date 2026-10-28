@@ -2,6 +2,7 @@ import { computed, DestroyRef, effect, inject, Injectable, signal } from '@angul
 import type { Signal, WritableSignal } from '@angular/core';
 import { DesktopApi } from '@core/desktop-api';
 import { I18nService } from '@core/i18n/i18n.service';
+import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { ChapterTranslation } from '@dreamer/shared/models/translation';
 import type { ChapterTranslationSummary } from '@dreamer/shared/models/translation';
@@ -26,6 +27,7 @@ export type TranslationDialog = { kind: 'glossary' } | { kind: 'content'; preset
 export class TranslationStore {
   private readonly api = inject(DesktopApi);
   private readonly i18n = inject(I18nService);
+  private readonly currentNovel = inject(CurrentNovelStore);
   private readonly progressValue = signal<TranslationProgress | null>(null);
   private readonly languageChoice = signal<TargetLanguage | null>(null);
   private statusRequest = 0;
@@ -35,6 +37,7 @@ export class TranslationStore {
 
   readonly novelId: WritableSignal<string> = signal('');
   readonly chapterFile: WritableSignal<string | null> = signal(null);
+  readonly selectedChapter: WritableSignal<number | null> = signal(null);
   readonly view: WritableSignal<TranslationView> = signal('reader');
   readonly display: WritableSignal<TranslationDisplay> = signal('original');
   readonly language: Signal<TargetLanguage | null> = computed(
@@ -51,6 +54,20 @@ export class TranslationStore {
   readonly run = computed(() => this.progressValue()?.run ?? this.status()?.run ?? null);
   readonly running = computed(() => this.run() !== null);
   readonly targets = computed(() => this.status()?.targets ?? []);
+  readonly locked = computed(() => this.currentNovel.novel()?.lock != null || this.running());
+  readonly lockReason = computed(() =>
+    this.i18n.t(this.running() ? 'library.translation.glossary.runningReason' : 'errors.NOVEL_LOCKED.message'),
+  );
+  readonly glossaryReason = computed(() => {
+    if (this.locked()) return this.lockReason();
+    const llm = this.status()?.llm.glossary;
+    return llm?.available ? '' : this.errorText(llm?.reason, 'library.translation.glossary.noLlm');
+  });
+  readonly contentReason = computed(() => {
+    if (this.locked()) return this.lockReason();
+    const llm = this.status()?.llm.content;
+    return llm?.available ? '' : this.errorText(llm?.reason, 'library.translation.page.noLlm');
+  });
   readonly issues: Signal<TranslationIssue[]> = computed(() => this.chapter()?.issueList ?? []);
 
   constructor() {
@@ -84,6 +101,7 @@ export class TranslationStore {
     if (novelId === this.novelId()) return;
     this.novelId.set(novelId);
     this.view.set('reader');
+    this.selectedChapter.set(null);
     this.display.set('original');
     this.languageChoice.set(null);
     this.status.set(null);
@@ -120,6 +138,20 @@ export class TranslationStore {
 
   chapterStatus(index: number): ChapterTranslationSummary | null {
     return this.status()?.chapters.find((item) => item.index === index) ?? null;
+  }
+
+  chapterTitle(index: number, original: string): string {
+    return this.translatedTitle(index) ?? original;
+  }
+
+  chapterTitleTranslated(index: number): boolean {
+    return this.translatedTitle(index) !== null;
+  }
+
+  errorText(code: string | null | undefined, fallback: string): string {
+    return code && this.i18n.has(`errors.${code}.message`)
+      ? this.i18n.t(`errors.${code}.message`)
+      : this.i18n.t(fallback);
   }
 
   languageLabel(language: TargetLanguage): string {
@@ -277,6 +309,11 @@ export class TranslationStore {
       this.chapter.set(await this.api.translationSave({ novelId, language, file, title, paragraphs }));
       await this.reload();
     });
+  }
+
+  private translatedTitle(index: number): string | null {
+    const title = this.chapterStatus(index)?.title?.trim();
+    return title || null;
   }
 
   private async mutate(action: (novelId: string) => Promise<void>): Promise<boolean> {

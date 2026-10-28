@@ -1,4 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Component } from '@angular/core';
 import { DestroyRef } from '@angular/core';
 import { ElementRef } from '@angular/core';
@@ -43,6 +44,39 @@ interface ReaderTextPart {
   issue: boolean;
 }
 
+export function chapterTranslation(
+  store: TranslationStore,
+  selected: LibraryChapter | null,
+): ChapterTranslation | null {
+  const translation: ChapterTranslation | null = store.chapter();
+  if (
+    selected &&
+    translation?.file === selected.file &&
+    store.chapterFile() === selected.file &&
+    translation.language === store.language()
+  )
+    return translation;
+  const language = store.language();
+  const summary = selected ? store.chapterStatus(selected.position) : null;
+  if (
+    !selected ||
+    !language ||
+    !summary ||
+    summary.file !== selected.file ||
+    !['not-translated', 'failed'].includes(summary.status)
+  )
+    return null;
+  return { ...summary, language, title: '', paragraphs: [], issueList: [], translatedAt: null };
+}
+
+function isUntranslated(translation: ChapterTranslation | null): boolean {
+  return !!translation && (translation.status === 'not-translated' || !translation.paragraphs.length);
+}
+
+export function effectiveDisplay(store: TranslationStore, selected: LibraryChapter | null): TranslationDisplay {
+  return isUntranslated(chapterTranslation(store, selected)) ? 'original' : store.display();
+}
+
 type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
 
 @Component({
@@ -53,6 +87,7 @@ type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
     ButtonDirective,
     IconComponent,
     NgTemplateOutlet,
+    RouterLink,
     PillComponent,
     SegmentedComponent,
     TranslatePipe,
@@ -80,7 +115,7 @@ export class NovelReaderComponent {
   private scrollFrame: number = 0;
   private issueFrame: number = 0;
 
-  protected readonly display = this.store.display;
+  protected readonly display = computed<TranslationDisplay>(() => effectiveDisplay(this.store, this.chapter()));
   protected readonly displayOptions = computed<SegmentedOption[]>(() =>
     (['original', 'translation', 'side'] as TranslationDisplay[]).map(
       (display: TranslationDisplay): SegmentedOption => ({
@@ -91,28 +126,10 @@ export class NovelReaderComponent {
       }),
     ),
   );
-  protected readonly translation = computed<ChapterTranslation | null>(() => {
-    const selected: LibraryChapter | null = this.chapter();
-    const translation: ChapterTranslation | null = this.store.chapter();
-    if (
-      selected &&
-      translation?.file === selected.file &&
-      this.store.chapterFile() === selected.file &&
-      translation.language === this.store.language()
-    )
-      return translation;
-    const language = this.store.language();
-    const summary = selected ? this.store.chapterStatus(selected.position) : null;
-    if (
-      !selected ||
-      !language ||
-      !summary ||
-      summary.file !== selected.file ||
-      !['not-translated', 'failed'].includes(summary.status)
-    )
-      return null;
-    return { ...summary, language, title: '', paragraphs: [], issueList: [], translatedAt: null };
-  });
+  protected readonly translation = computed<ChapterTranslation | null>(() =>
+    chapterTranslation(this.store, this.chapter()),
+  );
+  protected readonly untranslated = computed<boolean>(() => isUntranslated(this.translation()));
   protected readonly issue = computed<TranslationIssue | null>(() =>
     this.translation()
       ? (this.store.issues().find((item: TranslationIssue): boolean => item.id === this.store.selectedIssue()) ?? null)
@@ -221,10 +238,6 @@ export class NovelReaderComponent {
   }
   protected setLanguage(event: Event): void {
     this.store.setLanguage((event.target as HTMLSelectElement).value as TargetLanguage);
-  }
-  protected translate(overwrite: boolean): void {
-    const chapter: LibraryChapter | null = this.chapter();
-    if (chapter) this.store.openChapterDialog(chapter.position, overwrite);
   }
   protected sourceIssue(index: number | null): boolean {
     const issue = this.issue();

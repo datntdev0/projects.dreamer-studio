@@ -145,8 +145,8 @@ export class TranslateContentDialogComponent {
   }
 
   protected openGlossary(): void {
-    this.store.setView('glossary');
     this.store.closeDialog();
+    this.store.setView('glossary');
   }
 
   protected close(): void {

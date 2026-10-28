@@ -42,7 +42,15 @@ export class CurrentNovelStore {
   }
 
   analyse(id: string): void {
+    this.open(id, '/omniscient');
+  }
+
+  translate(id: string): void {
+    this.open(id, '/translation');
+  }
+
+  private open(id: string, url: string): void {
     this.select(id);
-    void this.router.navigateByUrl('/omniscient');
+    void this.router.navigateByUrl(url);
   }
 }

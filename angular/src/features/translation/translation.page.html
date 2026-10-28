@@ -1,0 +1,133 @@
+<div class="ds-page-toolbar compact-labels ds-world-toolbar">
+  <h1 dsPageTitle>{{ 'translation.page.title' | t }}</h1>
+  <span class="ds-select">
+    <select
+      class="ds-input"
+      data-testid="translation-language"
+      [attr.aria-label]="'library.translation.glossary.toolbar.language' | t"
+      [disabled]="!store.language()"
+      [value]="store.language()"
+      (change)="setLanguage($event)"
+    >
+      @for (language of store.targets(); track language) {
+        <option [value]="language" [selected]="language === store.language()">
+          {{ store.languageLabel(language) }}
+        </option>
+      }
+    </select>
+    <ds-icon name="chevron-down" size="sm" />
+  </span>
+  <span class="ds-spacer"></span>
+  @if (store.running()) {
+    <ds-translation-pill />
+  } @else {
+    <span [dsTooltip]="store.glossaryReason()">
+      <button
+        dsBtn
+        variant="primary"
+        type="button"
+        data-testid="translation-page-translate"
+        [attr.aria-label]="'library.translation.glossary.toolbar.translate' | t"
+        [disabled]="!store.status() || !!store.glossaryReason()"
+        (click)="store.openGlossaryDialog()"
+      >
+        <ds-icon name="sparkles" size="sm" /><span class="ds-toolbar-label">{{
+          'library.translation.glossary.toolbar.translate' | t
+        }}</span>
+      </button>
+    </span>
+    <span [dsTooltip]="store.contentReason()">
+      <button
+        dsBtn
+        type="button"
+        data-testid="translation-page-translate-chapters"
+        [attr.aria-label]="'translation.page.translateChapters' | t"
+        [disabled]="!store.status() || !!store.contentReason()"
+        (click)="openChapterTranslation()"
+      >
+        <ds-icon name="languages" size="sm" /><span class="ds-toolbar-label">{{
+          'translation.page.translateChapters' | t
+        }}</span>
+      </button>
+    </span>
+  }
+</div>
+@if (store.error()) {
+  <div class="ds-page-notice" data-testid="translation-page-error">
+    <ds-banner
+      variant="danger"
+      [dismissible]="false"
+      [heading]="'library.translation.page.errorHeading' | t"
+      [message]="store.error()"
+      [dismissLabel]="'common.dismiss' | t"
+    />
+  </div>
+}
+@if (!currentNovel.novels().length) {
+  <div class="ds-page-body center">
+    <ds-area-state
+      kind="empty"
+      icon="library"
+      data-testid="translation-page-empty"
+      [heading]="'translation.page.emptyLibrary' | t"
+      [description]="'translation.page.emptyLibraryHint' | t"
+    >
+      <a dsBtn variant="primary" routerLink="/library/import" data-testid="translation-page-import">{{
+        'analysis.pipeline.importPackage' | t
+      }}</a>
+    </ds-area-state>
+  </div>
+} @else {
+  <div class="ds-world-body">
+    <ds-glossary-view />
+  </div>
+}
+<ng-template
+  dsPanel="left"
+  panelClass="ds-world-panel"
+  testId="translation-page-chapters"
+  [label]="'translation.page.chapters' | t"
+  [resizeLabel]="'translation.page.resizeChapters' | t"
+>
+  @if (novelStore.novel(); as novel) {
+    <ds-novel-chapters
+      [novel]="novel"
+      [chapters]="novelStore.chapters()"
+      [current]="selectedId()"
+      (currentChange)="select($event)"
+      [organizable]="false"
+      [deselectable]="true"
+      [readerLink]="true"
+      [translatedTitles]="true"
+    />
+  } @else {
+    <ds-area-state
+      kind="loading"
+      [compact]="true"
+      [heading]="'library.translation.glossary.state.loading' | t"
+      data-testid="translation-chapters-loading"
+    />
+  }
+</ng-template>
+<ng-template
+  dsPanel="right"
+  panelClass="ds-world-panel"
+  testId="translation-page-instruction"
+  [label]="'translation.page.instruction' | t"
+  [resizeLabel]="'translation.page.resizeInstruction' | t"
+>
+  <div class="ds-panel-body library-translation-instruction">
+    @if (store.language(); as lang) {
+      <ds-instruction-editor mode="panel" [language]="lang" />
+    } @else {
+      <ds-area-state
+        kind="empty"
+        icon="languages"
+        [compact]="true"
+        [description]="'library.translation.page.noTarget' | t"
+      />
+    }
+  </div>
+</ng-template>
+<ds-translate-glossary-dialog />
+<ds-translate-content-dialog />

@@ -17,6 +17,7 @@ describe('buildRoutes', () => {
       'library/import',
       'library/:id',
       'omniscient',
+      'translation',
       'projects',
       'pipelines',
       'pipelines/:id',

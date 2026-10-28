@@ -1,4 +1,4 @@
-import type { GlossaryRow, TargetLanguage } from '@dreamer/shared/models/translation';
+import type { GlossaryRow, GlossaryTermKind, TargetLanguage } from '@dreamer/shared/models/translation';
 import { ENTITY_SEEDS, JADE_RIVER_CHAPTERS, jadeRiverChapters } from './analysis';
 
 const VI_NAMES: Record<string, string> = {
@@ -49,33 +49,58 @@ const VI_NAMES: Record<string, string> = {
   'jade current': 'dòng ngọc',
 };
 
+const TITLE_SEEDS: Record<string, { zh: string; en: string; vi: string }[]> = {
+  'master-qiao': [{ zh: '师父', en: 'Master', vi: 'sư phụ' }],
+  'prince-jian': [{ zh: '王爷', en: 'Prince', vi: 'vương gia' }],
+  'lady-bai': [{ zh: '夫人', en: 'Lady', vi: 'phu nhân' }],
+  'captain-wei': [{ zh: '队长', en: 'Captain', vi: 'đội trưởng' }],
+  'elder-su': [{ zh: '长老', en: 'Elder', vi: 'trưởng lão' }],
+};
+
 const UNTRANSLATED: Record<TargetLanguage, Set<string>> = {
-  en: new Set(['Yue', 'Qiao', 'Wei']),
-  vi: new Set(['Yue', 'Mei', 'Qiao', 'Wei', 'Jian', 'Lian']),
+  en: new Set(['Yue', 'Qiao', 'Wei', 'Prince']),
+  vi: new Set(['Yue', 'Mei', 'Qiao', 'Wei', 'Jian', 'Lian', 'Lady']),
 };
 const USER: Record<TargetLanguage, Set<string>> = {
   en: new Set(['Lin Yue', 'Jade River']),
-  vi: new Set(['Lin Yue', 'Mei Ren', 'Master Qiao', 'Jade River', 'jade seal']),
+  vi: new Set(['Lin Yue', 'Mei Ren', 'Master Qiao', 'Jade River', 'jade seal', 'Master']),
 };
 
-export function seedGlossaryRows(language: TargetLanguage): GlossaryRow[] {
-  return ENTITY_SEEDS.flatMap((entity): GlossaryRow[] =>
-    [null, ...entity.aliases].map((alias, index): GlossaryRow => {
-      const name = alias ?? entity.name;
-      const translation = UNTRANSLATED[language].has(name) ? null : language === 'vi' ? viName(name) : name;
-      const sourceName = index === 0 ? entity.zh : entity.zhAliases[index - 1];
-      return {
-        entityType: entity.type,
-        entityName: entity.zh,
-        alias: index === 0 ? null : sourceName,
-        translation,
-        status: translation === null ? 'untranslated' : USER[language].has(name) ? 'user' : 'llm',
-        chapters: jadeRiverChapters('zh').filter((chapter) =>
-          chapter.paragraphs.some((paragraph) => paragraph.includes(sourceName)),
-        ).length,
-      };
-    }),
+function seedRow(
+  entity: (typeof ENTITY_SEEDS)[number],
+  language: TargetLanguage,
+  kind: GlossaryTermKind,
+  source: string,
+  label: string,
+  translated: string,
+): GlossaryRow {
+  const translation = UNTRANSLATED[language].has(label) ? null : translated;
+  const chapters = jadeRiverChapters('zh').filter((chapter) =>
+    chapter.paragraphs.some((paragraph) => paragraph.includes(source)),
   );
+  return {
+    entityType: entity.type,
+    entityName: entity.zh,
+    term: kind === 'name' ? null : source,
+    kind,
+    translation,
+    status: translation === null ? 'untranslated' : USER[language].has(label) ? 'user' : 'llm',
+    chapters: chapters.length,
+    chapterIndexes: chapters.map((chapter) => chapter.index),
+  };
+}
+
+export function seedGlossaryRows(language: TargetLanguage): GlossaryRow[] {
+  const localized = (name: string): string => (language === 'vi' ? viName(name) : name);
+  return ENTITY_SEEDS.flatMap((entity): GlossaryRow[] => [
+    seedRow(entity, language, 'name', entity.zh, entity.name, localized(entity.name)),
+    ...entity.aliases.map((alias, index) =>
+      seedRow(entity, language, 'alias', entity.zhAliases[index], alias, localized(alias)),
+    ),
+    ...(TITLE_SEEDS[entity.id] ?? []).map((title) =>
+      seedRow(entity, language, 'title', title.zh, title.en, title[language]),
+    ),
+  ]);
 }
 
 export const DEFAULT_INSTRUCTIONS: Record<TargetLanguage, string> = {
@@ -142,6 +167,8 @@ export function translatedName(sourceName: string, language: TargetLanguage): st
       const name = entity.aliases[index];
       return language === 'vi' ? viName(name) : name;
     }
+    const title = TITLE_SEEDS[entity.id]?.find((item) => item.zh === sourceName);
+    if (title) return title[language];
   }
   return sourceName;
 }

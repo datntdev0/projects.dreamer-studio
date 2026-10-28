@@ -107,7 +107,7 @@ export const libraryStoryDecorators: Decorator<LibraryStoryArgs>[] = [
     ];
     return {
       ...result,
-      applicationConfig: { providers: [...(result.applicationConfig?.providers ?? []), ...providers] },
+      applicationConfig: { providers: [...providers, ...(result.applicationConfig?.providers ?? [])] },
     };
   },
 ];

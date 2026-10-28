@@ -3,6 +3,9 @@ import type { StoryObj } from '@storybook/angular';
 import type { LibraryStoryArgs } from '../../fixtures/library-story';
 import { libraryStoryDecorators } from '../../fixtures/library-story';
 import { SAMPLE_PARAGRAPHS } from '../../fixtures/library';
+import { translationScenarioOptions, translationStoryDecorators } from '../../fixtures/translation-story';
+import type { TranslationStoryArgs } from '../../fixtures/translation-story';
+import { UNANALYSED_NOVEL } from '../../fixtures/analysis';
 
 const meta: Meta<LibraryStoryArgs> = {
   title: 'Pages/Library/Reader',
@@ -59,3 +62,13 @@ export const Locked: Story = { args: { lock: true } };
 export const NovelNotFound: Story = { args: { route: '/library/n-missing' } };
 
 export const NovelLoadError: Story = { args: { route: '/library/n-broken' } };
+
+export const Translated: StoryObj<TranslationStoryArgs> = {
+  args: { route: '/library/n-jade-river', scenario: 'normal' },
+  argTypes: { scenario: { control: 'select', options: translationScenarioOptions } },
+  decorators: translationStoryDecorators,
+  render: (args) => ({
+    props: { ...args, route: args.scenario === 'notAnalysed' ? `/library/${UNANALYSED_NOVEL.id}` : args.route },
+    template: '<ds-library-story-host [route]="route" [chapter]="1" />',
+  }),
+};

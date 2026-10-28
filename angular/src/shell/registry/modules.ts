@@ -6,8 +6,9 @@ import { ImportPage } from '../../features/library/import/import.page';
 import { PipelinesPage } from '../../features/pipelines/pipelines.page';
 import { SettingsPage } from '../../features/settings/settings.page';
 import { OmniscientPage } from '../../features/omniscient/omniscient.page';
+import { TranslationPage } from '../../features/translation/translation.page';
 
-export type ModuleGroup = 'library' | 'analysis' | 'production' | 'system';
+export type ModuleGroup = 'library' | 'context' | 'production' | 'system';
 
 export interface AppSubRoute {
   path: string;
@@ -33,7 +34,7 @@ export const HOME_MODULE_ID = 'home';
 
 export const GROUP_TITLES: Record<ModuleGroup, string> = {
   library: 'rail.group.library',
-  analysis: 'rail.group.analysis',
+  context: 'rail.group.context',
   production: 'rail.group.production',
   system: 'rail.group.system',
 };
@@ -62,12 +63,22 @@ export const MODULES: AppModule[] = [
   },
   {
     id: 'omniscient',
-    group: 'analysis',
+    group: 'context',
     icon: 'network',
     label: 'nav.omniscient',
     description: 'module.omniscient.desc',
     release: '0.2.0',
     page: OmniscientPage,
+    novelScoped: true,
+  },
+  {
+    id: 'translation',
+    group: 'context',
+    icon: 'languages',
+    label: 'nav.translation',
+    description: 'module.translation.desc',
+    release: '0.3.0',
+    page: TranslationPage,
     novelScoped: true,
   },
   {

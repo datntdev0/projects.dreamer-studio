@@ -24,22 +24,24 @@
     >
   }
   <span class="ds-spacer"></span>
-  <span class="library-chapters-reason" [attr.tabindex]="canOrganize() ? null : 0" [dsTooltip]="organizeTooltip()">
-    <button
-      dsBtn
-      variant="ghost"
-      size="sm"
-      type="button"
-      class="library-chapters-organize"
-      data-testid="novel-chapters-organize"
-      [attr.aria-pressed]="organizing()"
-      [attr.aria-description]="organizeTooltip() || null"
-      [disabled]="!canOrganize()"
-      (click)="toggleOrganize()"
-    >
-      <ds-icon [name]="locked() ? 'lock' : 'sliders'" size="sm" />{{ 'library.chapters.organize' | t }}
-    </button>
-  </span>
+  @if (organizable()) {
+    <span class="library-chapters-reason" [attr.tabindex]="canOrganize() ? null : 0" [dsTooltip]="organizeTooltip()">
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        class="library-chapters-organize"
+        data-testid="novel-chapters-organize"
+        [attr.aria-pressed]="organizing()"
+        [attr.aria-description]="organizeTooltip() || null"
+        [disabled]="!canOrganize()"
+        (click)="toggleOrganize()"
+      >
+        <ds-icon [name]="locked() ? 'lock' : 'sliders'" size="sm" />{{ 'library.chapters.organize' | t }}
+      </button>
+    </span>
+  }
 </header>
 
 @if (chapters().length) {
@@ -269,58 +271,32 @@
             type="button"
             class="library-chapters-open"
             data-testid="novel-chapters-row-open"
-            [attr.aria-current]="chapter.id === current() || null"
+            [attr.aria-current]="(!deselectable() && chapter.id === current()) || null"
+            [attr.aria-pressed]="deselectable() ? chapter.id === current() : null"
             [tabIndex]="chapter.id === focusId() ? 0 : -1"
             (click)="openChapter(chapter)"
           >
             <ng-container *ngTemplateOutlet="label; context: { $implicit: chapter }" />
             @if (translationLanguage() && chapterStatus(chapter.position); as summary) {
-              <span
-                class="translation-status-row"
-                data-testid="translation-status-row"
-                [attr.data-status]="chapterRunning(chapter.position) ? 'running' : summary.status"
-                [dsTooltip]="statusLabel(summary, chapterRunning(chapter.position))"
-              >
-                @if (summary.edited) {
-                  <ds-icon
-                    name="pencil"
-                    size="sm"
-                    class="translation-status-edited"
-                    data-testid="translation-status-edited"
-                    aria-hidden="true"
-                  />
-                }
-                <span
-                  class="translation-status-icon"
-                  data-testid="translation-status-icon"
-                  [attr.data-status]="chapterRunning(chapter.position) ? 'running' : summary.status"
-                  aria-hidden="true"
-                >
-                  @if (chapterRunning(chapter.position)) {
-                    <ds-dot kind="primary" pulse />
-                  } @else {
-                    @switch (summary.status) {
-                      @case ('translated') {
-                        <ds-icon name="check" size="sm" />
-                      }
-                      @case ('has-issues') {
-                        <ds-icon name="alert-triangle" size="sm" /><span class="num">{{
-                          formatCount(summary.issues)
-                        }}</span>
-                      }
-                      @case ('stale') {
-                        <ds-icon name="clock" size="sm" />
-                      }
-                      @case ('failed') {
-                        <ds-icon name="alert-circle" size="sm" />
-                      }
-                    }
-                  }
-                </span>
-                <span class="visually-hidden">{{ statusLabel(summary, chapterRunning(chapter.position)) }}</span>
-              </span>
+              <ds-translation-status [summary]="summary" [running]="chapterRunning(chapter.position)" />
             }
           </button>
+          @if (readerLink()) {
+            <a
+              dsBtn
+              variant="ghost"
+              size="sm"
+              class="library-chapters-reader"
+              data-testid="novel-chapters-row-reader"
+              [iconOnly]="true"
+              [routerLink]="['/library', novel().id]"
+              [queryParams]="{ chapter: chapter.id }"
+              [attr.aria-label]="'translation.page.chapters.openReader' | t"
+              [dsTooltip]="'translation.page.chapters.openReader' | t"
+            >
+              <ds-icon name="book" size="sm" />
+            </a>
+          }
         }
       </div>
     </cdk-virtual-scroll-viewport>
@@ -417,7 +393,8 @@
 
 <ng-template #label let-chapter>
   @let num = mark(numberLabel(chapter), 'number');
-  @let title = mark(chapter.title, 'title');
+  @let shownTitle = rowTitle(chapter);
+  @let title = mark(shownTitle, 'title');
   <span class="library-chapters-num num"
     >{{ num.pre }}
     @if (num.hit) {
@@ -425,7 +402,11 @@
     }
     {{ num.post }}</span
   >
-  <span class="library-chapters-title" [dsTooltip]="chapter.title" dsTooltipWhenTruncated
+  <span
+    class="library-chapters-title"
+    [attr.lang]="rowLanguage(chapter)"
+    [dsTooltip]="shownTitle"
+    dsTooltipWhenTruncated
     >{{ title.pre }}
     @if (title.hit) {
       <mark>{{ title.hit }}</mark>
@@ -434,35 +415,37 @@
   >
 </ng-template>
 
-<ds-chapter-merge-dialog
-  [open]="dialog()?.kind === 'merge'"
-  [novelId]="novel().id"
-  [chapters]="dialogChapters('merge')"
-  (done)="onDialogDone()"
-  (invalidated)="onDialogInvalidated()"
-  (closed)="dialog.set(null)"
-/>
-<ds-chapter-split-dialog
-  [open]="dialog()?.kind === 'split'"
-  [novelId]="novel().id"
-  [chapter]="dialogChapters('split')[0] ?? null"
-  (done)="onDialogDone()"
-  (invalidated)="onDialogInvalidated()"
-  (closed)="dialog.set(null)"
-/>
-<ds-chapter-delete-dialog
-  [open]="dialog()?.kind === 'delete'"
-  [novelId]="novel().id"
-  [chapters]="dialogChapters('delete')"
-  (done)="onDialogDone()"
-  (invalidated)="onDialogInvalidated()"
-  (closed)="dialog.set(null)"
-/>
-<ds-chapter-move-dialog
-  [open]="dialog()?.kind === 'move'"
-  [novelId]="novel().id"
-  [chapters]="dialogChapters('move')"
-  (done)="onDialogDone()"
-  (invalidated)="onDialogInvalidated()"
-  (closed)="dialog.set(null)"
-/>
+@if (organizable()) {
+  <ds-chapter-merge-dialog
+    [open]="dialog()?.kind === 'merge'"
+    [novelId]="novel().id"
+    [chapters]="dialogChapters('merge')"
+    (done)="onDialogDone()"
+    (invalidated)="onDialogInvalidated()"
+    (closed)="dialog.set(null)"
+  />
+  <ds-chapter-split-dialog
+    [open]="dialog()?.kind === 'split'"
+    [novelId]="novel().id"
+    [chapter]="dialogChapters('split')[0] ?? null"
+    (done)="onDialogDone()"
+    (invalidated)="onDialogInvalidated()"
+    (closed)="dialog.set(null)"
+  />
+  <ds-chapter-delete-dialog
+    [open]="dialog()?.kind === 'delete'"
+    [novelId]="novel().id"
+    [chapters]="dialogChapters('delete')"
+    (done)="onDialogDone()"
+    (invalidated)="onDialogInvalidated()"
+    (closed)="dialog.set(null)"
+  />
+  <ds-chapter-move-dialog
+    [open]="dialog()?.kind === 'move'"
+    [novelId]="novel().id"
+    [chapters]="dialogChapters('move')"
+    (done)="onDialogDone()"
+    (invalidated)="onDialogInvalidated()"
+    (closed)="dialog.set(null)"
+  />
+}

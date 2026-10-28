@@ -19,7 +19,16 @@
       [heading]="'library.translation.page.issues.notTranslated' | t: { language: store.languageLabel(language) }"
       [description]="'library.translation.page.issues.notTranslatedHint' | t"
     />
-    <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'primary' }" />
+    <a
+      dsBtn
+      variant="primary"
+      size="sm"
+      routerLink="/translation"
+      class="library-translation-issues-action"
+      data-testid="translation-issues-open-translation"
+    >
+      <ds-icon name="languages" size="sm" />{{ 'library.translation.reader.openTranslation' | t }}
+    </a>
   } @else {
     <div class="library-translation-issues-head">
       <strong>{{ store.languageLabel(language) }}</strong>
@@ -53,7 +62,6 @@
             <ds-icon name="alert-circle" size="sm" /><strong>{{ 'library.translation.page.issues.failed' | t }}</strong>
           </div>
           <p>{{ chapter.error }}</p>
-          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'secondary' }" />
         </div>
       }
       @if (state() === 'stale') {
@@ -74,7 +82,6 @@
               ) | t
             }}
           </p>
-          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'secondary' }" />
         </div>
       }
       @if (chapter.instructionChanged && state() !== 'failed') {
@@ -90,7 +97,6 @@
             }}</strong>
           </div>
           <p>{{ 'library.translation.page.issues.instructionChanged' | t }}</p>
-          <ng-container *ngTemplateOutlet="translateButton; context: { variant: 'ghost' }" />
         </div>
       }
     }
@@ -153,24 +159,3 @@
     }
   }
 }
-
-<ng-template #translateButton let-variant="variant">
-  <span
-    class="library-novel-action"
-    [class.library-translation-issues-action]="state() === 'not-translated'"
-    [dsTooltip]="blockedReason()"
-    [attr.tabindex]="blockedReason() ? 0 : null"
-  >
-    <button
-      dsBtn
-      [variant]="variant"
-      size="sm"
-      type="button"
-      data-testid="translation-issues-translate"
-      [disabled]="!!blockedReason()"
-      (click)="translateChapter()"
-    >
-      <ds-icon name="languages" size="sm" />{{ 'library.translation.page.issues.translateChapter' | t }}
-    </button>
-  </span>
-</ng-template>

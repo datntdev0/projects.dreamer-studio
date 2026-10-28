@@ -37,7 +37,7 @@ export type TranslationScenario = 'normal' | 'none' | 'running' | 'notAnalysed' 
 const TICK_MS = 300;
 
 function rowId(key: GlossaryKey): string {
-  return `${key.entityType}:${key.entityName}:${key.alias ?? ''}`;
+  return `${key.entityType}:${key.entityName}:${key.kind}:${key.term ?? ''}`;
 }
 
 function glossaryBatches(rows: GlossaryRow[], size: GlossaryBatchSize): GlossaryRow[][] {
@@ -201,6 +201,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
       return {
         index: chapter.index,
         file: chapter.file,
+        title: null,
         status:
           chapter.index === (language === 'vi' ? 21 : 11) &&
           novelId === JADE_RIVER_NOVEL.id &&
@@ -268,7 +269,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
     if (!row) return;
     const translation = request.translation?.trim() || null;
     this.rows.set(key, { ...row, translation, status: translation ? 'user' : 'untranslated' });
-    const name = request.key.alias ?? request.key.entityName;
+    const name = request.key.term ?? request.key.entityName;
     for (const detail of this.translations.values()) {
       if (detail.language !== request.language) continue;
       const source = this.sourceChapters[detail.index - 1];
@@ -331,7 +332,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
       userEdited: queue.filter((chapter) => chapter.edited).length,
       untranslatedNames: rows.filter((row) => {
         if (row.status !== 'untranslated') return false;
-        const name = row.alias ?? row.entityName;
+        const name = row.term ?? row.entityName;
         return plannedText.some((text) =>
           findTextMatches(text, name).some((match) => isWord(text, match.start, match.end)),
         );
@@ -450,8 +451,8 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   }
 
   private summary(detail: ChapterTranslation): ChapterTranslationSummary {
-    const { index, file, status, issues, edited, staleReason, instructionChanged, error } = detail;
-    return { index, file, status, issues, edited, staleReason, instructionChanged, error };
+    const { index, file, title, status, issues, edited, staleReason, instructionChanged, error } = detail;
+    return { index, file, title, status, issues, edited, staleReason, instructionChanged, error };
   }
 
   private async worldRows(novelId: string, language: TargetLanguage): Promise<GlossaryRow[]> {
@@ -481,11 +482,11 @@ export class FakeTranslationApi extends FakeAnalysisApi {
     const rows = [...this.rows.entries()]
       .filter(([key]) => key.startsWith(`${detail.language}:`))
       .map(([, row]) => row)
-      .sort((a, b) => (b.alias ?? b.entityName).length - (a.alias ?? a.entityName).length);
+      .sort((a, b) => (b.term ?? b.entityName).length - (a.term ?? a.entityName).length);
     source.paragraphs.forEach((paragraph, index) => {
       const consumed: { start: number; end: number }[] = [];
       for (const row of rows) {
-        const name = row.alias ?? row.entityName;
+        const name = row.term ?? row.entityName;
         const match = findTextMatches(paragraph, name).find(
           (item) =>
             isWord(paragraph, item.start, item.end) &&
@@ -591,7 +592,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
         if (row)
           this.rows.set(key, {
             ...row,
-            translation: translatedName(row.alias ?? row.entityName, run.language),
+            translation: translatedName(row.term ?? row.entityName, run.language),
             status: 'llm',
           });
       }

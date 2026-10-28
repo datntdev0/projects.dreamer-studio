@@ -43,35 +43,6 @@
         <h1 dsPageTitle data-testid="novel-page-title" [attr.lang]="headingLanguage()">
           {{ heading() }}
         </h1>
-        <div class="ds-world-views" role="group" [attr.aria-label]="'library.translation.page.views' | t">
-          @for (view of views; track view) {
-            <button
-              type="button"
-              [attr.data-testid]="'translation-page-view-' + view"
-              [attr.aria-pressed]="translationStore.view() === view"
-              [dsTooltip]="
-                (view === 'reader' ? 'library.translation.page.view.reader' : 'library.translation.page.view.glossary')
-                  | t
-              "
-              [disabled]="editing()"
-              (click)="translationStore.setView(view)"
-            >
-              <ds-icon [name]="viewIcons[view]" size="sm" />
-              <span class="ds-toolbar-label">{{
-                (view === 'reader' ? 'library.translation.page.view.reader' : 'library.translation.page.view.glossary')
-                  | t
-              }}</span>
-              @if (view === 'glossary' && status()?.glossary?.untranslated) {
-                <ds-badge data-testid="translation-page-glossary-badge">{{
-                  status()?.glossary?.untranslated
-                }}</ds-badge>
-                <span class="visually-hidden">{{
-                  'library.translation.page.glossaryUntranslated' | t: { count: status()?.glossary?.untranslated ?? 0 }
-                }}</span>
-              }
-            </button>
-          }
-        </div>
         <span class="ds-spacer"></span>
         <div class="ds-page-actions" role="group" [attr.aria-label]="'library.novel.page.actions' | t">
           <button
@@ -88,29 +59,20 @@
               'library.novel.page.analyse' | t
             }}</span>
           </button>
-          @if (translationStore.running()) {
-            <ds-translation-pill />
-          } @else {
-            <span
-              class="library-novel-action"
-              [dsTooltip]="translateReason() || ('library.translation.page.translate' | t)"
-              [attr.tabindex]="translateReason() ? 0 : null"
-            >
-              <button
-                dsBtn
-                variant="primary"
-                size="sm"
-                type="button"
-                data-testid="translation-page-translate"
-                [disabled]="!!translateReason() || !status()"
-                (click)="translationStore.openContentDialog(null)"
-              >
-                <ds-icon name="languages" size="sm" /><span class="ds-toolbar-label">{{
-                  'library.translation.page.translate' | t
-                }}</span>
-              </button>
-            </span>
-          }
+          <button
+            dsBtn
+            size="sm"
+            type="button"
+            data-testid="novel-page-translation"
+            [disabled]="editing()"
+            [attr.aria-label]="'library.novel.page.translation' | t"
+            [dsTooltip]="'library.novel.page.translation' | t"
+            (click)="currentNovel.translate(item.id)"
+          >
+            <ds-icon name="languages" size="sm" /><span class="ds-toolbar-label">{{
+              'library.novel.page.translation' | t
+            }}</span>
+          </button>
           <span
             class="library-novel-action"
             [dsTooltip]="editReason() || editLabel()"
@@ -199,17 +161,12 @@
       class="library-novel-reader"
       tabindex="-1"
       data-testid="novel-page-reader"
-      [attr.aria-label]="
-        (translationStore.view() === 'glossary' ? 'library.translation.page.view.glossary' : 'library.reader.label') | t
-      "
-      [attr.data-view]="translationStore.view()"
+      [attr.aria-label]="'library.reader.label' | t"
     >
-      @if (translationStore.view() === 'glossary') {
-        <ds-glossary-view />
-      } @else if (novel(); as item) {
+      @if (novel(); as item) {
         @if (editing() && chapter(); as selected) {
           <ds-chapter-editor
-            [mode]="translationStore.display() === 'original' ? 'original' : 'translation'"
+            [mode]="display() === 'original' ? 'original' : 'translation'"
             [novel]="item"
             [chapter]="selected"
             (done)="editing.set(false)"
@@ -235,55 +192,36 @@
       [label]="'library.novel.tabs.label' | t"
       [resizeLabel]="'library.novel.page.resizeNovel' | t"
     >
-      @if (translationStore.view() === 'glossary') {
-        <div
-          class="ds-panel-body library-translation-instruction"
-          data-testid="translation-page-instruction"
-          [attr.inert]="editing() || null"
-        >
-          @if (translationStore.language(); as lang) {
-            <ds-instruction-editor mode="panel" [language]="lang" />
+      <div class="ds-panel-head" [attr.inert]="editing() || null">
+        <ds-tabs
+          idPrefix="novel-page-tab"
+          controls="novel-page-tabpanel"
+          [tabs]="tabs()"
+          [label]="'library.novel.tabs.label' | t"
+          [value]="tab()"
+          (valueChange)="tab.set($any($event))"
+        />
+      </div>
+      <div
+        id="novel-page-tabpanel"
+        class="ds-panel-body library-novel-body"
+        [attr.inert]="editing() || null"
+        role="tabpanel"
+        [attr.aria-labelledby]="'novel-page-tab-' + tab()"
+      >
+        @if (novel(); as item) {
+          @if (tab() === 'reading') {
+            <ds-reading-settings />
+          } @else if (tab() === 'search') {
+            <ds-novel-search [novel]="item" (selected)="onSearchSelected($event)" />
           } @else {
-            <ds-area-state
-              kind="empty"
-              icon="languages"
-              [compact]="true"
-              [description]="'library.translation.page.noTarget' | t"
-            />
+            <ds-translation-issues [sourceLanguage]="item.language" />
           }
-        </div>
-      } @else {
-        <div class="ds-panel-head" [attr.inert]="editing() || null">
-          <ds-tabs
-            idPrefix="novel-page-tab"
-            controls="novel-page-tabpanel"
-            [tabs]="tabs()"
-            [label]="'library.novel.tabs.label' | t"
-            [value]="tab()"
-            (valueChange)="tab.set($any($event))"
-          />
-        </div>
-        <div
-          id="novel-page-tabpanel"
-          class="ds-panel-body library-novel-body"
-          [attr.inert]="editing() || null"
-          role="tabpanel"
-          [attr.aria-labelledby]="'novel-page-tab-' + tab()"
-        >
-          @if (novel(); as item) {
-            @if (tab() === 'reading') {
-              <ds-reading-settings />
-            } @else if (tab() === 'search') {
-              <ds-novel-search [novel]="item" (selected)="onSearchSelected($event)" />
-            } @else {
-              <ds-translation-issues [sourceLanguage]="item.language" [blockedReason]="translateReason()" />
-            }
-          } @else {
-            <span class="skeleton library-novel-skeleton-cover" aria-hidden="true"></span>
-            <ng-container [ngTemplateOutlet]="skeletonRows" />
-          }
-        </div>
-      }
+        } @else {
+          <span class="skeleton library-novel-skeleton-cover" aria-hidden="true"></span>
+          <ng-container [ngTemplateOutlet]="skeletonRows" />
+        }
+      </div>
     </ng-template>
   }
 }
@@ -304,8 +242,6 @@
 </ng-template>
 
 <ds-unsaved-changes-dialog [open]="leaveOpen()" (keep)="settleLeave(false)" (discard)="settleLeave(true)" />
-<ds-translate-glossary-dialog />
-<ds-translate-content-dialog />
 
 <ng-template #skeletonRows>
   <div class="library-novel-skeleton-rows" aria-hidden="true">

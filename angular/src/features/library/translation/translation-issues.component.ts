@@ -1,10 +1,9 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { PillComponent } from '@components/status/pill.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
-import { TooltipDirective } from '@components/tooltip/tooltip.directive';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { TranslationIssue } from '@dreamer/shared/models/translation';
 import { TranslationStore } from '../translation.store';
@@ -13,15 +12,7 @@ type IssuesState = 'no-language' | 'loading' | 'not-translated' | 'translated' |
 
 @Component({
   selector: 'ds-translation-issues',
-  imports: [
-    AreaStateComponent,
-    ButtonDirective,
-    IconComponent,
-    NgTemplateOutlet,
-    PillComponent,
-    TooltipDirective,
-    TranslatePipe,
-  ],
+  imports: [AreaStateComponent, ButtonDirective, IconComponent, PillComponent, RouterLink, TranslatePipe],
   templateUrl: './translation-issues.component.html',
   host: {
     class: 'library-translation-issues',
@@ -31,7 +22,6 @@ type IssuesState = 'no-language' | 'loading' | 'not-translated' | 'translated' |
 })
 export class TranslationIssuesComponent {
   readonly sourceLanguage = input<string | null>(null);
-  readonly blockedReason = input<string>('');
   protected readonly store = inject(TranslationStore);
   protected readonly state = computed<IssuesState>(() => {
     if (!this.store.language()) return 'no-language';
@@ -55,12 +45,6 @@ export class TranslationIssuesComponent {
   protected readonly statusKey = computed(
     () => `library.translation.page.issues.status.${this.state() === 'has-issues' ? 'hasIssues' : this.state()}`,
   );
-
-  protected translateChapter(): void {
-    const index = this.store.chapter()?.index;
-    if (this.blockedReason() || index == null) return;
-    this.store.openChapterDialog(index, true);
-  }
 
   protected select(issue: TranslationIssue): void {
     if (this.store.selectedIssue() === issue.id) {

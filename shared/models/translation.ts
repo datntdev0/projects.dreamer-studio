@@ -4,6 +4,7 @@ export type TargetLanguage = 'en' | 'vi';
 export type TranslationView = 'reader' | 'glossary';
 export type TranslationDisplay = 'original' | 'translation' | 'side';
 export type GlossaryStatus = 'untranslated' | 'llm' | 'user';
+export type GlossaryTermKind = 'name' | 'alias' | 'title';
 export type GlossaryScope = 'untranslated' | 'all';
 export type GlossaryBatchSize = 50 | 100 | 200;
 export type ChapterTranslationStatus = 'not-translated' | 'translated' | 'has-issues' | 'stale' | 'failed';
@@ -18,13 +19,15 @@ export const GLOSSARY_BATCH_SIZES: GlossaryBatchSize[] = [50, 100, 200];
 export interface GlossaryKey {
   entityType: EntityType;
   entityName: string;
-  alias: string | null;
+  term: string | null;
+  kind: GlossaryTermKind;
 }
 
 export interface GlossaryRow extends GlossaryKey {
   translation: string | null;
   status: GlossaryStatus;
   chapters: number;
+  chapterIndexes: number[];
 }
 
 export interface GlossaryPage {
@@ -51,6 +54,7 @@ export interface LlmChoiceState {
 export interface ChapterTranslationSummary {
   index: number;
   file: string;
+  title: string | null;
   status: ChapterTranslationStatus;
   issues: number;
   edited: boolean;

@@ -1,0 +1,42 @@
+<span
+  class="translation-status-row"
+  data-testid="translation-status-row"
+  [attr.data-status]="status()"
+  [dsTooltip]="label()"
+>
+  @if (summary().edited) {
+    <ds-icon
+      name="pencil"
+      size="sm"
+      class="translation-status-edited"
+      data-testid="translation-status-edited"
+      aria-hidden="true"
+    />
+  }
+  <span
+    class="translation-status-icon"
+    data-testid="translation-status-icon"
+    [attr.data-status]="status()"
+    aria-hidden="true"
+  >
+    @if (running()) {
+      <ds-dot kind="primary" pulse />
+    } @else {
+      @switch (summary().status) {
+        @case ('translated') {
+          <ds-icon name="check" size="sm" />
+        }
+        @case ('has-issues') {
+          <ds-icon name="alert-triangle" size="sm" /><span class="num">{{ issueCount() }}</span>
+        }
+        @case ('stale') {
+          <ds-icon name="clock" size="sm" />
+        }
+        @case ('failed') {
+          <ds-icon name="alert-circle" size="sm" />
+        }
+      }
+    }
+  </span>
+  <span class="visually-hidden">{{ label() }}</span>
+</span>

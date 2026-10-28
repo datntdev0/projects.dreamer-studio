@@ -48,6 +48,14 @@ ds-glossary-view {
     }
   }
 
+  .glossary-chapter-chip {
+    padding-left: var(--sp-sm);
+    border: var(--gutter) solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-surface-muted);
+    color: var(--color-text-secondary);
+  }
+
   .glossary-area {
     display: grid;
     flex: 1;

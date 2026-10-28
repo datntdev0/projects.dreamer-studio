@@ -5,42 +5,49 @@
   }
 
   .translation-status-row {
-    display: inline-flex;
-    flex: none;
-    gap: var(--sp-xs);
-    align-items: center;
     margin-left: auto;
   }
+}
 
-  .translation-status-edited {
-    color: var(--color-text-tertiary);
-  }
+.translation-status-host {
+  display: contents;
+}
 
-  .translation-status-icon {
-    display: inline-flex;
-    gap: var(--sp-xxs);
-    align-items: center;
-  }
+.translation-status-row {
+  display: inline-flex;
+  flex: none;
+  gap: var(--sp-xs);
+  align-items: center;
+}
 
-  .translation-status-icon[data-status='translated'] {
-    color: var(--color-success);
-  }
+.translation-status-edited {
+  color: var(--color-text-tertiary);
+}
 
-  .translation-status-icon[data-status='has-issues'] {
-    color: var(--color-warning);
-  }
+.translation-status-icon {
+  display: inline-flex;
+  gap: var(--sp-xxs);
+  align-items: center;
+}
 
-  .translation-status-icon[data-status='stale'] {
-    color: var(--color-link);
-  }
+.translation-status-icon[data-status='translated'] {
+  color: var(--color-success);
+}
 
-  .translation-status-icon[data-status='failed'] {
-    color: var(--color-danger);
-  }
+.translation-status-icon[data-status='has-issues'] {
+  color: var(--color-warning);
+}
 
-  .translation-status-icon .num {
-    font-size: var(--font-size-small);
-  }
+.translation-status-icon[data-status='stale'] {
+  color: var(--color-link);
+}
+
+.translation-status-icon[data-status='failed'] {
+  color: var(--color-danger);
+}
+
+.translation-status-icon .num {
+  font-size: var(--font-size-small);
 }
 
 .library-inspector-stats > .translation-status-insp {

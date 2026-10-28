@@ -14,12 +14,10 @@ import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
-import { BadgeComponent } from '@components/status/badge.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
 import { AreaStateComponent } from '@components/state/area-state.component';
 import type { ChapterTranslationStatus } from '@dreamer/shared/models/translation';
-import type { TranslationView } from '@dreamer/shared/models/translation';
 import type { SplitterEdge } from '@components/splitter/splitter.directive';
 import { TabsComponent } from '@components/tabs/tabs.component';
 import type { TabItem } from '@components/tabs/tabs.component';
@@ -42,6 +40,8 @@ import type { ReaderHighlight } from './library.models';
 import { ChapterEditorComponent } from './novel-reader/chapter-editor.component';
 import { NovelChaptersComponent } from './novel-reader/novel-chapters.component';
 import { NovelReaderComponent } from './novel-reader/novel-reader.component';
+import { effectiveDisplay } from './novel-reader/novel-reader.component';
+import type { TranslationDisplay } from '@dreamer/shared/models/translation';
 import { NovelSearchComponent } from './novel-reader/novel-search.component';
 import type { NovelSearchSelection } from './novel-reader/novel-search.component';
 import { ReadingSettingsComponent } from './novel-reader/reading-settings.component';
@@ -52,12 +52,7 @@ import { TranslationStore } from './translation.store';
 import { AppInfoStore } from '@core/app-info';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { RecentNovelStore } from '@core/stores/recent-novel-store';
-import { GlossaryViewComponent } from './translation/glossary-view.component';
-import { InstructionEditorComponent } from './translation/instruction-editor.component';
-import { TranslateContentDialogComponent } from './translation/translate-content-dialog.component';
-import { TranslateGlossaryDialogComponent } from './translation/translate-glossary-dialog.component';
 import { TranslationIssuesComponent } from './translation/translation-issues.component';
-import { TranslationPillComponent } from './translation/translation-pill.component';
 
 type PageTab = NovelTab | 'translation';
 
@@ -93,13 +88,10 @@ const LOCK_KEYS: Record<string, { heading: string; reason: string; message: stri
   selector: 'ds-novel-page',
   imports: [
     AreaStateComponent,
-    BadgeComponent,
     BannerComponent,
     ButtonDirective,
     ChapterEditorComponent,
     IconComponent,
-    GlossaryViewComponent,
-    InstructionEditorComponent,
     NovelChaptersComponent,
     NovelReaderComponent,
     NovelSearchComponent,
@@ -109,12 +101,9 @@ const LOCK_KEYS: Record<string, { heading: string; reason: string; message: stri
     RouterLink,
     ReadingSettingsComponent,
     TabsComponent,
-    TranslateContentDialogComponent,
-    TranslateGlossaryDialogComponent,
     TooltipDirective,
     TranslatePipe,
     TranslationIssuesComponent,
-    TranslationPillComponent,
     UnsavedChangesDialogComponent,
   ],
   providers: [NovelStore, NovelSearchStore, TranslationStore],
@@ -180,18 +169,11 @@ export class NovelPage {
           : null,
     },
   ]);
-  protected readonly views: TranslationView[] = ['reader', 'glossary'];
-  protected readonly viewIcons: Record<TranslationView, string> = { reader: 'book', glossary: 'tag' };
-  protected readonly status = this.translationStore.status;
-  protected readonly translateReason: Signal<string> = computed(() => {
-    if (this.lockReason()) return this.lockReason();
-    if (!this.chapters().length) return this.i18n.t('library.novel.page.noChapters');
-    if (!this.translationStore.language()) return this.i18n.t('library.translation.page.noTarget');
-    if (this.status()?.llm.content.available === false) return this.i18n.t('library.translation.page.noLlm');
-    return '';
-  });
+  protected readonly display: Signal<TranslationDisplay> = computed(() =>
+    effectiveDisplay(this.translationStore, this.chapter()),
+  );
   protected readonly editLabel: Signal<string> = computed(() =>
-    this.translationStore.display() === 'original'
+    this.display() === 'original'
       ? this.i18n.t('library.novel.page.edit')
       : this.i18n.t('library.translation.page.editTranslation'),
   );
@@ -205,13 +187,12 @@ export class NovelPage {
     return type && LOCK_KEYS[type] ? this.i18n.t(LOCK_KEYS[type].message) : '';
   });
   protected readonly editReason: Signal<string> = computed(() => {
-    if (this.translationStore.view() === 'glossary') return this.i18n.t('library.translation.page.editGlossaryView');
     if (this.lockReason()) return this.lockReason();
     if (!this.chapters().length) return this.i18n.t('library.novel.page.noChapters');
     const chapter: LibraryChapter | null = this.chapter();
     if (chapter && this.store.text(chapter).status === 'missing')
       return this.i18n.t('library.novel.page.chapterMissing');
-    if (this.translationStore.display() !== 'original' && !this.translationStore.language())
+    if (this.display() !== 'original' && !this.translationStore.language())
       return this.i18n.t('library.translation.page.noTarget');
     return '';
   });
@@ -222,11 +203,7 @@ export class NovelPage {
     const translated = this.translationStore.chapter();
     const status: ChapterTranslationStatus | undefined = translated?.status;
     return (
-      this.translationStore.view() === 'reader' &&
-      this.translationStore.display() !== 'original' &&
-      !!translated?.title.trim() &&
-      status !== 'not-translated' &&
-      status !== 'failed'
+      this.display() !== 'original' && !!translated?.title.trim() && status !== 'not-translated' && status !== 'failed'
     );
   });
   protected readonly headingLanguage: Signal<string | null> = computed(() =>
@@ -237,7 +214,6 @@ export class NovelPage {
         : null,
   );
   protected readonly heading: Signal<string> = computed(() => {
-    if (this.translationStore.view() === 'glossary') return this.novel()?.title ?? '';
     const chapter: LibraryChapter | null = this.chapter();
     return chapter
       ? `${chapterNumber(chapter)} · ${this.translatedHeading() ? this.translationStore.chapter()?.title : chapter.title}`
@@ -362,7 +338,6 @@ export class NovelPage {
   }
 
   protected selectChapter(id: string | null): void {
-    if (this.translationStore.view() === 'glossary') this.translationStore.setView('reader');
     if (this.editing() || !id || id === this.current()) return;
     this.current.set(id);
     this.highlight.set(null);
@@ -403,7 +378,6 @@ export class NovelPage {
     const isF: boolean = event.key.toLocaleLowerCase() === 'f';
     if (event.ctrlKey && event.shiftKey && isF) {
       event.preventDefault();
-      this.translationStore.setView('reader');
       this.tab.set('search');
       if (!this.layout.isOpen('right')) this.layout.toggle('right');
       requestAnimationFrame(() => this.search()?.focus());

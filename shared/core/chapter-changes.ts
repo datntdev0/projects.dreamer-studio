@@ -6,6 +6,7 @@ import type { ChapterRef } from '../models/novel';
 import type { NovelChapterEntry } from '../models/novel-store';
 import type { ChapterStats } from './novel-text';
 import { splitParagraphs } from './novel-text';
+import { replaceTextMatches } from './text-match';
 
 export interface ChapterFile extends ChapterStats {
   file: string;
@@ -116,6 +117,32 @@ export async function applyChapterChange(
     case 'delete': {
       const removed: Set<number> = new Set(checkedPositions(chapters, change.chapters, 1));
       return chapters.filter((_, index: number): boolean => !removed.has(index + 1));
+    }
+    case 'replace': {
+      const replaced: Set<number> = new Set(checkedPositions(chapters, change.chapters, 1));
+      if (!change.query.trim()) {
+        throw invalid('search text required');
+      }
+      const replace = (text: string): string => replaceTextMatches(text, change.query, change.replacement);
+      const result: NovelChapterEntry[] = [];
+      for (const [index, entry] of chapters.entries()) {
+        if (!replaced.has(index + 1)) {
+          result.push(entry);
+          continue;
+        }
+        const source: string = (await texts.read(entry.file)).join('\n');
+        const title: string = replace(entry.title);
+        const paragraphs: string[] = splitParagraphs(replace(source));
+        if (title === entry.title && paragraphs.join('\n') === source) {
+          result.push(entry);
+          continue;
+        }
+        if (paragraphs.length === 0) {
+          throw invalid('at least one paragraph required');
+        }
+        result.push({ title: checkedTitle(title), ...(await texts.write(paragraphs)) });
+      }
+      return result;
     }
   }
 }

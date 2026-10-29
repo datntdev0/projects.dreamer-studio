@@ -53,7 +53,8 @@ export type ChapterChange =
   | { kind: 'move'; chapters: ChapterRef[]; toIndex: number }
   | { kind: 'merge'; chapters: ChapterRef[] }
   | { kind: 'split'; chapter: ChapterRef; atParagraph: number; title: string }
-  | { kind: 'delete'; chapters: ChapterRef[] };
+  | { kind: 'delete'; chapters: ChapterRef[] }
+  | { kind: 'replace'; chapters: ChapterRef[]; query: string; replacement: string };
 
 export interface ChapterChangeRequest {
   novelId: string;

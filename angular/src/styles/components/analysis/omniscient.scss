@@ -6,6 +6,16 @@
 
 .ds-world-toolbar {
   gap: var(--sp-md);
+
+  .ds-world-names {
+    display: inline-block;
+    flex: none;
+    width: auto;
+
+    .ds-input {
+      width: auto;
+    }
+  }
 }
 
 .ds-world-views {

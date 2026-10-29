@@ -40,6 +40,7 @@ export const ErrorCode = {
   TranslationNoWorld: 'TRANSLATION_NO_WORLD',
   TranslationNothingToRun: 'TRANSLATION_NOTHING_TO_RUN',
   TranslationLlmOutputInvalid: 'TRANSLATION_LLM_OUTPUT_INVALID',
+  TranslationStaleRef: 'TRANSLATION_STALE_REF',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

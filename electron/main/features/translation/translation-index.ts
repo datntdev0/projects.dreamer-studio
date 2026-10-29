@@ -6,7 +6,9 @@ import { checkTranslation } from '@dreamer/shared/core/translation-check';
 import { chapterTranslationStatuses, translatedCount } from '@dreamer/shared/core/translation-status';
 import { LibraryChannel, TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { ChapterTranslation } from '@dreamer/shared/models/translation';
 import { ChapterTranslationFile, ChapterTranslationSummary } from '@dreamer/shared/models/translation';
+import { TranslationIssue } from '@dreamer/shared/models/translation';
 import { GlossaryRow, GlossaryUsed } from '@dreamer/shared/models/translation';
 import { TranslationIndexEntry, TranslationIndexFile } from '@dreamer/shared/models/translation';
 import { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
@@ -93,6 +95,66 @@ export async function chapterStatusesFor(
     readGlossary(folder, language),
     await instructionHash(instruction.text),
   );
+}
+
+export async function chapterTranslation(
+  folder: NovelFolder,
+  novel: NovelMetadata,
+  language: TargetLanguage,
+  file: string,
+): Promise<ChapterTranslation | null> {
+  const summary: ChapterTranslationSummary | undefined = (await chapterStatusesFor(folder, novel, language)).find(
+    (chapter: ChapterTranslationSummary): boolean => chapter.file === file,
+  );
+  if (summary === undefined) return null;
+  const stored: ChapterTranslationFile | null =
+    summary.status === 'not-translated' || summary.status === 'failed'
+      ? null
+      : readChapterTranslation(folder, language, file);
+  return {
+    ...summary,
+    language,
+    title: stored?.title ?? '',
+    paragraphs: stored?.paragraphs ?? [],
+    issueList: stored?.issues ?? [],
+    translatedAt: stored?.translatedAt ?? null,
+  };
+}
+
+export interface ChapterTranslationInput {
+  source: { title: string; paragraphs: string[] };
+  translation: { title: string; paragraphs: string[] };
+  names: GlossaryUsed[];
+  index: number;
+  file: string;
+  edited: boolean;
+  instructionHash: string;
+  translatedAt: string;
+}
+
+export interface ChapterTranslationBuild {
+  entry: TranslationIndexEntry;
+  result: ChapterTranslationFile;
+  issues: TranslationIssue[];
+}
+
+export function buildChapterTranslation(input: ChapterTranslationInput): ChapterTranslationBuild {
+  const { names, index, file, edited, instructionHash, translatedAt } = input;
+  const issues: TranslationIssue[] = checkTranslation({ source: input.source, translation: input.translation, names });
+  return {
+    entry: {
+      index,
+      file,
+      edited,
+      instructionHash,
+      title: input.translation.title,
+      issues: issues.length,
+      glossaryUsed: names,
+      translatedAt,
+    },
+    result: { version: 1, file, ...input.translation, issues, translatedAt },
+    issues,
+  };
 }
 
 export function languageSummary(

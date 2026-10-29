@@ -76,3 +76,16 @@ export function findTextMatches(text: string, query: string, options: TextMatchO
   }
   return matches;
 }
+
+export function replaceTextMatches(text: string, query: string, replacement: string): string {
+  const matches: TextMatch[] = findTextMatches(text, query);
+  if (!matches.length) return text;
+  const characters: string[] = Array.from(text);
+  let result = '';
+  let index = 0;
+  for (const { start, end } of matches) {
+    result += `${characters.slice(index, start).join('')}${replacement}`;
+    index = end;
+  }
+  return `${result}${characters.slice(index).join('')}`;
+}

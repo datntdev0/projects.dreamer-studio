@@ -1,10 +1,13 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { TranslationChannel } from '@dreamer/shared/ipc/channels';
+import { LibraryChannel, TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { glossaryKeyId, hasGlossaryKey } from '@dreamer/shared/core/glossary';
+import { foundGlossary } from '@dreamer/shared/core/translation-check';
 import { formatLlmChoice, LlmResolution, resolveLlm } from '@dreamer/shared/models/llm';
-import { NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { WorldEditEntity } from '@dreamer/shared/models/analysis';
-import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { ChapterTranslation, GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { TranslationChapterRequest, TranslationSaveRequest } from '@dreamer/shared/models/translation';
+import { TranslationIndexEntry } from '@dreamer/shared/models/translation';
 import { ContentRunPlan, ContentRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryRunPlan } from '@dreamer/shared/models/translation';
 import { GlossaryRunRequest } from '@dreamer/shared/models/translation';
@@ -18,13 +21,16 @@ import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { AppDataSession } from '../../app/app-data-session';
 import { broadcast } from '../../ipc/broadcast';
 import { createLogger, Logger } from '../../logging/logger';
+import { readChapterParagraphs } from '../analysis/analysis-files';
 import { AnalysisRuns } from '../analysis/analysis-runs';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { editGlossaryEntry, hasAnalysedWorld, loadGlossaryRows, pruneGlossary } from './translation-glossary';
 import { loadInstruction, resetInstruction, saveInstruction } from './translation-instruction';
-import { chapterStatusesFor, languageSummary, recheckGlossaryChange } from './translation-index';
+import { buildChapterTranslation, ChapterTranslationBuild, chapterStatusesFor } from './translation-index';
+import { chapterTranslation, instructionHash, languageSummary } from './translation-index';
+import { readTranslationIndex, recheckGlossaryChange, saveTranslationEntry } from './translation-index';
 import { checkGlossaryRun } from './glossary-translation-pipeline';
 import { checkContentRun, ContentTranslationDeps } from './content-translation-pipeline';
 
@@ -34,6 +40,13 @@ interface RunStart {
   novelId: string;
   language: TargetLanguage;
   instruction: string | null;
+}
+
+function normalizeParagraphs(paragraphs: string[]): string[] {
+  return paragraphs
+    .flatMap((paragraph: string): string[] => paragraph.split(/\r?\n/))
+    .map((line: string): string => line.trim())
+    .filter((line: string): boolean => line !== '');
 }
 
 function isTranslationRun(run: PipelineRun): boolean {
@@ -118,6 +131,49 @@ export class TranslationService {
       analysed,
       rows: analysed ? await this.glossaryRows(novel, query.language) : [],
     };
+  }
+
+  async chapter(request: TranslationChapterRequest): Promise<ChapterTranslation | null> {
+    const novel: NovelMetadata = this.readNovel(request.novelId);
+    return chapterTranslation(this.folder(request.novelId), novel, request.language, request.file);
+  }
+
+  save(request: TranslationSaveRequest): Promise<ChapterTranslation> {
+    return withNovelLock(request.novelId, async (): Promise<ChapterTranslation> => {
+      const novel: NovelMetadata = this.readNovel(request.novelId);
+      assertUnlocked(new PipelineRunRepository(this.session().db), request.novelId);
+      const position: number = novel.chapters.findIndex(
+        (chapter: NovelChapterEntry): boolean => chapter.file === request.file,
+      );
+      if (position < 0) throw new CodedError(ErrorCode.TranslationStaleRef, `Chapter not found: ${request.file}`);
+      const folder: NovelFolder = this.folder(request.novelId);
+      const chapter: NovelChapterEntry = novel.chapters[position];
+      const previous: TranslationIndexEntry | undefined = readTranslationIndex(folder, request.language)?.chapters.find(
+        (entry: TranslationIndexEntry): boolean => entry.file === request.file,
+      );
+      const hash: string =
+        previous !== undefined && previous.error === undefined
+          ? previous.instructionHash
+          : await instructionHash((await loadInstruction(folder, request.novelId, request.language)).text);
+      const rows: GlossaryRow[] = hasAnalysedWorld(folder) ? await this.glossaryRows(novel, request.language) : [];
+      const paragraphs: string[] = await readChapterParagraphs(folder, chapter.file);
+      const built: ChapterTranslationBuild = buildChapterTranslation({
+        source: { title: chapter.title, paragraphs },
+        translation: { title: request.title.trim(), paragraphs: normalizeParagraphs(request.paragraphs) },
+        names: foundGlossary(rows, chapter.title, paragraphs),
+        index: position + 1,
+        file: chapter.file,
+        edited: true,
+        instructionHash: hash,
+        translatedAt: new Date().toISOString(),
+      });
+      await saveTranslationEntry(folder, request.language, novel.chapters, built.entry, built.result);
+      broadcast(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
+      broadcast(LibraryChannel.Changed, { novelIds: [request.novelId] });
+      const saved: ChapterTranslation | null = await chapterTranslation(folder, novel, request.language, request.file);
+      if (saved === null) throw new CodedError(ErrorCode.TranslationStaleRef, `Chapter not found: ${request.file}`);
+      return saved;
+    });
   }
 
   async planGlossary(request: GlossaryRunRequest): Promise<GlossaryRunPlan> {

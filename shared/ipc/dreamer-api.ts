@@ -146,7 +146,7 @@ export interface DreamerApi {
   };
   translation?: {
     status(query: TranslationStatusQuery): Promise<TranslationStatus>;
-    chapter(request: TranslationChapterRequest): Promise<ChapterTranslation>;
+    chapter(request: TranslationChapterRequest): Promise<ChapterTranslation | null>;
     glossary(query: InstructionRequest): Promise<GlossaryPage>;
     editGlossary(request: GlossaryEditRequest): Promise<void>;
     instruction(request: InstructionRequest): Promise<TranslationInstruction>;

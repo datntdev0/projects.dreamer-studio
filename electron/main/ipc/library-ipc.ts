@@ -257,6 +257,13 @@ function isChapterChange(value: unknown): value is ChapterChange {
     case 'merge':
     case 'delete':
       return hasOnlyKeys(value, ['kind', 'chapters']) && isChapterRefs(value.chapters);
+    case 'replace':
+      return (
+        hasOnlyKeys(value, ['kind', 'chapters', 'query', 'replacement']) &&
+        isChapterRefs(value.chapters) &&
+        typeof value.query === 'string' &&
+        typeof value.replacement === 'string'
+      );
     case 'split':
       return (
         hasOnlyKeys(value, ['kind', 'chapter', 'atParagraph', 'title']) &&

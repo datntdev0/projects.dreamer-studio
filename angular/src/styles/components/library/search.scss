@@ -35,6 +35,29 @@
   overflow: auto;
 }
 
+.library-novel-search-bar {
+  display: flex;
+  gap: var(--sp-xxs);
+  align-items: center;
+
+  > .library-novel-search-field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.library-novel-search-replace {
+  display: flex;
+  gap: var(--sp-xxs);
+  align-items: center;
+  padding-left: calc(var(--control-h-sm) + var(--sp-xxs));
+
+  > .ds-input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .library-novel-search-field {
   position: relative;
   display: flex;
@@ -88,7 +111,7 @@
     background: var(--color-surface-muted);
   }
 
-  > button {
+  > button:not(.ds-btn) {
     display: inline-flex;
     gap: var(--sp-xs);
     align-items: center;

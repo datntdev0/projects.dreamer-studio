@@ -20,6 +20,23 @@
       </button>
     }
   </div>
+  @if (store.nameTargets().length) {
+    <span class="ds-select ds-world-names">
+      <select
+        class="ds-input"
+        data-testid="world-name-language"
+        [attr.aria-label]="'analysis.page.nameLanguage' | t"
+        [dsTooltip]="'analysis.page.nameLanguage' | t"
+        (change)="setNameLanguage($event)"
+      >
+        <option value="" [selected]="!store.nameLanguage()">{{ 'analysis.page.nameOriginal' | t }}</option>
+        @for (option of store.nameOptions(); track option.value) {
+          <option [value]="option.value" [selected]="option.value === store.nameLanguage()">{{ option.label }}</option>
+        }
+      </select>
+      <ds-icon name="chevron-down" size="sm" />
+    </span>
+  }
   <span class="ds-spacer"></span>
   <button
     dsBtn
@@ -122,6 +139,8 @@
         'analysis.pipeline.importPackage' | t
       }}</a>
     </div>
+  } @else if (store.worldLoading()) {
+    <ds-area-state kind="loading" [heading]="'analysis.world.loading' | t" data-testid="world-loading" />
   } @else if (!store.loading() && !store.summary().analysed && !store.summary().stale && !store.run()) {
     <div class="ds-world-empty">
       <ds-icon name="network" size="xl" />

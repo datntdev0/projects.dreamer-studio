@@ -4,8 +4,12 @@ import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import { I18nService } from '@core/i18n/i18n.service';
 import { LlmStore } from '@core/stores/llm-store';
 import { SettingsStore } from '@core/stores/settings-store';
+import { TranslationLanguageStore } from '@core/stores/translation-language-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { DEFAULT_LANGUAGE } from '@dreamer/shared/i18n/translate';
+import { glossaryTranslations, translateEntityNames } from '@dreamer/shared/core/glossary';
+import { targetLanguages } from '@dreamer/shared/models/translation';
+import type { TargetLanguage } from '@dreamer/shared/models/translation';
 import { formatLlmChoice, LLM_CLIS, resolveLlm } from '@dreamer/shared/models/llm';
 import type { LlmProblem } from '@dreamer/shared/models/llm';
 import type {
@@ -73,11 +77,15 @@ export class OmniscientStore {
   private readonly i18n = inject(I18nService);
   private readonly llmStore = inject(LlmStore);
   private readonly settings = inject(SettingsStore);
+  private readonly translationLanguage = inject(TranslationLanguageStore);
   private readonly progressValue = signal<AnalysisProgress | null>(null);
+  private readonly nameTranslations = signal<Map<string, string>>(new Map());
+  private readonly namesTranslated = signal(false);
   private statusRequest = 0;
   private worldRequest = 0;
   private reviewRequest = 0;
   private previewRequest = 0;
+  private namesRequest = 0;
   private previewTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly novelId = this.current.novelId;
@@ -104,6 +112,7 @@ export class OmniscientStore {
   readonly reviewChapter = signal<number | null>(null);
   readonly reviewKind = signal<'entity' | 'fact' | 'all'>('all');
 
+  readonly worldLoading = computed(() => this.loading() && !this.world());
   readonly run = computed(() => this.progressValue() ?? this.status()?.run ?? null);
   readonly locked = computed(() => !!this.novel()?.lock || !!this.run());
   readonly editLockKey = computed(() => {
@@ -157,9 +166,31 @@ export class OmniscientStore {
   readonly reviewChapters = computed(() =>
     (this.status()?.chapters ?? []).filter((item) => item.status === 'analysed'),
   );
-  readonly entities = computed(() => this.world()?.entities ?? []);
+  readonly nameTargets = computed<TargetLanguage[]>(() => {
+    const novel = this.novel();
+    return novel ? targetLanguages(novel.language) : [];
+  });
+  readonly nameOptions = computed(() =>
+    this.nameTargets().map((language) => ({
+      value: language,
+      label: this.i18n.t(`library.translation.language.${language}`),
+    })),
+  );
+  readonly nameLanguage = computed<TargetLanguage | null>(() => {
+    if (!this.namesTranslated()) return null;
+    const targets = this.nameTargets();
+    const choice = this.translationLanguage.language(this.novelId() ?? '');
+    return choice && targets.includes(choice) ? choice : (targets[0] ?? null);
+  });
+  readonly displayWorld = computed<World | null>(() => {
+    const world = this.world();
+    const translations = this.nameTranslations();
+    if (!world || !translations.size) return world;
+    return { ...world, entities: world.entities.map((entity) => translateEntityNames(entity, translations)) };
+  });
+  readonly entities = computed(() => this.displayWorld()?.entities ?? []);
   readonly links = computed(() => this.world()?.links ?? []);
-  readonly graphWorld = computed<World>(() => this.world() ?? EMPTY_WORLD);
+  readonly graphWorld = computed<World>(() => this.displayWorld() ?? EMPTY_WORLD);
   readonly graphTypes = computed<EntityType[]>(() => filterEntityTypes(this.typeFilter()));
   readonly graphPredicates = computed<string[]>(() => {
     const predicate = this.predicateFilter();
@@ -169,11 +200,15 @@ export class OmniscientStore {
   readonly visibleEntities = computed(() => {
     const query = this.query().trim().toLocaleLowerCase();
     const types: EntityTypeName[] = this.graphTypes();
-    return this.entities().filter(
-      (entity) =>
+    const originals = new Map((this.world()?.entities ?? []).map((entity) => [entity.id, entity]));
+    return this.entities().filter((entity) => {
+      const original = originals.get(entity.id);
+      const names = [entity.name, ...entity.aliases, ...(original ? [original.name, ...original.aliases] : [])];
+      return (
         (!types.length || types.includes(entity.type)) &&
-        (!query || [entity.name, ...entity.aliases].some((name) => name.toLocaleLowerCase().includes(query))),
-    );
+        (!query || names.some((name) => name.toLocaleLowerCase().includes(query)))
+      );
+    });
   });
   readonly selected = computed<WorldEntity | null>(
     () => this.entities().find((item) => item.id === this.selectedId()) ?? null,
@@ -191,6 +226,9 @@ export class OmniscientStore {
     const offChanged = this.api.onAnalysisChanged((event) => {
       if (event.novelId === this.novelId()) void this.reload();
     });
+    const offTranslationChanged = this.api.onTranslationChanged((event) => {
+      if (event.novelId === this.novelId() && event.language === this.nameLanguage()) void this.loadNames();
+    });
     const offLibraryChanged = this.api.onLibraryChanged((event: LibraryChangedEvent): void => {
       const novelId = this.novelId();
       if (novelId && event.novelIds.includes(novelId)) void this.reload();
@@ -200,14 +238,19 @@ export class OmniscientStore {
       this.worldRequest++;
       this.reviewRequest++;
       this.previewRequest++;
+      this.namesRequest++;
       clearTimeout(this.previewTimer);
       offProgress();
       offChanged();
+      offTranslationChanged();
       offLibraryChanged();
     });
     effect(() => {
       const id = this.novelId();
       untracked(() => {
+        this.status.set(null);
+        this.world.set(null);
+        this.review.set(null);
         this.progressValue.set(null);
         this.selectedId.set(null);
         this.checkedIds.set([]);
@@ -216,6 +259,11 @@ export class OmniscientStore {
         this.reviewChapter.set(null);
         void this.reload(id);
       });
+    });
+    effect(() => {
+      this.novelId();
+      this.nameLanguage();
+      untracked(() => void this.loadNames());
     });
   }
 
@@ -252,6 +300,28 @@ export class OmniscientStore {
     this.world.set(world);
     if (this.selectedId() && !world?.entities.some((item) => item.id === this.selectedId())) this.selectedId.set(null);
     this.checkedIds.update((ids) => ids.filter((id) => world?.entities.some((entity) => entity.id === id)));
+  }
+
+  setNameLanguage(language: TargetLanguage | null): void {
+    const novelId = this.novelId();
+    this.namesTranslated.set(language !== null);
+    if (novelId && language) this.translationLanguage.set(novelId, language);
+  }
+
+  async loadNames(): Promise<void> {
+    const novelId = this.novelId();
+    const language = this.nameLanguage();
+    const request = ++this.namesRequest;
+    if (!novelId || !language) {
+      this.nameTranslations.set(new Map());
+      return;
+    }
+    try {
+      const glossary = await this.api.translationGlossary({ novelId, language });
+      if (request === this.namesRequest) this.nameTranslations.set(glossaryTranslations(glossary?.rows ?? []));
+    } catch {
+      if (request === this.namesRequest) this.nameTranslations.set(new Map());
+    }
   }
 
   async loadReview(): Promise<void> {

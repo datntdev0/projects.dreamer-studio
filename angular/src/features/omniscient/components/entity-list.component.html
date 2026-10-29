@@ -144,14 +144,23 @@
         >
       </div>
     } @empty {
-      <div class="ds-world-entities-empty" data-testid="world-entity-empty">
-        @if (!store.entities().length) {
-          <strong>{{ 'analysis.entities.empty' | t }}</strong>
-          <span>{{ 'analysis.entities.emptyHint' | t }}</span>
-        } @else {
-          {{ (store.query() ? 'analysis.world.noSearch' : 'analysis.world.noFilters') | t }}
-        }
-      </div>
+      @if (store.worldLoading()) {
+        <ds-area-state
+          kind="loading"
+          [compact]="true"
+          [heading]="'analysis.world.loading' | t"
+          data-testid="world-entity-loading"
+        />
+      } @else {
+        <div class="ds-world-entities-empty" data-testid="world-entity-empty">
+          @if (!store.entities().length) {
+            <strong>{{ 'analysis.entities.empty' | t }}</strong>
+            <span>{{ 'analysis.entities.emptyHint' | t }}</span>
+          } @else {
+            {{ (store.query() ? 'analysis.world.noSearch' : 'analysis.world.noFilters') | t }}
+          }
+        </div>
+      }
     }
   </div>
   @if (store.checkedIds().length) {

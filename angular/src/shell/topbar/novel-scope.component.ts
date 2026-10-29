@@ -1,13 +1,15 @@
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { ButtonDirective } from '@components/button/button.directive';
 import { IconComponent } from '@components/icon/icon.component';
+import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
 import type { NovelSummary } from '@dreamer/shared/models/novel';
 
 @Component({
   selector: 'ds-novel-scope',
-  imports: [IconComponent, TranslatePipe],
+  imports: [ButtonDirective, IconComponent, TooltipDirective, TranslatePipe],
   templateUrl: './novel-scope.component.html',
   host: {
     class: 'ds-novel-scope',
@@ -82,6 +84,11 @@ export class NovelScopeComponent {
   protected choose(novel: NovelSummary | undefined): void {
     if (novel) this.store.select(novel.id);
     this.close(true);
+  }
+
+  protected openNovel(id: string): void {
+    this.close(false);
+    void this.router.navigate(['/library', id]);
   }
 
   protected openLibrary(): void {

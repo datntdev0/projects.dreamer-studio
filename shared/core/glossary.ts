@@ -1,5 +1,6 @@
 import { ENTITY_TYPES, EntityType, WorldEditEntity } from '../models/analysis';
 import { GlossaryBatchSize, GlossaryEntry, GlossaryKey, GlossaryRow, GlossaryScope } from '../models/translation';
+import { GlossaryTermKind } from '../models/translation';
 
 export interface GlossaryWorldKey {
   key: GlossaryKey;
@@ -50,6 +51,28 @@ export function glossaryRows(entities: WorldEditEntity[], entries: GlossaryEntry
       chapterIndexes: chapters,
     };
   });
+}
+
+export function glossaryTranslations(rows: GlossaryRow[]): Map<string, string> {
+  return new Map(
+    rows.flatMap((row: GlossaryRow): [string, string][] =>
+      row.translation === null ? [] : [[glossaryKeyId(row), row.translation]],
+    ),
+  );
+}
+
+export function translateEntityNames<T extends WorldEditEntity>(entity: T, translations: Map<string, string>): T {
+  const entityType: EntityType = entity.type as EntityType;
+  const find = (kind: GlossaryTermKind, term: string | null): string | undefined =>
+    translations.get(glossaryKeyId({ entityType, entityName: entity.name, kind, term }));
+  const term = (value: string, kind: 'alias' | 'title', other: 'alias' | 'title'): string =>
+    find(kind, value) ?? find(other, value) ?? value;
+  return {
+    ...entity,
+    name: find('name', null) ?? entity.name,
+    aliases: entity.aliases.map((alias: string): string => term(alias, 'alias', 'title')),
+    titles: entity.titles.map((title: string): string => term(title, 'title', 'alias')),
+  };
 }
 
 export function glossaryRunRows(rows: GlossaryRow[], scope: GlossaryScope): GlossaryRow[] {

@@ -18,6 +18,21 @@
   }
   <ds-icon class="caret" name="chevron-down" size="sm" />
 </button>
+@if (store.novel(); as novel) {
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    type="button"
+    data-testid="topbar-novel-open"
+    [iconOnly]="true"
+    [attr.aria-label]="'topbar.novelOpen' | t"
+    [dsTooltip]="'topbar.novelOpen' | t"
+    (click)="openNovel(novel.id)"
+  >
+    <ds-icon name="arrow-right" size="sm" />
+  </button>
+}
 @if (open()) {
   <div class="ds-novel-scope-menu" data-testid="topbar-novel-menu">
     <div class="ds-novel-scope-search">

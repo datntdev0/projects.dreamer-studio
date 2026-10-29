@@ -45,6 +45,8 @@ import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dream
 import { GlossaryRunPlan, GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import { TranslationChanged, TranslationInstruction, TranslationProgress } from '@dreamer/shared/models/translation';
 import { TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
+import { ChapterTranslation } from '@dreamer/shared/models/translation';
+import { TranslationChapterRequest, TranslationSaveRequest } from '@dreamer/shared/models/translation';
 
 function unavailable(message: string): Promise<never> {
   return Promise.reject({
@@ -55,10 +57,6 @@ function unavailable(message: string): Promise<never> {
 
 function analysisUnavailable(): Promise<never> {
   return unavailable('Analysis is available in the prototype only.');
-}
-
-function translationUnavailable(): Promise<never> {
-  return unavailable('Translation runs are not implemented yet.');
 }
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
@@ -177,7 +175,8 @@ const api: DreamerApi = {
   },
   translation: {
     status: (query: TranslationStatusQuery): Promise<TranslationStatus> => call(TranslationChannel.Status, query),
-    chapter: translationUnavailable,
+    chapter: (request: TranslationChapterRequest): Promise<ChapterTranslation | null> =>
+      call(TranslationChannel.Chapter, request),
     glossary: (query: InstructionRequest): Promise<GlossaryPage> => call(TranslationChannel.Glossary, query),
     editGlossary: (request: GlossaryEditRequest): Promise<void> => call(TranslationChannel.EditGlossary, request),
     instruction: (request: InstructionRequest): Promise<TranslationInstruction> =>
@@ -192,7 +191,7 @@ const api: DreamerApi = {
       call(TranslationChannel.PlanGlossary, request),
     startGlossary: (request: GlossaryRunRequest): Promise<void> => call(TranslationChannel.StartGlossary, request),
     cancel: (novelId: string): Promise<void> => call(TranslationChannel.Cancel, novelId),
-    save: translationUnavailable,
+    save: (request: TranslationSaveRequest): Promise<ChapterTranslation> => call(TranslationChannel.Save, request),
     onProgress: (listener: (progress: TranslationProgress) => void): (() => void) =>
       subscribe(TranslationChannel.Progress, listener),
     onChanged: (listener: (event: TranslationChanged) => void): (() => void) =>

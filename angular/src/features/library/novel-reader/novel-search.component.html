@@ -1,30 +1,73 @@
-<div class="library-novel-search-field">
-  <input
-    #searchInput
-    class="ds-input"
-    type="search"
-    data-testid="novel-search-input"
-    [value]="value()"
-    [attr.aria-label]="'library.search.input' | t"
-    [placeholder]="'library.search.input' | t"
-    (input)="setValue($event)"
-    (keydown)="onKeydown($event)"
-  />
-  @if (value()) {
+<div class="library-novel-search-bar">
+  <button
+    dsBtn
+    variant="ghost"
+    size="sm"
+    type="button"
+    data-testid="novel-search-replace-toggle"
+    [iconOnly]="true"
+    [attr.aria-expanded]="replaceOpen()"
+    [attr.aria-label]="'library.search.replace.toggle' | t"
+    [dsTooltip]="'library.search.replace.toggle' | t"
+    (click)="toggleReplace()"
+  >
+    <ds-icon [name]="replaceOpen() ? 'chevron-down' : 'chevron-right'" size="sm" />
+  </button>
+  <div class="library-novel-search-field">
+    <input
+      #searchInput
+      class="ds-input"
+      type="search"
+      data-testid="novel-search-input"
+      [value]="value()"
+      [attr.aria-label]="'library.search.input' | t"
+      [placeholder]="'library.search.input' | t"
+      (input)="setValue($event)"
+      (keydown)="onKeydown($event)"
+    />
+    @if (value()) {
+      <button
+        dsBtn
+        variant="ghost"
+        size="sm"
+        type="button"
+        data-testid="novel-search-clear"
+        [iconOnly]="true"
+        [attr.aria-label]="'library.search.clear' | t"
+        (click)="clear()"
+      >
+        <ds-icon name="x" size="sm" />
+      </button>
+    }
+  </div>
+</div>
+@if (replaceOpen()) {
+  <div class="library-novel-search-replace">
+    <input
+      class="ds-input"
+      type="text"
+      data-testid="novel-search-replace-input"
+      [value]="replacement()"
+      [attr.aria-label]="'library.search.replace.input' | t"
+      [placeholder]="'library.search.replace.input' | t"
+      (input)="setReplacement($event)"
+    />
     <button
       dsBtn
       variant="ghost"
       size="sm"
       type="button"
-      data-testid="novel-search-clear"
+      data-testid="novel-search-replace-all"
       [iconOnly]="true"
-      [attr.aria-label]="'library.search.clear' | t"
-      (click)="clear()"
+      [attr.aria-label]="'library.search.replace.all' | t"
+      [dsTooltip]="replaceReason() || ('library.search.replace.all' | t)"
+      [disabled]="!canReplace()"
+      (click)="replaceAll()"
     >
-      <ds-icon name="x" size="sm" />
+      <ds-icon name="replace-all" size="sm" />
     </button>
-  }
-</div>
+  </div>
+}
 
 @if (running()) {
   <div class="library-novel-search-running">
@@ -67,6 +110,23 @@
             {{ group.chapter.title }}
           </button>
           <ds-badge>{{ group.hits.length }}</ds-badge>
+          @if (replaceOpen()) {
+            <button
+              dsBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              data-testid="novel-search-replace-chapter"
+              [attr.data-chapter]="group.chapter.id"
+              [iconOnly]="true"
+              [attr.aria-label]="'library.search.replace.chapter' | t"
+              [dsTooltip]="replaceReason() || ('library.search.replace.chapter' | t)"
+              [disabled]="!canReplace()"
+              (click)="replaceIn(group)"
+            >
+              <ds-icon name="replace" size="sm" />
+            </button>
+          }
         </div>
         @if (!isCollapsed(group.chapter.id)) {
           <div class="library-search-hit-list">

@@ -90,6 +90,7 @@ export const AnalysisChannel = {
 
 export const TranslationChannel = {
   Status: 'translation:status',
+  Chapter: 'translation:chapter',
   Glossary: 'translation:glossary',
   EditGlossary: 'translation:edit-glossary',
   Instruction: 'translation:instruction',
@@ -100,6 +101,7 @@ export const TranslationChannel = {
   PlanContent: 'translation:plan-content',
   StartContent: 'translation:start-content',
   Cancel: 'translation:cancel',
+  Save: 'translation:save',
   Progress: 'translation:progress',
   Changed: 'translation:changed',
 } as const;

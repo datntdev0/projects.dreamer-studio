@@ -204,7 +204,7 @@ export class NovelReaderComponent {
       cancelAnimationFrame(this.issueFrame);
       if (id)
         this.issueFrame = requestAnimationFrame(() =>
-          this.host.querySelector<HTMLElement>('.translation-reader-issue')?.scrollIntoView({ block: 'center' }),
+          this.centerInArticle(this.host.querySelector<HTMLElement>('.translation-reader-issue')),
         );
     });
   }
@@ -319,10 +319,17 @@ export class NovelReaderComponent {
     cancelAnimationFrame(this.scrollFrame);
     this.scrollFrame = requestAnimationFrame(() => {
       if (toHighlight) {
-        this.host.querySelector<HTMLElement>('mark.current')?.scrollIntoView({ block: 'center' });
+        this.centerInArticle(this.host.querySelector<HTMLElement>('mark.current'));
       } else {
         this.host.querySelector<HTMLElement>('[data-testid="novel-reader-article"]')?.scrollTo({ top: 0 });
       }
     });
+  }
+
+  private centerInArticle(target: HTMLElement | null): void {
+    const article: HTMLElement | null = this.host.querySelector<HTMLElement>('[data-testid="novel-reader-article"]');
+    if (!target || !article) return;
+    const offset: number = target.getBoundingClientRect().top - article.getBoundingClientRect().top;
+    article.scrollTo({ top: article.scrollTop + offset - (article.clientHeight - target.offsetHeight) / 2 });
   }
 }

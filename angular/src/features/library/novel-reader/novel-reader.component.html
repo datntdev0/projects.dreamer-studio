@@ -25,6 +25,11 @@
         <ds-icon name="chevron-down" size="sm" />
       </span>
     }
+    @if (untranslated()) {
+      <ds-pill icon="languages" data-testid="translation-reader-status-not-translated">{{
+        'library.translation.reader.status.notTranslated' | t
+      }}</ds-pill>
+    }
     <span class="ds-spacer"></span>
     @if (translation(); as translated) {
       @if (translated.issueList.length) {

@@ -11,6 +11,9 @@ import {
   TargetLanguage,
 } from '@dreamer/shared/models/translation';
 import { TranslationInstruction, TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
+import { ChapterTranslation } from '@dreamer/shared/models/translation';
+import { TranslationChapterRequest, TranslationSaveRequest } from '@dreamer/shared/models/translation';
+import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { TranslationService } from '../features/translation/translation-service';
 import { handleValidated } from './handle';
@@ -34,6 +37,23 @@ function isInstructionRequest(value: unknown): value is InstructionRequest {
 
 function isInstructionSaveRequest(value: unknown): value is InstructionSaveRequest {
   return isInstructionRequest(value) && 'text' in value && typeof value.text === 'string' && value.text.trim() !== '';
+}
+
+function isChapterRequest(value: unknown): value is TranslationChapterRequest {
+  return isInstructionRequest(value) && 'file' in value && typeof value.file === 'string' && isContentHash(value.file);
+}
+
+function isSaveRequest(value: unknown): value is TranslationSaveRequest {
+  return (
+    isChapterRequest(value) &&
+    'title' in value &&
+    typeof value.title === 'string' &&
+    value.title.trim() !== '' &&
+    'paragraphs' in value &&
+    Array.isArray(value.paragraphs) &&
+    value.paragraphs.every((paragraph: unknown): boolean => typeof paragraph === 'string') &&
+    value.paragraphs.some((paragraph: string): boolean => paragraph.trim() !== '')
+  );
 }
 
 function isGlossaryEditRequest(value: unknown): value is GlossaryEditRequest {
@@ -88,6 +108,16 @@ export function registerTranslationIpc(service: TranslationService): void {
     TranslationChannel.Status,
     isStatusQuery,
     (query: TranslationStatusQuery): Promise<TranslationStatus> => service.status(query),
+  );
+  handleValidated(
+    TranslationChannel.Chapter,
+    isChapterRequest,
+    (request: TranslationChapterRequest): Promise<ChapterTranslation | null> => service.chapter(request),
+  );
+  handleValidated(
+    TranslationChannel.Save,
+    isSaveRequest,
+    (request: TranslationSaveRequest): Promise<ChapterTranslation> => service.save(request),
   );
   handleValidated(
     TranslationChannel.Glossary,

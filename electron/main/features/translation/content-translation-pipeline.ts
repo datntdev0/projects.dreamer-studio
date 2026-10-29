@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { checkTranslation, foundGlossary } from '@dreamer/shared/core/translation-check';
+import { foundGlossary } from '@dreamer/shared/core/translation-check';
 import { glossaryTerm } from '@dreamer/shared/core/glossary';
 import { contentRunQueue } from '@dreamer/shared/core/translation-status';
 import { translationParts } from '@dreamer/shared/core/translation-parts';
@@ -10,7 +10,7 @@ import { NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-s
 import { PipelineStepDetail } from '@dreamer/shared/models/pipeline';
 import { ChapterTranslationFile, ChapterTranslationSummary } from '@dreamer/shared/models/translation';
 import { ContentRunRequest, GlossaryRow, GlossaryUsed } from '@dreamer/shared/models/translation';
-import { TranslationIndexEntry, TranslationIssue, TranslationRun } from '@dreamer/shared/models/translation';
+import { TranslationIndexEntry, TranslationRun } from '@dreamer/shared/models/translation';
 import { AppPaths } from '@storage/paths';
 import { broadcast } from '../../ipc/broadcast';
 import { readChapterParagraphs } from '../analysis/analysis-files';
@@ -19,7 +19,8 @@ import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { isAbort, PipelineDefinition, settleAll, StepContext } from '../pipelines/pipeline-definition';
 import { promptLogDir } from '../pipelines/run-log';
 import { WorkSlots } from '../pipelines/work-slots';
-import { chapterStatusesFor, instructionHash, saveTranslationEntry } from './translation-index';
+import { buildChapterTranslation, ChapterTranslationBuild, chapterStatusesFor } from './translation-index';
+import { instructionHash, saveTranslationEntry } from './translation-index';
 import { hasAnalysedWorld, loadGlossaryRows } from './translation-glossary';
 import { loadInstruction } from './translation-instruction';
 import { AskLlm } from '../llm/llm-checked';
@@ -201,19 +202,17 @@ async function translate(ctx: StepContext, deps: ContentTranslationDeps): Promis
         ask,
         ctx,
       });
-      const chapterIssues: TranslationIssue[] = checkTranslation({
+      ctx.checkpoint();
+      const built: ChapterTranslationBuild = buildChapterTranslation({
         source: { title: chapter.title, paragraphs },
         translation: translated,
         names,
+        ...base,
+        translatedAt: new Date().toISOString(),
       });
-      ctx.checkpoint();
-      const translatedAt: string = new Date().toISOString();
-      await save(
-        { ...base, title: translated.title, issues: chapterIssues.length, glossaryUsed: names, translatedAt },
-        { version: 1, file: chapter.file, ...translated, issues: chapterIssues, translatedAt },
-      );
+      await save(built.entry, built.result);
       run.done++;
-      if (chapterIssues.length > 0) issues++;
+      if (built.issues.length > 0) issues++;
       ctx.log.info(`Chapter ${index} saved`);
     } catch (error: unknown) {
       if (!isChapterFailure(error)) throw error;

@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BannerComponent } from '@components/banner/banner.component';
+import { AreaStateComponent } from '@components/state/area-state.component';
 import { ButtonDirective } from '@components/button/button.directive';
 import { BadgeComponent } from '@components/status/badge.component';
 import { IconComponent } from '@components/icon/icon.component';
@@ -21,10 +22,12 @@ import { WorldGraphComponent } from './components/world-graph.component';
 import { WorldTimelineComponent } from './components/world-timeline.component';
 import { OmniscientStore } from './omniscient.store';
 import type { OmniscientView } from './omniscient.store';
+import type { TargetLanguage } from '@dreamer/shared/models/translation';
 
 @Component({
   selector: 'ds-omniscient-page',
   imports: [
+    AreaStateComponent,
     BadgeComponent,
     BannerComponent,
     ButtonDirective,
@@ -57,6 +60,12 @@ export class OmniscientPage {
     return dialog?.kind === 'edit' ? dialog.scope : null;
   });
   protected readonly views: OmniscientView[] = ['graph', 'table', 'review'];
+
+  protected setNameLanguage(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.store.setNameLanguage(value ? (value as TargetLanguage) : null);
+  }
+
   protected readonly viewIcons: Record<OmniscientView, string> = { graph: 'network', table: 'list', review: 'tasks' };
   protected readonly viewKeys: Record<OmniscientView, string> = {
     graph: 'analysis.page.view.graph',

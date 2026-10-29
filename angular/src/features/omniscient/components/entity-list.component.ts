@@ -1,6 +1,7 @@
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { ButtonDirective } from '@components/button/button.directive';
 import { SegmentedComponent } from '@components/form/segmented.component';
+import { AreaStateComponent } from '@components/state/area-state.component';
 import type { SegmentedOption } from '@components/form/segmented.component';
 import { IconComponent } from '@components/icon/icon.component';
 import { BadgeComponent } from '@components/status/badge.component';
@@ -22,7 +23,15 @@ const MOVE_KEYS: Record<string, (index: number, last: number) => number> = {
 
 @Component({
   selector: 'ds-entity-list',
-  imports: [BadgeComponent, ButtonDirective, IconComponent, SegmentedComponent, TooltipDirective, TranslatePipe],
+  imports: [
+    AreaStateComponent,
+    BadgeComponent,
+    ButtonDirective,
+    IconComponent,
+    SegmentedComponent,
+    TooltipDirective,
+    TranslatePipe,
+  ],
   templateUrl: './entity-list.component.html',
 })
 export class EntityListComponent {

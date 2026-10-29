@@ -8,6 +8,8 @@ import { AppPaths } from '@storage/paths';
 import { listLibraryFolders, NovelFolder, novelFolder } from './library-files';
 import { readMetadata } from './novel/novel-files';
 import { readAnalysisIndex } from '../analysis/analysis-files';
+import { languageSummary } from '../translation/translation-index';
+import { targetLanguages } from '@dreamer/shared/models/translation';
 
 const logger: Logger = createLogger('library');
 
@@ -33,7 +35,9 @@ function toSummary(metadata: NovelStore.NovelMetadata, folder: NovelFolder): Nov
     importedAt: metadata.importedAt,
     updatedAt: metadata.updatedAt,
     hasCover: metadata.cover !== null,
-    translations: [],
+    translations: targetLanguages(metadata.language)
+      .map((language) => languageSummary(folder, metadata, language))
+      .filter((summary) => summary.translated > 0),
     analysis: analysisSummary(metadata, folder),
     lock: null,
   };

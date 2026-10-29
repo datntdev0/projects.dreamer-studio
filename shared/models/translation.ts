@@ -16,6 +16,11 @@ export type TranslationRunMode = 'missing' | 'range' | 'full';
 export const TARGET_LANGUAGES: TargetLanguage[] = ['en', 'vi'];
 export const GLOSSARY_BATCH_SIZES: GlossaryBatchSize[] = [50, 100, 200];
 
+export function targetLanguages(novelLanguage: string): TargetLanguage[] {
+  const primary: string = novelLanguage.split('-')[0].toLowerCase();
+  return TARGET_LANGUAGES.filter((language: TargetLanguage): boolean => language !== primary);
+}
+
 export interface GlossaryKey {
   entityType: EntityType;
   entityName: string;
@@ -34,6 +39,11 @@ export interface GlossaryEntry extends GlossaryKey {
   translation: string;
   source: 'llm' | 'user';
   updatedAt: string;
+}
+
+export interface GlossaryUsed {
+  key: GlossaryKey;
+  translation: string | null;
 }
 
 export interface GlossaryFile {
@@ -95,6 +105,7 @@ export interface TranslationLastRun {
   language: TargetLanguage;
   translated: number;
   failed: number;
+  issues: number;
 }
 
 export interface TranslationStatus {
@@ -119,6 +130,32 @@ export interface TranslationIssue {
   translatedParagraph: number | null;
   sourceCount: number | null;
   translatedCount: number | null;
+}
+
+export interface TranslationIndexEntry {
+  index: number;
+  file: string;
+  title: string | null;
+  issues: number;
+  edited: boolean;
+  instructionHash: string;
+  glossaryUsed: GlossaryUsed[];
+  error?: string;
+  translatedAt: string;
+}
+
+export interface TranslationIndexFile {
+  version: 1;
+  chapters: TranslationIndexEntry[];
+}
+
+export interface ChapterTranslationFile {
+  version: 1;
+  file: string;
+  title: string;
+  paragraphs: string[];
+  issues: TranslationIssue[];
+  translatedAt: string;
 }
 
 export interface ChapterTranslation extends ChapterTranslationSummary {

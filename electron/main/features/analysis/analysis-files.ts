@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { splitParagraphs } from '@dreamer/shared/core/novel-text';
@@ -7,9 +6,10 @@ import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { AnalysisIndexFile, ChapterResult, OverlayFile } from '@dreamer/shared/models/analysis';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
+import { isPlainObject } from '@dreamer/shared/models/validation';
 import { createLogger, Logger } from '../../logging/logger';
 import { chapterPath, NovelFolder } from '../library/library-files';
-import { asWriteError } from '../library/library-io';
+import { asWriteError, readJsonFile } from '../library/library-io';
 import { writeFileAtomic } from '../library/novel/novel-files';
 
 const logger: Logger = createLogger('analysis');
@@ -31,25 +31,11 @@ export function chapterResultFile(folder: NovelFolder, file: string): string {
   return join(folder.analysis, 'chapters', `${file}.json`);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function readJson(file: string): unknown {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8'));
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-      logger.warn(`analysis file unreadable or invalid: ${file}: ${errorMessage(error)}`);
-    return undefined;
-  }
-}
-
 export function readAnalysisIndex(folder: NovelFolder): AnalysisIndexFile | null {
   const file: string = analysisIndexFile(folder);
-  const parsed: unknown = readJson(file);
+  const parsed: unknown = readJsonFile(file, logger);
   if (parsed === undefined) return null;
-  if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.chapters)) {
+  if (!isPlainObject(parsed) || parsed.version !== 1 || !Array.isArray(parsed.chapters)) {
     logger.warn(`analysis index invalid: ${file}`);
     return null;
   }
@@ -70,10 +56,10 @@ export async function writeAnalysisIndex(folder: NovelFolder, index: AnalysisInd
 
 export function readChapterResult(folder: NovelFolder, file: string): ChapterResult | null {
   const path: string = chapterResultFile(folder, file);
-  const parsed: unknown = readJson(path);
+  const parsed: unknown = readJsonFile(path, logger);
   if (parsed === undefined) return null;
   if (
-    !isRecord(parsed) ||
+    !isPlainObject(parsed) ||
     parsed.version !== 1 ||
     parsed.file !== file ||
     !Array.isArray(parsed.entities) ||
@@ -87,9 +73,9 @@ export function readChapterResult(folder: NovelFolder, file: string): ChapterRes
 
 export function readWorldOverlay(folder: NovelFolder): OverlayFile | null {
   const file: string = worldOverlayFile(folder);
-  const parsed: unknown = readJson(file);
+  const parsed: unknown = readJsonFile(file, logger);
   if (parsed === undefined) return null;
-  if (!isRecord(parsed) || parsed.version !== 2 || !Array.isArray(parsed.edits)) {
+  if (!isPlainObject(parsed) || parsed.version !== 2 || !Array.isArray(parsed.edits)) {
     logger.warn(`analysis world overlay invalid or outdated: ${file}`);
     return null;
   }

@@ -1,10 +1,14 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { COVER_FILES, isNovelId, NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { isContentHash } from '@dreamer/shared/models/novel-store';
+import { TARGET_LANGUAGES, TargetLanguage, TranslationIndexFile } from '@dreamer/shared/models/translation';
 import { createLogger, Logger } from '../../logging/logger';
 import { AppPaths } from '@storage/paths';
 import { coverPath, importStagingRoot, listLibraryFolders, novelFolder, NovelFolder, trashDir } from './library-files';
 import { readMetadata, unreferencedChapterFiles } from './novel/novel-files';
+import { readTranslationIndex } from '../translation/translation-index';
+import { translationChaptersDir } from '../translation/translation-files';
 
 const logger: Logger = createLogger('library');
 
@@ -58,6 +62,18 @@ function libraryFolders(paths: AppPaths): string[] {
   }
 }
 
+function unreferencedTranslationChapterFiles(folder: NovelFolder, language: TargetLanguage): number {
+  const index: TranslationIndexFile | null = readTranslationIndex(folder, language);
+  if (index === null) return 0;
+  const files: Set<string> = new Set(index.chapters.map((entry) => entry.file));
+  return removeEntries(translationChaptersDir(folder, language), (name: string): boolean => {
+    if (name.endsWith('.tmp')) return true;
+    if (!name.endsWith('.json')) return false;
+    const file: string = name.slice(0, -'.json'.length);
+    return isContentHash(file) && !files.has(file);
+  });
+}
+
 export function cleanLibrary(paths: AppPaths): LibraryCleanup {
   const result: LibraryCleanup = {
     staging: removeEntries(importStagingRoot(paths)) + removeEntries(trashDir(paths)),
@@ -86,6 +102,9 @@ export function cleanLibrary(paths: AppPaths): LibraryCleanup {
         if (remove(file)) {
           result.chapters += 1;
         }
+      }
+      for (const language of TARGET_LANGUAGES) {
+        result.chapters += unreferencedTranslationChapterFiles(folder, language);
       }
     } catch (error) {
       logger.error(`library cleanup could not inspect chapters for ${id}`, error);

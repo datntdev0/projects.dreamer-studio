@@ -148,8 +148,8 @@ export class PipelineStore {
       void this.notifyAnalysisFinished(run);
       return;
     }
-    if (run.type === 'glossary-translation') {
-      void this.notifyGlossaryTranslationFinished(run);
+    if (run.type === 'glossary-translation' || run.type === 'content-translation') {
+      void this.notifyTranslationFinished(run);
       return;
     }
     if (run.status === 'succeeded') {
@@ -253,8 +253,9 @@ export class PipelineStore {
     }
   }
 
-  private async notifyGlossaryTranslationFinished(run: PipelineRun): Promise<void> {
+  private async notifyTranslationFinished(run: PipelineRun): Promise<void> {
     const title: string = this.runTitle(run);
+    const kind: string = run.type === 'glossary-translation' ? 'glossaryTranslation' : 'contentTranslation';
     const novelId: string | null = run.novelId;
     const lastRun = novelId
       ? await this.desktopApi
@@ -265,37 +266,38 @@ export class PipelineStore {
     const counts = lastRun?.runId === run.id ? lastRun : null;
     const action = novelId
       ? {
-          label: this.i18n.t('toast.glossaryTranslation.open'),
+          label: this.i18n.t(`toast.${kind}.open`),
           run: () => this.injector.get(CurrentNovelStore).translate(novelId),
         }
       : undefined;
     const message = counts
-      ? this.i18n.t('toast.glossaryTranslation.succeededMsg', {
+      ? this.i18n.t(`toast.${kind}.succeededMsg`, {
           title,
           translated: counts.translated,
           failed: counts.failed,
+          issues: counts.issues,
         })
       : undefined;
 
     if (run.status === 'succeeded') {
       this.toast.show({
         kind: 'success',
-        title: this.i18n.t('toast.glossaryTranslation.succeeded'),
+        title: this.i18n.t(`toast.${kind}.succeeded`),
         message,
         action,
       });
     } else if (run.status === 'cancelled') {
       this.toast.show({
         kind: 'info',
-        title: this.i18n.t('toast.glossaryTranslation.cancelled'),
+        title: this.i18n.t(`toast.${kind}.cancelled`),
         message,
         action,
       });
     } else if (run.status === 'failed') {
       this.toast.show({
         kind: 'danger',
-        title: this.i18n.t('toast.glossaryTranslation.failed'),
-        message: this.i18n.t('toast.glossaryTranslation.failedMsg', { title, error: runError(run, this.i18n) }),
+        title: this.i18n.t(`toast.${kind}.failed`),
+        message: this.i18n.t(`toast.${kind}.failedMsg`, { title, error: runError(run, this.i18n) }),
         action: { label: this.i18n.t('toast.pipeline.viewLog'), run: () => this.openPipeline(run.id) },
       });
     }

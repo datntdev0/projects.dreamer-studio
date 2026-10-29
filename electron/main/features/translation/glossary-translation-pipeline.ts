@@ -23,6 +23,7 @@ import { SettingsStore } from '../settings/settings-store';
 import { AnalysisSnapshots } from '../analysis/analysis-snapshot';
 import { loadInstruction } from './translation-instruction';
 import { hasAnalysedWorld, loadGlossaryRows, saveLlmEntries } from './translation-glossary';
+import { recheckGlossaryChange } from './translation-index';
 import { askGlossaryBatch } from './translation-llm';
 import { TranslationRuns } from './translation-runs';
 
@@ -131,8 +132,10 @@ async function translate(ctx: StepContext, deps: GlossaryTranslationDeps): Promi
       language: request.language,
       translated: run.done - run.failed,
       failed: run.failed,
+      issues: 0,
     });
   let callNumber: number = 0;
+  const saved: Set<string> = new Set();
   const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
     ctx.checkpoint();
     const number: string = String(++callNumber).padStart(3, '0');
@@ -161,7 +164,7 @@ async function translate(ctx: StepContext, deps: GlossaryTranslationDeps): Promi
           log: ctx.log,
         });
         ctx.checkpoint();
-        const saved: number = await withNovelLock(request.novelId, (): Promise<number> =>
+        const batchSaved: string[] = await withNovelLock(request.novelId, (): Promise<string[]> =>
           saveLlmEntries(
             folder,
             request.language,
@@ -169,9 +172,12 @@ async function translate(ctx: StepContext, deps: GlossaryTranslationDeps): Promi
           ),
         );
         broadcast(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
+        batchSaved.forEach((id: string): void => {
+          saved.add(id);
+        });
         run.done += batchRows.length;
-        run.failed += batchRows.length - saved;
-        ctx.log.info(`Glossary batch ${batch} saved ${saved}/${batchRows.length}`);
+        run.failed += batchRows.length - batchSaved.length;
+        ctx.log.info(`Glossary batch ${batch} saved ${batchSaved.length}/${batchRows.length}`);
       } catch (error: unknown) {
         if (!isBatchFailure(error)) throw error;
         run.done += batchRows.length;
@@ -180,10 +186,14 @@ async function translate(ctx: StepContext, deps: GlossaryTranslationDeps): Promi
       }
       publish(deps, request.novelId, run, ctx);
     }
+    await recheckGlossaryChange(deps.snapshots, folder, request.novelId, request.language, saved);
     ctx.checkpoint();
     finish();
   } catch (error: unknown) {
-    if (isAbort(error)) finish();
+    if (isAbort(error)) {
+      await recheckGlossaryChange(deps.snapshots, folder, request.novelId, request.language, saved);
+      finish();
+    }
     throw error;
   }
 }

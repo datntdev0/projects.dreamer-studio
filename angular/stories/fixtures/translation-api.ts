@@ -28,7 +28,7 @@ import type { TranslationRun } from '@dreamer/shared/models/translation';
 import type { TranslationSaveRequest } from '@dreamer/shared/models/translation';
 import type { TranslationStatus } from '@dreamer/shared/models/translation';
 import type { TranslationStatusQuery } from '@dreamer/shared/models/translation';
-import { TARGET_LANGUAGES } from '@dreamer/shared/models/translation';
+import { targetLanguages } from '@dreamer/shared/models/translation';
 import { JADE_RIVER_NOVEL, UNANALYSED_CHAPTERS, UNANALYSED_NOVEL, jadeRiverChapters, jadeRiverNovel } from './analysis';
 import { FakeAnalysisApi } from './analysis-api';
 import { DEFAULT_INSTRUCTIONS, seedGlossaryRows, translatedName, translatedScene } from './translation';
@@ -98,7 +98,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
       'zh',
     );
     this.translationScenario = scenario;
-    for (const language of this.targetLanguages(JADE_RIVER_NOVEL.id))
+    for (const language of targetLanguages(this.sourceNovel.language))
       for (const row of seedGlossaryRows(language)) this.rows.set(this.glossaryKey(language, row), row);
     if (scenario !== 'none' && scenario !== 'notAnalysed') {
       for (let index = 1; index <= 20; index++) {
@@ -193,7 +193,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   override async translationStatus(query: TranslationStatusQuery): Promise<TranslationStatus> {
     const novelId = query.novelId;
     const source = novelId === JADE_RIVER_NOVEL.id ? this.sourceChapters : UNANALYSED_CHAPTERS;
-    const language: TargetLanguage = query.language ?? this.targetLanguages(novelId)[0];
+    const language: TargetLanguage = query.language ?? targetLanguages(this.novelLanguage(novelId))[0];
     const chapters = source.map((chapter): ChapterTranslationSummary => {
       const stored =
         novelId === JADE_RIVER_NOVEL.id
@@ -228,7 +228,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
     return {
       novelId,
       language,
-      targets: this.targetLanguages(novelId),
+      targets: targetLanguages(this.novelLanguage(novelId)),
       languages: this.languageSummaries(novelId, source.length),
       chapters,
       glossary: { total: rows.length, untranslated: rows.filter((row) => row.status === 'untranslated').length },
@@ -431,16 +431,15 @@ export class FakeTranslationApi extends FakeAnalysisApi {
     return `${language}:${rowId(key)}`;
   }
 
-  private targetLanguages(novelId: string): TargetLanguage[] {
-    const sourceLanguage = novelId === JADE_RIVER_NOVEL.id ? this.sourceNovel.language : UNANALYSED_NOVEL.language;
-    return TARGET_LANGUAGES.filter((language) => language !== sourceLanguage);
+  private novelLanguage(novelId: string): string {
+    return novelId === JADE_RIVER_NOVEL.id ? this.sourceNovel.language : UNANALYSED_NOVEL.language;
   }
 
   private languageSummaries(
     novelId: string,
     total: number,
   ): { language: TargetLanguage; translated: number; total: number }[] {
-    return this.targetLanguages(novelId).map((language) => ({
+    return targetLanguages(this.novelLanguage(novelId)).map((language) => ({
       language,
       translated:
         novelId === JADE_RIVER_NOVEL.id
@@ -612,13 +611,22 @@ export class FakeTranslationApi extends FakeAnalysisApi {
     this.translationTimer = null;
     const run = this.translationRun;
     const language = run?.language ?? 'vi';
-    if (run?.kind === 'glossary') {
+    if (run) {
       this.lastRun = {
         runId: 'story-translation',
         kind: run.kind,
         language: run.language,
         translated: run.done - run.failed,
         failed: run.failed,
+        issues:
+          run.kind === 'content'
+            ? this.queue.slice(0, run.done).filter((index) => {
+                const chapter = this.sourceChapters[index - 1];
+                return (
+                  !!chapter && (this.translations.get(this.translationKey(run.language, chapter.file))?.issues ?? 0) > 0
+                );
+              }).length
+            : 0,
       };
     }
     this.translationRun = null;

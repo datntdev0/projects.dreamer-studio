@@ -26,8 +26,10 @@ function refreshImported(index: LibraryIndex, notify: (novelIds: string[]) => vo
   }
 }
 
-function refreshAnalysis(notify: (novelIds: string[]) => void, run: PipelineRun): void {
-  if (run.type === 'world-analysis' && run.novelId !== null) notify([run.novelId]);
+const libraryChangeRunTypes: PipelineRun['type'][] = ['world-analysis', 'content-translation', 'glossary-translation'];
+
+function refreshLibrary(notify: (novelIds: string[]) => void, run: PipelineRun): void {
+  if (libraryChangeRunTypes.includes(run.type) && run.novelId !== null) notify([run.novelId]);
 }
 
 export class AppDataSession {
@@ -60,7 +62,7 @@ export class AppDataSession {
       const library: LibraryService = new LibraryService(paths, index, runs, notify);
       executor.onRunFinished((run: PipelineRun): void => {
         refreshImported(index, notify, run);
-        refreshAnalysis(notify, run);
+        refreshLibrary(notify, run);
       });
       return new AppDataSession(paths, db, executor, index, library, logsWritable);
     } catch (error) {

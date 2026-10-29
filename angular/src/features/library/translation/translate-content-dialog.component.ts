@@ -17,7 +17,6 @@ const BLOCKED_REASON_KEYS: Record<string, string> = {
   NOVEL_LOCKED: 'errors.NOVEL_LOCKED.message',
   LLM_UNAVAILABLE: 'library.translation.dialog.reasonNoLlm',
   TRANSLATION_NOTHING_TO_RUN: 'library.translation.dialog.reasonNothingContent',
-  ANALYSIS_REQUIRED: 'library.translation.dialog.reasonNotAnalysed',
 };
 
 @Component({

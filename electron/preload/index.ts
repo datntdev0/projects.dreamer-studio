@@ -40,6 +40,7 @@ import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dre
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { ContentRunPlan, ContentRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
 import { GlossaryRunPlan, GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import { TranslationChanged, TranslationInstruction, TranslationProgress } from '@dreamer/shared/models/translation';
@@ -185,8 +186,8 @@ const api: DreamerApi = {
       call(TranslationChannel.SaveInstruction, request),
     resetInstruction: (request: InstructionRequest): Promise<TranslationInstruction> =>
       call(TranslationChannel.ResetInstruction, request),
-    planContent: translationUnavailable,
-    startContent: translationUnavailable,
+    planContent: (request: ContentRunRequest): Promise<ContentRunPlan> => call(TranslationChannel.PlanContent, request),
+    startContent: (request: ContentRunRequest): Promise<void> => call(TranslationChannel.StartContent, request),
     planGlossary: (request: GlossaryRunRequest): Promise<GlossaryRunPlan> =>
       call(TranslationChannel.PlanGlossary, request),
     startGlossary: (request: GlossaryRunRequest): Promise<void> => call(TranslationChannel.StartGlossary, request),

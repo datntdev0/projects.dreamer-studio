@@ -36,6 +36,12 @@ export function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+export async function settleAll(tasks: Promise<void>[]): Promise<void> {
+  const results: PromiseSettledResult<void>[] = await Promise.allSettled(tasks);
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (failure) throw failure.reason;
+}
+
 export function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) {

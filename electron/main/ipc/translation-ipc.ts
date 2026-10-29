@@ -1,6 +1,7 @@
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { ENTITY_TYPES, EntityType } from '@dreamer/shared/models/analysis';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { ContentRunPlan, ContentRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryRunPlan, GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
 import {
@@ -64,6 +65,24 @@ function isGlossaryRunRequest(value: unknown): value is GlossaryRunRequest {
   );
 }
 
+function isChapterIndex(value: unknown): value is number | null {
+  return value === null || (typeof value === 'number' && Number.isInteger(value) && value >= 1);
+}
+
+function isContentRunRequest(value: unknown): value is ContentRunRequest {
+  return (
+    isPlainObject(value) &&
+    isNovelIdValue(value.novelId) &&
+    isTargetLanguage(value.language) &&
+    (value.mode === 'missing' || value.mode === 'range' || value.mode === 'full') &&
+    isChapterIndex(value.from) &&
+    isChapterIndex(value.to) &&
+    (value.mode !== 'range' || (value.from !== null && value.to !== null && value.from <= value.to)) &&
+    typeof value.overwrite === 'boolean' &&
+    (value.instruction === null || typeof value.instruction === 'string')
+  );
+}
+
 export function registerTranslationIpc(service: TranslationService): void {
   handleValidated(
     TranslationChannel.Status,
@@ -104,6 +123,14 @@ export function registerTranslationIpc(service: TranslationService): void {
     TranslationChannel.StartGlossary,
     isGlossaryRunRequest,
     (request: GlossaryRunRequest): Promise<void> => service.startGlossary(request),
+  );
+  handleValidated(
+    TranslationChannel.PlanContent,
+    isContentRunRequest,
+    (request: ContentRunRequest): Promise<ContentRunPlan> => service.planContent(request),
+  );
+  handleValidated(TranslationChannel.StartContent, isContentRunRequest, (request: ContentRunRequest): Promise<void> =>
+    service.startContent(request),
   );
   handleValidated(TranslationChannel.Cancel, isNovelIdValue, (novelId: string): void => service.cancel(novelId));
 }

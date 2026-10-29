@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { rename } from 'node:fs/promises';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import type { Logger } from '../../logging/logger';
 import { sleep } from '../pipelines/pipeline-definition';
 
 const renameDelayMs: number = 200;
@@ -33,5 +35,15 @@ export async function renameWithRetry(source: string, destination: string, signa
       }
       await sleep(renameDelayMs, signal);
     }
+  }
+}
+
+export function readJsonFile(file: string, log: Logger): unknown {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+      log.warn(`file unreadable or invalid: ${file}: ${errorMessage(error)}`);
+    return undefined;
   }
 }

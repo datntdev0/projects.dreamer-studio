@@ -9,7 +9,7 @@ import { formatLlmChoice, LlmFeatureRunRequest, LlmRunResult, resolveLlm } from 
 import { NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { PipelineStepDetail } from '@dreamer/shared/models/pipeline';
 import { AppPaths } from '@storage/paths';
-import { isAbort, PipelineDefinition, StepContext } from '../pipelines/pipeline-definition';
+import { isAbort, PipelineDefinition, settleAll, StepContext } from '../pipelines/pipeline-definition';
 import { promptLogDir } from '../pipelines/run-log';
 import { LlmService } from '../llm/llm-service';
 import { WorkSlots } from '../pipelines/work-slots';
@@ -126,12 +126,6 @@ function isChapterFailure(error: unknown): error is CodedError {
     error instanceof CodedError &&
     (error.code === ErrorCode.AnalysisLlmOutputInvalid || error.code === ErrorCode.LlmTimeout)
   );
-}
-
-async function settleAll(tasks: Promise<void>[]): Promise<void> {
-  const results: PromiseSettledResult<void>[] = await Promise.allSettled(tasks);
-  const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-  if (failure) throw failure.reason;
 }
 
 function publish(deps: WorldAnalysisDeps, novelId: string, run: AnalysisRun, ctx: StepContext): void {

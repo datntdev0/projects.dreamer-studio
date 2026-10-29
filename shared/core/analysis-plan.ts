@@ -44,13 +44,17 @@ export function matchChapters<T extends { index: number; file: string }>(
   return matches.sort((a: ChapterMatch<T>, b: ChapterMatch<T>): number => a.index - b.index);
 }
 
-export function alignIndex(index: AnalysisIndexFile, chapters: { file: string }[]): AnalysisIndexFile {
+export function alignIndex<T extends { index: number; file: string }, I extends { chapters: T[] }>(
+  index: I,
+  chapters: { file: string }[],
+): I {
   return {
     ...index,
-    chapters: matchChapters(index.chapters, chapters).map(
-      (match: ChapterMatch<AnalysisIndexEntry>): AnalysisIndexEntry => ({ ...match.entry, index: match.index }),
-    ),
-  };
+    chapters: matchChapters(index.chapters, chapters).map((match: ChapterMatch<T>): T => ({
+      ...match.entry,
+      index: match.index,
+    })),
+  } as I;
 }
 
 export function chapterStatuses(
@@ -90,17 +94,28 @@ export function isUpToDate(status: ChapterAnalysisStatus): boolean {
   return status === 'analysed';
 }
 
-export function planRun(options: AnalysisRunOptions, chapters: ChapterAnalysisSummary[]): AnalysisRunQueue {
+export function chapterQueue<T extends { index: number }>(
+  options: { mode: 'missing' | 'range' | 'full'; from: number | null; to: number | null; overwrite: boolean },
+  chapters: T[],
+  isMissing: (chapter: T) => boolean,
+): number[] {
   const first: number = Math.max(1, Math.min(chapters.length, options.from ?? 1));
   const last: number = Math.max(1, Math.min(chapters.length, options.to ?? chapters.length));
-  const queue: number[] = chapters
-    .filter((chapter: ChapterAnalysisSummary): boolean => {
-      if (options.mode === 'missing')
-        return chapter.status === 'not-analysed' || chapter.status === 'stale' || chapter.status === 'failed';
+  return chapters
+    .filter((chapter: T): boolean => {
+      if (options.mode === 'missing') return isMissing(chapter);
       if (options.mode === 'range' && (chapter.index < first || chapter.index > last)) return false;
-      return options.overwrite || !isUpToDate(chapter.status);
+      return options.overwrite || isMissing(chapter);
     })
-    .map((chapter: ChapterAnalysisSummary): number => chapter.index);
+    .map((chapter: T): number => chapter.index);
+}
+
+export function planRun(options: AnalysisRunOptions, chapters: ChapterAnalysisSummary[]): AnalysisRunQueue {
+  const queue: number[] = chapterQueue(
+    options,
+    chapters,
+    (chapter: ChapterAnalysisSummary): boolean => !isUpToDate(chapter.status),
+  );
   const batches: number[][] = [];
   const batchSize: number = Math.max(1, Math.floor(options.batchSize));
   for (let offset: number = 0; offset < queue.length; offset += batchSize)
@@ -114,12 +129,15 @@ export function planRun(options: AnalysisRunOptions, chapters: ChapterAnalysisSu
   };
 }
 
-export function upsertIndexEntry(index: AnalysisIndexFile, entry: AnalysisIndexEntry): AnalysisIndexFile {
-  const chapters: AnalysisIndexEntry[] = index.chapters
-    .filter((existing: AnalysisIndexEntry): boolean => existing.index !== entry.index && existing.file !== entry.file)
+export function upsertIndexEntry<T extends { index: number; file: string }, I extends { chapters: T[] }>(
+  index: I,
+  entry: T,
+): I {
+  const chapters: T[] = index.chapters
+    .filter((existing: T): boolean => existing.index !== entry.index && existing.file !== entry.file)
     .concat(entry)
-    .sort((a: AnalysisIndexEntry, b: AnalysisIndexEntry): number => a.index - b.index);
-  return { ...index, chapters };
+    .sort((a: T, b: T): number => a.index - b.index);
+  return { ...index, chapters } as I;
 }
 
 export function emptyIndex(): AnalysisIndexFile {

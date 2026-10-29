@@ -16,6 +16,11 @@ interface GlossaryBatchTranslation {
   translation: string;
 }
 
+export interface ChapterPartTranslation {
+  title: string;
+  paragraphs: string[];
+}
+
 const glossaryBatchSchema: Record<string, unknown> = {
   type: 'object',
   properties: {
@@ -33,6 +38,16 @@ const glossaryBatchSchema: Record<string, unknown> = {
     },
   },
   required: ['translations'],
+  additionalProperties: false,
+};
+
+const chapterPartSchema: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    paragraphs: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['title', 'paragraphs'],
   additionalProperties: false,
 };
 
@@ -68,6 +83,62 @@ function glossaryBatchPrompt(input: {
       '- Return every id exactly once.',
     ].join('\n'),
   ].join('\n\n');
+}
+
+function chapterPartPrompt(input: {
+  chapter: number;
+  part: number;
+  parts: number;
+  title: string | null;
+  paragraphs: string[];
+  glossary: { term: string; translation: string; entityType: string }[];
+  sourceLanguage: string;
+  targetLanguage: TargetLanguage;
+  instruction: string;
+}): string {
+  const glossary: string =
+    input.glossary.length === 0
+      ? 'none'
+      : input.glossary
+          .map((entry: { term: string; translation: string; entityType: string }): string => {
+            return `${entry.term} → ${entry.translation} (${entry.entityType})`;
+          })
+          .join('\n');
+  return [
+    `Translate part ${input.part}/${input.parts} of chapter ${input.chapter} from ${input.sourceLanguage} into ${targetLanguageName(input.targetLanguage)}; return JSON: {"title":"...","paragraphs":["..."]}.`,
+    '## Instruction',
+    input.instruction,
+    '## Glossary',
+    glossary,
+    ...(input.title === null ? [] : ['## Title', input.title]),
+    '## Paragraphs',
+    input.paragraphs.map((paragraph: string, index: number): string => `[${index + 1}] ${paragraph}`).join('\n'),
+    '## Rules',
+    [
+      '- Return one translated paragraph per numbered paragraph, in the same order, exactly ' +
+        input.paragraphs.length +
+        '.',
+      '- Use the glossary translations for those names.',
+      '- `title` must be the translated title, or "" when no title was given.',
+    ].join('\n'),
+  ].join('\n\n');
+}
+
+function checkChapterPart(
+  input: { title: string | null; paragraphs: string[] },
+  output: ChapterPartTranslation,
+): { result: ChapterPartTranslation; errors: string[] } {
+  const title: string = input.title === null ? '' : output.title.trim();
+  const paragraphs: string[] = output.paragraphs.map((paragraph: string): string => paragraph.trim());
+  const errors: string[] = [];
+  if (paragraphs.length !== input.paragraphs.length) {
+    errors.push(`Return exactly ${input.paragraphs.length} paragraphs, got ${paragraphs.length}.`);
+  }
+  paragraphs.forEach((paragraph: string, index: number): void => {
+    if (paragraph === '') errors.push(`Empty paragraph ${index + 1}.`);
+  });
+  if (input.title !== null && title === '') errors.push('Empty title.');
+  return { result: { title, paragraphs }, errors };
 }
 
 function checkGlossaryBatch(
@@ -124,5 +195,32 @@ export function askGlossaryBatch(input: {
     log: input.log,
     check: (output: GlossaryBatchOutput): { result: Map<GlossaryRow, string>; errors: string[] } =>
       checkGlossaryBatch(input.rows, output),
+  });
+}
+
+export function askChapterPart(input: {
+  chapter: number;
+  part: number;
+  parts: number;
+  title: string | null;
+  paragraphs: string[];
+  glossary: { term: string; translation: string; entityType: string }[];
+  sourceLanguage: string;
+  targetLanguage: TargetLanguage;
+  instruction: string;
+  ask: AskLlm;
+  log: Logger;
+}): Promise<ChapterPartTranslation> {
+  return askChecked<ChapterPartTranslation, ChapterPartTranslation>({
+    label: `Chapter ${input.chapter} part ${input.part}/${input.parts}`,
+    slug: `chapter-c${String(input.chapter).padStart(4, '0')}-p${String(input.part).padStart(2, '0')}`,
+    prompt: chapterPartPrompt(input),
+    schema: chapterPartSchema,
+    timeoutMs: TRANSLATION_TIMEOUT_MS,
+    failureCode: ErrorCode.TranslationLlmOutputInvalid,
+    ask: input.ask,
+    log: input.log,
+    check: (output: ChapterPartTranslation): { result: ChapterPartTranslation; errors: string[] } =>
+      checkChapterPart(input, output),
   });
 }

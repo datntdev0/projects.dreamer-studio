@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import { glossaryKeyId, glossaryRows, pruneEntries } from '@dreamer/shared/core/glossary';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { WorldEditEntity } from '@dreamer/shared/models/analysis';
@@ -15,11 +15,11 @@ import { translationGlossaryFile, translationLanguageDir } from './translation-f
 
 const logger: Logger = createLogger('translation');
 
-export async function readGlossary(folder: NovelFolder, language: TargetLanguage): Promise<GlossaryEntry[]> {
+export function readGlossary(folder: NovelFolder, language: TargetLanguage): GlossaryEntry[] {
   const file: string = translationGlossaryFile(folder, language);
   let text: string;
   try {
-    text = await fs.readFile(file, 'utf8');
+    text = readFileSync(file, 'utf8');
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
@@ -49,7 +49,7 @@ export async function loadGlossaryRows(
   language: TargetLanguage,
 ): Promise<GlossaryRow[]> {
   const entities: WorldEditEntity[] = (await snapshots.get(folder, novel)).model.state.entities;
-  return glossaryRows(entities, await readGlossary(folder, language));
+  return glossaryRows(entities, readGlossary(folder, language));
 }
 
 export async function editGlossaryEntry(
@@ -59,7 +59,7 @@ export async function editGlossaryEntry(
   translation: string | null,
 ): Promise<void> {
   const id: string = glossaryKeyId(key);
-  const entries: GlossaryEntry[] = (await readGlossary(folder, language)).filter(
+  const entries: GlossaryEntry[] = readGlossary(folder, language).filter(
     (entry: GlossaryEntry) => glossaryKeyId(entry) !== id,
   );
   const trimmed: string = translation?.trim() ?? '';
@@ -67,35 +67,45 @@ export async function editGlossaryEntry(
   await writeGlossary(folder, language, entries);
 }
 
-export async function pruneGlossary(folder: NovelFolder, entities: WorldEditEntity[]): Promise<boolean> {
-  let changed: boolean = false;
+export async function pruneGlossary(
+  folder: NovelFolder,
+  entities: WorldEditEntity[],
+): Promise<Map<TargetLanguage, Set<string>>> {
+  const removed: Map<TargetLanguage, Set<string>> = new Map();
   for (const language of TARGET_LANGUAGES) {
-    const entries: GlossaryEntry[] = await readGlossary(folder, language);
+    const entries: GlossaryEntry[] = readGlossary(folder, language);
     const kept: GlossaryEntry[] = pruneEntries(entries, entities);
     if (kept.length !== entries.length) {
       await writeGlossary(folder, language, kept);
-      changed = true;
+      removed.set(
+        language,
+        new Set(
+          entries
+            .filter((entry: GlossaryEntry): boolean => !kept.includes(entry))
+            .map((entry: GlossaryEntry): string => glossaryKeyId(entry)),
+        ),
+      );
     }
   }
-  return changed;
+  return removed;
 }
 
 export async function saveLlmEntries(
   folder: NovelFolder,
   language: TargetLanguage,
   translations: { key: GlossaryKey; translation: string }[],
-): Promise<number> {
+): Promise<string[]> {
   const entries: Map<string, GlossaryEntry> = new Map(
-    (await readGlossary(folder, language)).map((entry: GlossaryEntry) => [glossaryKeyId(entry), entry]),
+    readGlossary(folder, language).map((entry: GlossaryEntry) => [glossaryKeyId(entry), entry]),
   );
-  let saved: number = 0;
+  const saved: string[] = [];
   for (const { key, translation } of translations) {
     const id: string = glossaryKeyId(key);
     if (entries.get(id)?.source === 'user') continue;
     entries.set(id, glossaryEntry(key, translation, 'llm'));
-    saved++;
+    saved.push(id);
   }
-  if (saved > 0) await writeGlossary(folder, language, [...entries.values()]);
+  if (saved.length > 0) await writeGlossary(folder, language, [...entries.values()]);
   return saved;
 }
 

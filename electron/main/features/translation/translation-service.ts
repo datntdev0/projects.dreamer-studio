@@ -1,16 +1,17 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
-import { hasGlossaryKey } from '@dreamer/shared/core/glossary';
+import { glossaryKeyId, hasGlossaryKey } from '@dreamer/shared/core/glossary';
 import { formatLlmChoice, LlmResolution, resolveLlm } from '@dreamer/shared/models/llm';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { WorldEditEntity } from '@dreamer/shared/models/analysis';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { ContentRunPlan, ContentRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryRunPlan } from '@dreamer/shared/models/translation';
 import { GlossaryRunRequest } from '@dreamer/shared/models/translation';
-import { TranslationRun } from '@dreamer/shared/models/translation';
+import { TranslationRun, TranslationRunKind } from '@dreamer/shared/models/translation';
 import { GlossaryPage, GlossaryRow, InstructionRequest } from '@dreamer/shared/models/translation';
 import { InstructionSaveRequest } from '@dreamer/shared/models/translation';
-import { LlmChoiceState, TARGET_LANGUAGES, TargetLanguage } from '@dreamer/shared/models/translation';
+import { LlmChoiceState, targetLanguages, TargetLanguage } from '@dreamer/shared/models/translation';
 import { TranslationInstruction, TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -23,16 +24,28 @@ import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { editGlossaryEntry, hasAnalysedWorld, loadGlossaryRows, pruneGlossary } from './translation-glossary';
 import { loadInstruction, resetInstruction, saveInstruction } from './translation-instruction';
-import { checkGlossaryRun, GlossaryTranslationDeps } from './glossary-translation-pipeline';
+import { chapterStatusesFor, languageSummary, recheckGlossaryChange } from './translation-index';
+import { checkGlossaryRun } from './glossary-translation-pipeline';
+import { checkContentRun, ContentTranslationDeps } from './content-translation-pipeline';
 
 const logger: Logger = createLogger('translation');
+
+interface RunStart {
+  novelId: string;
+  language: TargetLanguage;
+  instruction: string | null;
+}
+
+function isTranslationRun(run: PipelineRun): boolean {
+  return run.type === 'glossary-translation' || run.type === 'content-translation';
+}
 
 export class TranslationService {
   private readonly observed: WeakSet<AppDataSession> = new WeakSet<AppDataSession>();
 
   constructor(
     private readonly session: () => AppDataSession,
-    private readonly deps: GlossaryTranslationDeps,
+    private readonly deps: ContentTranslationDeps,
     private readonly analysisRuns: AnalysisRuns,
   ) {
     this.analysisRuns.onChanged((novelId: string): void => void this.pruneOnWorldChange(novelId));
@@ -42,7 +55,7 @@ export class TranslationService {
     const session: AppDataSession = this.session();
     if (!this.observed.has(session)) {
       session.executor.onRunFinished((run: PipelineRun): void => {
-        if (run.type === 'glossary-translation' && run.novelId !== null) this.deps.runs.clear(run.novelId);
+        if (isTranslationRun(run) && run.novelId !== null) this.deps.runs.clear(run.novelId);
       });
       this.observed.add(session);
     }
@@ -52,18 +65,17 @@ export class TranslationService {
   private activeRun(novelId: string): PipelineRun | undefined {
     return new PipelineRunRepository(this.current().db)
       .activeNovelRuns()
-      .find(
-        (run: PipelineRun): boolean =>
-          run.novelId === novelId && (run.type === 'glossary-translation' || run.type === 'content-translation'),
-      );
+      .find((run: PipelineRun): boolean => run.novelId === novelId && isTranslationRun(run));
   }
 
   async status(query: TranslationStatusQuery): Promise<TranslationStatus> {
     const novel: NovelMetadata = this.readNovel(query.novelId);
-    const targets: TargetLanguage[] = this.targetLanguages(novel);
+    const targets: TargetLanguage[] = targetLanguages(novel.language);
     const language: TargetLanguage =
       query.language !== null && targets.includes(query.language) ? query.language : targets[0];
     const glossary: GlossaryRow[] = await this.glossaryRows(novel, language);
+    const folder: NovelFolder = this.folder(novel.id);
+    const chapters = await chapterStatusesFor(folder, novel, language);
     const statuses = await this.deps.llm.status();
     const activeRun: PipelineRun | undefined = this.activeRun(query.novelId);
     const run: TranslationRun | null =
@@ -82,22 +94,8 @@ export class TranslationService {
       novelId: novel.id,
       language,
       targets,
-      languages: targets.map((target: TargetLanguage) => ({
-        language: target,
-        translated: 0,
-        total: novel.chapters.length,
-      })),
-      chapters: novel.chapters.map((chapter, index: number) => ({
-        index: index + 1,
-        file: chapter.file,
-        title: null,
-        status: 'not-translated',
-        issues: 0,
-        edited: false,
-        staleReason: null,
-        instructionChanged: false,
-        error: null,
-      })),
+      languages: targets.map((target: TargetLanguage) => languageSummary(folder, novel, target)),
+      chapters,
       glossary: {
         total: glossary.length,
         untranslated: glossary.filter((row: GlossaryRow): boolean => row.status === 'untranslated').length,
@@ -125,29 +123,71 @@ export class TranslationService {
   async planGlossary(request: GlossaryRunRequest): Promise<GlossaryRunPlan> {
     const session: AppDataSession = this.current();
     const check = await checkGlossaryRun(this.deps, session.paths, request);
-    const blockedReason: ErrorCode | null = novelLocks(new PipelineRunRepository(session.db)).has(request.novelId)
-      ? ErrorCode.NovelLocked
-      : check.blockedReason;
+    const blockedReason: ErrorCode | null = this.planBlockedReason(session, request.novelId, check.blockedReason);
     return { count: check.queue.length, batches: check.batches.length, blockedReason };
   }
 
   async startGlossary(request: GlossaryRunRequest): Promise<void> {
     const session: AppDataSession = this.current();
     const check = await checkGlossaryRun(this.deps, session.paths, request);
-    if (check.blockedReason) {
-      throw new CodedError(check.blockedReason, `Glossary translation cannot run: ${check.blockedReason}`);
-    }
+    await this.startRun(
+      session,
+      'glossary',
+      { ...request },
+      check.novel.title,
+      check.queue.length,
+      check.blockedReason,
+    );
+  }
+
+  async planContent(request: ContentRunRequest): Promise<ContentRunPlan> {
+    const session: AppDataSession = this.current();
+    const check = await checkContentRun(this.deps, session.paths, request);
+    const blockedReason: ErrorCode | null = this.planBlockedReason(session, request.novelId, check.blockedReason);
+    const queued: Set<number> = new Set(check.queue);
+    return {
+      count: check.queue.length,
+      from: check.queue.length > 0 ? Math.min(...check.queue) : null,
+      to: check.queue.length > 0 ? Math.max(...check.queue) : null,
+      userEdited: check.statuses.filter((chapter): boolean => queued.has(chapter.index) && chapter.edited).length,
+      untranslatedNames: check.rows.filter(
+        (row: GlossaryRow): boolean =>
+          row.status === 'untranslated' && row.chapterIndexes.some((index: number): boolean => queued.has(index)),
+      ).length,
+      blockedReason,
+    };
+  }
+
+  async startContent(request: ContentRunRequest): Promise<void> {
+    const session: AppDataSession = this.current();
+    const check = await checkContentRun(this.deps, session.paths, request);
+    await this.startRun(session, 'content', { ...request }, check.novel.title, check.queue.length, check.blockedReason);
+  }
+
+  private planBlockedReason(session: AppDataSession, novelId: string, reason: ErrorCode | null): ErrorCode | null {
+    return novelLocks(new PipelineRunRepository(session.db)).has(novelId) ? ErrorCode.NovelLocked : reason;
+  }
+
+  private async startRun(
+    session: AppDataSession,
+    kind: TranslationRunKind,
+    request: RunStart & Record<string, unknown>,
+    title: string,
+    total: number,
+    blockedReason: ErrorCode | null,
+  ): Promise<void> {
+    if (blockedReason) throw new CodedError(blockedReason, `Translation cannot run: ${blockedReason}`);
     assertUnlocked(new PipelineRunRepository(session.db), request.novelId);
     if (request.instruction?.trim()) {
       await this.saveInstruction({ novelId: request.novelId, language: request.language, text: request.instruction });
     }
-    session.executor.startRun('glossary-translation', { ...request }, check.novel.title, request.novelId);
+    session.executor.startRun(`${kind}-translation`, request, title, request.novelId);
     this.deps.runs.set(request.novelId, {
-      kind: 'glossary',
+      kind,
       language: request.language,
       runningChapter: null,
       done: 0,
-      total: check.queue.length,
+      total,
       failed: 0,
     });
   }
@@ -167,6 +207,13 @@ export class TranslationService {
       }
       await editGlossaryEntry(this.folder(request.novelId), request.language, request.key, request.translation);
       broadcast(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
+      void recheckGlossaryChange(
+        this.deps.snapshots,
+        this.folder(request.novelId),
+        request.novelId,
+        request.language,
+        new Set([glossaryKeyId(request.key)]),
+      );
     });
   }
 
@@ -210,24 +257,25 @@ export class TranslationService {
 
   private async pruneOnWorldChange(novelId: string): Promise<void> {
     try {
+      let removed: Map<TargetLanguage, Set<string>> = new Map();
       await withNovelLock(novelId, async (): Promise<void> => {
         const folder: NovelFolder = this.folder(novelId);
         const novel: NovelMetadata | null = readMetadata(folder);
         if (novel === null) return;
-        await pruneGlossary(folder, await this.entities(folder, novel));
-        for (const language of this.targetLanguages(novel)) {
+        removed = await pruneGlossary(folder, await this.entities(folder, novel));
+        for (const language of targetLanguages(novel.language)) {
           broadcast(TranslationChannel.Changed, { novelId, language });
         }
       });
+      const folder: NovelFolder = this.folder(novelId);
+      await Promise.all(
+        [...removed].map(([language, changed]: [TargetLanguage, Set<string>]): Promise<void> =>
+          recheckGlossaryChange(this.deps.snapshots, folder, novelId, language, changed),
+        ),
+      );
     } catch (error: unknown) {
       logger.error(`Glossary prune failed for ${novelId}`, error);
     }
-  }
-
-  private targetLanguages(novel: NovelMetadata): TargetLanguage[] {
-    return TARGET_LANGUAGES.filter(
-      (language: TargetLanguage): boolean => language !== novel.language.split('-')[0].toLowerCase(),
-    );
   }
 
   private readNovel(novelId: string): NovelMetadata {

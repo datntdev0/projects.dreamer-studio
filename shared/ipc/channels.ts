@@ -97,6 +97,8 @@ export const TranslationChannel = {
   ResetInstruction: 'translation:reset-instruction',
   PlanGlossary: 'translation:plan-glossary',
   StartGlossary: 'translation:start-glossary',
+  PlanContent: 'translation:plan-content',
+  StartContent: 'translation:start-content',
   Cancel: 'translation:cancel',
   Progress: 'translation:progress',
   Changed: 'translation:changed',

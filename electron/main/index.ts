@@ -29,7 +29,8 @@ import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { AnalysisService } from './features/analysis/analysis-service';
 import { TranslationService } from './features/translation/translation-service';
 import { glossaryTranslationPipeline } from './features/translation/glossary-translation-pipeline';
-import { GlossaryTranslationDeps } from './features/translation/glossary-translation-pipeline';
+import { contentTranslationPipeline } from './features/translation/content-translation-pipeline';
+import { ContentTranslationDeps } from './features/translation/content-translation-pipeline';
 import { TranslationRuns } from './features/translation/translation-runs';
 import { AnalysisRuns } from './features/analysis/analysis-runs';
 import { AnalysisSnapshots } from './features/analysis/analysis-snapshot';
@@ -87,19 +88,28 @@ const chapterSlots: WorkSlots = new WorkSlots((): number => settings.get().pipel
 const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns(), chapterSlots };
 const analysisSnapshots: AnalysisSnapshots = new AnalysisSnapshots();
 const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
-const translationDeps: GlossaryTranslationDeps = {
+const translationDeps: ContentTranslationDeps = {
   llm,
   settings,
   runs: new TranslationRuns(),
   snapshots: analysisSnapshots,
+  chapterSlots,
 };
 const glossaryTranslation: PipelineDefinition = glossaryTranslationPipeline(translationDeps);
+const contentTranslation: PipelineDefinition = contentTranslationPipeline(translationDeps);
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
   registry: new PipelineRegistry(
     app.isPackaged
-      ? [novelImportPipeline, novelExportPipeline, worldAnalysis, glossaryTranslation]
-      : [demoPipeline, novelImportPipeline, novelExportPipeline, worldAnalysis, glossaryTranslation],
+      ? [novelImportPipeline, novelExportPipeline, worldAnalysis, glossaryTranslation, contentTranslation]
+      : [
+          demoPipeline,
+          novelImportPipeline,
+          novelExportPipeline,
+          worldAnalysis,
+          glossaryTranslation,
+          contentTranslation,
+        ],
   ),
   limit: (): number => settings.get().pipelines.maxConcurrent,
   startBackend,

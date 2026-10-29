@@ -8,7 +8,6 @@ import {
 } from '@dreamer/shared/core/world';
 import { previewEdits, toGraph } from '@dreamer/shared/core/world';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
 import { AnalysisEditRequest, AnalysisPlan, AnalysisRun, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
 import {
   AnalysisStatus,
@@ -30,7 +29,6 @@ import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
 import { PipelineRunRepository } from '@storage/repositories/pipeline-run-repository';
 import { AppDataSession } from '../../app/app-data-session';
-import { broadcast } from '../../ipc/broadcast';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
@@ -43,11 +41,11 @@ import { AnalysisRunCheck, checkAnalysisRun, WorldAnalysisDeps } from './world-a
 
 export class AnalysisService {
   private readonly observed: WeakSet<AppDataSession> = new WeakSet<AppDataSession>();
-  private readonly snapshots: AnalysisSnapshots = new AnalysisSnapshots();
 
   constructor(
     private readonly session: () => AppDataSession,
     private readonly deps: WorldAnalysisDeps,
+    private readonly snapshots: AnalysisSnapshots = new AnalysisSnapshots(),
   ) {}
 
   private get runs(): AnalysisRuns {
@@ -202,7 +200,7 @@ export class AnalysisService {
       const folder: NovelFolder = this.folder(novelId);
       await appendOverlayEdits(folder, request.edits);
       await deleteLegacyWorldFile(folder);
-      broadcast(AnalysisChannel.Changed, { novelId });
+      this.runs.changed(novelId);
     });
   }
 

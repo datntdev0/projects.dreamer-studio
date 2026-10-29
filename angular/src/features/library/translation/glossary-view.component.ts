@@ -11,6 +11,7 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
+import { glossaryKeyId } from '@dreamer/shared/core/glossary';
 import type { EntityType } from '@dreamer/shared/models/analysis';
 import type {
   GlossaryKey,
@@ -128,10 +129,10 @@ export class GlossaryViewComponent {
     return new Intl.NumberFormat(this.i18n.language()).format(value);
   }
   protected rowKey(row: GlossaryKey): string {
-    return `${row.entityType}:${row.entityName}:${row.kind}:${row.term ?? ''}`;
+    return glossaryKeyId(row);
   }
   protected testKey(row: GlossaryKey): string {
-    return this.rowKey(row).replace(/[^a-zA-Z0-9]/g, '-');
+    return this.rowKey(row).replace(/[^\p{L}\p{N}]/gu, '-');
   }
   protected trackRow = (_index: number, row: GlossaryRow): string => this.rowKey(row);
   protected rowName(row: GlossaryRow): string {

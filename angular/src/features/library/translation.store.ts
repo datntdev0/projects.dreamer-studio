@@ -3,6 +3,7 @@ import type { Signal, WritableSignal } from '@angular/core';
 import { DesktopApi } from '@core/desktop-api';
 import { I18nService } from '@core/i18n/i18n.service';
 import { CurrentNovelStore } from '@core/stores/current-novel-store';
+import { TranslationLanguageStore } from '@core/stores/translation-language-store';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import type { ChapterTranslation } from '@dreamer/shared/models/translation';
 import type { ChapterTranslationSummary } from '@dreamer/shared/models/translation';
@@ -28,8 +29,9 @@ export class TranslationStore {
   private readonly api = inject(DesktopApi);
   private readonly i18n = inject(I18nService);
   private readonly currentNovel = inject(CurrentNovelStore);
+  private readonly translationLanguage = inject(TranslationLanguageStore);
   private readonly progressValue = signal<TranslationProgress | null>(null);
-  private readonly languageChoice = signal<TargetLanguage | null>(null);
+  private readonly languageChoice = computed(() => this.translationLanguage.language(this.novelId()));
   private statusRequest = 0;
   private chapterRequest = 0;
   private glossaryRequest = 0;
@@ -40,9 +42,11 @@ export class TranslationStore {
   readonly selectedChapter: WritableSignal<number | null> = signal(null);
   readonly view: WritableSignal<TranslationView> = signal('reader');
   readonly display: WritableSignal<TranslationDisplay> = signal('original');
-  readonly language: Signal<TargetLanguage | null> = computed(
-    () => this.languageChoice() ?? this.status()?.targets[0] ?? null,
-  );
+  readonly language: Signal<TargetLanguage | null> = computed(() => {
+    const choice = this.languageChoice();
+    const targets = this.status()?.targets ?? [];
+    return choice && targets.includes(choice) ? choice : (targets[0] ?? null);
+  });
   readonly status: WritableSignal<TranslationStatus | null> = signal(null);
   readonly chapter: WritableSignal<ChapterTranslation | null> = signal(null);
   readonly glossary: WritableSignal<GlossaryPage | null> = signal(null);
@@ -103,7 +107,6 @@ export class TranslationStore {
     this.view.set('reader');
     this.selectedChapter.set(null);
     this.display.set('original');
-    this.languageChoice.set(null);
     this.status.set(null);
     this.chapter.set(null);
     this.glossary.set(null);
@@ -124,7 +127,7 @@ export class TranslationStore {
 
   setLanguage(language: TargetLanguage): void {
     if (language === this.language()) return;
-    this.languageChoice.set(language);
+    this.translationLanguage.set(this.novelId(), language);
     this.chapter.set(null);
     this.glossary.set(null);
     this.instruction.set(null);

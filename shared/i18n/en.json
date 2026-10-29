@@ -974,6 +974,8 @@
   "errors.LLM_NOT_AVAILABLE.fix": "Open Settings › LLM integrations and choose an installed CLI.",
   "errors.ANALYSIS_QUOTE_NOT_FOUND.title": "Quote not found",
   "errors.ANALYSIS_QUOTE_NOT_FOUND.message": "The quote is not in the chosen chapter. Use Find in novel to pick the chapter, or leave the quote empty.",
+  "errors.GLOSSARY_KEY_NOT_FOUND.title": "Name not found",
+  "errors.GLOSSARY_KEY_NOT_FOUND.message": "This name is no longer in the world of the novel. The glossary has been refreshed.",
   "run.type.novel-import": "Import novel",
   "library.import.step.check": "Check the package",
   "library.import.step.extract": "Extract chapters",

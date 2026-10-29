@@ -4,6 +4,7 @@ import { broadcast } from '../../ipc/broadcast';
 
 export class AnalysisRuns {
   private readonly runs: Map<string, AnalysisRun> = new Map<string, AnalysisRun>();
+  private readonly listeners: Set<(novelId: string) => void> = new Set<(novelId: string) => void>();
 
   get(novelId: string): AnalysisRun | null {
     return this.runs.get(novelId) ?? null;
@@ -24,6 +25,18 @@ export class AnalysisRuns {
 
   clear(novelId: string): void {
     this.runs.delete(novelId);
+    this.changed(novelId);
+  }
+
+  changed(novelId: string): void {
     broadcast(AnalysisChannel.Changed, { novelId });
+    this.listeners.forEach((listener: (novelId: string) => void): void => listener(novelId));
+  }
+
+  onChanged(listener: (novelId: string) => void): () => void {
+    this.listeners.add(listener);
+    return (): void => {
+      this.listeners.delete(listener);
+    };
   }
 }

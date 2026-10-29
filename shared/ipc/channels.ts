@@ -91,6 +91,7 @@ export const AnalysisChannel = {
 export const TranslationChannel = {
   Status: 'translation:status',
   Glossary: 'translation:glossary',
+  EditGlossary: 'translation:edit-glossary',
   Instruction: 'translation:instruction',
   SaveInstruction: 'translation:save-instruction',
   ResetInstruction: 'translation:reset-instruction',

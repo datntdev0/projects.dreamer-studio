@@ -36,6 +36,7 @@ export const ErrorCode = {
   AnalysisOpenIssues: 'ANALYSIS_OPEN_ISSUES',
   AnalysisEditInvalid: 'ANALYSIS_EDIT_INVALID',
   AnalysisQuoteNotFound: 'ANALYSIS_QUOTE_NOT_FOUND',
+  GlossaryKeyNotFound: 'GLOSSARY_KEY_NOT_FOUND',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

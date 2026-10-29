@@ -974,6 +974,8 @@
   "errors.LLM_NOT_AVAILABLE.fix": "Mở Cài đặt › Tích hợp LLM và chọn một CLI đã cài đặt.",
   "errors.ANALYSIS_QUOTE_NOT_FOUND.title": "Không tìm thấy trích dẫn",
   "errors.ANALYSIS_QUOTE_NOT_FOUND.message": "Trích dẫn không có trong chương đã chọn. Dùng Tìm trong tiểu thuyết để chọn chương, hoặc để trống trích dẫn.",
+  "errors.GLOSSARY_KEY_NOT_FOUND.title": "Không tìm thấy tên",
+  "errors.GLOSSARY_KEY_NOT_FOUND.message": "Tên này không còn trong thế giới của tiểu thuyết. Bảng thuật ngữ đã được làm mới.",
   "run.type.novel-import": "Nhập tiểu thuyết",
   "library.import.step.check": "Kiểm tra gói",
   "library.import.step.extract": "Giải nén chương",

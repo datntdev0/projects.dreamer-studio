@@ -11,6 +11,10 @@ export function translationInstructionFile(folder: NovelFolder, language: Target
   return join(translationLanguageDir(folder, language), 'instruction.md');
 }
 
+export function translationGlossaryFile(folder: NovelFolder, language: TargetLanguage): string {
+  return join(translationLanguageDir(folder, language), 'glossary.json');
+}
+
 function assertTargetLanguage(language: TargetLanguage): void {
   if (!TARGET_LANGUAGES.includes(language)) {
     throw new Error('invalid target language');

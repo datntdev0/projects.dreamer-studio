@@ -29,6 +29,7 @@ import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { AnalysisService } from './features/analysis/analysis-service';
 import { TranslationService } from './features/translation/translation-service';
 import { AnalysisRuns } from './features/analysis/analysis-runs';
+import { AnalysisSnapshots } from './features/analysis/analysis-snapshot';
 import { worldAnalysisPipeline, WorldAnalysisDeps } from './features/analysis/world-analysis-pipeline';
 import { PipelineDefinition } from './features/pipelines/pipeline-definition';
 import { CheckContext } from './features/diagnostics/self-check';
@@ -81,6 +82,7 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
 const llm: LlmService = new LlmService(settings, () => manager.paths());
 const chapterSlots: WorkSlots = new WorkSlots((): number => settings.get().pipelines.maxChapters);
 const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns(), chapterSlots };
+const analysisSnapshots: AnalysisSnapshots = new AnalysisSnapshots();
 const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
@@ -166,8 +168,10 @@ async function onReady(): Promise<void> {
   registerPipelineIpc(() => manager.session().executor);
   registerLibraryIpc(() => manager.session());
   registerLlmIpc(llm);
-  registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session(), analysisDeps));
-  registerTranslationIpc(new TranslationService((): AppDataSession => manager.session(), { llm, settings }));
+  registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session(), analysisDeps, analysisSnapshots));
+  registerTranslationIpc(
+    new TranslationService((): AppDataSession => manager.session(), analysisDeps, analysisSnapshots),
+  );
   registerSettingsIpc(settings);
   registerBackendIpc();
   registerBuiltInChecks(diagnostics);

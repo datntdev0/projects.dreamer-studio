@@ -39,6 +39,7 @@ import { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
 import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
 import { TranslationChanged, TranslationInstruction, TranslationProgress } from '@dreamer/shared/models/translation';
 import { TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
@@ -176,7 +177,7 @@ const api: DreamerApi = {
     status: (query: TranslationStatusQuery): Promise<TranslationStatus> => call(TranslationChannel.Status, query),
     chapter: translationUnavailable,
     glossary: (query: InstructionRequest): Promise<GlossaryPage> => call(TranslationChannel.Glossary, query),
-    editGlossary: translationUnavailable,
+    editGlossary: (request: GlossaryEditRequest): Promise<void> => call(TranslationChannel.EditGlossary, request),
     instruction: (request: InstructionRequest): Promise<TranslationInstruction> =>
       call(TranslationChannel.Instruction, request),
     saveInstruction: (request: InstructionSaveRequest): Promise<TranslationInstruction> =>

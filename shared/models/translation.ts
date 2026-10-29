@@ -30,6 +30,17 @@ export interface GlossaryRow extends GlossaryKey {
   chapterIndexes: number[];
 }
 
+export interface GlossaryEntry extends GlossaryKey {
+  translation: string;
+  source: 'llm' | 'user';
+  updatedAt: string;
+}
+
+export interface GlossaryFile {
+  version: 1;
+  entries: GlossaryEntry[];
+}
+
 export interface GlossaryPage {
   novelId: string;
   language: TargetLanguage;

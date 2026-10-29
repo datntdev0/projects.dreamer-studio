@@ -77,7 +77,7 @@ export const MODULES: AppModule[] = [
     icon: 'languages',
     label: 'nav.translation',
     description: 'module.translation.desc',
-    release: '0.3.0',
+    release: '0.2.0',
     page: TranslationPage,
     novelScoped: true,
   },

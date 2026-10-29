@@ -8,11 +8,10 @@ DOCS = ROOT / "_docs"
 TEMPLATES = ROOT / ".claude" / "templates"
 REQS_XLSX = DOCS / "0.requirements-analysis.xlsx"
 
-CATALOG_SHEET = "Capacity Catalog"
+CATALOG_SHEET = "1. Capabilities"
+L2_PREFIX = "2. "
 CATALOG_ID = "ID"
-CATALOG_NAME = "Capacity Full Name"
-REQ_ID = "Req ID"
-REQ_CAPACITY = "Capacity Name"
+CATALOG_NAME = "Capability"
 STATUSES = ("0. Idea", "1. Draft", "2. Approve", "3. Implement", "4. Done")
 
 DECISIONS_SHEET = "Open Decisions"
@@ -53,5 +52,5 @@ def read_rows(ws):
     return rows
 
 
-def theme_sheets(wb):
-    return [ws for ws in wb.worksheets if ws.title not in (CATALOG_SHEET, DECISIONS_SHEET)]
+def spec_sheets(wb):
+    return [ws for ws in wb.worksheets if ws.title.startswith(L2_PREFIX)]

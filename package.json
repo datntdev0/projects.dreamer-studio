@@ -14,7 +14,8 @@
     "check": "pnpm lint && pnpm format:check && pnpm test",
     "py:setup": "node scripts/py.mjs setup",
     "dev": "node scripts/dev.mjs",
-    "start": "node scripts/build.mjs build && pnpm --filter @dreamer/electron start",
+    "build": "node scripts/build.mjs build",
+    "start": "pnpm --filter @dreamer/electron start",
     "package": "node scripts/build.mjs package",
     "storybook": "pnpm --filter @dreamer/angular storybook",
     "storybook:build": "pnpm --filter @dreamer/angular storybook:build"

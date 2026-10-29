@@ -3,7 +3,7 @@
 - `.claude/README.md` — project overview and the Claude framework (agents, skills, scripts).
 - `DESIGN.md` — visual tokens; never use raw colors, sizes or spacing in UI code.
 - `_docs/1.architecture-overview.html` — architecture; decisions in the xlsx `Open Decisions` sheet (`reqs.py decisions`).
-- `_docs/0.requirements-analysis.xlsx` — requirements and decisions; read it with `python .claude/scripts/reqs.py list`, view it in `_docs/0.requirements-analysis.html`.
+- `_docs/0.requirements-analysis.xlsx` — capability intent (L1), feature/change specifications (L2), and decisions; read it with `python .claude/scripts/reqs.py list`, view it in `_docs/0.requirements-analysis.html`.
 
 ## Workflow
 
@@ -17,7 +17,7 @@ Quick path: `/solo-prototype <idea>` (no docs, no gates in between).
 
 ## Commands
 
-- Requirements and decisions: `python .claude/scripts/reqs.py list | decisions | check | next-id` (read-only)
+- Capabilities, Level 2 specifications, and decisions: `python .claude/scripts/reqs.py list | decisions | check | next-id` (read-only)
 - Docs: `python .claude/scripts/docs.py new <type> [ID]`, `python .claude/scripts/docs.py serve`
 - First run: `pnpm install`, then `pnpm py:setup` (creates `backend/.venv`).
 - App: `pnpm dev | lint | format | format:check | test | test:coverage | check` (`lint` runs `scripts/check-i18n.mjs` first; `check` = lint + format:check + test; `test:coverage` → `.testing/coverage/<electron|angular|python>`).
@@ -28,8 +28,8 @@ Quick path: `/solo-prototype <idea>` (no docs, no gates in between).
 ## Conventions
 
 - Docs and markdown: short, bullets and ordered lists.
-- IDs: capacity `THnn-nn`, requirement `REQ-nnn` (functional) / `TSK-nnn` (technical), decision `ADR-nn`.
-- Commits: `<type>(<scope>): <summary> [<req-id>]`, one plan step per commit. Do not over 100 characters in the summary.
+- IDs: capability `THnn-nn`, Level 2 spec `L2-THnn-nn-nn`, decision `ADR-nn`.
+- Commits: `<type>(<scope>): <summary> [<Capability ID>]`, one plan step per commit. Do not over 100 characters in the summary.
 - Code style: `_docs/1.architecture-overview.html` › Conventions › Code style:
   - no member comments, single-line imports, no `Omit` 
   - `data-testid`, unit tests only on request;

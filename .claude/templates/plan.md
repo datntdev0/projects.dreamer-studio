@@ -11,12 +11,12 @@
 
 ### Step 1 — <title>
 
-- Commit: `feat(<scope>): <summary> [REQ-nnn]`
-- Covers: REQ-nnn AC-1, AC-2
+- Commit: `feat(<scope>): <summary> [THnn-nn]`
+- Capability: THnn-nn
 - Sub-steps:
   1. [coder-a] <task> — files: `...`
   2. [coder-b] <task> — files: `...` (parallel with 1)
-  3. [tester] tests for AC-1, AC-2
+  3. [tester] verify L2 scenarios or direct L1 intent
 - Done when: <check>
 
 ### Step N-1 — fix
@@ -27,7 +27,7 @@
 ### Step N — docs
 
 - Commit: `docs(<scope>): <summary> [{{ID}}]`
-- Covers: docs, ADRs and requirement status match the final code (after fix; all ACs pass)
+- Covers: docs, ADRs, capability status, and L2 status match the final code (after fix; all applicable verification passes)
 - Done when: `reqs.py check` passes
 
 ## Progress

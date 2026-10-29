@@ -1,13 +1,13 @@
 ---
 name: solo-solution
-description: Architect reads approved requirements and proposes a solution design in _docs/<id>.solution.html, with analyst, designer, coder and the human. Use before implementing a capacity or functional requirement.
-argument-hint: "<capacity or requirement ID>"
+description: Architect reads approved capabilities and Level 2 specifications and proposes a solution design in _docs/<id>.solution.html, with analyst, designer, coder and the human. Use before implementing a capability or feature/change.
+argument-hint: "<Capability ID | Spec ID>"
 ---
 
 # solo-solution
 
 - **Lead**: `architect` — the main session follows `.claude/agents/architect.md`.
-- **Collaborators**: `analyst` (requirement questions), `designer` (UX review, then slice specs in parallel), `coder` (builds the slices in parallel), human (decisions, gate).
+- **Collaborators**: `analyst` (capability or L2 intent questions), `designer` (UX review, then slice specs in parallel), `coder` (builds the slices in parallel), human (decisions, gate).
 - **Artifacts**: `_docs/<id>.solution.html`; Storybook prototype in `angular/stories/pages/` (source code).
 
 ## Workflow
@@ -15,18 +15,18 @@ argument-hint: "<capacity or requirement ID>"
 `collect ──► analyze ──► clarify ──► prototype ──► propose ──► human gate`
 
 1. **Collect**
-   - Requirements: `python .claude/scripts/reqs.py list --capacity <THnn-nn>` or `--id <REQ-nnn>`.
-   - Warn if any requirement is not `2. Approve`; ask the human to continue or run `/solo-analysis` first.
+   - Specifications: `python .claude/scripts/reqs.py list --capacity <THnn-nn>` or `--id <L2-THnn>`.
+   - Warn if the Capability or any relevant L2 spec is not `2. Approve`; ask the human to continue or run `/solo-analysis` first.
    - `_docs/1.architecture-overview.html`, decisions (`python .claude/scripts/reqs.py decisions`), related code, `DESIGN.md`.
 2. **Analyze**
-   - Map each AC to components, data, interfaces and tests.
+   - Map relevant L2 scenarios to components, data, interfaces and tests. If no L2 exists, identify the L1 intent that needs verification and decide whether complexity warrants recording an L2 before design.
    - Spawn in parallel (one message), both read-only:
      - `designer` (review mode): screens, states, UX gaps and questions; no files written.
-     - `analyst`: ambiguous or missing ACs.
+     - `analyst`: ambiguous capability intent or L2 scenarios.
    - Identify options for each non-trivial choice.
 3. **Clarify** — before any prototype work
    - Merge architect, analyst and designer questions and concerns; ask them with `AskUserQuestion` (max 4 per round, options + recommendation).
-   - Requirement changes → `analyst` proposes them as a table (status back to `1. Draft`).
+   - Capability or L2 changes → `analyst` proposes them as a table (status back to `1. Draft`).
 4. **Prototype** (only when the scope has UI)
    - Several IDs on one page (e.g. two capacities on one Settings page): one prototype pass for the page; each solution links it.
    - Split the UI into **slices** with no shared files (one page section, panel or dialog each).
@@ -40,7 +40,7 @@ argument-hint: "<capacity or requirement ID>"
    - Stories: one `Main` story where every state reachable by navigating or clicking can be seen; extra stories only for states that cannot be reached that way.
 5. **Propose**
    - `python .claude/scripts/docs.py new solution <id> --title "<name>"`.
-   - Fill all sections; UI Design = the designers' slice specs; Traceability must cover every AC in scope.
+   - Fill all sections; UI Design = the designers' slice specs; Traceability must cover applicable L1 intent and every in-scope L2 scenario.
    - Remaining choices → `decision` blocks with a recommended option.
 6. **Human gate**
    - Show: summary, artifact path, story URLs, open decisions.

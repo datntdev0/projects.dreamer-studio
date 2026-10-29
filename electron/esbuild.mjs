@@ -13,7 +13,7 @@ export function readAppVersion() {
   return readRootPackage().version;
 }
 
-export function createBuildOptions(onRebuild) {
+export function createBuildOptions() {
   const { version, author } = readRootPackage();
   return {
     entryPoints: { 'main/index': `${electronDir}main/index.ts`, 'preload/index': `${electronDir}preload/index.ts` },
@@ -22,7 +22,9 @@ export function createBuildOptions(onRebuild) {
     platform: 'node',
     format: 'cjs',
     bundle: true,
-    sourcemap: true,
+    minify: true,
+    metafile: true,
+    sourcemap: false,
     external: ['electron'],
     define: {
       APP_VERSION: JSON.stringify(version),
@@ -30,9 +32,7 @@ export function createBuildOptions(onRebuild) {
       BUILD_DATE: JSON.stringify(process.env.DREAMER_BUILD_DATE || null),
     },
     logLevel: 'info',
-    plugins: onRebuild
-      ? [{ name: 'rebuild', setup: (b) => b.onEnd((result) => result.errors.length || onRebuild()) }]
-      : [],
+    plugins: [],
   };
 }
 
@@ -40,8 +40,8 @@ export async function buildOnce() {
   await build(createBuildOptions());
 }
 
-export async function watchBuild(onRebuild) {
-  const ctx = await context(createBuildOptions(onRebuild));
+export async function watchBuild() {
+  const ctx = await context(createBuildOptions());
   await ctx.watch();
   return ctx;
 }

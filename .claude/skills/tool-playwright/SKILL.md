@@ -23,11 +23,11 @@ allowed-tools: Bash(playwright-cli:*)
    - Snapshot again and compare, or `playwright-cli --raw eval "document.title"`.
    - Errors: `playwright-cli console error`, `playwright-cli requests`.
    - Theme: `playwright-cli --raw eval "document.documentElement.dataset.theme"`.
-7. **Evidence** — `playwright-cli screenshot --filename=.testing/.playwright-cli/<req-id>-ac<n>.png`.
+7. **Evidence** — `playwright-cli screenshot --filename=.testing/.playwright-cli/<capability-or-spec-id>-scenario<n>.png`.
 8. **Close** — `playwright-cli close` (or `-s=<name> close`); stop the dev server.
 
 ## Rules
 
 - Re-snapshot after every navigation or re-render; refs change.
-- Check light and dark themes, VN and EN, when the AC touches UI text or color.
-- Report per AC: steps, expected, actual, screenshot path.
+- Check light and dark themes, VN and EN, when the scenario or intent touches UI text or color.
+- Report per scenario or intent: steps, expected, actual, screenshot path.

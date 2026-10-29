@@ -1,6 +1,6 @@
 ---
 name: solo-prototype
-description: Quickly build a working prototype of a requirement idea from the human, skipping the analysis, solution and plan documents and the gates of the other solo skills. The main session splits the work into small tasks for cheap sub-agents (Explore on haiku, coder and tester on sonnet). Use when the human wants to try an idea fast.
+description: Quickly build a working prototype of a capability or feature idea from the human, skipping the analysis, solution and plan documents and the gates of the other solo skills. The main session splits the work into small tasks for cheap sub-agents (Explore, coder and tester). Use when the human wants to try an idea fast.
 argument-hint: "<idea>"
 ---
 

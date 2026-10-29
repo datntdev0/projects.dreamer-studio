@@ -12,7 +12,7 @@
   - electron-builder zip + PyInstaller
 - **Folders**: `angular/`; `electron/`; `shared/`; `backend/`; `scripts/`
 - **Sources of truth**:
-  - Requirements: `_docs/0.requirements-analysis.xlsx`
+  - Capability intent (L1), feature/change specifications (L2), and decisions: `_docs/0.requirements-analysis.xlsx`
   - Architecture: `_docs/1.architecture-overview.html`
   - Visual design: `DESIGN.md`
 
@@ -38,11 +38,11 @@ prototype   (quick path: idea ──► working code, no docs)
 
 | Agent | Model | Owns |
 | --- | --- | --- |
-| analyst | opus | requirement proposals |
+| analyst | opus | capability and L2 specification proposals |
 | designer | opus | UX, `DESIGN.md` compliance, slice specs for the Storybook prototype (several in parallel) |
 | architect | opus | architecture, solutions, plans, review |
 | coder | sonnet | code for one sub-step, or implement for designer |
-| tester | sonnet | tests, AC verification |
+| tester | sonnet | tests, L2 scenario / L1 intent verification |
 
 ### Rules
 
@@ -51,7 +51,7 @@ prototype   (quick path: idea ──► working code, no docs)
 3. Lead = main session; collaborators = sub-agents, spawned in parallel when independent.
 4. Sub-agent sessions stay small: one task per spawn (one sub-step, slice, finding group or search area); the agent reports, then its session ends. Heavy work is split first; a finished agent is never reused for a new task.
 5. Cheapest model that fits: haiku for search (`Explore`), sonnet for code and tests, opus only for analysis, design and architecture.
-6. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
+6. Capability and L2 status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
 7. Implementation: one plan step = one commit; then a fix commit for review and test findings; docs commit last.
 
 ## Layout
@@ -66,10 +66,10 @@ prototype   (quick path: idea ──► working code, no docs)
   flows/<ID>/    plan.md, verification.md, screenshots, i18n/ fragments (gitignored)
   archived/      old flows and docs (gitignored)
 _docs/
-  0.requirements-analysis.xlsx   requirements + Open Decisions sheet (source of truth)
-  0.requirements-analysis.html   read-only viewer: overview, capacities, themes, decisions
+  0.requirements-analysis.xlsx   L1 Capabilities, L2 theme sheets, and Open Decisions (source of truth)
+  0.requirements-analysis.html   read-only viewer: overview, capabilities, L2 specifications, decisions
   1.architecture-overview.html   architecture
-  <ID>.solution.html             solution per capacity / requirement (gitignored)
+  <ID>.solution.html             solution per capability or L2 specification (gitignored)
 ```
 
 ## Scripts
@@ -78,7 +78,7 @@ _docs/
 python .claude/scripts/reqs.py list --capacity TH01-03     # read (add --json)
 python .claude/scripts/reqs.py check                       # validate the xlsx
 python .claude/scripts/reqs.py decisions --status Open     # architecture decisions
-python .claude/scripts/reqs.py next-id                     # next REQ/TSK and AD number
+python .claude/scripts/reqs.py next-id                     # next L2 Spec ID(s) and ADR number
 python .claude/scripts/docs.py new solution TH01-03 --title "App Shell"
 python .claude/scripts/docs.py serve                       # http://localhost:8765/_docs/
 python .claude/scripts/i18n.py merge <fragment> --prefix settings.storage.  # parallel-safe i18n keys

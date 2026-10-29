@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Requirements Analysis</title>
+  <title>Capability Specifications</title>
   <link rel="stylesheet" href="../.claude/templates/assets/doc.css">
   <script src="../.claude/templates/assets/doc.js"></script>
   <style>
-    /* Requirement status ramp: one green hue, light -> dark with progress (OKLCH, hue 160). */
+    /* Specification status ramp: one green hue, light -> dark with progress (OKLCH, hue 160). */
     :root { --status-0: #c2e9d3; --status-1: #7bcba1; --status-2: #23ac74; --status-3: #008554; --status-4: #005d39; }
     :root[data-theme="dark"] { --status-0: #224c37; --status-1: #2b7351; --status-2: #339c6d; --status-3: #47c58c; --status-4: #85e9b6; }
 
@@ -50,15 +50,15 @@
   <!--
     AGENT GUIDE — view only; never edit data in this page.
     1. Source of truth: _docs/0.requirements-analysis.xlsx. Agents read it (`reqs.py list | decisions | check`).
-    2. Requirements: sheet "Capacity Catalog" + one sheet per theme (owner: analyst).
+    2. Level 1: sheet "1. Capabilities". Level 2: feature/change specifications in sheets "2. <Theme>".
     3. Decisions: sheet "Open Decisions" (owner: architect); Status Open | Decided | Deferred.
        Open: Decision lists the options, one per line "<title> — <details>"; Recommended holds an option title.
        Decided: Decision holds the choice; a grouped ADR has one "<topic>: <text>" line per topic in Context and Decision.
-       Affects: capacity IDs only.
+       Affects: Capability IDs only.
   -->
   <header class="doc-header">
     <span class="brand">Dreamer Studio</span>
-    <span class="muted">Requirements Analysis</span>
+    <span class="muted">Capability Specifications</span>
     <span class="spacer"></span>
     <span class="meta" data-xlsx-source></span>
     <button class="btn" data-action="reload-xlsx">Reload</button>
@@ -68,7 +68,7 @@
   <div class="doc-layout">
     <nav class="doc-nav" id="nav"></nav>
     <main class="doc-main wide">
-      <h1 id="view-title">Requirements Analysis</h1>
+      <h1 id="view-title">Capability Specifications</h1>
       <div class="doc-meta"><span>Source: _docs/0.requirements-analysis.xlsx</span></div>
 
       <section data-xlsx-picker hidden></section>
@@ -86,14 +86,15 @@
   </div>
 
   <script>
-    const CATALOG_SHEET = "Capacity Catalog";
+    const CATALOG_SHEET = "1. Capabilities";
     const DECISIONS_SHEET = "Open Decisions";
+    const L2_PREFIX = "2. ";
     const OPTION_SEPARATOR = " — ";
     const STATUSES = ["0. Idea", "1. Draft", "2. Approve", "3. Implement", "4. Done"];
     const STATUS_KIND = { 0: "", 1: "warning", 2: "info", 3: "info", 4: "success", Open: "warning", Decided: "success", Deferred: "" };
     const VIEW_KEY = "doc:requirements-analysis:view";
     const { $$, escapeHtml, storage, sheetRows } = window.Doc;
-    let data = { capacities: [], themes: [], decisions: [] };
+    let data = { capacities: [], specifications: [], decisions: [] };
     let current = location.hash.slice(1) || storage(VIEW_KEY) || "overview";
 
     // ---------- load ----------
@@ -101,8 +102,8 @@
     function showWorkbook(workbook) {
       data = {
         capacities: sheetRows(workbook, CATALOG_SHEET),
-        themes: workbook.SheetNames.filter((name) => ![CATALOG_SHEET, DECISIONS_SHEET].includes(name))
-          .map((name) => ({ name, requirements: sheetRows(workbook, name) })),
+        specifications: workbook.SheetNames.filter((name) => name.startsWith(L2_PREFIX))
+          .map((name) => ({ name: name.slice(L2_PREFIX.length), specifications: sheetRows(workbook, name) })),
         decisions: sheetRows(workbook, DECISIONS_SHEET),
       };
       document.getElementById("content").hidden = false;
@@ -111,7 +112,7 @@
 
     // ---------- helpers ----------
 
-    const requirements = () => data.themes.flatMap((theme) => theme.requirements);
+    const specifications = () => data.specifications.flatMap((theme) => theme.specifications);
     const openDecisions = () => data.decisions.filter((row) => row.Status === "Open");
     const lines = (text) => String(text).split("\n").map((line) => line.trim()).filter(Boolean);
 
@@ -128,10 +129,11 @@
 
     function views() {
       return [
-        { key: "overview", group: "Requirements", label: "Overview", render: renderOverview },
+        { key: "overview", group: "Specifications", label: "Overview", render: renderOverview },
         { key: "catalog", label: CATALOG_SHEET, count: data.capacities.length, rows: data.capacities, render: renderCatalog },
-        ...data.themes.map((theme, index) => ({
-          key: `theme-${index}`, label: theme.name, count: theme.requirements.length, rows: theme.requirements, render: renderTheme,
+        ...data.specifications.map((sheet, index) => ({
+          key: `spec-${index}`, group: index === 0 ? "Level 2 specifications" : undefined,
+          label: sheet.name, count: sheet.specifications.length, rows: sheet.specifications, render: renderSpecs,
         })),
         { key: "decisions", group: "Architecture", label: "Decisions", count: openDecisions().length, countLabel: "open",
           rows: data.decisions, render: renderDecisions },
@@ -152,22 +154,9 @@
       const query = document.getElementById("search").value.trim().toLowerCase();
       const release = document.getElementById("release").value;
       const status = document.getElementById("status").value;
-      return (!release || current === "decisions" || row.Release === release)
+      return (!release || current === "decisions" || current.startsWith("spec-") || row.Release === release)
         && (!status || row.Status === status)
         && (!query || Object.values(row).join(" ").toLowerCase().includes(query));
-    }
-
-    // ---------- requirement views ----------
-
-    function requirementCard(req) {
-      const criteria = lines(req["Acceptance Criteria"]).map((line) => `<li>${escapeHtml(line.replace(/^AC-\d+\.\s*/, ""))}</li>`).join("");
-      return `<article class="card req">
-        <header><code>${escapeHtml(req["Req ID"])}</code><b>${escapeHtml(req["Req Name"])}</b>
-          <span class="pill">${escapeHtml(req.Release)}</span>${statusPill(req.Status)}</header>
-        <p><b>Purpose:</b> ${escapeHtml(req.Purpose)}</p>
-        <p class="muted pre-line">${escapeHtml(req.Description)}</p>
-        ${criteria ? `<h4>Acceptance criteria</h4><ol>${criteria}</ol>` : ""}
-      </article>`;
     }
 
     // ---------- overview ----------
@@ -213,51 +202,60 @@
     }
 
     function renderOverview() {
-      const reqs = requirements();
-      const counts = countBy(reqs, "Status");
+      const capacities = data.capacities;
+      const counts = countBy(capacities, "Status");
       const count = (...indexes) => indexes.reduce((sum, index) => sum + (counts[STATUSES[index]] || 0), 0);
-      const percent = reqs.length ? Math.round((count(4) / reqs.length) * 100) : 0;
+      const percent = capacities.length ? Math.round((count(4) / capacities.length) * 100) : 0;
       const decisions = countBy(data.decisions, "Status");
-      const releases = [...new Set(reqs.map((req) => req.Release).filter(Boolean))].sort();
+      const releases = [...new Set(capacities.map((cap) => cap.Release).filter(Boolean))].sort();
+      const themes = [...new Set(capacities.map((cap) => cap.Theme).filter(Boolean))].sort();
       return `<div class="summary">
-          <div class="card hero"><span class="meta">Requirements done</span><span class="hero-value">${percent}%</span>
+          <div class="card hero"><span class="meta">Capabilities done</span><span class="hero-value">${percent}%</span>
             <span class="meter" role="img" aria-label="${percent}% done"><span style="width: ${percent}%"></span></span>
-            <span class="meta">${count(4)} of ${reqs.length} requirements</span></div>
+            <span class="meta">${count(4)} of ${capacities.length} capabilities</span></div>
           <div class="tiles">
-            ${tile("Capacities", data.capacities.length, `${data.themes.length} themes with requirements`, "catalog")}
+            ${tile("Capabilities", capacities.length, `${themes.length} themes`, "catalog")}
+            ${tile("Level 2 specs", specifications().length, "feature/change specifications")}
             ${tile("Approved, not done", count(2, 3), `${count(3)} in implementation`)}
-            ${tile("Ideas and drafts", count(0, 1), "waiting for analysis or approval")}
             ${tile("Decisions", data.decisions.length, `${decisions.Open || 0} open · ${decisions.Deferred || 0} deferred`, "decisions")}
           </div>
         </div>
-        ${chartCard("Progress by release", "Release", releases.map((release) => ({ label: release, rows: reqs.filter((req) => req.Release === release) })))}
-        ${chartCard("Progress by theme", "Theme", data.themes.map((theme, index) => ({ label: theme.name, rows: theme.requirements, view: `theme-${index}` })))}`;
+        ${chartCard("Capability status by release", "Release", releases.map((release) => ({ label: release, rows: capacities.filter((cap) => cap.Release === release) })))}
+        ${chartCard("Capability status by theme", "Theme", themes.map((theme) => ({ label: theme, rows: capacities.filter((cap) => cap.Theme === theme) })))}`;
     }
 
     function renderCatalog(rows) {
       const body = rows.map((cap) => {
-        const reqs = requirements().filter((req) => req["Capacity Name"] === cap["Capacity Full Name"]);
+        const specs = specifications().filter((spec) => spec["Capability ID"] === cap.ID);
         return `<tr class="row-link" data-toggle="${escapeHtml(cap.ID)}">
-            <td><code>${escapeHtml(cap.ID)}</code></td><td>${escapeHtml(cap["Capacity Full Name"])}</td>
+            <td><code>${escapeHtml(cap.ID)}</code></td><td>${escapeHtml(cap.Capability)}</td>
             <td>${escapeHtml(cap.Purpose)}</td><td>${escapeHtml(cap.Release)}</td><td>${statusPill(cap.Status)}</td>
-            <td class="num">${reqs.length}</td></tr>
+            <td class="num">${specs.length}</td></tr>
           <tr data-detail="${escapeHtml(cap.ID)}" hidden><td colspan="6">
-            <p class="pre-line">${escapeHtml(cap.Description)}</p>
-            <h4>Expectation</h4><p class="pre-line">${escapeHtml(cap.Expectation)}</p>
-            ${reqs.map(requirementCard).join("")}
+            <p class="pre-line">${escapeHtml(cap["Context & Boundaries"])}</p>
+            ${specs.map(renderSpec).join("")}
           </td></tr>`;
       }).join("");
-      return `<table><thead><tr><th>ID</th><th>Capacity</th><th>Purpose</th><th>Release</th><th>Status</th><th>Reqs</th></tr></thead>
+      return `<table><thead><tr><th>Capability ID</th><th>Capability</th><th>Purpose</th><th>Release</th><th>Status</th><th>L2</th></tr></thead>
         <tbody>${body || `<tr><td colspan="6" class="muted">No capacity matches the filters.</td></tr>`}</tbody></table>`;
     }
 
-    function renderTheme(rows) {
-      const groups = {};
-      rows.forEach((req) => (groups[req["Capacity Name"]] ||= []).push(req));
-      return Object.entries(groups).map(([capacity, reqs]) =>
-        `<details open><summary>${escapeHtml(capacity)} <span class="meta">(${reqs.length})</span></summary>
-          ${reqs.map(requirementCard).join("")}</details>`).join("")
-        || `<p class="muted">No requirement matches the filters.</p>`;
+    function renderSpec(spec) {
+      const fields = [
+        ["Scope", "Scope"], ["Acceptance scenarios", "Acceptance Scenarios"],
+        ["Invariants & contracts", "Invariants & Contracts"],
+        ["Migration & edge cases", "Migration & Edge Cases"], ["Open decisions", "Open Decisions"],
+      ];
+      return `<article class="card req">
+        <header><code>${escapeHtml(spec["Spec ID"])}</code><b>${escapeHtml(spec.Title)}</b>${statusPill(spec.Status)}
+          <span class="meta">Capability ${escapeHtml(spec["Capability ID"])}</span></header>
+        ${fields.filter(([, key]) => spec[key]).map(([label, key]) => `<h4>${label}</h4><p class="pre-line">${escapeHtml(spec[key])}</p>`).join("")}
+      </article>`;
+    }
+
+    function renderSpecs(rows) {
+      return rows.map(renderSpec).join("")
+        || `<p class="muted">No Level 2 specification matches the filters.</p>`;
     }
 
     // ---------- decisions view ----------
@@ -338,7 +336,7 @@
       document.getElementById("view-title").textContent = view.label;
       document.getElementById("toolbar").hidden = !view.rows;
       document.getElementById("release").hidden = current === "decisions";
-      fillSelect("release", requirements().concat(data.capacities).map((row) => row.Release), "All releases");
+      fillSelect("release", data.capacities.map((row) => row.Release), "All releases");
       fillSelect("status", (view.rows || []).map((row) => row.Status), "All statuses");
 
       const container = document.getElementById("view");

@@ -18,7 +18,7 @@ export default tseslint.config(
       '.claude',
       'worktree',
       '.data',
-      '**/storybook-static',
+      '**/.storybook-static',
     ],
   },
   {

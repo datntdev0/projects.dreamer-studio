@@ -46,7 +46,13 @@
           },
           "configurations": {
             "production": {
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumError": "5mb"
+                }
+              ]
             },
             "development": {
               "baseHref": "/",
@@ -101,7 +107,7 @@
             "styles": ["src/styles.scss"],
             "browserTarget": "dreamer:build:development",
             "compodoc": false,
-            "outputDir": "storybook-static"
+            "outputDir": ".storybook-static"
           }
         }
       }

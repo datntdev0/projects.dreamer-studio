@@ -1,33 +1,25 @@
-# Python
-__pycache__/
+# Backend python
 *.pyc
-
-# playwright-cli output
-.testing/.playwright-cli/
+__pycache__/
+backend/.venv/
+backend/build/
 
 # Excel lock files
 ~$*.xlsx
 
 # Claude framework
-.claude/settings.local.json
 _docs/*.solution.html
+.claude/settings.local.json
 .claude/flows/
 .claude/archived/
+worktree/
 
-# Build output
+# Node.js modules
 node_modules/
+**/.storybook-static/
+**/.coverage
+**/dist/
 .data/
 .output/
-**/dist/
-out/
+.testing/
 .angular/
-backend/.venv/
-backend/build/
-.ruff_cache/
-.pytest_cache/
-.testing/coverage/
-.testing/logs/
-.coverage
-worktree/
-storybook-static/
-debug-storybook.log

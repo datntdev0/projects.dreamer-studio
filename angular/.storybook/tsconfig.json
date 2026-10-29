@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": { "types": [] },
-  "include": ["../src/**/*.ts", "../stories/**/*.ts", "./*.ts"],
+  "files": ["./preview.ts"],
+  "include": ["../stories/**/*.stories.ts"],
   "exclude": ["../src/**/*.test.ts"]
 }

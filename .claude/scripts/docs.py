@@ -26,7 +26,7 @@ DOC_TYPES = {
 def cmd_new(args):
     template_name, output_pattern = DOC_TYPES[args.type]
     if "{id}" in output_pattern and not args.id:
-        fail(f"'{args.type}' needs an ID, e.g. TH01-03 or REQ-013")
+        fail(f"'{args.type}' needs a Capability ID, e.g. TH01-03")
     output = ROOT / output_pattern.format(id=args.id)
     if output.exists() and not args.force:
         fail(f"{output.relative_to(ROOT)} exists; edit it or pass --force")
@@ -56,7 +56,7 @@ def main():
 
     new_parser = commands.add_parser("new", help="create a document from a template")
     new_parser.add_argument("type", choices=DOC_TYPES)
-    new_parser.add_argument("id", nargs="?", help="capacity or requirement ID")
+    new_parser.add_argument("id", nargs="?", help="Capability ID or L2 Spec ID")
     new_parser.add_argument("--title")
     new_parser.add_argument("--force", action="store_true", help="overwrite an existing file")
     new_parser.set_defaults(run=cmd_new)

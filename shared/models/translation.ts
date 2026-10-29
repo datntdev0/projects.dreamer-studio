@@ -89,6 +89,14 @@ export interface TranslationRun {
   failed: number;
 }
 
+export interface TranslationLastRun {
+  runId: string;
+  kind: TranslationRunKind;
+  language: TargetLanguage;
+  translated: number;
+  failed: number;
+}
+
 export interface TranslationStatus {
   novelId: string;
   language: TargetLanguage;
@@ -97,6 +105,7 @@ export interface TranslationStatus {
   chapters: ChapterTranslationSummary[];
   glossary: { total: number; untranslated: number };
   run: TranslationRun | null;
+  lastRun: TranslationLastRun | null;
   llm: { glossary: LlmChoiceState; content: LlmChoiceState };
 }
 

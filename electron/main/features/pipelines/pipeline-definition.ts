@@ -32,6 +32,10 @@ export function abortError(): DOMException {
   return new DOMException('The operation was aborted.', 'AbortError');
 }
 
+export function isAbort(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
 export function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) {

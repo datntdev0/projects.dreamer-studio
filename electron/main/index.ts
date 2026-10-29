@@ -28,6 +28,9 @@ import { createLogger, Logger } from './logging/logger';
 import { registerBuiltInChecks } from './features/diagnostics/built-in-checks';
 import { AnalysisService } from './features/analysis/analysis-service';
 import { TranslationService } from './features/translation/translation-service';
+import { glossaryTranslationPipeline } from './features/translation/glossary-translation-pipeline';
+import { GlossaryTranslationDeps } from './features/translation/glossary-translation-pipeline';
+import { TranslationRuns } from './features/translation/translation-runs';
 import { AnalysisRuns } from './features/analysis/analysis-runs';
 import { AnalysisSnapshots } from './features/analysis/analysis-snapshot';
 import { worldAnalysisPipeline, WorldAnalysisDeps } from './features/analysis/world-analysis-pipeline';
@@ -84,12 +87,19 @@ const chapterSlots: WorkSlots = new WorkSlots((): number => settings.get().pipel
 const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns(), chapterSlots };
 const analysisSnapshots: AnalysisSnapshots = new AnalysisSnapshots();
 const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
+const translationDeps: GlossaryTranslationDeps = {
+  llm,
+  settings,
+  runs: new TranslationRuns(),
+  snapshots: analysisSnapshots,
+};
+const glossaryTranslation: PipelineDefinition = glossaryTranslationPipeline(translationDeps);
 const manager: AppDataManager = new AppDataManager(settings, {
   migrations: appMigrations,
   registry: new PipelineRegistry(
     app.isPackaged
-      ? [novelImportPipeline, novelExportPipeline, worldAnalysis]
-      : [demoPipeline, novelImportPipeline, novelExportPipeline, worldAnalysis],
+      ? [novelImportPipeline, novelExportPipeline, worldAnalysis, glossaryTranslation]
+      : [demoPipeline, novelImportPipeline, novelExportPipeline, worldAnalysis, glossaryTranslation],
   ),
   limit: (): number => settings.get().pipelines.maxConcurrent,
   startBackend,
@@ -170,7 +180,7 @@ async function onReady(): Promise<void> {
   registerLlmIpc(llm);
   registerAnalysisIpc(new AnalysisService((): AppDataSession => manager.session(), analysisDeps, analysisSnapshots));
   registerTranslationIpc(
-    new TranslationService((): AppDataSession => manager.session(), analysisDeps, analysisSnapshots),
+    new TranslationService((): AppDataSession => manager.session(), translationDeps, analysisDeps.runs),
   );
   registerSettingsIpc(settings);
   registerBackendIpc();

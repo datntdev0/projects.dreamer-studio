@@ -22,6 +22,7 @@ import type { TranslationChanged } from '@dreamer/shared/models/translation';
 import type { TranslationChapterRequest } from '@dreamer/shared/models/translation';
 import type { TranslationInstruction } from '@dreamer/shared/models/translation';
 import type { TranslationIssue } from '@dreamer/shared/models/translation';
+import type { TranslationLastRun } from '@dreamer/shared/models/translation';
 import type { TranslationProgress } from '@dreamer/shared/models/translation';
 import type { TranslationRun } from '@dreamer/shared/models/translation';
 import type { TranslationSaveRequest } from '@dreamer/shared/models/translation';
@@ -79,6 +80,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   private readonly translationChangedListeners = new Set<(event: TranslationChanged) => void>();
   private readonly translationLibraryListeners = new Set<(event: LibraryChangedEvent) => void>();
   private translationRun: TranslationRun | null = null;
+  private lastRun: TranslationLastRun | null = null;
   private queue: number[] = [];
   private glossaryQueue: string[][] = [];
   private translationTimer: ReturnType<typeof setInterval> | null = null;
@@ -231,6 +233,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
       chapters,
       glossary: { total: rows.length, untranslated: rows.filter((row) => row.status === 'untranslated').length },
       run: novelId === JADE_RIVER_NOVEL.id ? this.translationRun && { ...this.translationRun } : null,
+      lastRun: novelId === JADE_RIVER_NOVEL.id && this.lastRun ? { ...this.lastRun } : null,
       llm: { glossary: llm, content: llm },
     };
   }
@@ -530,7 +533,7 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   private blockedReason(novelId: string, kind: 'content' | 'glossary'): string | null {
     if (this.translationScenario === 'locked' || this.translationRun) return 'NOVEL_LOCKED';
     if (this.translationScenario === 'noLlm') return 'LLM_UNAVAILABLE';
-    if (kind === 'glossary' && novelId === UNANALYSED_NOVEL.id) return 'ANALYSIS_REQUIRED';
+    if (kind === 'glossary' && novelId === UNANALYSED_NOVEL.id) return 'TRANSLATION_NO_WORLD';
     return null;
   }
 
@@ -607,7 +610,17 @@ export class FakeTranslationApi extends FakeAnalysisApi {
   private stop(emit: boolean): void {
     if (this.translationTimer) clearInterval(this.translationTimer);
     this.translationTimer = null;
-    const language = this.translationRun?.language ?? 'vi';
+    const run = this.translationRun;
+    const language = run?.language ?? 'vi';
+    if (run?.kind === 'glossary') {
+      this.lastRun = {
+        runId: 'story-translation',
+        kind: run.kind,
+        language: run.language,
+        translated: run.done - run.failed,
+        failed: run.failed,
+      };
+    }
     this.translationRun = null;
     this.queue = [];
     this.glossaryQueue = [];

@@ -41,6 +41,7 @@ import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/sha
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
 import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
+import { GlossaryRunPlan, GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import { TranslationChanged, TranslationInstruction, TranslationProgress } from '@dreamer/shared/models/translation';
 import { TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
 
@@ -186,9 +187,10 @@ const api: DreamerApi = {
       call(TranslationChannel.ResetInstruction, request),
     planContent: translationUnavailable,
     startContent: translationUnavailable,
-    planGlossary: translationUnavailable,
-    startGlossary: translationUnavailable,
-    cancel: translationUnavailable,
+    planGlossary: (request: GlossaryRunRequest): Promise<GlossaryRunPlan> =>
+      call(TranslationChannel.PlanGlossary, request),
+    startGlossary: (request: GlossaryRunRequest): Promise<void> => call(TranslationChannel.StartGlossary, request),
+    cancel: (novelId: string): Promise<void> => call(TranslationChannel.Cancel, novelId),
     save: translationUnavailable,
     onProgress: (listener: (progress: TranslationProgress) => void): (() => void) =>
       subscribe(TranslationChannel.Progress, listener),

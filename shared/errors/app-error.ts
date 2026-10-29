@@ -37,6 +37,9 @@ export const ErrorCode = {
   AnalysisEditInvalid: 'ANALYSIS_EDIT_INVALID',
   AnalysisQuoteNotFound: 'ANALYSIS_QUOTE_NOT_FOUND',
   GlossaryKeyNotFound: 'GLOSSARY_KEY_NOT_FOUND',
+  TranslationNoWorld: 'TRANSLATION_NO_WORLD',
+  TranslationNothingToRun: 'TRANSLATION_NOTHING_TO_RUN',
+  TranslationLlmOutputInvalid: 'TRANSLATION_LLM_OUTPUT_INVALID',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

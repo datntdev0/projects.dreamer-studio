@@ -1,13 +1,16 @@
 import { promises as fs } from 'node:fs';
-import { glossaryKeyId, pruneEntries } from '@dreamer/shared/core/glossary';
+import { glossaryKeyId, glossaryRows, pruneEntries } from '@dreamer/shared/core/glossary';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
 import { WorldEditEntity } from '@dreamer/shared/models/analysis';
-import { GlossaryEntry, GlossaryFile, GlossaryKey } from '@dreamer/shared/models/translation';
+import { NovelMetadata } from '@dreamer/shared/models/novel-store';
+import { GlossaryEntry, GlossaryFile, GlossaryKey, GlossaryRow } from '@dreamer/shared/models/translation';
 import { TARGET_LANGUAGES, TargetLanguage } from '@dreamer/shared/models/translation';
 import { createLogger, Logger } from '../../logging/logger';
 import { asWriteError } from '../library/library-io';
 import { NovelFolder } from '../library/library-files';
 import { writeFileAtomic } from '../library/novel/novel-files';
+import { readAnalysisIndex } from '../analysis/analysis-files';
+import { AnalysisSnapshots } from '../analysis/analysis-snapshot';
 import { translationGlossaryFile, translationLanguageDir } from './translation-files';
 
 const logger: Logger = createLogger('translation');
@@ -35,6 +38,20 @@ export async function readGlossary(folder: NovelFolder, language: TargetLanguage
   return [];
 }
 
+export function hasAnalysedWorld(folder: NovelFolder): boolean {
+  return readAnalysisIndex(folder)?.chapters.some((entry) => !entry.error) ?? false;
+}
+
+export async function loadGlossaryRows(
+  snapshots: AnalysisSnapshots,
+  folder: NovelFolder,
+  novel: NovelMetadata,
+  language: TargetLanguage,
+): Promise<GlossaryRow[]> {
+  const entities: WorldEditEntity[] = (await snapshots.get(folder, novel)).model.state.entities;
+  return glossaryRows(entities, await readGlossary(folder, language));
+}
+
 export async function editGlossaryEntry(
   folder: NovelFolder,
   language: TargetLanguage,
@@ -46,18 +63,7 @@ export async function editGlossaryEntry(
     (entry: GlossaryEntry) => glossaryKeyId(entry) !== id,
   );
   const trimmed: string = translation?.trim() ?? '';
-  if (trimmed) {
-    const { entityType, entityName, term, kind }: GlossaryKey = key;
-    entries.push({
-      entityType,
-      entityName,
-      term,
-      kind,
-      translation: trimmed,
-      source: 'user',
-      updatedAt: new Date().toISOString(),
-    });
-  }
+  if (trimmed) entries.push(glossaryEntry(key, trimmed, 'user'));
   await writeGlossary(folder, language, entries);
 }
 
@@ -72,6 +78,30 @@ export async function pruneGlossary(folder: NovelFolder, entities: WorldEditEnti
     }
   }
   return changed;
+}
+
+export async function saveLlmEntries(
+  folder: NovelFolder,
+  language: TargetLanguage,
+  translations: { key: GlossaryKey; translation: string }[],
+): Promise<number> {
+  const entries: Map<string, GlossaryEntry> = new Map(
+    (await readGlossary(folder, language)).map((entry: GlossaryEntry) => [glossaryKeyId(entry), entry]),
+  );
+  let saved: number = 0;
+  for (const { key, translation } of translations) {
+    const id: string = glossaryKeyId(key);
+    if (entries.get(id)?.source === 'user') continue;
+    entries.set(id, glossaryEntry(key, translation, 'llm'));
+    saved++;
+  }
+  if (saved > 0) await writeGlossary(folder, language, [...entries.values()]);
+  return saved;
+}
+
+function glossaryEntry(key: GlossaryKey, translation: string, source: GlossaryEntry['source']): GlossaryEntry {
+  const { entityType, entityName, term, kind }: GlossaryKey = key;
+  return { entityType, entityName, term, kind, translation, source, updatedAt: new Date().toISOString() };
 }
 
 async function writeGlossary(folder: NovelFolder, language: TargetLanguage, entries: GlossaryEntry[]): Promise<void> {

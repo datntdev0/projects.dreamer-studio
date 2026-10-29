@@ -1,8 +1,14 @@
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { ENTITY_TYPES, EntityType } from '@dreamer/shared/models/analysis';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
+import { GlossaryRunPlan, GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
-import { TARGET_LANGUAGES, TargetLanguage } from '@dreamer/shared/models/translation';
+import {
+  GLOSSARY_BATCH_SIZES,
+  GlossaryBatchSize,
+  TARGET_LANGUAGES,
+  TargetLanguage,
+} from '@dreamer/shared/models/translation';
 import { TranslationInstruction, TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { TranslationService } from '../features/translation/translation-service';
@@ -47,6 +53,17 @@ function isGlossaryEditRequest(value: unknown): value is GlossaryEditRequest {
   );
 }
 
+function isGlossaryRunRequest(value: unknown): value is GlossaryRunRequest {
+  return (
+    isPlainObject(value) &&
+    isNovelIdValue(value.novelId) &&
+    isTargetLanguage(value.language) &&
+    (value.scope === 'untranslated' || value.scope === 'all') &&
+    GLOSSARY_BATCH_SIZES.includes(value.batchSize as GlossaryBatchSize) &&
+    (value.instruction === null || typeof value.instruction === 'string')
+  );
+}
+
 export function registerTranslationIpc(service: TranslationService): void {
   handleValidated(
     TranslationChannel.Status,
@@ -78,4 +95,15 @@ export function registerTranslationIpc(service: TranslationService): void {
     isInstructionRequest,
     (request: InstructionRequest): Promise<TranslationInstruction> => service.resetInstruction(request),
   );
+  handleValidated(
+    TranslationChannel.PlanGlossary,
+    isGlossaryRunRequest,
+    (request: GlossaryRunRequest): Promise<GlossaryRunPlan> => service.planGlossary(request),
+  );
+  handleValidated(
+    TranslationChannel.StartGlossary,
+    isGlossaryRunRequest,
+    (request: GlossaryRunRequest): Promise<void> => service.startGlossary(request),
+  );
+  handleValidated(TranslationChannel.Cancel, isNovelIdValue, (novelId: string): void => service.cancel(novelId));
 }

@@ -1,5 +1,5 @@
 import { ENTITY_TYPES, EntityType, WorldEditEntity } from '../models/analysis';
-import { GlossaryEntry, GlossaryKey, GlossaryRow } from '../models/translation';
+import { GlossaryBatchSize, GlossaryEntry, GlossaryKey, GlossaryRow, GlossaryScope } from '../models/translation';
 
 export interface GlossaryWorldKey {
   key: GlossaryKey;
@@ -50,6 +50,43 @@ export function glossaryRows(entities: WorldEditEntity[], entries: GlossaryEntry
       chapterIndexes: chapters,
     };
   });
+}
+
+export function glossaryRunRows(rows: GlossaryRow[], scope: GlossaryScope): GlossaryRow[] {
+  return rows.filter((row: GlossaryRow) => row.status !== 'user' && (scope === 'all' || row.status === 'untranslated'));
+}
+
+export function glossaryTerm(key: GlossaryKey): string {
+  return key.kind === 'name' ? key.entityName : (key.term ?? '');
+}
+
+export function glossaryEntityId(key: GlossaryKey): string {
+  return `${key.entityType}\u0000${key.entityName}`;
+}
+
+export function groupByEntity(rows: GlossaryRow[]): Map<string, GlossaryRow[]> {
+  const entities: Map<string, GlossaryRow[]> = new Map();
+  for (const row of rows) {
+    const id: string = glossaryEntityId(row);
+    entities.set(id, [...(entities.get(id) ?? []), row]);
+  }
+  return entities;
+}
+
+export function glossaryBatches(rows: GlossaryRow[], size: GlossaryBatchSize): GlossaryRow[][] {
+  const batches: GlossaryRow[][] = [];
+  let batch: GlossaryRow[] = [];
+  for (const group of groupByEntity(rows).values()) {
+    if (batch.length && batch.length + group.length > size) {
+      batches.push(batch);
+      batch = [];
+    }
+    batch.push(...group);
+  }
+  if (batch.length) {
+    batches.push(batch);
+  }
+  return batches;
 }
 
 export function hasGlossaryKey(entities: WorldEditEntity[], key: GlossaryKey): boolean {

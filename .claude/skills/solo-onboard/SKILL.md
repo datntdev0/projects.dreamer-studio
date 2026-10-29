@@ -11,7 +11,7 @@ argument-hint: "[focus area]"
 - **Artifacts**:
   - `.claude/README.md` — project section: What, Stack, Folders, Sources of truth (short bullets; no releases or decision lists)
   - `_docs/1.architecture-overview.html` — overview, context diagrams, repository structure, conventions
-  - Proposed rows for the `Open Decisions` sheet in `_docs/0.requirements-analysis.xlsx` — architecture questions; the human adds them (viewed in `_docs/0.requirements-analysis.html` › Decisions)
+  - Proposed rows for the `Open Decisions` sheet in `_docs/0.requirements-analysis.xlsx` — architecture questions (viewed in `_docs/0.requirements-analysis.html` › Decisions)
 
 ## Workflow
 
@@ -29,10 +29,10 @@ argument-hint: "[focus area]"
    - List gaps and open questions (missing stack choice, unclear layering, …).
 3. **Propose**
    - Create docs: `python .claude/scripts/docs.py new architecture-overview` (and `requirements-analysis` if missing).
-   - Propose question rows as a table for the human to add (`ADR-nn` from `reqs.py next-id`, `Affects` = capacity IDs, options in `Decision` one per line `<title> — <details>`, `Recommended`, `Status` `Open`).
+   - Propose question rows as a table (`ADR-nn` from `reqs.py next-id`, `Affects` = capacity IDs, options in `Decision` one per line `<title> — <details>`, `Recommended`, `Status` `Open`).
    - Fill each section with facts; mark guesses `[unverified]`.
    - Update the project section of `.claude/README.md` and the commands in `CLAUDE.md`.
 4. **Human gate**
    - Show: 5-line summary, artifact paths, open questions.
-   - Human records the answers in the xlsx (`Decision`, `Status` `Decided`, `Decided On`) and says so.
+   - Record the answers in the xlsx (`Decision`, `Status` `Decided`, `Decided On`).
    - Run `reqs.py check`; update the overview; repeat until the human approves.

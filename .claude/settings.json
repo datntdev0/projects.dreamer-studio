@@ -4,9 +4,6 @@
       "Bash(python .claude/scripts/reqs.py:*)",
       "Bash(python .claude/scripts/docs.py new:*)",
       "Bash(playwright-cli:*)"
-    ],
-    "deny": [
-      "Edit(_docs/0.requirements-analysis.xlsx)"
     ]
   }
 }

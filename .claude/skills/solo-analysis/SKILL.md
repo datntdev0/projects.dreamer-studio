@@ -1,6 +1,6 @@
 ---
 name: solo-analysis
-description: Analyst clarifies, analyzes and proposes final requirements for _docs/0.requirements-analysis.xlsx (the human applies them), with designer, architect and the human. Use for a new idea, theme, capacity or requirement change.
+description: Analyst clarifies, analyzes and proposes final requirements for _docs/0.requirements-analysis.xlsx, with designer, architect and the human. Use for a new idea, theme, capacity or requirement change.
 argument-hint: "<idea | theme | capacity ID | requirement ID>"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "<idea | theme | capacity ID | requirement ID>"
 
 - **Lead**: `analyst` — the main session follows `.claude/agents/analyst.md`.
 - **Collaborators**: `designer` (UX gaps), `architect` (feasibility, technical tasks), human (answers, gate).
-- **Artifact**: proposed changes for `_docs/0.requirements-analysis.xlsx`; the human edits the xlsx (view: `_docs/0.requirements-analysis.html`).
+- **Artifact**: proposed changes for `_docs/0.requirements-analysis.xlsx` (view: `_docs/0.requirements-analysis.html`).
 
 ## Workflow
 
@@ -29,9 +29,8 @@ argument-hint: "<idea | theme | capacity ID | requirement ID>"
    - Repeat until scope, release and priority are clear.
 4. **Propose**
    - Write the proposed changes as a table (ID, sheet, column, current → new, full text for new rows); new rows get status `1. Draft`; new IDs from `reqs.py next-id`.
-   - Never write the xlsx; the human applies the table.
 5. **Human gate**
    - Show the proposed changes table.
-   - Human applies it in the xlsx, then says so; run `reqs.py check` and report issues.
+   - Run `reqs.py check` and report issues.
    - Only the human sets status `2. Approve`.
    - Changes requested → back to step 2.

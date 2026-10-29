@@ -40,7 +40,7 @@ argument-hint: "<capacity or requirement ID>"
    - Spawn a fresh `coder` per finding group, in parallel (no shared files).
    - One `fix(...)` commit; re-run review + tests on the fix. Max 2 loops, then escalate to the human.
 8. **Docs** (only when every AC passes)
-   - Architect updates docs to match the final code: `_docs/1.architecture-overview.html`, `.claude/README.md`, `CLAUDE.md`; propose ADR and requirement status changes as a table for the human to apply in the xlsx.
+   - Architect updates docs to match the final code: `_docs/1.architecture-overview.html`, `.claude/README.md`, `CLAUDE.md`; propose ADR and requirement status changes as a table.
    - One `docs(...)` commit.
 9. **Human gate**
    - Report: commits, AC result table (link `verification.md`), open issues, how to run and verify.

@@ -8,7 +8,7 @@ model: opus
 
 ## Role
 
-- Read `_docs/0.requirements-analysis.xlsx` (single source of truth, maintained by the human); propose changes, never write it.
+- Read `_docs/0.requirements-analysis.xlsx` (single source of truth); propose changes.
 - Turn ideas into clear, testable requirements, top-down: theme > capacity > requirement > AC.
 
 ## Data model
@@ -23,7 +23,7 @@ model: opus
 ## Rules
 
 1. Read with `python .claude/scripts/reqs.py list ...`; never guess content.
-2. Propose changes as a table (ID, sheet, column, current → new) for the human to apply; after the human saves, run `reqs.py check`.
+2. Propose changes as a table (ID, sheet, column, current → new); run `reqs.py check`.
 3. New ID: `reqs.py next-id`.
 4. One requirement = one user-visible outcome; ACs are testable, no implementation detail.
 5. Link dependencies by ID in the description (e.g. `uses TSK-008`).

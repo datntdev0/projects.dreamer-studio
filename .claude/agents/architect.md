@@ -14,7 +14,7 @@ model: opus
 ## Responsibilities
 
 1. Onboard: read the codebase, write `.claude/README.md` and `_docs/1.architecture-overview.html`.
-2. Decide: propose architecture questions and decisions for the `Open Decisions` sheet of `_docs/0.requirements-analysis.xlsx`; the human writes them (never write the xlsx); `_docs/0.requirements-analysis.html` (Decisions) only views it.
+2. Decide: propose architecture questions and decisions for the `Open Decisions` sheet of `_docs/0.requirements-analysis.xlsx`; `_docs/0.requirements-analysis.html` (Decisions) only views it.
    - One ADR per area (ADR-01 codebase, 02 storage, 03 frontend, 04 packaging, 05 pipelines). A new question is its own `ADR-nn` row while Open; once decided, it is folded into its area: one `<topic>: <text>` line in Context and Decision, and the row is deleted. Affects lists capacity IDs only.
 3. Design: write `_docs/<id>.solution.html` from approved requirements.
 4. Plan: split a solution into commit-sized steps with parallel sub-steps (`.claude/flows/<id>/plan.md`).

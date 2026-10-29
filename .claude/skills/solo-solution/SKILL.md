@@ -26,7 +26,7 @@ argument-hint: "<capacity or requirement ID>"
    - Identify options for each non-trivial choice.
 3. **Clarify** — before any prototype work
    - Merge architect, analyst and designer questions and concerns; ask them with `AskUserQuestion` (max 4 per round, options + recommendation).
-   - Requirement changes → `analyst` proposes them as a table; the human edits the xlsx (status back to `1. Draft`).
+   - Requirement changes → `analyst` proposes them as a table (status back to `1. Draft`).
 4. **Prototype** (only when the scope has UI)
    - Several IDs on one page (e.g. two capacities on one Settings page): one prototype pass for the page; each solution links it.
    - Split the UI into **slices** with no shared files (one page section, panel or dialog each).

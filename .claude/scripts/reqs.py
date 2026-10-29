@@ -1,4 +1,4 @@
-"""Read and check _docs/0.requirements-analysis.xlsx (read-only; the human maintains the xlsx).
+"""Read and check _docs/0.requirements-analysis.xlsx (read-only).
 
 Usage:
   python .claude/scripts/reqs.py list [--capacity TH01-03] [--id REQ-013] [--release 0.1.0] [--status "1. Draft"] [--json]

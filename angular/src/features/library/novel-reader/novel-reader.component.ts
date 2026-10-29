@@ -1,5 +1,4 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { Component } from '@angular/core';
 import { DestroyRef } from '@angular/core';
 import { ElementRef } from '@angular/core';
@@ -73,10 +72,6 @@ function isUntranslated(translation: ChapterTranslation | null): boolean {
   return !!translation && (translation.status === 'not-translated' || !translation.paragraphs.length);
 }
 
-export function effectiveDisplay(store: TranslationStore, selected: LibraryChapter | null): TranslationDisplay {
-  return isUntranslated(chapterTranslation(store, selected)) ? 'original' : store.display();
-}
-
 type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
 
 @Component({
@@ -87,7 +82,6 @@ type ReaderState = 'loading' | 'ready' | 'select' | 'empty' | 'error';
     ButtonDirective,
     IconComponent,
     NgTemplateOutlet,
-    RouterLink,
     PillComponent,
     SegmentedComponent,
     TranslatePipe,
@@ -105,7 +99,6 @@ export class NovelReaderComponent {
   readonly current = model<string | null>(null);
   readonly highlight = input<ReaderHighlight | null>(null);
   readonly showIssues = output<void>();
-  readonly editTranslation = output<void>();
 
   private readonly settingsStore: SettingsStore = inject(SettingsStore);
   private readonly novelStore: NovelStore = inject(NovelStore);
@@ -115,7 +108,7 @@ export class NovelReaderComponent {
   private scrollFrame: number = 0;
   private issueFrame: number = 0;
 
-  protected readonly display = computed<TranslationDisplay>(() => effectiveDisplay(this.store, this.chapter()));
+  protected readonly display = computed<TranslationDisplay>(() => this.store.display());
   protected readonly displayOptions = computed<SegmentedOption[]>(() =>
     (['original', 'translation', 'side'] as TranslationDisplay[]).map(
       (display: TranslationDisplay): SegmentedOption => ({
@@ -148,14 +141,6 @@ export class NovelReaderComponent {
       (_: unknown, index: number): number => index,
     );
   });
-  protected readonly staleMessage = computed(() => {
-    const translation: ChapterTranslation | null = this.translation();
-    const reason: string = this.i18n.t(
-      `library.translation.reader.stale.${translation?.staleReason === 'glossary' ? 'glossary' : 'source'}`,
-    );
-    return translation?.edited ? `${reason} ${this.i18n.t('library.translation.reader.stale.edited')}` : reason;
-  });
-
   protected readonly skeletonLines: number[] = Array.from({ length: 8 }, (_, index: number): number => index);
   protected readonly chapter: Signal<LibraryChapter | null> = computed(
     () => this.chapters().find((chapter: LibraryChapter): boolean => chapter.id === this.current()) ?? null,

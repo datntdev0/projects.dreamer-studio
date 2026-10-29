@@ -38,7 +38,7 @@ prototype   (quick path: idea ──► working code, no docs)
 
 | Agent | Model | Owns |
 | --- | --- | --- |
-| analyst | opus | requirement proposals (the human edits the xlsx) |
+| analyst | opus | requirement proposals |
 | designer | opus | UX, `DESIGN.md` compliance, slice specs for the Storybook prototype (several in parallel) |
 | architect | opus | architecture, solutions, plans, review |
 | coder | sonnet | code for one sub-step, or implement for designer |
@@ -51,9 +51,8 @@ prototype   (quick path: idea ──► working code, no docs)
 3. Lead = main session; collaborators = sub-agents, spawned in parallel when independent.
 4. Sub-agent sessions stay small: one task per spawn (one sub-step, slice, finding group or search area); the agent reports, then its session ends. Heavy work is split first; a finished agent is never reused for a new task.
 5. Cheapest model that fits: haiku for search (`Explore`), sonnet for code and tests, opus only for analysis, design and architecture.
-6. The xlsx belongs to the human: agents read it and propose changes; only the human edits it.
-7. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
-8. Implementation: one plan step = one commit; then a fix commit for review and test findings; docs commit last.
+6. Requirement status: `0. Idea` → `1. Draft` → `2. Approve` (human only) → `3. Implement` → `4. Done`.
+7. Implementation: one plan step = one commit; then a fix commit for review and test findings; docs commit last.
 
 ## Layout
 

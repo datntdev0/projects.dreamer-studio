@@ -40,7 +40,6 @@ import type { ReaderHighlight } from './library.models';
 import { ChapterEditorComponent } from './novel-reader/chapter-editor.component';
 import { NovelChaptersComponent } from './novel-reader/novel-chapters.component';
 import { NovelReaderComponent } from './novel-reader/novel-reader.component';
-import { effectiveDisplay } from './novel-reader/novel-reader.component';
 import type { TranslationDisplay } from '@dreamer/shared/models/translation';
 import { NovelSearchComponent } from './novel-reader/novel-search.component';
 import type { NovelSearchSelection } from './novel-reader/novel-search.component';
@@ -169,9 +168,7 @@ export class NovelPage {
           : null,
     },
   ]);
-  protected readonly display: Signal<TranslationDisplay> = computed(() =>
-    effectiveDisplay(this.translationStore, this.chapter()),
-  );
+  protected readonly display: Signal<TranslationDisplay> = computed(() => this.translationStore.display());
   protected readonly editLabel: Signal<string> = computed(() =>
     this.display() === 'original'
       ? this.i18n.t('library.novel.page.edit')

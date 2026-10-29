@@ -14,7 +14,6 @@ Quick path: `/solo-prototype <idea>` (no docs, no gates in between).
 - Use a workflow skill only when the human invokes or names it. Otherwise do only the task asked: no extra steps (plan, xlsx or doc updates, review, tests, commits, sub-agents) unless asked.
 - Each skill ends with a human gate.
 - Sub-agents: one small task per spawn; the agent reports and its session ends. Split heavy work first; never reuse a finished sub-agent for a new task.
-- The xlsx is maintained by the human only. Claude reads and checks it, never writes it (no script, no openpyxl); propose changes as a table for the human to apply.
 
 ## Commands
 

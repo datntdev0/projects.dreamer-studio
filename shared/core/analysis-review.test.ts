@@ -63,7 +63,7 @@ const MODEL = {
   issues: ISSUES,
 };
 
-describe('reviewItems', () => {
+describe('[TH04-01] reviewItems', () => {
   const items = reviewItems(MODEL, CHAPTERS);
 
   it('builds one item per issue with its entities, fact and chapter', () => {
@@ -85,7 +85,7 @@ describe('reviewItems', () => {
   });
 });
 
-describe('filterReviewItems', () => {
+describe('[TH04-01] filterReviewItems', () => {
   const items = reviewItems(MODEL, CHAPTERS);
   const query = { novelId: 'n', chapterIndex: null, itemKind: 'all' as const };
 
@@ -100,7 +100,7 @@ describe('filterReviewItems', () => {
   });
 });
 
-describe('issueCounts', () => {
+describe('[TH04-01] issueCounts', () => {
   it('counts errors and warnings', () => {
     expect(issueCounts(ISSUES)).toEqual({ errors: 1, warnings: 2 });
   });

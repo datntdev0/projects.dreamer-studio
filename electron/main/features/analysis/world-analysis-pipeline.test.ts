@@ -235,7 +235,7 @@ afterEach(() => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe('world analysis pipeline definition', () => {
+describe('[TH04-01] world analysis pipeline definition', () => {
   it('has check, candidates and predicates steps', () => {
     expect(pipeline.type).toBe('world-analysis');
     expect(pipeline.overallProgress).toBe(true);
@@ -248,7 +248,7 @@ describe('world analysis pipeline definition', () => {
   });
 });
 
-describe('precondition', () => {
+describe('[TH04-01] precondition', () => {
   it('fails with LLM_NOT_AVAILABLE when no LLM is chosen', async () => {
     setup(false);
     await expect(runStep(0)).rejects.toMatchObject({ code: ErrorCode.LlmNotAvailable });
@@ -284,7 +284,7 @@ describe('precondition', () => {
   });
 });
 
-describe('analyse', () => {
+describe('[TH04-01] analyse', () => {
   it('batches candidates, runs predicates per chapter and saves results', async () => {
     await runAll(request({ batchSize: 2 }));
     expect(callsOf('candidates').map((call: Call): number[] => call.chapters)).toEqual([[1, 2], [3]]);

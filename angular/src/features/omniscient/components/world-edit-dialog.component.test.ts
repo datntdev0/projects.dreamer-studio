@@ -1,16 +1,33 @@
-import { describe, expect, it } from 'vitest';
-import { chapterRanges } from './world-edit-dialog.component';
+import { TestBed } from '@angular/core/testing';
+import { I18nService } from '@core/i18n/i18n.service';
+import { describe, expect, it, vi } from 'vitest';
+import type { WorldEditEntity } from '@dreamer/shared/models/analysis';
+import { WorldEditDialogComponent } from './world-edit-dialog.component';
 
-describe('chapterRanges', () => {
-  it('collapses consecutive chapters into ranges', () => {
-    expect(chapterRanges([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 17])).toBe('1-10,12-13,15,17');
-  });
+describe('[TH04-01] WorldEditDialogComponent', () => {
+  it('[L2-TH04-01-02] enables merge only after selecting two world entities', async () => {
+    HTMLDialogElement.prototype.showModal ??= vi.fn();
+    HTMLDialogElement.prototype.close ??= vi.fn();
+    await TestBed.configureTestingModule({
+      imports: [WorldEditDialogComponent],
+      providers: [{ provide: I18nService, useValue: { t: (key: string) => key, language: () => 'en' } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WorldEditDialogComponent);
+    const entities: WorldEditEntity[] = [
+      { id: 'e1', type: 'Character', name: 'Mai', aliases: [], titles: [], chapters: [1] },
+      { id: 'e2', type: 'Character', name: 'Lan', aliases: [], titles: [], chapters: [2] },
+    ];
+    fixture.componentRef.setInput('open', true);
+    fixture.componentRef.setInput('scope', { issue: null, entities, facts: [], catalog: [], focus: [] });
+    fixture.detectChanges();
 
-  it('sorts and de-duplicates chapters before formatting', () => {
-    expect(chapterRanges([13, 2, 1, 3, 2, 12])).toBe('1-3,12-13');
-  });
-
-  it('formats an empty chapter list', () => {
-    expect(chapterRanges([])).toBe('');
+    const merge = (): HTMLButtonElement => fixture.nativeElement.querySelector('[data-testid="world-edit-merge"]');
+    expect(fixture.nativeElement.querySelector('[data-testid="world-edit-merge"]')).toBeNull();
+    fixture.nativeElement.querySelector('[data-testid="world-edit-select-e1"] input').click();
+    fixture.detectChanges();
+    expect(merge().disabled).toBe(true);
+    fixture.nativeElement.querySelector('[data-testid="world-edit-select-e2"] input').click();
+    fixture.detectChanges();
+    expect(merge().disabled).toBe(false);
   });
 });

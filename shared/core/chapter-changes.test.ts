@@ -24,7 +24,7 @@ function memoryTexts(): ChapterTexts & { written: string[][] } {
   };
 }
 
-describe('applyChapterChange', () => {
+describe('[TH03-03] applyChapterChange', () => {
   it('renames a chapter with a trimmed title', async () => {
     const result = await applyChapterChange(
       CHAPTERS,

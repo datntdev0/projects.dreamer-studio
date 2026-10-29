@@ -35,7 +35,7 @@ function graph(sources: WorldSource[], scope: WorldScope = all, edits: WorldDraf
   return toGraph(model(sources, edits), scope);
 }
 
-describe('mergeChapters', () => {
+describe('[TH04-01] mergeChapters', () => {
   it('merges the same name and type across chapters, ignoring case', () => {
     const { entities } = mergeChapters([source(1, [entity('a', 'Mai Linh')]), source(2, [entity('b', 'mai LINH')])]);
     expect(entities).toHaveLength(1);
@@ -87,7 +87,7 @@ describe('mergeChapters', () => {
   });
 });
 
-describe('toGraph', () => {
+describe('[TH04-01] toGraph', () => {
   const people: AnalysisEntity[] = [entity('a', 'Lan'), entity('b', 'Hanoi', { type: 'Location' })];
 
   it('filters chapters by scope', () => {
@@ -130,7 +130,7 @@ describe('toGraph', () => {
   });
 });
 
-describe('entityOccurrences', () => {
+describe('[TH04-01] entityOccurrences', () => {
   const chapters: OccurrenceChapter[] = [
     { index: 1, title: 'One', paragraphs: ['Mai Linh walked.'] },
     { index: 2, title: 'Two', paragraphs: ['Nothing here.'] },
@@ -164,7 +164,7 @@ describe('entityOccurrences', () => {
   });
 });
 
-describe('overlay', () => {
+describe('[TH04-01] overlay', () => {
   const people: AnalysisEntity[] = [entity('a', 'Lan'), entity('b', 'Hanoi', { type: 'Location' })];
   const sources: WorldSource[] = [
     source(1, people, [fact('f1', { quote: 'q1' })]),
@@ -280,7 +280,7 @@ describe('overlay', () => {
   });
 });
 
-describe('invalidEdits', () => {
+describe('[TH04-01] invalidEdits', () => {
   const base: WorldModel = model([source(1, [entity('a', 'Lan')])]);
 
   it('accepts valid edits', () => {
@@ -295,7 +295,7 @@ describe('invalidEdits', () => {
   });
 });
 
-describe('findQuoteMatches', () => {
+describe('[TH04-01] findQuoteMatches', () => {
   const book = [
     { index: 1, title: 'One', paragraphs: ['He said “Hello  there” — and left.'] },
     { index: 2, title: 'Two', paragraphs: ['Nothing.'] },

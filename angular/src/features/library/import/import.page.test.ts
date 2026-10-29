@@ -54,8 +54,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('ImportPage', () => {
-  it('REQ-013 AC-2: starts on the source step with a package picker', async () => {
+describe('[TH03-01] ImportPage', () => {
+  it('[L2-TH03-01-01] starts on the source step with a package picker', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage();
 
     expect(query(fixture, 'import-source-idle')).not.toBeNull();
@@ -64,7 +64,7 @@ describe('ImportPage', () => {
     expect(has(fixture, 'import-start')).toBe(false);
   });
 
-  it('REQ-013 AC-3: lists the problems of an invalid package and lets the user pick another file', async () => {
+  it('[L2-TH03-01-01] shows safe validation issues and allows choosing another package', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage('problems');
 
     await click(fixture, 'import-source-pick');
@@ -76,7 +76,7 @@ describe('ImportPage', () => {
     expect(has(fixture, 'import-preview')).toBe(false);
   });
 
-  it('REQ-013 AC-4: previews the package metadata, chapters and checks', async () => {
+  it('[L2-TH03-01-01] previews package metadata, chapters, and validation checks', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage();
 
     await click(fixture, 'import-source-pick');
@@ -88,7 +88,7 @@ describe('ImportPage', () => {
     expect((query(fixture, 'import-start') as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('REQ-013 AC-4: blocks the import while the required title is empty', async () => {
+  it('[L2-TH03-01-01] blocks import until the required title is provided', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage('minimal');
 
     await click(fixture, 'import-source-pick');
@@ -97,7 +97,7 @@ describe('ImportPage', () => {
     expect((query(fixture, 'import-start') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('REQ-013 AC-6: starts the import pipeline with the edited preview and offers a link to the pipelines', async () => {
+  it('[L2-TH03-01-01] starts import with the edited preview and links to pipeline progress', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage();
     const importNovel = vi.spyOn(TestBed.inject(DesktopApi), 'importNovel');
     const show = vi.spyOn(TestBed.inject(ToastService), 'show');
@@ -121,7 +121,7 @@ describe('ImportPage', () => {
     expect(query(fixture, 'import-source-idle')).not.toBeNull();
   });
 
-  it('returns to the source step when the preview is cancelled', async () => {
+  it('[L2-TH03-01-01] returns to the source step when the preview is cancelled', async () => {
     const fixture: ComponentFixture<ImportPage> = await createPage();
 
     await click(fixture, 'import-source-pick');

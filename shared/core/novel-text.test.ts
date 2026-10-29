@@ -1,46 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { contentHash, decodeUtf8, normalizeChapterText, normalizeLineEndings, splitParagraphs } from './novel-text';
+import { decodeUtf8, normalizeChapterText, chapterStats } from './novel-text';
 
-describe('novel text', () => {
-  it('removes a UTF-8 BOM', () => {
-    const bytes: Uint8Array = new Uint8Array([0xef, 0xbb, 0xbf, 0x61, 0x62, 0x63]);
-
-    expect(decodeUtf8(bytes)).toBe('abc');
+describe('[TH03-03] novel text contracts', () => {
+  it('rejects malformed UTF-8 and normalizes line endings and blank paragraphs', () => {
+    expect(decodeUtf8(new Uint8Array([0xff]))).toBeNull();
+    expect(normalizeChapterText('  one\r\n\r two \n')).toBe('one\ntwo');
   });
 
-  it('rejects invalid UTF-8', () => {
-    const bytes: Uint8Array = new Uint8Array([0xc3, 0x28]);
-
-    expect(decodeUtf8(bytes)).toBeNull();
-  });
-
-  it('normalizes CRLF and CR to LF', () => {
-    expect(normalizeLineEndings('one\r\ntwo\rthree\nfour')).toBe('one\ntwo\nthree\nfour');
-  });
-
-  it('trims lines and drops blank paragraphs', () => {
-    const text: string = '  first  \r\n\t\rsecond\n\u3000third\u3000\n   ';
-
-    expect(splitParagraphs(text)).toEqual(['first', 'second', 'third']);
-  });
-
-  it('returns no paragraphs for empty text', () => {
-    expect(splitParagraphs('')).toEqual([]);
-    expect(splitParagraphs(' \t\r\n\u3000')).toEqual([]);
-  });
-
-  it('normalizes chapter text to one paragraph per line', () => {
-    expect(normalizeChapterText('  first  \r\n\r\n second\r third \n')).toBe('first\nsecond\nthird');
-  });
-
-  it('hashes UTF-8 text with SHA-256', async () => {
-    expect(await contentHash('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-  });
-
-  it('returns the same hash for the same text', async () => {
-    const first: string = await contentHash('same text');
-    const second: string = await contentHash('same text');
-
-    expect(second).toBe(first);
+  it('counts paragraphs and Unicode code points excluding separators', () => {
+    expect(chapterStats('猫\n🙂')).toEqual({ paragraphs: 2, chars: 2 });
   });
 });

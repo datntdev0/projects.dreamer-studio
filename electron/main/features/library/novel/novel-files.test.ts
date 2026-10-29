@@ -63,7 +63,7 @@ afterEach(() => {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe('novel content writes', () => {
+describe('[TH03-03] novel content writes', () => {
   it('writes normalized chapter text to a file named by its content hash', async () => {
     const folder: NovelFolder = novelFolder(paths, novelId);
     const normalized: string = 'First paragraph\nSecond paragraph';
@@ -99,7 +99,7 @@ describe('novel content writes', () => {
   });
 });
 
-describe('novel metadata writes', () => {
+describe('[TH03-03] novel metadata writes', () => {
   it('writes valid formatted JSON atomically and leaves no temporary file', async () => {
     const folder: NovelFolder = novelFolder(paths, novelId);
     const metadata: NovelMetadata = sampleMetadata();
@@ -192,7 +192,7 @@ describe('novel metadata writes', () => {
   });
 });
 
-describe('novel lifecycle', () => {
+describe('[TH03-03] novel lifecycle', () => {
   it('runs same-id tasks in order and continues after a failure', async () => {
     const events: string[] = [];
     let releaseFirst: () => void = (): void => undefined;

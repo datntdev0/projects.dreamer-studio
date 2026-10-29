@@ -224,7 +224,7 @@ afterEach(() => {
   rmSync(tempFolder, { recursive: true, force: true });
 });
 
-describe('package reader', () => {
+describe('[TH03-02] package reader', () => {
   it('reads the sample package', async () => {
     const path: string = await buildSampleZip();
     const preview: ImportPreview = await readOk(path);

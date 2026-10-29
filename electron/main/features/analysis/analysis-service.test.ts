@@ -154,7 +154,7 @@ afterEach(() => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe('status', () => {
+describe('[TH04-01] status', () => {
   it('lists the chapter statuses and counts the issues of the world', async () => {
     const status = await service.status(novelId);
     expect(status.chapters.map((chapter) => chapter.status)).toEqual(['analysed', 'analysed', 'not-analysed']);
@@ -171,7 +171,7 @@ describe('status', () => {
   });
 });
 
-describe('review', () => {
+describe('[TH04-01] review', () => {
   it('lists the issues with their fact and counts', async () => {
     const page = await service.review({ novelId, chapterIndex: null, itemKind: 'all' });
     const item = page.items.find((candidate) => candidate.issue.reason === 'quote-not-found');
@@ -186,7 +186,7 @@ describe('review', () => {
   });
 });
 
-describe('scope and preview', () => {
+describe('[TH04-01] scope and preview', () => {
   async function factIssueKey(): Promise<string> {
     const page = await service.review({ novelId, chapterIndex: 2, itemKind: 'fact' });
     return page.items.find((item) => item.issue.reason === 'quote-not-found')!.issue.key;
@@ -209,7 +209,7 @@ describe('scope and preview', () => {
   });
 });
 
-describe('occurrences', () => {
+describe('[TH04-01] occurrences', () => {
   it('gives an empty list for an unknown entity', async () => {
     expect(await service.occurrences({ novelId, entityId: 'missing' })).toEqual([]);
   });
@@ -234,7 +234,7 @@ describe('occurrences', () => {
   });
 });
 
-describe('edit', () => {
+describe('[TH04-01] edit', () => {
   it('appends the edits to world-overlay.json and shows them in the world', async () => {
     const id: string = await idOf('Mai Linh');
     await service.edit({ novelId, edits: [rename(id, 'Mai')] });
@@ -278,7 +278,7 @@ describe('edit', () => {
   });
 });
 
-describe('findQuote', () => {
+describe('[TH04-01] findQuote', () => {
   it('gives one match per chapter containing the quote, with a fold', async () => {
     const result = await service.findQuote({ novelId, quote: '  mai LINH  ' });
     expect(result.map((item) => item.chapterIndex)).toEqual([1, 2]);

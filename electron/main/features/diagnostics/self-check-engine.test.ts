@@ -23,7 +23,7 @@ function byId(run: DiagnosticsRun, id: string): CheckResult {
   return run.results.find((result: CheckResult): boolean => result.id === id) as CheckResult;
 }
 
-describe('SelfCheckEngine', () => {
+describe('[TH02-02] SelfCheckEngine', () => {
   it('turns a throwing and a hanging check into errors while the others still return, in registration order', async () => {
     const engine: SelfCheckEngine = new SelfCheckEngine(context, 50);
     [okCheck('first'), throwingCheck, hangingCheck, okCheck('last')].forEach((check: SelfCheck): void =>

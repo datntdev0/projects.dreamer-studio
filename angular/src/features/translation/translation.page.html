@@ -1,4 +1,4 @@
-<div class="ds-page-toolbar compact-labels ds-world-toolbar">
+<div class="ds-page-toolbar library-translation-toolbar ds-world-toolbar">
   <h1 dsPageTitle>{{ 'translation.page.title' | t }}</h1>
   <span class="ds-select">
     <select
@@ -24,7 +24,6 @@
     <span [dsTooltip]="store.glossaryReason()">
       <button
         dsBtn
-        variant="primary"
         type="button"
         data-testid="translation-page-translate"
         [attr.aria-label]="'library.translation.glossary.toolbar.translate' | t"
@@ -39,6 +38,7 @@
     <span [dsTooltip]="store.contentReason()">
       <button
         dsBtn
+        variant="primary"
         type="button"
         data-testid="translation-page-translate-chapters"
         [attr.aria-label]="'translation.page.translateChapters' | t"

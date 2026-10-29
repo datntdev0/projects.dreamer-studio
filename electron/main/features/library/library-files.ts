@@ -8,6 +8,7 @@ export interface NovelFolder {
   metadata: string;
   chapters: string;
   analysis: string;
+  translation: string;
 }
 
 export function novelFolderAt(dir: string): NovelFolder {
@@ -16,6 +17,7 @@ export function novelFolderAt(dir: string): NovelFolder {
     metadata: join(dir, NovelStore.NOVEL_METADATA_FILE),
     chapters: join(dir, NovelStore.NOVEL_CHAPTERS_DIR),
     analysis: join(dir, NovelStore.ANALYSIS_DIR),
+    translation: join(dir, NovelStore.TRANSLATION_DIR),
   };
 }
 

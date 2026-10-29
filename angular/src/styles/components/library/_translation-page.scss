@@ -1,3 +1,19 @@
+@use 'bootstrap/scss/mixins/visually-hidden' as accessibility;
+
+.library-translation-toolbar {
+  container: page-toolbar / inline-size;
+
+  .ds-select .ds-input {
+    width: auto;
+  }
+
+  @container page-toolbar (max-width: 559px) {
+    .ds-toolbar-label {
+      @include accessibility.visually-hidden();
+    }
+  }
+}
+
 .library-translation-instruction {
   display: flex;
   flex-direction: column;

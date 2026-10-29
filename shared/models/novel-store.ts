@@ -6,6 +6,7 @@ export const NOVEL_METADATA_FILE: string = 'metadata.json';
 
 export const NOVEL_CHAPTERS_DIR: string = 'chapters';
 export const ANALYSIS_DIR: string = 'analysis';
+export const TRANSLATION_DIR: string = 'translation';
 
 export type NovelCoverFile = 'cover.jpg' | 'cover.png';
 

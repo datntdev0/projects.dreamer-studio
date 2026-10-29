@@ -3,6 +3,7 @@ import { AppError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AppInfo } from '@dreamer/shared/ipc/app';
 import { BackendStatus } from '@dreamer/shared/ipc/backend';
 import { AnalysisChannel, AppChannel, AppDataChannel, BackendChannel, DevChannel } from '@dreamer/shared/ipc/channels';
+import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import {
   DiagnosticsChannel,
   LibraryChannel,
@@ -38,12 +39,23 @@ import { SearchProgress, SearchRequest } from '@dreamer/shared/models/novel';
 import { LibraryChangedEvent, NovelDetail, NovelPatch, NovelSummary } from '@dreamer/shared/models/novel';
 import { NovelImportRequest, PackageReadResult, PickedImage } from '@dreamer/shared/models/novel-package';
 import { AppSettings, SettingsPatch, SettingsSection, SettingsState } from '@dreamer/shared/models/settings';
+import { GlossaryPage, InstructionRequest, InstructionSaveRequest } from '@dreamer/shared/models/translation';
+import { TranslationChanged, TranslationInstruction, TranslationProgress } from '@dreamer/shared/models/translation';
+import { TranslationStatus, TranslationStatusQuery } from '@dreamer/shared/models/translation';
 
-function analysisUnavailable(): Promise<never> {
+function unavailable(message: string): Promise<never> {
   return Promise.reject({
     code: ErrorCode.NotImplemented,
-    message: 'Analysis is available in the prototype only.',
+    message,
   } satisfies AppError);
+}
+
+function analysisUnavailable(): Promise<never> {
+  return unavailable('Analysis is available in the prototype only.');
+}
+
+function translationUnavailable(): Promise<never> {
+  return unavailable('Translation runs are not implemented yet.');
 }
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
@@ -159,6 +171,28 @@ const api: DreamerApi = {
       subscribe(AnalysisChannel.Progress, listener),
     onChanged: (listener: (event: AnalysisChanged) => void): (() => void) =>
       subscribe(AnalysisChannel.Changed, listener),
+  },
+  translation: {
+    status: (query: TranslationStatusQuery): Promise<TranslationStatus> => call(TranslationChannel.Status, query),
+    chapter: translationUnavailable,
+    glossary: (query: InstructionRequest): Promise<GlossaryPage> => call(TranslationChannel.Glossary, query),
+    editGlossary: translationUnavailable,
+    instruction: (request: InstructionRequest): Promise<TranslationInstruction> =>
+      call(TranslationChannel.Instruction, request),
+    saveInstruction: (request: InstructionSaveRequest): Promise<TranslationInstruction> =>
+      call(TranslationChannel.SaveInstruction, request),
+    resetInstruction: (request: InstructionRequest): Promise<TranslationInstruction> =>
+      call(TranslationChannel.ResetInstruction, request),
+    planContent: translationUnavailable,
+    startContent: translationUnavailable,
+    planGlossary: translationUnavailable,
+    startGlossary: translationUnavailable,
+    cancel: translationUnavailable,
+    save: translationUnavailable,
+    onProgress: (listener: (progress: TranslationProgress) => void): (() => void) =>
+      subscribe(TranslationChannel.Progress, listener),
+    onChanged: (listener: (event: TranslationChanged) => void): (() => void) =>
+      subscribe(TranslationChannel.Changed, listener),
   },
   dev: {
     crash: (kind: DevCrashKind): Promise<void> => call(DevChannel.Crash, kind),

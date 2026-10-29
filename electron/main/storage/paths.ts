@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
+import { TargetLanguage } from '@dreamer/shared/models/translation';
 
 export interface AppPaths {
   settingsFile: string;
@@ -67,4 +68,8 @@ export function ontologyDefaultFile(): string {
 
 export function packageFormatFile(): string {
   return resourceFile('package.format.yml');
+}
+
+export function translationInstructionDefaultFile(language: TargetLanguage): string {
+  return resourceFile(`translation-instruction.${language}.md`);
 }

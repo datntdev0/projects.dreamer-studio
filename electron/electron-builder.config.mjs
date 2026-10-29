@@ -14,6 +14,8 @@ export default {
     { from: 'main/storage/migrations', to: 'migrations' },
     { from: 'resources/ontology.format.yml', to: 'ontology.format.yml' },
     { from: 'resources/package.format.yml', to: 'package.format.yml' },
+    { from: 'resources/translation-instruction.en.md', to: 'translation-instruction.en.md' },
+    { from: 'resources/translation-instruction.vi.md', to: 'translation-instruction.vi.md' },
   ],
   win: {
     icon: 'resources/icon.ico',

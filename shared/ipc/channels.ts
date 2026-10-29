@@ -88,6 +88,16 @@ export const AnalysisChannel = {
   Changed: 'analysis:changed',
 } as const;
 
+export const TranslationChannel = {
+  Status: 'translation:status',
+  Glossary: 'translation:glossary',
+  Instruction: 'translation:instruction',
+  SaveInstruction: 'translation:save-instruction',
+  ResetInstruction: 'translation:reset-instruction',
+  Progress: 'translation:progress',
+  Changed: 'translation:changed',
+} as const;
+
 export const PipelineChannel = {
   Types: 'pipeline:types',
   Start: 'pipeline:start',

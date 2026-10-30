@@ -8,6 +8,7 @@ export default defineConfig({
     alias: { '@storage': fromRoot('electron/main/storage') },
   },
   test: {
+    slowTestThreshold: 3000,
     environment: 'node',
     include: ['electron/**/*.test.ts', 'shared/**/*.test.ts', 'scripts/**/*.test.{ts,mjs}'],
     env: { DREAMER_TEST_LOG_DIR: fromRoot('.testing/logs') },

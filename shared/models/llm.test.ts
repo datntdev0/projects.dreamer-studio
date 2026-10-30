@@ -10,7 +10,7 @@ function status(id: LlmCliId, state: LlmCliState): LlmCliStatus {
   return { id, state, version: null, path: state === 'installed' ? 'C:\\cli.exe' : null, customPath: false };
 }
 
-describe('LLM choices', () => {
+describe('[TH02-03] LLM choices', () => {
   it('recognizes only known feature IDs and exact valid choices', () => {
     expect(isLlmFeatureId('worldAnalysis')).toBe(true);
     expect(isLlmFeatureId('unknown')).toBe(false);
@@ -27,7 +27,7 @@ describe('LLM choices', () => {
   });
 });
 
-describe('resolveLlm', () => {
+describe('[TH02-03] resolveLlm', () => {
   const settings: LlmSettings = { paths: {}, default: claude, features: { worldAnalysis: codex } };
 
   it.each([
@@ -73,8 +73,8 @@ describe('resolveLlm', () => {
   });
 });
 
-describe('sanitizeLlmSettings', () => {
-  it('loads a REQ-027 paths-only block without invalid fields', () => {
+describe('[TH02-03] sanitizeLlmSettings', () => {
+  it('[L2-TH02-03-01] accepts custom CLI paths without requiring model selections', () => {
     const invalid: string[] = [];
     const paths: object = { claude: 'C:\\cli.exe' };
     expect(sanitizeLlmSettings({ paths }, invalid)).toEqual({ paths, default: null, features: {} });
@@ -131,7 +131,7 @@ describe('sanitizeLlmSettings', () => {
   });
 });
 
-describe('validateLlmPatch', () => {
+describe('[TH02-03] validateLlmPatch', () => {
   it.each([
     ['patch', null],
     ['patch', {}],

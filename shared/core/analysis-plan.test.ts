@@ -33,7 +33,7 @@ function options(over: Partial<AnalysisRunOptions>): AnalysisRunOptions {
   return { mode: 'full', from: null, to: null, overwrite: false, stage: 'all', batchSize: 5, ...over };
 }
 
-describe('chapterStatuses', () => {
+describe('[TH04-01] chapterStatuses', () => {
   it('marks every chapter not-analysed without an index', () => {
     const result = chapterStatuses(chapters('a', 'b'), null);
     expect(result.map((item) => item.status)).toEqual(['not-analysed', 'not-analysed']);
@@ -63,7 +63,7 @@ describe('chapterStatuses', () => {
   });
 });
 
-describe('planRun', () => {
+describe('[TH04-01] planRun', () => {
   const all = summaries('not-analysed', 'analysed', 'stale', 'failed', 'analysed', 'analysed');
 
   it('missing mode picks not-analysed, stale and failed and ignores overwrite', () => {
@@ -118,7 +118,7 @@ describe('planRun', () => {
   });
 });
 
-describe('upsertIndexEntry and emptyIndex', () => {
+describe('[TH04-01] upsertIndexEntry and emptyIndex', () => {
   it('creates an empty index', () => {
     expect(emptyIndex()).toEqual({ version: 1, chapters: [], lastRun: null });
   });
@@ -144,7 +144,7 @@ function statusesOf(current: NovelChapterEntry[], ...entries: AnalysisIndexEntry
   return chapterStatuses(current, indexOf(...entries)).map((item) => item.status);
 }
 
-describe('matchChapters', () => {
+describe('[TH04-01] matchChapters', () => {
   it('matches an entry by its file at the current position, not stale', () => {
     const result = matchChapters([entry(1, 'a'), entry(2, 'b')], chapters('x', 'a', 'b'));
     expect(result.map((match) => [match.entry.file, match.index, match.stale])).toEqual([
@@ -184,7 +184,7 @@ describe('matchChapters', () => {
   });
 });
 
-describe('alignIndex', () => {
+describe('[TH04-01] alignIndex', () => {
   it('moves entries to their current index and drops deleted ones', () => {
     const aligned = alignIndex(indexOf(entry(1, 'a'), entry(2, 'b'), entry(3, 'c')), chapters('b', 'c'));
     expect(aligned.chapters.map((item) => [item.file, item.index])).toEqual([
@@ -209,7 +209,7 @@ describe('alignIndex', () => {
   });
 });
 
-describe('chapterStatuses after chapter changes', () => {
+describe('[TH04-01] chapterStatuses after chapter changes', () => {
   const analysed = [entry(1, 'a'), entry(2, 'b'), entry(3, 'c')];
 
   it('marks an edited chapter stale and keeps its previous result', () => {
@@ -255,7 +255,7 @@ describe('chapterStatuses after chapter changes', () => {
     expect(result[0].error).toBeUndefined();
   });
 
-  it('finds a moved chapter by its file before the index (AC-5)', () => {
+  it('[L2-TH04-01-01] matches a moved chapter by its file before the previous index', () => {
     const result = chapterStatuses(chapters('b', 'a'), indexOf(entry(1, 'a', { error: 'x' }), entry(2, 'b')));
     expect(result.map((item) => item.status)).toEqual(['analysed', 'failed']);
   });

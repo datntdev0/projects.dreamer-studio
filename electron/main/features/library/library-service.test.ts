@@ -72,7 +72,7 @@ afterEach(() => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe('LibraryService', () => {
+describe('[TH03-02] LibraryService', () => {
   it('lists novels with their active run lock', () => {
     activeRuns = [lockRun(novelId)];
 

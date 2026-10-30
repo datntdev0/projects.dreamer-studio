@@ -66,7 +66,7 @@ afterEach(() => {
   rmSync(tempDir, { recursive: true, force: true });
 });
 
-describe('loadMigrations', () => {
+describe('[TH01-02] loadMigrations', () => {
   it('sorts by version numbers then upgrade number', () => {
     writeMigration('0.10.0_1__c.sql', 'SELECT 1');
     writeMigration('0.10.0_0__b.sql', 'SELECT 1');
@@ -106,7 +106,7 @@ describe('loadMigrations', () => {
   });
 });
 
-describe('runMigrations', () => {
+describe('[TH01-02] runMigrations', () => {
   beforeEach(() => {
     writeFileSync(join(migrationsDir, historyFile), readFileSync(join(realMigrationsDir, historyFile)));
   });

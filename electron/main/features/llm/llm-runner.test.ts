@@ -108,7 +108,7 @@ afterAll(async () => {
   await rm(testDir, { recursive: true, force: true });
 });
 
-describe('runLlm with a fake CLI', () => {
+describe('[TH02-03] runLlm with a fake CLI', () => {
   it('returns a checked answer and usage, then removes the run folder', async () => {
     vi.stubEnv('DREAMER_FAKE_MODE', 'ok');
     await expect(run()).resolves.toMatchObject({ value: { ok: true }, usage: { inputTokens: 3, outputTokens: 2 } });
@@ -140,7 +140,7 @@ describe('runLlm with a fake CLI', () => {
   });
 });
 
-describe('runLlm prompt file', () => {
+describe('[TH02-03] runLlm prompt file', () => {
   const warn = vi.fn();
   const logged = { ...log, warn };
 

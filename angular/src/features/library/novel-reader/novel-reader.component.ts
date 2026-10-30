@@ -43,6 +43,38 @@ interface ReaderTextPart {
   issue: boolean;
 }
 
+export function readerTextParts(
+  text: string,
+  highlight: ReaderHighlight | null,
+  chapterId: string | null,
+  paragraph: number | null,
+  side: 'source' | 'translation',
+  issueQuery = '',
+): ReaderTextPart[] {
+  const query: string =
+    issueQuery || (side === 'source' && highlight?.chapterId === chapterId ? highlight.query.trim() : '');
+  if (!query) return [{ text, highlighted: false, current: false, issue: false }];
+  const characters: string[] = Array.from(text);
+  const matches: TextMatch[] = findTextMatches(text, query);
+  const parts: ReaderTextPart[] = [];
+  let from: number = 0;
+  for (const [index, match] of matches.entries()) {
+    if (match.start > from)
+      parts.push({ text: characters.slice(from, match.start).join(''), highlighted: false, current: false, issue: false });
+    parts.push({
+      text: characters.slice(match.start, match.end).join(''),
+      highlighted: true,
+      current: !issueQuery && highlight?.paragraph === paragraph && highlight.occurrence === index,
+      issue: !!issueQuery,
+    });
+    from = match.end;
+  }
+  if (!parts.length) return [{ text, highlighted: false, current: false, issue: false }];
+  if (from < characters.length)
+    parts.push({ text: characters.slice(from).join(''), highlighted: false, current: false, issue: false });
+  return parts;
+}
+
 export function chapterTranslation(
   store: TranslationStore,
   selected: LibraryChapter | null,
@@ -285,34 +317,7 @@ export class NovelReaderComponent {
     const marked: boolean = side === 'source' ? this.sourceIssue(paragraph) : this.translatedIssue(paragraph);
     const issueQuery: string =
       marked && issue?.name && (side === 'source' || issue.kind === 'untranslated-name') ? issue.name : '';
-    const query: string =
-      issueQuery ||
-      (side === 'source' && highlight && highlight.chapterId === chapter?.id ? highlight.query.trim() : '');
-    if (!query) return [{ text, highlighted: false, current: false, issue: false }];
-    const characters: string[] = Array.from(text);
-    const matches: TextMatch[] = findTextMatches(text, query);
-    const parts: ReaderTextPart[] = [];
-    let from: number = 0;
-    for (const [index, match] of matches.entries()) {
-      if (match.start > from)
-        parts.push({
-          text: characters.slice(from, match.start).join(''),
-          highlighted: false,
-          current: false,
-          issue: false,
-        });
-      parts.push({
-        text: characters.slice(match.start, match.end).join(''),
-        highlighted: true,
-        current: !issueQuery && highlight?.paragraph === paragraph && highlight.occurrence === index,
-        issue: !!issueQuery,
-      });
-      from = match.end;
-    }
-    if (!parts.length) return [{ text, highlighted: false, current: false, issue: false }];
-    if (from < characters.length)
-      parts.push({ text: characters.slice(from).join(''), highlighted: false, current: false, issue: false });
-    return parts;
+    return readerTextParts(text, highlight, chapter?.id ?? null, paragraph, side, issueQuery);
   }
 
   private scheduleScroll(toHighlight: boolean): void {

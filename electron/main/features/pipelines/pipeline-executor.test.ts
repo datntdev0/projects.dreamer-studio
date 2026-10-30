@@ -100,7 +100,7 @@ afterEach(() => {
   rmSync(tempDir, { recursive: true, force: true });
 });
 
-describe('PipelineExecutor', () => {
+describe('[TH01-04] PipelineExecutor', () => {
   it('starts a labeled run through startRun', async () => {
     const run: PipelineRun = executor.startRun('demo', { source: 'package.zip' }, 'Imported novel');
     expect(run).toMatchObject({ label: 'Imported novel', novelId: null });
@@ -141,7 +141,7 @@ describe('PipelineExecutor', () => {
     await waitForStatus(run.id, 'succeeded');
   });
 
-  it('AC-1: start returns a queued run at once and does not block the event loop', async () => {
+  it('[L2-TH01-04-01] queues a run immediately without blocking the event loop', async () => {
     setup(makeDefinition([sleepStep('long', 100)]));
     let timerFired: boolean = false;
     setTimeout((): void => {
@@ -154,7 +154,7 @@ describe('PipelineExecutor', () => {
     await waitForStatus(run.id, 'succeeded');
   });
 
-  it('AC-2: a run goes queued, running, succeeded with progress 100 and timestamps', async () => {
+  it('[L2-TH01-04-01] completes a run with terminal status, full progress, and timestamps', async () => {
     const run: PipelineRun = executor.start(startRequest);
     expect(run.startedAt).toBeNull();
     await waitForStatus(run.id, 'running');
@@ -166,7 +166,7 @@ describe('PipelineExecutor', () => {
     expect(done.finishedAt).not.toBeNull();
   });
 
-  it('AC-3: progress and step fields update and the run log has the step lines', async () => {
+  it('[L2-TH01-04-01] records step progress and log lines during execution', async () => {
     let reported: boolean = false;
     setup(
       makeDefinition([
@@ -321,7 +321,7 @@ describe('PipelineExecutor', () => {
     expect(existsSync(other)).toBe(true);
   });
 
-  it('AC-4: cancel stops a running run and runs cleanup, a queued run is cancelled with no log', async () => {
+  it('[L2-TH01-04-01] cancels running work with cleanup and cancels queued work before start', async () => {
     setup(makeDefinition([sleepStep('long', 2000)]));
     const running: PipelineRun = executor.start(startRequest);
     const queued: PipelineRun = executor.start(startRequest);
@@ -336,7 +336,7 @@ describe('PipelineExecutor', () => {
     expect(readLogText(running.id)).toContain('Cancelled by user at step 1');
   });
 
-  it('AC-5: with limit 1 the second run stays queued until the first finishes', async () => {
+  it('[L2-TH01-04-01] keeps later runs queued until a concurrency slot is available', async () => {
     setup(makeDefinition([sleepStep('long', 150)]));
     const first: PipelineRun = executor.start(startRequest);
     const second: PipelineRun = executor.start(startRequest);
@@ -346,7 +346,7 @@ describe('PipelineExecutor', () => {
     await waitForStatus(second.id, 'succeeded');
   });
 
-  it('REQ-009 AC-2: raising the limit starts queued runs at once while the first is still running', async () => {
+  it('[L2-TH01-04-01] starts queued work when the concurrency limit increases', async () => {
     const releases: Array<() => void> = [];
     setup(makeDefinition([gatedStep('gated', releases)]));
     const runs: PipelineRun[] = [
@@ -368,7 +368,7 @@ describe('PipelineExecutor', () => {
     }
   });
 
-  it('REQ-009 AC-3: lowering the limit keeps running runs and holds new runs until the active count drops', async () => {
+  it('[L2-TH01-04-01] preserves running work and queues new work when the concurrency limit decreases', async () => {
     const releases: Array<() => void> = [];
     limit = 3;
     setup(makeDefinition([gatedStep('gated', releases)]));
@@ -439,7 +439,7 @@ describe('PipelineExecutor', () => {
     await vi.waitFor((): void => expect(readLogText(run.id)).toContain('Cleanup failed'), { timeout: 3000 });
   });
 
-  it('AC-6: recover cancels queued and running rows with reason appClosed', () => {
+  it('[L2-TH01-04-01] recovers queued and active runs as cancelled after app close', () => {
     repository.insert(makeRun('r1', 'running'), {});
     repository.insert(makeRun('q1', 'queued'), {});
     repository.insert(makeRun('s1', 'succeeded'), {});
@@ -451,7 +451,7 @@ describe('PipelineExecutor', () => {
     expect(executor.list(allRuns).total).toBe(3);
   });
 
-  it('AC-7: cancelAll cancels running and queued runs at once and logs the app close', async () => {
+  it('[L2-TH01-04-01] cancels all active and queued runs during shutdown', async () => {
     setup(makeDefinition([sleepStep('long', 2000)]));
     const running: PipelineRun = executor.start(startRequest);
     const queued: PipelineRun = executor.start(startRequest);
@@ -464,7 +464,7 @@ describe('PipelineExecutor', () => {
     expect(readLogText(running.id)).toContain('Cancelled: app closed');
   });
 
-  it('AC-8: the log survives success and delete removes the row and file but skips active runs', async () => {
+  it('[L2-TH01-04-01] retains completed run logs and deletes logs with finished history', async () => {
     const done: PipelineRun = executor.start(startRequest);
     await waitForStatus(done.id, 'succeeded');
     expect(existsSync(runLogFile(paths, done.id))).toBe(true);

@@ -83,7 +83,7 @@ function runPredicates(entities: AnalysisEntity[], ...facts: PredicateOutput['fa
   return checkPredicates({ chapter: TEXT, entities, output: { facts }, ontology: ONTOLOGY });
 }
 
-describe('checkCandidates', () => {
+describe('[TH04-01] checkCandidates', () => {
   it('verifies an entity found by name', () => {
     const { entities, errors } = runCandidates(candidates({ type: 'Location', name: 'Hanoi', aliases: [] }));
     expect(errors).toEqual([]);
@@ -193,7 +193,7 @@ describe('checkCandidates', () => {
   });
 });
 
-describe('checkPredicates', () => {
+describe('[TH04-01] checkPredicates', () => {
   it('verifies a relationship fact', () => {
     const { facts, errors } = runPredicates(ENTITIES, fact({}));
     expect(errors).toEqual([]);
@@ -325,7 +325,7 @@ describe('checkPredicates', () => {
   });
 });
 
-describe('mergeStageEntities', () => {
+describe('[TH04-01] mergeStageEntities', () => {
   const previous = [entity('Persona', 'Mai'), entity('Location', 'Hanoi')];
   const next = [entity('Persona', 'Lan')];
 
@@ -338,7 +338,7 @@ describe('mergeStageEntities', () => {
   });
 });
 
-describe('chapterCounts', () => {
+describe('[TH04-01] chapterCounts', () => {
   it('counts entities and facts', () => {
     const facts: AnalysisFact[] = [{ id: 'f-1', kind: 'scalar', predicate: 'gender', subjectId: 'x', quote: null }];
     expect(chapterCounts([entity('Persona', 'A'), entity('Persona', 'B')], facts)).toEqual({ entities: 2, facts: 1 });

@@ -1,5 +1,64 @@
 # Unit test audit against L1/L2 requirements
 
+## Acceptance-unit implementation (2026-10-31)
+
+Read the **Acceptance Scenarios**, **Invariants & Contracts**, and **Migration & Edge Cases** columns from `_docs/0.requirements-analysis.xlsx`. The current workbook contains 20 L2 specifications. The historical inventory below is retained as audit context; it is not a claim that every scenario is now covered.
+
+The requested acceptance-unit layer now uses `angular/tests/<CapabilityID>/<SpecID>.spec.ts` and `electron/tests/<CapabilityID>/<SpecID>.spec.ts`. Existing colocated `.test.ts` suites remain in place. Angular acceptance tests drive production components and unchanged templates, using real services/stores with a fake DesktopApi boundary; Electron tests exercise production services, pipelines, package readers/writers, temporary files and SQLite. They do not launch Electron or installed CLIs. Shared fixtures are in each `tests/support/` directory. Import the Electron fixture before production modules so its Electron, logging and broadcast mocks are registered before module initialization.
+
+| Spec | Angular evidence added | Electron evidence added |
+|---|---|---|
+| L2-TH01-01-01 | Production Root/Shell render unhandled-error banners; repeated errors coalesce; real open-logs and dismiss controls invoke their boundaries. | Root package version/author feed compiled build identity; main/preload build entry contract; time/level/process/stack formatting and app-data log retention. Clean checkout/package launch remain integration checks. |
+| L2-TH01-02-01 | — | Fresh startup folders/database; ordered, once-only upgrades; backup of populated data; failed/unknown migrations stop startup and leave prior data readable. |
+| L2-TH01-03-01 | Production GeneralSection/Topbar controls update language/theme through real services; settings events refresh controls; Rail renders English fallback and logs missing keys once. | — |
+| L2-TH01-04-01 | Production HomePage/StatusBar render pipeline event progress/history; actual completion toast action opens the matching run; deletion removes the rendered history. | Queue/slot scheduling; persisted progress; cancellation and cleanup; restart recovery; finished history/log deletion; concurrency increases/decreases (also L2-TH02-01-01 AC6). |
+| L2-TH02-01-01 | Production PipelineSection range controls persist valid changes, restore their value after a rejected update and render failure feedback; settings events update controls without duplicate subscriptions. | Persist preferences across settings instances; empty/existing folder switches; preserve the old database; missing target and failed upgrade rollback; active-work guard. |
+| L2-TH02-02-01 | About release/runtime identity and repository action; bug-report copy success/failure; missing metadata fallback. | Registered built-in health checks report OK/Warning/Error and suggested fixes; throwing/timed-out checks are isolated; reruns evaluate fresh context without accumulating results. |
+| L2-TH02-03-01 | — | Supported CLI detection/version and events; custom path validation/persistence with invalid replacement refused; connection success/coded failure; feature override/default resolution; disappearance blocks execution. Detection/process boundaries are faked; installed CLI compatibility remains integration. |
+| L2-TH03-01-01 | Production ImportPage picker/preview/edit/confirm submits edited metadata; preview cancellation returns to source without import; real drop handler refuses non-ZIP files. | Read-only preview; edited metadata/chapter selection; repeated imports get distinct IDs; corrupt archive refusal; changed-package rejection; cancellation and injected disk-write failure clean staging. |
+| L2-TH03-02-01 | Production `LibraryPage`, `LibraryItemsComponent`, `LibraryInspectorComponent` and panel outlets render their unchanged templates with real stores. Tests use actual search/filter/sort controls, card selection, inspector cover/metadata/counts/synopsis and open/folder actions, empty/no-result actions, and pipeline-driven pending/completed imports. Only DesktopApi and navigation side effects are faked. Renderer file-service security still requires integration tests. | — |
+| L2-TH03-02-02 | Production LibraryPage metadata form saves into list/inspector; required-field and invalid-cover feedback retain the draft; cover replacement/removal refreshes inspector; unsaved-selection dialog supports keep editing/discard. | Valid metadata updates list/detail and survives a fresh session; invalid required fields/cover bytes leave metadata unchanged; replace/remove cover persists and cleans owned files without deleting the source image. |
+| L2-TH03-02-03 | — | Export current chapter order/content and import into a separate empty library; failed/cancelled export removes partial output and preserves an existing destination; bulk deletion skips locked novels. |
+| L2-TH03-03-01 | Production NovelPage reader renders first chapter/pager boundaries, missing-file retry and keyboard suppression. Colocated tests cover selected search-hit highlighting and focus-mode panels. | — |
+| L2-TH03-03-02 | Production NovelPage organize controls, selection and move/merge dialogs submit chapter changes; rendered order updates on save and remains unchanged for lock/stale-selection/missing-file failures. | — |
+| L2-TH03-03-03 | Production NovelPage editor saves normalized edits into reader, renders empty-field validation, confirms keep/discard of dirty edits, and retains draft with visible lock refusal. | — |
+| L2-TH04-01-01 | — | Block invalid ontology/unavailable LLM/no eligible chapters; selected range and overwrite planning; retain completed output after isolated timeout or cancellation. |
+| L2-TH04-01-02 | — | Review invalid quotes with source chapter context; preview and persist corrected quotes; revalidate issues; fresh chapter results replace old review. **Explicit merge is not implemented/tested.** |
+| L2-TH04-01-03 | — | Chapter-boundary/single-chapter views and occurrences; persisted overlay survives regenerated chapter results and becomes an explicit orphan if its target disappears. |
+| L2-TH04-05-01 | Production TranslationPage target controls, instruction panel and reset confirmation preserve per-language values; actual glossary inputs/buttons edit and clear entries; no-analysis UI links to analysis. | — |
+| L2-TH04-05-02 | Production glossary-run dialog controls pass identical scope/language/batch/instruction to plan/start, close after success, and retain configuration with visible failure feedback. | Eligible selection, aliases grouped with their entity, automatic saves preserve user-authored values, completed batches and summary counts survive cancellation. |
+| L2-TH04-05-03 | Production NovelPage original/translation/side controls ignore obsolete translation responses; actual TranslationPage content-run dialog passes identical overwrite/range/instruction to plan/start. | Persist validation issues/user edits; source/glossary staleness versus instruction-only changes; protect current user edits without overwrite; explicit overwrite; retain completed chapters after timeout/cancellation. |
+
+### Known requirement gaps
+
+- **L2-TH04-05-03, user-edited stale translations:** `contentRunQueue` currently queues stale user edits even with `overwrite: false`. The Electron spec contains a named `it.fails` regression test for the required protection. Vitest reports this as **expected fail**, not a verified requirement. Remove `.fails` when the implementation is corrected. Product behavior was not changed as part of this test-only task.
+- **L2-TH04-01-02 AC3/4 and L2-TH04-01-03 merge invariant:** `AnalysisService` has no explicit merge/accept-warning operation. Its snapshot derives the world directly from chapter results and overlays. Tests prove revalidation and overlay persistence; they do not assert an unavailable merge transaction or error gate.
+- Other unlisted scenarios retain their colocated unit evidence or still require integration/E2E as described below. Native dialogs, packaged startup, real CLI compatibility, app relaunch, full IPC journeys and destructive-action confirmation are not established by these unit tests. Export round-trip covers metadata and chapters; the optional-cover round-trip remains a gap in this new layer.
+
+### Running the suites
+
+- All Electron/shared unit suites: `pnpm exec vitest run`.
+- New Electron acceptance-unit suites only: `pnpm exec vitest run electron/tests`.
+- Angular (existing and new suites): `pnpm --filter @dreamer/angular test`.
+- Electron type check, including the new tests: `pnpm exec tsc -p electron/tsconfig.json`.
+- Focused lint: `pnpm exec eslint electron/tests angular/tests`.
+
+On Windows PowerShell with script execution disabled, use `pnpm.cmd` in place of `pnpm`. Root Vitest discovery includes Electron `.spec.ts`; Angular CLI discovery and its spec tsconfig include `angular/tests`. The acceptance-unit layer has **14 Electron suites and 14 Angular suites**. Comparing the workbook's Spec IDs with both test directories confirms **20/20 L2 specs have at least one corresponding `.spec.ts`**, with no missing or unknown IDs. This is file-level traceability, not proof that all acceptance scenarios are verified end to end.
+
+Validation on 2026-10-31: the root Electron/shared run completed with **40 files, 353 passed tests and 1 expected failure**; Angular completed with **25 files and 66 passed tests**. Electron TypeScript checking, focused ESLint, Prettier checking, and `git diff --check` passed. These results include existing suites. The Electron acceptance-unit layer contributes 54 passing cases and 1 expected-failure case. Python/backend and packaged/E2E checks were not run for this change.
+
+Angular component-test policy: prefer production components and their unchanged production templates across both `src/**/*.test.ts` and `tests/**/*.spec.ts`. Test-only components, host templates and template overrides are allowed only when testing the actual component is technically impossible, with the specific reason documented beside the exception. The current audit found and removed the library browse template override, the novel focus-mode host, and the empty theme-service host; no exceptions remain. Production panel outlets are mounted as separate fixtures sharing the real layout service, and service-only tests use direct injection without an empty host component.
+
+### Angular component review (2026-10-31)
+
+The review found that removing synthetic templates alone was insufficient: several L2 suites still invoked stores or editor methods directly and could pass with broken template bindings. Those suites now interact with actual production pages, controls, dialogs and panel outlets, assert the DesktopApi request, and verify the rendered result or refusal. This includes library metadata/cover, chapter navigation/organizing/editing, import, settings, pipeline notifications, and translation instructions/glossary/content runs.
+
+Colocated reader, translation, review, layout, rail and topbar tests also now exercise production components with real collaborator services. Review filters verify rendered source context through the real OmniscientStore; layout tests register/unregister real panel directives. Focused theme-service and route-builder unit tests remain as supplementary contract tests, rather than acceptance-scenario evidence by themselves.
+
+`angular/tests/support/desktop-fixture.ts` centralizes typed DesktopApi fakes and mounts production toast/confirmation/panel components. Browser-only adapters cover JSDOM's missing dialog, resize and scrolling APIs. Fixtures remain attached to the document for native checkbox/radio events, and teardown cancels toast timers and pending animation frames. No test component, synthetic host template or template override is used.
+
+The final Angular review run passed **25 files / 66 tests**. ESLint passed for `angular/tests` and `angular/src`. These are component integration tests within Angular; actual Electron IPC, native OS dialogs and packaged execution still require integration/E2E checks.
+
 ## Scope and classification
 
 Static review of the original `*.test.ts` and `backend/tests/test_*.py` suite against `_docs/0.requirements-analysis.xlsx` (12 L1 capabilities, 18 L2 specifications). The original suite was later curated to the target inventory below: tests outside that inventory were removed, and focused tests were added for translation rules, adapter contracts, package metadata and reader selection. Tests were not executed. “Covered” means an automated test asserts the relevant behavior at a unit/service/store boundary; it does not mean the complete user journey has been verified.
@@ -117,7 +176,7 @@ Do not create unit suites solely to assert static text, a simple input-to-output
 
 ### Acceptance-scenario unit tests by L1/L2
 
-Keep this layer intentionally smaller than the L2 catalog. Place a suite under `electron/tests/<CapabilityID>/<SpecID>.spec.ts` only when it proves an important cross-module service contract that would be slow or ambiguous to diagnose through E2E. Do not create a duplicate Angular acceptance suite: visible UI flows belong to the Playwright project below. Use deterministic fakes at process, filesystem, clock, and IPC boundaries.
+Keep this layer intentionally smaller than the L2 catalog. Place a suite under `electron/tests/<CapabilityID>/<SpecID>.spec.ts` only when it proves an important cross-module service contract that would be slow or ambiguous to diagnose through E2E. Per the requested path convention, Angular state/component contracts live under `angular/tests/<CapabilityID>/<SpecID>.spec.ts`; complete visible UI journeys still belong to Playwright. Use deterministic fakes at process, filesystem, clock, and IPC boundaries.
 
 - `electron/tests/TH01-02/L2-TH01-02-01.spec.ts` — app-data startup contract: initialize new data; upgrade a populated store once with backup; keep startup blocked and prior data intact on failed/unknown migration.
 - `electron/tests/TH01-04/L2-TH01-04-01.spec.ts` — pipeline lifecycle contract: queue/slot scheduling, cancel at checkpoint with cleanup, retain per-run logs/history, and recover active runs as cancelled on shutdown.

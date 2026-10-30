@@ -85,6 +85,7 @@
             "buildTarget": "::development",
             "tsConfig": "tsconfig.spec.json",
             "runnerConfig": "vitest.config.ts",
+            "include": ["**/*.test.ts", "../tests/**/*.spec.ts"],
             "coverageInclude": ["src/**/*.ts"]
           }
         },

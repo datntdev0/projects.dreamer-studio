@@ -8,5 +8,5 @@
       "@storage/*": ["./main/storage/*"]
     }
   },
-  "include": ["main", "preload", "../shared", "esbuild.mjs"]
+  "include": ["main", "preload", "tests", "../shared", "esbuild.mjs"]
 }

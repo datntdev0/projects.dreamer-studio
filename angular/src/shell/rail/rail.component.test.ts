@@ -1,25 +1,14 @@
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { I18nService } from '@core/i18n/i18n.service';
 import { describe, expect, it } from 'vitest';
+import { desktopFixture } from '../../../tests/support/desktop-fixture';
 import { RailComponent } from './rail.component';
 
-describe('[TH01-03] RailComponent', () => {
-  it('keeps released and future modules discoverable at their module routes', async () => {
-    await TestBed.configureTestingModule({
-      imports: [RailComponent],
-      providers: [
-        provideRouter([]),
-        { provide: I18nService, useValue: { t: (key: string) => key } },
-      ],
-    }).compileComponents();
-    const fixture = TestBed.createComponent(RailComponent);
-    fixture.detectChanges();
-
-    const library = fixture.nativeElement.querySelector('[data-testid="rail-entry-library"]') as HTMLAnchorElement;
-    const future = fixture.nativeElement.querySelector('[data-testid="rail-entry-projects"]') as HTMLAnchorElement;
-    expect(library.getAttribute('href')).toBe('/library');
-    expect(future.getAttribute('href')).toBe('/projects');
-    expect(fixture.nativeElement.querySelector('[data-testid="rail-group-system"]')).not.toBeNull();
+describe('[TH01-03] RailComponent production navigation', () => {
+  it('keeps released and future destinations discoverable with real links and translated labels', async () => {
+    const app = desktopFixture();
+    const view = await app.mount(RailComponent);
+    expect(view.element('rail-entry-library').getAttribute('href')).toBe('/library');
+    expect(view.element('rail-entry-library').textContent).toContain('Library');
+    expect(view.element('rail-entry-projects').getAttribute('href')).toBe('/projects');
+    expect(view.find('rail-group-system')).not.toBeNull();
   });
 });

@@ -1,37 +1,20 @@
-import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { AppInfoStore } from '@core/app-info';
-import { I18nService } from '@core/i18n/i18n.service';
-import { SettingsStore } from '@core/stores/settings-store';
-import { ThemeService } from '@core/theme/theme.service';
-import { describe, expect, it, vi } from 'vitest';
-import { LayoutService } from '../layout/layout.service';
-import { PageCrumbService } from '../page-crumb.service';
+import { describe, expect, it } from 'vitest';
+import { desktopFixture } from '../../../tests/support/desktop-fixture';
 import { TopbarComponent } from './topbar.component';
 
-describe('[TH01-03] TopbarComponent', () => {
-  it('[L2-TH01-03-01] sends language and theme choices to the settings store', async () => {
-    const update = vi.fn(async () => true);
-    await TestBed.configureTestingModule({
-      imports: [TopbarComponent],
-      providers: [
-        provideRouter([]),
-        { provide: SettingsStore, useValue: { update } },
-        { provide: ThemeService, useValue: { theme: signal<'light' | 'dark'>('light') } },
-        { provide: I18nService, useValue: { t: (key: string) => key, language: signal<'en' | 'vi'>('en') } },
-        { provide: AppInfoStore, useValue: { info: signal(null) } },
-        { provide: LayoutService, useValue: { has: () => false, isOpen: () => true, toggle: vi.fn() } },
-        { provide: PageCrumbService, useValue: { detail: signal(null) } },
-      ],
-    }).compileComponents();
-    const fixture = TestBed.createComponent(TopbarComponent);
-    fixture.componentRef.setInput('railExpanded', true);
-    fixture.detectChanges();
-
-    (fixture.nativeElement.querySelector('[data-testid="topbar-lang"]') as HTMLButtonElement).click();
-    (fixture.nativeElement.querySelector('[data-testid="topbar-theme"]') as HTMLButtonElement).click();
-    expect(update).toHaveBeenNthCalledWith(1, { language: 'vi' });
-    expect(update).toHaveBeenNthCalledWith(2, { theme: 'dark' });
+describe('[TH01-03] TopbarComponent with real settings and theme services', () => {
+  it('[L2-TH01-03-01] changes language/theme from actual buttons and reflects the saved choices', async () => {
+    const app = desktopFixture();
+    const view = await app.mount(TopbarComponent, false, [], { railExpanded: true });
+    await view.click('topbar-lang');
+    await view.click('topbar-theme');
+    expect(app.api.updateSettings).toHaveBeenNthCalledWith(1, { language: 'vi' });
+    expect(app.api.updateSettings).toHaveBeenNthCalledWith(2, { theme: 'dark' });
+    expect(view.element('topbar-lang').textContent).toContain('VI');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    await view.click('topbar-lang');
+    await view.click('topbar-theme');
+    expect(view.element('topbar-lang').textContent).toContain('EN');
+    expect(document.documentElement.dataset['theme']).toBe('light');
   });
 });

@@ -37,6 +37,7 @@ export default tseslint.config(
       'electron/main/app/app-data-*.ts',
       'electron/main/index.ts',
       'electron/**/*.test.ts',
+      'electron/tests/**',
     ],
     rules: {
       'no-restricted-imports': [

@@ -1,66 +1,39 @@
-import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
-import { DesktopApi } from '@core/desktop-api';
-import { I18nService } from '@core/i18n/i18n.service';
-import { CurrentNovelStore } from '@core/stores/current-novel-store';
-import { TranslationLanguageStore } from '@core/stores/translation-language-store';
-import { describe, expect, it, vi } from 'vitest';
-import { TranslationStore } from './translation.store';
-import type { GlossaryKey } from '@dreamer/shared/models/translation';
+import { convertToParamMap } from '@angular/router';
+import { describe, expect, it } from 'vitest';
+import { desktopFixture, novelRoute, translatedChapter } from '../../../tests/support/desktop-fixture';
+import { NovelPage } from './novel.page';
 
-describe('[TH04-05] TranslationStore', () => {
-  it('clears chapter and glossary state when opening a different novel', async () => {
-    TestBed.configureTestingModule({ providers: [
-      TranslationStore,
-      { provide: DesktopApi, useValue: {} },
-      { provide: I18nService, useValue: { t: (key: string) => key } },
-      { provide: CurrentNovelStore, useValue: { novel: () => null } },
-      { provide: TranslationLanguageStore, useValue: { language: () => null, set: vi.fn() } },
-    ] });
-    const store = TestBed.inject(TranslationStore);
-    store.chapter.set({} as never);
-    store.glossary.set({} as never);
-
-    await store.open('novel-a');
-
-    expect(store.novelId()).toBe('novel-a');
-    expect(store.chapter()).toBeNull();
-    expect(store.glossary()).toBeNull();
-    expect(store.view()).toBe('reader');
+describe('[TH04-05] translation state through the production novel page', () => {
+  it('clears visible translation and display state when the real page opens another novel', async () => {
+    const app = desktopFixture();
+    const route = novelRoute();
+    app.state.novels.push({ ...app.state.novels[0], id: 'other', title: 'Other novel' });
+    app.state.translations.set('vi/first', translatedChapter('first', 'vi', ['Old novel translation.']));
+    app.api.translationChapter.mockImplementation(async ({ novelId }) =>
+      novelId === 'novel' ? translatedChapter('first', 'vi', ['Old novel translation.']) : null,
+    );
+    const view = await app.mount(NovelPage, true, [route.provider]);
+    await view.click('translation-reader-display-translation');
+    expect(view.element('novel-reader-article').textContent).toContain('Old novel translation.');
+    route.params.next(convertToParamMap({ id: 'other' }));
+    await view.settle();
+    expect(view.element('novel-reader-article').getAttribute('data-display')).toBe('original');
+    expect(view.element('novel-reader-article').textContent).not.toContain('Old novel translation.');
+    expect(view.element('novel-reader-article').textContent).toContain('moon over moon');
   });
 
-  it('tracks a saved target-language choice and loads its glossary', async () => {
-    const selected = signal<'en' | 'vi' | null>(null);
-    const api = {
-      translationStatus: vi.fn(async () => ({ targets: ['vi', 'en'] })),
-      translationInstruction: vi.fn(async ({ language }: { language: 'en' | 'vi' }) => ({
-        novelId: 'novel-a', language, text: '', isDefault: true, updatedAt: null,
-      })),
-      translationGlossary: vi.fn(async ({ language }: { language: 'en' | 'vi' }) => ({
-        novelId: 'novel-a', language, analysed: true, rows: [],
-      })),
-      translationEditGlossary: vi.fn(async () => undefined),
-    };
-    TestBed.configureTestingModule({ providers: [
-      TranslationStore,
-      { provide: DesktopApi, useValue: api },
-      { provide: I18nService, useValue: { t: (key: string) => key } },
-      { provide: CurrentNovelStore, useValue: { novel: () => null } },
-      { provide: TranslationLanguageStore, useValue: {
-        language: () => selected(), set: (_novelId: string, language: 'en' | 'vi') => selected.set(language),
-      } },
-    ] });
-    const store = TestBed.inject(TranslationStore);
-    await store.open('novel-a');
-    store.setLanguage('en');
-    await store.loadGlossary();
-
-    expect(store.language()).toBe('en');
-    expect(store.instruction()?.language).toBe('en');
-    expect(store.glossary()?.language).toBe('en');
-    expect(api.translationGlossary).toHaveBeenCalledWith({ novelId: 'novel-a', language: 'en' });
-    const key: GlossaryKey = { entityType: 'Persona', entityName: 'Mai', term: null, kind: 'name' };
-    expect(await store.editGlossary(key, 'Mây')).toBe(true);
-    expect(api.translationEditGlossary).toHaveBeenCalledWith({ novelId: 'novel-a', language: 'en', key, translation: 'Mây' });
+  it('restores each novel view language through the actual reader selector when revisiting it', async () => {
+    const app = desktopFixture();
+    const route = novelRoute();
+    app.state.novels.push({ ...app.state.novels[0], id: 'other' });
+    const view = await app.mount(NovelPage, true, [route.provider]);
+    await view.input('translation-reader-language', 'en', 'change');
+    route.params.next(convertToParamMap({ id: 'other' }));
+    await view.settle();
+    expect((view.element('translation-reader-language') as HTMLSelectElement).value).toBe('vi');
+    route.params.next(convertToParamMap({ id: 'novel' }));
+    await view.settle();
+    expect((view.element('translation-reader-language') as HTMLSelectElement).value).toBe('en');
+    expect(app.api.translationInstruction).toHaveBeenCalledWith({ novelId: 'novel', language: 'en' });
   });
 });

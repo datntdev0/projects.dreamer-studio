@@ -417,7 +417,8 @@ ds-world-edit-dialog dialog.ds-dialog {
   padding: var(--sp-sm) var(--sp-md) var(--sp-md);
   border-top: 1px solid var(--color-border);
 
-  &.fact {
+  &.fact,
+  &.persona {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -483,7 +484,8 @@ ds-world-edit-dialog dialog.ds-dialog {
     background: color-mix(in srgb, var(--color-warning) 16%, transparent);
   }
 
-  &[data-state='open'] {
+  &[data-state='open'],
+  &[data-state='invalid'] {
     --edit-preview-color: var(--color-danger);
 
     border-color: var(--color-danger);

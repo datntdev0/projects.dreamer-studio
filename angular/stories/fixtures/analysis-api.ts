@@ -2,15 +2,10 @@ import { DestroyRef, inject, provideAppInitializer, type EnvironmentProviders, t
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { isUpToDate } from '@dreamer/shared/core/analysis-plan';
 import { filterReviewItems, issueCounts, reviewItems } from '@dreamer/shared/core/analysis-review';
-import {
-  buildModel,
-  editScope,
-  entityOccurrences,
-  findQuoteMatches,
-  invalidEdits,
-  previewEdits,
-  toGraph,
-} from '@dreamer/shared/core/world';
+import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
+import { buildModel, editScope, entityOccurrences, findQuoteMatches, toGraph } from '@dreamer/shared/core/world';
+import { applyEdits } from '@dreamer/shared/core/world-apply';
+import type { ApplyChapter, ApplyOutcome } from '@dreamer/shared/core/world-apply';
 import type { WorldModel, WorldSource } from '@dreamer/shared/core/world';
 import type {
   AnalysisChanged,
@@ -32,6 +27,7 @@ import type {
   ReviewQuery,
   World,
   WorldDraftEdit,
+  ChapterResult,
   WorldEditPreview,
   WorldEditScope,
   WorldPreviewRequest,
@@ -56,7 +52,6 @@ import {
   UNANALYSED_NOVEL,
   jadeRiverChapters,
   jadeRiverNovel,
-  jadeRiverOverlay,
 } from './analysis';
 import type { ChapterAnalysis, JadeRiverEdition } from './analysis';
 import { toNovelSummary } from './library';
@@ -71,7 +66,6 @@ const TICK_MS = 280;
 
 export class FakeAnalysisApi extends FakePipelinesApi {
   private readonly chapters = new Map<string, ChapterAnalysis[]>();
-  private readonly overlay = new Map<string, WorldDraftEdit[]>();
   private readonly changedListeners = new Set<(event: AnalysisChanged) => void>();
   private readonly progressListeners = new Set<(progress: AnalysisProgress) => void>();
   private readonly libraryListeners = new Set<(event: LibraryChangedEvent) => void>();
@@ -96,7 +90,6 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       UNANALYSED_NOVEL.id,
       UNANALYSED_CHAPTERS.map((chapter) => ({ ...chapter })),
     );
-    this.overlay.set(novelId, jadeRiverOverlay(edition));
     destroyRef.onDestroy(() => this.timers.forEach((timer) => clearInterval(timer)));
     if (scenario === 'running') {
       const queue = this.chapters
@@ -182,6 +175,7 @@ export class FakeAnalysisApi extends FakePipelinesApi {
     const queue = await this.runQueue(request);
     return {
       count: queue.length,
+      edited: 0,
       from: queue.length ? Math.min(...queue) : null,
       to: queue.length ? Math.max(...queue) : null,
       batches: Math.ceil(queue.length / Math.max(1, request.batchSize)),
@@ -222,12 +216,16 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   }
 
   override async analysisPreview(request: WorldPreviewRequest): Promise<WorldEditPreview | null> {
-    return previewEdits(this.model(request.novelId), {
-      edits: request.edits,
-      issueKey: request.issueKey,
-      ontology: DEFAULT_ONTOLOGY,
-      texts: this.chapters.get(request.novelId) ?? [],
-    });
+    const outcome = this.apply(request.novelId, request.edits);
+    if (outcome.problem) return { resolved: false, added: [], problem: outcome.problem };
+    const before = this.model(request.novelId);
+    const after = this.model(request.novelId, outcome.results);
+    const known = new Set(before.issues.map((issue) => issue.key));
+    return {
+      resolved: request.issueKey ? !after.issues.some((issue) => issue.key === request.issueKey) : true,
+      added: after.issues.filter((issue) => !known.has(issue.key)),
+      problem: null,
+    };
   }
 
   override async analysisOccurrences(query: OccurrenceQuery): Promise<Occurrence[]> {
@@ -239,9 +237,9 @@ export class FakeAnalysisApi extends FakePipelinesApi {
   override async analysisEdit(request: AnalysisEditRequest): Promise<void> {
     const { novelId, edits } = request;
     this.assertFree(novelId);
-    const message = invalidEdits(this.model(novelId), edits);
-    if (message) throw new CodedError(ErrorCode.AnalysisEditInvalid, message);
-    this.overlay.set(novelId, [...(this.overlay.get(novelId) ?? []), ...edits]);
+    const outcome = this.apply(novelId, edits, new Date().toISOString());
+    if (outcome.problem) throw new CodedError(ErrorCode.AnalysisEditInvalid, outcome.problem.reason);
+    this.chapters.set(novelId, this.withResults(novelId, outcome.results));
     this.emitChanged(novelId);
   }
 
@@ -355,14 +353,47 @@ export class FakeAnalysisApi extends FakePipelinesApi {
       throw new CodedError(ErrorCode.NovelLocked, 'Novel is busy');
   }
 
-  private model(novelId: string): WorldModel {
-    const chapters = this.chapters.get(novelId) ?? [];
+  private apply(novelId: string, edits: WorldDraftEdit[], editedAt = ''): ApplyOutcome {
+    const chapters = (this.chapters.get(novelId) ?? [])
+      .filter((chapter) => chapter.resultFile && (chapter.status === 'analysed' || chapter.status === 'stale'))
+      .map((chapter): ApplyChapter => ({
+        index: chapter.index,
+        paragraphs: chapter.paragraphs,
+        result: {
+          version: 1,
+          file: chapter.file,
+          index: chapter.index,
+          title: chapter.title,
+          analysedAt: '',
+          llm: '',
+          entities: chapter.entities,
+          facts: chapter.facts,
+        },
+      }));
+    return applyEdits({ chapters, entities: this.model(novelId).state.entities, edits, editedAt });
+  }
+
+  private withResults(novelId: string, results: ChapterResult[]): ChapterAnalysis[] {
+    return (this.chapters.get(novelId) ?? []).map((chapter) => {
+      const result = results.find((item) => item.file === chapter.file);
+      return result
+        ? {
+            ...chapter,
+            entities: result.entities,
+            facts: result.facts,
+            counts: chapterCounts(result.entities, result.facts),
+          }
+        : chapter;
+    });
+  }
+
+  private model(novelId: string, results: ChapterResult[] = []): WorldModel {
+    const chapters = this.withResults(novelId, results);
     const sources = chapters
       .filter((chapter) => chapter.resultFile && (chapter.status === 'analysed' || chapter.status === 'stale'))
       .map((chapter): WorldSource => ({ ...chapter, stale: chapter.status === 'stale' }));
     return buildModel({
       sources,
-      edits: this.overlay.get(novelId) ?? [],
       ontology: DEFAULT_ONTOLOGY,
       texts: chapters,
     });

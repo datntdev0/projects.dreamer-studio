@@ -29,11 +29,6 @@
                 issueKeys[issue] | t
               }}</ds-pill>
             }
-            @if (entity.overlay) {
-              <ds-pill kind="warning" icon="pencil" data-testid="world-entity-edited">{{
-                'analysis.world.editedByYou' | t
-              }}</ds-pill>
-            }
             @if (entity.stale) {
               <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>
             }
@@ -112,13 +107,10 @@
                     @if (scalar.quote) {
                       <blockquote class="serif">{{ scalar.quote }}</blockquote>
                     }
-                    @if (scalar.overlay || !scalar.quote || scalar.stale) {
+                    @if (!scalar.quote || scalar.stale) {
                       <div class="ds-world-detail-tags">
                         @if (!scalar.quote) {
                           <ds-pill icon="user">{{ 'analysis.entity.addedByUser' | t }}</ds-pill>
-                        }
-                        @if (scalar.overlay) {
-                          <ds-pill kind="warning" icon="pencil">{{ 'analysis.world.editedByYou' | t }}</ds-pill>
                         }
                         @if (scalar.stale) {
                           <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>
@@ -227,13 +219,10 @@
                   <ds-icon name="pencil" size="sm" />
                 </button>
               </div>
-              @if (link.overlay || !link.quotes.length || link.stale) {
+              @if (!link.quotes.length || link.stale) {
                 <div class="ds-world-detail-tags">
                   @if (!link.quotes.length) {
                     <ds-pill icon="user">{{ 'analysis.entity.addedByUser' | t }}</ds-pill>
-                  }
-                  @if (link.overlay) {
-                    <ds-pill kind="warning" icon="pencil">{{ 'analysis.world.editedByYou' | t }}</ds-pill>
                   }
                   @if (link.stale) {
                     <ds-pill kind="warning" icon="clock">{{ 'analysis.world.stale' | t }}</ds-pill>

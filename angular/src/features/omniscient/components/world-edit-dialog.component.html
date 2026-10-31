@@ -273,7 +273,7 @@
                 </div>
               </div>
             } @else {
-              <div class="ds-world-edit-body">
+              <div class="ds-world-edit-body" [class.persona]="card.entity.type === 'Persona'">
                 <ds-field
                   required
                   [controlId]="'world-edit-name-' + card.key"
@@ -303,6 +303,31 @@
                     <ds-icon name="chevron-down" size="sm" />
                   </span>
                 </ds-field>
+                @if (card.entity.type === 'Persona') {
+                  <ds-field
+                    [controlId]="'world-edit-character-' + card.key"
+                    [label]="'analysis.edit.personaCharacter' | t"
+                  >
+                    <span class="ds-select">
+                      <select
+                        class="ds-input"
+                        [id]="'world-edit-character-' + card.key"
+                        [attr.data-testid]="'world-edit-persona-character-' + card.key"
+                        (change)="setPersonaCharacter(card.key, $event)"
+                      >
+                        <option value="" [selected]="!personaCharacter(card.key)">
+                          {{ 'analysis.edit.noCharacter' | t }}
+                        </option>
+                        @for (option of characterOptions(); track option.id) {
+                          <option [value]="option.id" [selected]="personaCharacter(card.key) === option.id">
+                            {{ option.label }}
+                          </option>
+                        }
+                      </select>
+                      <ds-icon name="chevron-down" size="sm" />
+                    </span>
+                  </ds-field>
+                }
                 @if (hasField(card.entity, 'alias')) {
                   <ds-field
                     span="full"
@@ -568,6 +593,9 @@
       data-testid="world-edit-preview"
     >
       <p><ds-icon [name]="previewIcons[previewState()]" size="sm" />{{ previewKeys[previewState()] | t }}</p>
+      @if (previewState() === 'invalid') {
+        <p class="ds-world-edit-problem" data-testid="world-edit-problem">{{ problemText() }}</p>
+      }
       @if (preview()?.added?.length && previewState() !== 'checking' && previewState() !== 'idle') {
         <div class="ds-world-edit-added" data-testid="world-edit-added">
           <p>

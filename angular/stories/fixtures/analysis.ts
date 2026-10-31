@@ -10,7 +10,6 @@ import type {
   EntityType,
   Ontology,
   OntologyProblem,
-  WorldDraftEdit,
 } from '@dreamer/shared/models/analysis';
 
 export type ChapterAnalysis = AnalysisChapterDetail;
@@ -742,31 +741,3 @@ export const UNANALYSED_CHAPTERS: ChapterAnalysis[] = makeChapters(UNANALYSED_NO
   entities: [],
   facts: [],
 }));
-
-export function jadeRiverOverlay(edition: JadeRiverEdition = 'en'): WorldDraftEdit[] {
-  const yue = BY_ID.get('lin-yue')!;
-  return [
-    {
-      kind: 'entity-edit',
-      entityId: 'lin-yue',
-      patch: {
-        aliases: [...(edition === 'zh' ? yue.zhAliases : yue.aliases), edition === 'zh' ? '小月' : 'Little Yue'],
-      },
-    },
-    {
-      kind: 'fact-add',
-      fact: {
-        id: 'c4-user-alliance',
-        chapterIndex: 4,
-        kind: 'relationship',
-        predicate: 'ally_of',
-        subjectId: 'lin-yue',
-        objectId: 'lady-bai',
-        quote: openingScene(4, edition).links[0].quote,
-      },
-    },
-    { kind: 'entity-edit', entityId: 'removed-in-rerun', patch: { name: edition === 'zh' ? '旧名' : 'Old Name' } },
-  ];
-}
-
-export const JADE_RIVER_OVERLAY: WorldDraftEdit[] = jadeRiverOverlay('en');

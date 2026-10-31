@@ -1,5 +1,5 @@
 import type { ChapterAnalysisStatus, EntityType, FailReason, IssueSeverity } from '@dreamer/shared/models/analysis';
-import type { OntologyProblemCode, WorldDraftEdit } from '@dreamer/shared/models/analysis';
+import type { OntologyProblemCode } from '@dreamer/shared/models/analysis';
 import { ENTITY_TYPES as ONTOLOGY_ENTITY_TYPES } from '@dreamer/shared/models/analysis';
 
 export const ENTITY_TYPES: EntityType[] = [...ONTOLOGY_ENTITY_TYPES];
@@ -126,48 +126,12 @@ export const ontologyProblemKeys: Record<OntologyProblemCode, string> = {
   'property-not-multiple': 'analysis.ontology.problem.propertyNotMultiple',
 };
 
-export const orphanKindKeys: Record<WorldDraftEdit['kind'], string> = {
-  'entity-add': 'analysis.orphans.kind.entityAdd',
-  'entity-edit': 'analysis.orphans.kind.entityEdit',
-  'entity-delete': 'analysis.orphans.kind.entityDelete',
-  'entity-merge': 'analysis.orphans.kind.entityMerge',
-  'entity-split': 'analysis.orphans.kind.entitySplit',
-  'fact-add': 'analysis.orphans.kind.factAdd',
-  'fact-edit': 'analysis.orphans.kind.factEdit',
-  'fact-delete': 'analysis.orphans.kind.factDelete',
-};
-
-function factDetail(predicate: string | undefined, quote: string | null | undefined): string {
-  return [predicate, quote ? `"${quote}"` : ''].filter(Boolean).join(' ');
-}
-
-export function orphanDetail(edit: WorldDraftEdit): string {
-  switch (edit.kind) {
-    case 'entity-add':
-      return edit.entity.name;
-    case 'entity-edit':
-    case 'entity-delete':
-      return edit.entityId;
-    case 'entity-merge':
-      return `${edit.sourceIds.join(', ')} → ${edit.targetId}`;
-    case 'entity-split':
-      return `${edit.entityId} → ${edit.newEntity.name}`;
-    case 'fact-add':
-      return factDetail(edit.fact.predicate, edit.fact.quote);
-    case 'fact-edit':
-      return factDetail(edit.patch.predicate, edit.patch.quote) || edit.factId;
-    case 'fact-delete':
-      return edit.factId;
-  }
-}
-
 interface PluralKeys {
   one: string;
   many: string;
 }
 
 const PLURAL_KEYS = {
-  orphanRow: { one: 'analysis.orphans.row.one', many: 'analysis.orphans.row.many' },
   entityChapters: { one: 'analysis.entity.chapterCount.one', many: 'analysis.entity.chapterCount.many' },
   entitiesChapters: { one: 'analysis.entities.chapterCount.one', many: 'analysis.entities.chapterCount.many' },
   inChapters: { one: 'analysis.entity.inChapters.one', many: 'analysis.entity.inChapters.many' },

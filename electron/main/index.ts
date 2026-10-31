@@ -85,8 +85,14 @@ async function showDataFailure(error: unknown, paths: AppPaths): Promise<void> {
 
 const llm: LlmService = new LlmService(settings, () => manager.paths());
 const chapterSlots: WorkSlots = new WorkSlots((): number => settings.get().pipelines.maxChapters);
-const analysisDeps: WorldAnalysisDeps = { llm, settings, runs: new AnalysisRuns(), chapterSlots };
 const analysisSnapshots: AnalysisSnapshots = new AnalysisSnapshots();
+const analysisDeps: WorldAnalysisDeps = {
+  llm,
+  settings,
+  runs: new AnalysisRuns(),
+  chapterSlots,
+  snapshots: analysisSnapshots,
+};
 const worldAnalysis: PipelineDefinition = worldAnalysisPipeline(analysisDeps);
 const translationDeps: ContentTranslationDeps = {
   llm,

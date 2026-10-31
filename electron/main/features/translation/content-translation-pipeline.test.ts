@@ -13,12 +13,16 @@ import { WorkSlots } from '../pipelines/work-slots';
 import { contentTranslationPipeline } from './content-translation-pipeline';
 import { readChapterTranslation, readTranslationIndex, saveTranslationEntry } from './translation-index';
 
-vi.mock('electron', () => ({ app: { getPath: () => 'appData', isPackaged: false, getAppPath: () => join(process.cwd(), 'electron') } }));
+vi.mock('electron', () => ({
+  app: { getPath: () => 'appData', isPackaged: false, getAppPath: () => join(process.cwd(), 'electron') },
+}));
 vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
 
 describe('[TH04-05] contentTranslationPipeline', () => {
   let root = '';
-  afterEach(() => { if (root) rmSync(root, { recursive: true, force: true }); });
+  afterEach(() => {
+    if (root) rmSync(root, { recursive: true, force: true });
+  });
 
   it('[L2-TH04-05-03] keeps a completed chapter and continues after another chapter times out', async () => {
     root = mkdtempSync(join(tmpdir(), 'dreamer-content-translation-'));
@@ -28,9 +32,18 @@ describe('[TH04-05] contentTranslationPipeline', () => {
     const folder = novelFolder(paths, novelId);
     const written = await Promise.all([writeChapter(folder, 'First source.'), writeChapter(folder, 'Second source.')]);
     const novel: NovelMetadata = {
-      formatVersion: NOVEL_STORE_VERSION, id: novelId, originalTitle: 'Original', title: 'Novel', author: '',
-      description: '', language: 'zh', publication: 'ongoing', tags: [], cover: null,
-      importedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      formatVersion: NOVEL_STORE_VERSION,
+      id: novelId,
+      originalTitle: 'Original',
+      title: 'Novel',
+      author: '',
+      description: '',
+      language: 'zh',
+      publication: 'ongoing',
+      tags: [],
+      cover: null,
+      importedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
       chapters: written.map((chapter, index) => ({ title: `Chapter ${index + 1}`, ...chapter })),
     };
     await writeMetadata(folder, novel);
@@ -40,11 +53,21 @@ describe('[TH04-05] contentTranslationPipeline', () => {
       'vi',
       novel.chapters,
       {
-        index: 1, file: written[0].file, title: 'My edit', issues: 0, edited: true,
-        instructionHash, glossaryUsed: [], translatedAt: '2026-01-02T00:00:00.000Z',
+        index: 1,
+        file: written[0].file,
+        title: 'My edit',
+        issues: 0,
+        edited: true,
+        instructionHash,
+        glossaryUsed: [],
+        translatedAt: '2026-01-02T00:00:00.000Z',
       },
       {
-        version: 1, file: written[0].file, title: 'My edit', paragraphs: ['User text.'], issues: [],
+        version: 1,
+        file: written[0].file,
+        title: 'My edit',
+        paragraphs: ['User text.'],
+        issues: [],
         translatedAt: '2026-01-02T00:00:00.000Z',
       },
     );
@@ -65,10 +88,15 @@ describe('[TH04-05] contentTranslationPipeline', () => {
       chapterSlots: new WorkSlots(() => 1),
     };
     const ctx = {
-      runId: 'run-1', paths,
+      runId: 'run-1',
+      paths,
       params: { novelId, language: 'vi', mode: 'full', from: null, to: null, overwrite: true, instruction: null },
-      signal: new AbortController().signal, progress: vi.fn(), enterStep: vi.fn(), checkpoint: vi.fn(),
-      setNovelId: vi.fn(), log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+      signal: new AbortController().signal,
+      progress: vi.fn(),
+      enterStep: vi.fn(),
+      checkpoint: vi.fn(),
+      setNovelId: vi.fn(),
+      log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     } as unknown as StepContext;
 
     const pipeline = contentTranslationPipeline(deps as never);
@@ -76,11 +104,13 @@ describe('[TH04-05] contentTranslationPipeline', () => {
 
     const index = readTranslationIndex(folder, 'vi');
     expect(readChapterTranslation(folder, 'vi', written[0].file)).toMatchObject({
-      title: 'Translated title', paragraphs: ['Translated text.'],
+      title: 'Translated title',
+      paragraphs: ['Translated text.'],
     });
     expect(index?.chapters[0]).toMatchObject({ title: 'Translated title', edited: false });
     expect(index?.chapters.map((chapter) => chapter.error ?? chapter.title)).toEqual([
-      'Translated title', ErrorCode.LlmTimeout,
+      'Translated title',
+      ErrorCode.LlmTimeout,
     ]);
     expect(runs.finish).toHaveBeenCalledWith(novelId, expect.objectContaining({ translated: 1, failed: 1 }));
   });

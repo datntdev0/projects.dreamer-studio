@@ -2,9 +2,21 @@ import { describe, expect, it } from 'vitest';
 import type { GlossaryRow } from '../models/translation';
 import { glossaryBatches, glossaryRunRows } from './glossary';
 
-function row(entityName: string, kind: GlossaryRow['kind'], status: GlossaryRow['status'] = 'untranslated'): GlossaryRow {
-  return { entityType: 'Persona', entityName, term: kind === 'name' ? null : `${entityName} ${kind}`, kind,
-    translation: null, status, chapters: 1, chapterIndexes: [1] };
+function row(
+  entityName: string,
+  kind: GlossaryRow['kind'],
+  status: GlossaryRow['status'] = 'untranslated',
+): GlossaryRow {
+  return {
+    entityType: 'Persona',
+    entityName,
+    term: kind === 'name' ? null : `${entityName} ${kind}`,
+    kind,
+    translation: null,
+    status,
+    chapters: 1,
+    chapterIndexes: [1],
+  };
 }
 
 describe('[TH04-05] glossary rules', () => {

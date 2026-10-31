@@ -13,7 +13,6 @@ import { EntityListComponent } from './components/entity-list.component';
 import { EntityPanelComponent } from './components/entity-panel.component';
 import { EntityTableComponent } from './components/entity-table.component';
 import { OntologyProblemsDialogComponent } from './components/ontology-problems-dialog.component';
-import { OverlayOrphansDialogComponent } from './components/overlay-orphans-dialog.component';
 import { ReviewViewComponent } from './components/review-view.component';
 import { RunAnalysisDialogComponent } from './components/run-analysis-dialog.component';
 import { RunPillComponent } from './components/run-pill.component';
@@ -36,7 +35,6 @@ import type { TargetLanguage } from '@dreamer/shared/models/translation';
     EntityTableComponent,
     IconComponent,
     OntologyProblemsDialogComponent,
-    OverlayOrphansDialogComponent,
     PageTitleDirective,
     PanelDirective,
     ReviewViewComponent,

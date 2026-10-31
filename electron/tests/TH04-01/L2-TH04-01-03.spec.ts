@@ -2,9 +2,10 @@ import { llmDeps, seedNovel, sessionDeps, workspace } from '../support/fixtures'
 import { persona, seedAnalysis } from '../support/analysis';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppDataSession } from '../../main/app/app-data-session';
+import { readChapterResult } from '../../main/features/analysis/analysis-files';
 import { AnalysisService } from '../../main/features/analysis/analysis-service';
 
-describe('[TH04-01] L2-TH04-01-03 persistent world overlay', () => {
+describe('[TH04-01] L2-TH04-01-03 explore and edit the world', () => {
   let work: ReturnType<typeof workspace>;
   let session: AppDataSession;
   let seed: Awaited<ReturnType<typeof seedNovel>>;
@@ -33,20 +34,15 @@ describe('[TH04-01] L2-TH04-01-03 persistent world overlay', () => {
     ).toEqual(['Lan']);
   });
 
-  it('AC3/4/5 reapplies saved edits after fresh chapter results, and reports obsolete edits as orphans', async () => {
+  it('AC3/4 saves edits into the chapter results, and a re-analysis of the chapter replaces them', async () => {
     const query = { novelId: seed.novel.id, chapter: null, only: false };
-    const entityId = (await service.world(query)).entities.find((entity) => entity.name === 'Mai')!.id;
-    await service.edit({
-      novelId: seed.novel.id,
-      edits: [{ kind: 'entity-edit', entityId, patch: { name: 'User name' } }],
-    });
-    await seedAnalysis(seed, 1, [persona()]);
-    service = new AnalysisService(() => session, llmDeps(work.root));
-    expect((await service.world(query)).entities.map((entity) => entity.name)).toContain('User name');
-    await seedAnalysis(seed, 1, []);
-    service = new AnalysisService(() => session, llmDeps(work.root));
-    const world = await service.world(query);
-    expect(world.orphans).toEqual([{ kind: 'entity-edit', entityId, patch: { name: 'User name' } }]);
-    expect(world.entities.map((entity) => entity.name)).not.toContain('User name');
+    const names = async (): Promise<string[]> =>
+      (await new AnalysisService(() => session, llmDeps(work.root)).world(query)).entities.map((entity) => entity.name);
+    const entityId = (await service.world(query)).entities.find((entity) => entity.name === 'Lan')!.id;
+    await service.edit({ novelId: seed.novel.id, edits: [{ kind: 'entity-delete', entityId }] });
+    expect(await names()).toEqual(['Mai']);
+    expect(readChapterResult(seed.folder, seed.novel.chapters[1].file)).toMatchObject({ entities: [] });
+    await seedAnalysis(seed, 2, [persona('lan', 'Lan')]);
+    expect(await names()).toEqual(['Mai', 'Lan']);
   });
 });

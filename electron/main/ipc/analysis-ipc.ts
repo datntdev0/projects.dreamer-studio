@@ -156,6 +156,8 @@ function isDraftEdit(value: unknown): value is WorldDraftEdit {
       return isFactRef({ factId: value.factId, chapterIndex: value.chapterIndex }) && isFactPatch(value.patch);
     case 'fact-delete':
       return isFactRef({ factId: value.factId, chapterIndex: value.chapterIndex });
+    case 'persona-character':
+      return isNonEmptyString(value.personaId) && (value.characterId === null || isNonEmptyString(value.characterId));
     default:
       return false;
   }

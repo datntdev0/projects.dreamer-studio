@@ -10,18 +10,18 @@ import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { translateEntityNames } from '@dreamer/shared/core/glossary';
-import { hasProperty } from '@dreamer/shared/core/ontology-rules';
+import { HAS_PERSONA, hasProperty } from '@dreamer/shared/core/ontology-rules';
 import { addedFact, applyDraftEdits, creatorOf, factKey, mergeEntities } from '@dreamer/shared/core/world-edit';
 import { patchEntity, patchFact, removeEntity, removeFact, touchesEntity } from '@dreamer/shared/core/world-edit';
 import { undoDraftEdit } from '@dreamer/shared/core/world-edit';
 import type { DraftState } from '@dreamer/shared/core/world-edit';
 import type { EntityPatch, EntityType, FactRef, Ontology, WorldDraftEdit } from '@dreamer/shared/models/analysis';
 import type { WorldEditEntity, WorldEditPreview, WorldEditScope, WorldFact } from '@dreamer/shared/models/analysis';
-import type { WorldIssue } from '@dreamer/shared/models/analysis';
+import type { EditProblemReason, WorldIssue } from '@dreamer/shared/models/analysis';
 import { entityTypeIcons, entityTypeKeys, issueDetailKeys, issueIcons, reasonKeys } from '../omniscient-labels';
 
 type ItemState = 'new' | 'edited' | 'deleted' | 'merged' | 'removed' | 'same';
-type PreviewState = 'idle' | 'checking' | 'resolved' | 'open' | 'clean' | 'warn';
+type PreviewState = 'idle' | 'checking' | 'invalid' | 'resolved' | 'open' | 'clean' | 'warn';
 
 interface EntityCard {
   key: string;
@@ -74,6 +74,7 @@ const STATE_PILLS: Record<ItemState, 'info' | 'warning' | 'neutral'> = {
 const PREVIEW_KEYS: Record<PreviewState, string> = {
   idle: 'analysis.edit.preview.idle',
   checking: 'analysis.edit.preview.checking',
+  invalid: 'analysis.edit.preview.invalid',
   resolved: 'analysis.edit.preview.resolved',
   open: 'analysis.edit.preview.open',
   clean: 'analysis.edit.preview.clean',
@@ -83,10 +84,20 @@ const PREVIEW_KEYS: Record<PreviewState, string> = {
 const PREVIEW_ICONS: Record<PreviewState, string> = {
   idle: 'info',
   checking: 'clock',
+  invalid: 'alert-circle',
   resolved: 'check',
   open: 'alert-circle',
   clean: 'check',
   warn: 'alert-triangle',
+};
+
+const PROBLEM_KEYS: Record<EditProblemReason, string> = {
+  missing: 'analysis.edit.problem.missing',
+  'name-empty': 'analysis.edit.problem.nameEmpty',
+  'type-invalid': 'analysis.edit.problem.typeInvalid',
+  'name-taken': 'analysis.edit.problem.nameTaken',
+  'word-not-in-text': 'analysis.edit.problem.wordNotInText',
+  'chapter-not-analysed': 'analysis.edit.problem.chapterNotAnalysed',
 };
 
 const FIELD_KEYS: Record<string, string> = {
@@ -231,6 +242,20 @@ export class WorldEditDialogComponent {
       .map((entity) => ({ id: entity.id, label: this.entityLabel(entity) }));
   });
 
+  protected readonly characterOptions = computed<Option[]>(() =>
+    [...this.current().entities, ...(this.scope()?.catalog ?? [])]
+      .filter(
+        (entity, index, all) => entity.type === 'Character' && all.findIndex((item) => item.id === entity.id) === index,
+      )
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((entity) => ({ id: entity.id, label: this.displayName(entity) || this.i18n.t('analysis.edit.unnamed') })),
+  );
+
+  protected readonly problemText = computed(() => {
+    const problem = this.preview()?.problem;
+    return problem ? this.i18n.t(PROBLEM_KEYS[problem.reason], { word: problem.word }) : '';
+  });
+
   protected readonly selectedCards = computed(() =>
     this.entityCards().filter((card) => this.selected().includes(card.key) && this.isPresent(card)),
   );
@@ -241,6 +266,7 @@ export class WorldEditDialogComponent {
     const preview = this.preview();
     if (!this.edits().length) return 'idle';
     if (this.checking() || !preview) return 'checking';
+    if (preview.problem) return 'invalid';
     if (this.issue()) return preview.resolved ? 'resolved' : 'open';
     return preview.added.length ? 'warn' : 'clean';
   });
@@ -344,6 +370,22 @@ export class WorldEditDialogComponent {
 
   protected isNewFact(fact: WorldFact): boolean {
     return !!addedFact(this.edits(), fact.id);
+  }
+
+  protected personaCharacter(id: string): string {
+    const edit = this.edits().find((item) => item.kind === 'persona-character' && item.personaId === id);
+    if (edit?.kind === 'persona-character') return edit.characterId ?? '';
+    return this.baseCharacter(id);
+  }
+
+  protected setPersonaCharacter(id: string, event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const rest = this.edits().filter((edit) => edit.kind !== 'persona-character' || edit.personaId !== id);
+    this.edits.set(
+      value === this.baseCharacter(id)
+        ? rest
+        : [...rest, { kind: 'persona-character', personaId: id, characterId: value || null }],
+    );
   }
 
   protected deleteEntity(id: string): void {
@@ -506,6 +548,10 @@ export class WorldEditDialogComponent {
     return `${this.entityName(fact.subjectId, fact.subjectName)} ${fact.predicate}${object}`;
   }
 
+  private baseCharacter(id: string): string {
+    return this.base().facts.find((fact) => fact.predicate === HAS_PERSONA && fact.objectId === id)?.subjectId ?? '';
+  }
+
   private target(fact: WorldFact): FactRef {
     return { factId: fact.id, chapterIndex: fact.chapterIndex };
   }
@@ -625,6 +671,11 @@ export class WorldEditDialogComponent {
       case 'fact-delete':
         return this.i18n.t('analysis.edit.change.factDelete', {
           fact: this.factText(baseFact(edit.factId, edit.chapterIndex)),
+        });
+      case 'persona-character':
+        return this.i18n.t('analysis.edit.change.personaCharacter', {
+          name: name(edit.personaId),
+          character: edit.characterId ? name(edit.characterId) : '∅',
         });
     }
   }

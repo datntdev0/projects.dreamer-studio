@@ -7,7 +7,7 @@ import { entityTypeIcons, entityTypeKeys } from '../omniscient-labels';
 import { OmniscientStore } from '../omniscient.store';
 import { issueIcons, issueLabelKeys, issueRanks } from '../omniscient-labels';
 
-export type EntitySortKey = 'name' | 'type' | 'aliases' | 'chapters' | 'degree' | 'overlay' | 'issue';
+export type EntitySortKey = 'name' | 'type' | 'aliases' | 'chapters' | 'degree' | 'issue';
 export type SortDirection = 'asc' | 'desc';
 
 const SORT_VALUES: Record<EntitySortKey, (entity: WorldEntity) => string | number> = {
@@ -16,7 +16,6 @@ const SORT_VALUES: Record<EntitySortKey, (entity: WorldEntity) => string | numbe
   aliases: (entity) => entity.aliases.length,
   chapters: (entity) => entity.chapters.length,
   degree: (entity) => entity.degree,
-  overlay: (entity) => (entity.overlay ? 1 : 0),
   issue: (entity) => issueRanks[entity.issue ?? 'none'],
 };
 
@@ -55,7 +54,6 @@ export class EntityTableComponent {
     { key: 'chapters', label: 'analysis.entities.chapters', numeric: true },
     { key: 'degree', label: 'analysis.world.degree', numeric: true },
     { key: 'issue', label: 'analysis.world.issue', numeric: false },
-    { key: 'overlay', label: 'analysis.world.edited', numeric: false },
   ];
   protected readonly sortKey = signal<EntitySortKey>('chapters');
   protected readonly sortDirection = signal<SortDirection>('desc');

@@ -20,6 +20,7 @@ import { SettingsStore } from '../settings/settings-store';
 import { readAnalysisIndex, readChapterResult } from './analysis-files';
 import { novelOntologyFile } from './analysis-ontology';
 import { AnalysisRuns } from './analysis-runs';
+import { AnalysisSnapshots } from './analysis-snapshot';
 import { worldAnalysisPipeline } from './world-analysis-pipeline';
 
 vi.mock('electron', () => ({
@@ -130,6 +131,7 @@ function setup(withLlm: boolean = true): void {
     settings: fakeSettings(withLlm),
     runs,
     chapterSlots: new WorkSlots((): number => 1),
+    snapshots: new AnalysisSnapshots(),
   });
 }
 

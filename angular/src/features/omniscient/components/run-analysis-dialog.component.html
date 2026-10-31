@@ -125,6 +125,11 @@
       <ds-icon name="save" size="sm" />{{ (planning() ? 'analysis.run.planning' : 'analysis.run.savedPerChapter') | t }}
     </p>
   </div>
+  @if (current?.edited && !planning()) {
+    <p class="ds-world-run-reason" role="status" data-testid="world-run-edited">
+      <ds-icon name="alert-triangle" size="sm" />{{ 'analysis.run.editedWarning' | t: { count: current!.edited } }}
+    </p>
+  }
   @if (reason()) {
     <p class="ds-world-run-reason" role="alert" data-testid="world-run-reason">
       <ds-icon name="alert-circle" size="sm" />{{ reason() }}

@@ -183,11 +183,15 @@ export type WorldDraftEdit =
   | { kind: 'entity-split'; entityId: string; newEntity: WorldEditEntity; aliases: string[]; facts: FactRef[] }
   | { kind: 'fact-add'; fact: WorldFact }
   | { kind: 'fact-edit'; factId: string; chapterIndex: number; patch: FactPatch }
-  | { kind: 'fact-delete'; factId: string; chapterIndex: number };
+  | { kind: 'fact-delete'; factId: string; chapterIndex: number }
+  | { kind: 'persona-character'; personaId: string; characterId: string | null };
 
-export interface OverlayFile {
-  version: 2;
-  edits: WorldDraftEdit[];
+export type EditProblemReason =
+  'missing' | 'name-empty' | 'type-invalid' | 'name-taken' | 'word-not-in-text' | 'chapter-not-analysed';
+
+export interface EditProblem {
+  reason: EditProblemReason;
+  word: string;
 }
 
 export interface WorldEditScope {
@@ -201,6 +205,7 @@ export interface WorldEditScope {
 export interface WorldEditPreview {
   resolved: boolean;
   added: WorldIssue[];
+  problem: EditProblem | null;
 }
 
 export interface WorldScalar {
@@ -208,7 +213,6 @@ export interface WorldScalar {
   predicate: string;
   chapterIndex: number;
   quote: string | null;
-  overlay?: boolean;
   stale?: boolean;
   issue?: IssueSeverity;
 }
@@ -222,7 +226,6 @@ export interface WorldEntity {
   degree: number;
   chapters: number[];
   scalars: WorldScalar[];
-  overlay?: boolean;
   stale?: boolean;
   staleChapters: number[];
   issue?: IssueSeverity;
@@ -236,7 +239,6 @@ export interface WorldLink {
   label?: string;
   chapters: number[];
   quotes: string[];
-  overlay?: boolean;
   stale?: boolean;
   staleChapters: number[];
   issue?: IssueSeverity;
@@ -245,7 +247,6 @@ export interface WorldLink {
 export interface World {
   entities: WorldEntity[];
   links: WorldLink[];
-  orphans: WorldDraftEdit[];
 }
 
 export interface AnalysisIssueCounts {
@@ -277,6 +278,7 @@ export interface ChapterResult {
   index: number;
   title: string;
   analysedAt: string;
+  editedAt?: string;
   llm: string;
   entities: AnalysisEntity[];
   facts: AnalysisFact[];
@@ -330,6 +332,7 @@ export interface AnalysisRunRequest extends AnalysisRunOptions {
 
 export interface AnalysisPlan {
   count: number;
+  edited: number;
   from: number | null;
   to: number | null;
   batches: number;

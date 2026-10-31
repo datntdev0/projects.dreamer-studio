@@ -41,8 +41,7 @@ import type { EntityTypeFilter } from './omniscient-labels';
 
 export type OmniscientView = 'graph' | 'table' | 'review';
 
-export type OmniscientDialog =
-  { kind: 'run' } | { kind: 'ontology' } | { kind: 'orphans' } | { kind: 'edit'; scope: WorldEditScope };
+export type OmniscientDialog = { kind: 'run' } | { kind: 'ontology' } | { kind: 'edit'; scope: WorldEditScope };
 
 export interface EditRequest {
   issueKey?: string | null;
@@ -63,7 +62,7 @@ export interface AnalysisSummary {
 }
 
 const PREVIEW_DELAY_MS = 300;
-const EMPTY_WORLD: World = { entities: [], links: [], orphans: [] };
+const EMPTY_WORLD: World = { entities: [], links: [] };
 const LLM_PROBLEM_KEYS: Record<LlmProblem, string> = {
   noDefault: 'settings.llm.features.problem.noDefault',
   defaultUnavailable: 'settings.llm.features.problem.defaultUnavailable',
@@ -245,7 +244,6 @@ export class OmniscientStore {
   readonly selected = computed<WorldEntity | null>(
     () => this.entities().find((item) => item.id === this.selectedId()) ?? null,
   );
-  readonly orphans = computed(() => this.world()?.orphans ?? []);
   readonly openReviewCount = computed(
     () => (this.status()?.issues.errors ?? 0) + (this.status()?.issues.warnings ?? 0),
   );

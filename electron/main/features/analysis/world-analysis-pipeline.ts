@@ -28,6 +28,7 @@ export interface WorldAnalysisDeps {
   settings: SettingsStore;
   runs: AnalysisRuns;
   chapterSlots: WorkSlots;
+  snapshots: AnalysisSnapshots;
 }
 
 export interface AnalysisRunCheck {
@@ -96,6 +97,7 @@ async function saveEntry(
 }
 
 async function saveLastRun(
+  snapshots: AnalysisSnapshots,
   novel: NovelMetadata,
   folder: NovelFolder,
   runId: string,
@@ -104,7 +106,7 @@ async function saveLastRun(
 ): Promise<void> {
   await withNovelLock(novel.id, async (): Promise<void> => {
     await deleteLegacyWorldFile(folder);
-    const issues: number = (await new AnalysisSnapshots().build(folder, novel)).model.issues.length;
+    const issues: number = (await snapshots.get(folder, novel)).model.issues.length;
     const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
     await writeAnalysisIndex(folder, {
       ...index,
@@ -262,9 +264,9 @@ async function analyse(ctx: StepContext, deps: WorldAnalysisDeps): Promise<void>
       );
     }
     ctx.checkpoint();
-    await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed);
+    await saveLastRun(deps.snapshots, novel, folder, ctx.runId, run.done - run.failed, run.failed);
   } catch (error: unknown) {
-    if (isAbort(error)) await saveLastRun(novel, folder, ctx.runId, run.done - run.failed, run.failed);
+    if (isAbort(error)) await saveLastRun(deps.snapshots, novel, folder, ctx.runId, run.done - run.failed, run.failed);
     throw error;
   }
 }

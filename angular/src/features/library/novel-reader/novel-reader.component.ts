@@ -60,7 +60,12 @@ export function readerTextParts(
   let from: number = 0;
   for (const [index, match] of matches.entries()) {
     if (match.start > from)
-      parts.push({ text: characters.slice(from, match.start).join(''), highlighted: false, current: false, issue: false });
+      parts.push({
+        text: characters.slice(from, match.start).join(''),
+        highlighted: false,
+        current: false,
+        issue: false,
+      });
     parts.push({
       text: characters.slice(match.start, match.end).join(''),
       highlighted: true,

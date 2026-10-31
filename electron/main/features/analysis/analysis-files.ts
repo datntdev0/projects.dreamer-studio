@@ -4,7 +4,7 @@ import { splitParagraphs } from '@dreamer/shared/core/novel-text';
 import { alignIndex, emptyIndex } from '@dreamer/shared/core/analysis-plan';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { AnalysisIndexFile, ChapterResult, OverlayFile } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexFile, ChapterResult } from '@dreamer/shared/models/analysis';
 import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { createLogger, Logger } from '../../logging/logger';
@@ -51,12 +51,22 @@ export async function writeAnalysisIndex(folder: NovelFolder, index: AnalysisInd
     await writeFileAtomic(analysisIndexFile(folder), `${JSON.stringify(index, null, 2)}\n`);
   } catch (error: unknown) {
     asWriteError(error);
+  } finally {
+    bumpGeneration(folder);
   }
 }
 
-export function readChapterResult(folder: NovelFolder, file: string): ChapterResult | null {
-  const path: string = chapterResultFile(folder, file);
-  const parsed: unknown = readJsonFile(path, logger);
+const generations: Map<string, number> = new Map<string, number>();
+
+export function analysisGeneration(folder: NovelFolder): number {
+  return generations.get(folder.analysis) ?? 0;
+}
+
+function bumpGeneration(folder: NovelFolder): void {
+  generations.set(folder.analysis, analysisGeneration(folder) + 1);
+}
+
+function asChapterResult(parsed: unknown, path: string, file: string): ChapterResult | null {
   if (parsed === undefined) return null;
   if (
     !isPlainObject(parsed) ||
@@ -71,33 +81,27 @@ export function readChapterResult(folder: NovelFolder, file: string): ChapterRes
   return parsed as unknown as ChapterResult;
 }
 
-export function readWorldOverlay(folder: NovelFolder): OverlayFile | null {
-  const file: string = worldOverlayFile(folder);
-  const parsed: unknown = readJsonFile(file, logger);
-  if (parsed === undefined) return null;
-  if (!isPlainObject(parsed) || parsed.version !== 2 || !Array.isArray(parsed.edits)) {
-    logger.warn(`analysis world overlay invalid or outdated: ${file}`);
-    return null;
-  }
-  return parsed as unknown as OverlayFile;
+export function readChapterResult(folder: NovelFolder, file: string): ChapterResult | null {
+  const path: string = chapterResultFile(folder, file);
+  return asChapterResult(readJsonFile(path, logger), path, file);
 }
 
-export async function writeWorldOverlay(folder: NovelFolder, overlay: OverlayFile): Promise<void> {
+export async function loadChapterResult(folder: NovelFolder, file: string): Promise<ChapterResult | null> {
+  const path: string = chapterResultFile(folder, file);
   try {
-    await writeFileAtomic(
-      worldOverlayFile(folder),
-      `${JSON.stringify(overlay, null, 2)}
-`,
-    );
+    return asChapterResult(JSON.parse(await readFile(path, 'utf8')), path, file);
   } catch (error: unknown) {
-    asWriteError(error);
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+      logger.warn(`file unreadable or invalid: ${path}: ${errorMessage(error)}`);
+    return null;
   }
 }
 
 export async function deleteLegacyWorldFile(folder: NovelFolder): Promise<void> {
-  await rm(legacyWorldFile(folder), { force: true }).catch((error: unknown): void =>
-    logger.warn(`legacy world file not deleted: ${errorMessage(error)}`),
-  );
+  for (const file of [legacyWorldFile(folder), worldOverlayFile(folder)])
+    await rm(file, { force: true }).catch((error: unknown): void =>
+      logger.warn(`legacy world file not deleted: ${errorMessage(error)}`),
+    );
 }
 
 export async function readChapterParagraphs(folder: NovelFolder, file: string): Promise<string[]> {
@@ -115,6 +119,8 @@ export async function writeChapterResult(folder: NovelFolder, result: ChapterRes
     await writeFileAtomic(chapterResultFile(folder, result.file), `${JSON.stringify(result, null, 2)}\n`);
   } catch (error: unknown) {
     asWriteError(error);
+  } finally {
+    bumpGeneration(folder);
   }
 }
 

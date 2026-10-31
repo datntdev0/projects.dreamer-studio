@@ -2,7 +2,7 @@ import type { AnalysisEntity, AnalysisFact, CandidateOutput, ChapterAnalysisCoun
 import type { EntityType } from '../models/analysis';
 import type { FailReason, Ontology, OntologyPredicate, PredicateOutput } from '../models/analysis';
 import { propertyTypes } from './ontology-rules';
-import { findTextContext, findTextMatches } from './text-match';
+import { foldedText } from './folded-text';
 
 export interface CandidateChapter {
   index: number;
@@ -14,9 +14,8 @@ export function nameKey(value: string): string {
 }
 
 export function namesFound(paragraphs: string[], names: string[]): string[] {
-  return names.filter((name) =>
-    paragraphs.some((paragraph) => findTextMatches(paragraph, name, { fold: true }).length > 0),
-  );
+  const text = foldedText(paragraphs);
+  return names.filter((name) => text.has(name));
 }
 
 export function findPredicate(ontology: Ontology, name: string): OntologyPredicate | undefined {
@@ -51,7 +50,7 @@ export function factRule(input: {
   if (typeMismatch(predicate, subjectType, objectType)) return 'type-not-allowed';
   if (predicate.labeled && !input.label?.trim()) return 'label-missing';
   const quote = input.quote?.trim() ?? '';
-  if (!quote || (paragraphs && findTextContext(paragraphs, quote, { fold: true }) === null)) return 'quote-not-found';
+  if (!quote || (paragraphs && !foldedText(paragraphs).has(quote))) return 'quote-not-found';
   return undefined;
 }
 

@@ -1,14 +1,11 @@
 import { filterReviewItems, issueCounts, reviewItems } from '@dreamer/shared/core/analysis-review';
-import {
-  editScope,
-  entityOccurrences,
-  findQuoteMatches,
-  invalidEdits,
-  OccurrenceChapter,
-} from '@dreamer/shared/core/world';
-import { previewEdits, toGraph } from '@dreamer/shared/core/world';
+import { chapterCounts } from '@dreamer/shared/core/analysis-checks';
+import { editScope, entityOccurrences, findQuoteMatches, OccurrenceChapter } from '@dreamer/shared/core/world';
+import { toGraph, WorldModel } from '@dreamer/shared/core/world';
+import { applyEdits, ApplyChapter, ApplyOutcome } from '@dreamer/shared/core/world-apply';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AnalysisEditRequest, AnalysisPlan, AnalysisRun, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
+import { AnalysisIndexFile, ChapterResult, EditProblem, WorldDraftEdit } from '@dreamer/shared/models/analysis';
 import {
   AnalysisStatus,
   OntologyProblem,
@@ -32,11 +29,11 @@ import { AppDataSession } from '../../app/app-data-session';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { assertUnlocked, novelLocks } from '../library/novel/novel-lock';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
-import { deleteLegacyWorldFile, readAnalysisIndex, readReviewParagraphs } from './analysis-files';
-import { appendOverlayEdits } from './analysis-overlay';
+import { deleteLegacyWorldFile, readAlignedIndex, readAnalysisIndex, readReviewParagraphs } from './analysis-files';
+import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { checkOntology, openOntology, resetOntology } from './analysis-ontology';
 import { AnalysisRuns } from './analysis-runs';
-import { AnalysisSnapshot, AnalysisSnapshots } from './analysis-snapshot';
+import { AnalysisSnapshot, AnalysisSnapshots, modelWith } from './analysis-snapshot';
 import { AnalysisRunCheck, checkAnalysisRun, WorldAnalysisDeps } from './world-analysis-pipeline';
 
 export class AnalysisService {
@@ -93,8 +90,11 @@ export class AnalysisService {
     const blockedReason: ErrorCode | null = novelLocks(new PipelineRunRepository(session.db)).has(request.novelId)
       ? ErrorCode.NovelLocked
       : check.blockedReason;
+    const queued: Set<number> = new Set<number>(check.plan.queue);
+    const { snapshot } = await this.snapshot(request.novelId);
     return {
       count: check.plan.count,
+      edited: snapshot.results.filter((chapter) => queued.has(chapter.index) && !!chapter.result.editedAt).length,
       from: check.plan.from,
       to: check.plan.to,
       batches: check.plan.batches.length,
@@ -180,28 +180,52 @@ export class AnalysisService {
   }
 
   async preview(request: WorldPreviewRequest): Promise<WorldEditPreview> {
-    const { model, parsed, texts } = (await this.snapshot(request.novelId)).snapshot;
-    return previewEdits(model, {
-      edits: request.edits,
-      issueKey: request.issueKey,
-      ontology: parsed.ontology,
-      texts,
-    });
+    const { snapshot } = await this.snapshot(request.novelId);
+    const outcome: ApplyOutcome = this.apply(snapshot, request.edits);
+    if (outcome.problem) return { resolved: false, added: [], problem: outcome.problem };
+    const after: WorldModel = modelWith(snapshot, outcome.results);
+    const before: Set<string> = new Set<string>(snapshot.model.issues.map((issue): string => issue.key));
+    return {
+      resolved: request.issueKey ? !after.issues.some((issue): boolean => issue.key === request.issueKey) : true,
+      added: after.issues.filter((issue): boolean => !before.has(issue.key)),
+      problem: null,
+    };
   }
 
   edit(request: AnalysisEditRequest): Promise<void> {
     const novelId: string = request.novelId;
     return withNovelLock(novelId, async (): Promise<void> => {
       assertUnlocked(new PipelineRunRepository(this.session().db), novelId);
-      const { snapshot } = await this.snapshot(novelId);
-      const message: string | null =
-        request.edits.length === 0 ? 'There is no edit to save' : invalidEdits(snapshot.model, request.edits);
-      if (message) throw new CodedError(ErrorCode.AnalysisEditInvalid, message);
+      if (request.edits.length === 0) throw new CodedError(ErrorCode.AnalysisEditInvalid, 'There is no edit to save');
+      const { novel, snapshot } = await this.snapshot(novelId);
+      const outcome: ApplyOutcome = this.apply(snapshot, request.edits, new Date().toISOString());
+      if (outcome.problem) throw editRefused(outcome.problem);
       const folder: NovelFolder = this.folder(novelId);
-      await appendOverlayEdits(folder, request.edits);
+      for (const result of outcome.results) await writeChapterResult(folder, result);
+      const changed: Map<string, ChapterResult> = new Map(outcome.results.map((result) => [result.file, result]));
+      const index: AnalysisIndexFile = readAlignedIndex(folder, novel.chapters);
+      await writeAnalysisIndex(folder, {
+        ...index,
+        chapters: index.chapters.map((entry) => {
+          const result: ChapterResult | undefined = changed.get(entry.file);
+          return result ? { ...entry, counts: chapterCounts(result.entities, result.facts) } : entry;
+        }),
+      });
       await deleteLegacyWorldFile(folder);
       this.runs.changed(novelId);
     });
+  }
+
+  private apply(snapshot: AnalysisSnapshot, edits: WorldDraftEdit[], editedAt: string = ''): ApplyOutcome {
+    const texts: Map<number, string[]> = new Map(
+      snapshot.chapterTexts.map((chapter): [number, string[]] => [chapter.index, chapter.paragraphs]),
+    );
+    const chapters: ApplyChapter[] = snapshot.results.map((chapter): ApplyChapter => ({
+      index: chapter.index,
+      result: chapter.result,
+      paragraphs: texts.get(chapter.index) ?? [],
+    }));
+    return applyEdits({ chapters, entities: snapshot.model.state.entities, edits, editedAt });
   }
 
   private async snapshot(novelId: string): Promise<{ novel: NovelMetadata; snapshot: AnalysisSnapshot }> {
@@ -220,4 +244,12 @@ export class AnalysisService {
   private folder(novelId: string): NovelFolder {
     return novelFolder(this.current().paths, novelId);
   }
+}
+
+function editRefused(problem: EditProblem): CodedError {
+  return new CodedError(
+    ErrorCode.AnalysisEditInvalid,
+    `World edit refused: ${problem.reason}${problem.word ? ` "${problem.word}"` : ''}`,
+    JSON.stringify(problem),
+  );
 }

@@ -40,8 +40,13 @@ export function findTextContext(
   return null;
 }
 
-export function findTextMatches(text: string, query: string, options: TextMatchOptions = {}): TextMatch[] {
-  const fold: boolean = options.fold === true;
+interface FoldedSegments {
+  lower: string;
+  starts: number[];
+  ends: number[];
+}
+
+function foldSegments(text: string, fold: boolean): FoldedSegments {
   const starts: number[] = [];
   const ends: number[] = [];
   let lower = '';
@@ -61,11 +66,30 @@ export function findTextMatches(text: string, query: string, options: TextMatchO
     }
     index = end;
   }
-  const lowered: string = Array.from(query.normalize('NFC'))
+  return { lower, starts, ends };
+}
+
+function lowerCodePoints(text: string): string {
+  return Array.from(text)
     .map((character: string): string => character.toLocaleLowerCase())
     .join('');
-  const needle: string = fold ? foldPunctuation(lowered).trim() : lowered;
+}
+
+export function foldText(text: string): string {
+  const normalized: string = text.normalize('NFC');
+  return foldPunctuation(normalized.includes('Σ') ? lowerCodePoints(normalized) : normalized.toLocaleLowerCase());
+}
+
+export function foldQuery(query: string, fold: boolean = true): string {
+  const lowered: string = lowerCodePoints(query.normalize('NFC'));
+  return fold ? foldPunctuation(lowered).trim() : lowered;
+}
+
+export function findTextMatches(text: string, query: string, options: TextMatchOptions = {}): TextMatch[] {
+  const fold: boolean = options.fold === true;
+  const needle: string = foldQuery(query, fold);
   if (!needle) return [];
+  const { lower, starts, ends } = foldSegments(text, fold);
   const matches: TextMatch[] = [];
   let offset = 0;
   while (offset < lower.length) {

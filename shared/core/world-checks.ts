@@ -98,12 +98,16 @@ function nameConflicts(input: WorldCheckInput): WorldIssue[] {
 
 function aliasConflicts(input: WorldCheckInput): WorldIssue[] {
   const issues: WorldIssue[] = [];
+  const named = new Map<string, Set<string>>();
   for (const entity of input.entities) {
-    const alias = entity.aliases.find(
-      (word) =>
-        nameKey(word) !== nameKey(entity.name) &&
-        input.entities.some((other) => other.id !== entity.id && nameKey(other.name) === nameKey(word)),
-    );
+    const key = nameKey(entity.name);
+    named.set(key, (named.get(key) ?? new Set<string>()).add(entity.id));
+  }
+  for (const entity of input.entities) {
+    const alias = entity.aliases.find((word) => {
+      const ids = named.get(nameKey(word));
+      return nameKey(word) !== nameKey(entity.name) && !!ids && [...ids].some((id) => id !== entity.id);
+    });
     if (alias === undefined) continue;
     issues.push(
       issue('alias-conflict', `alias-conflict:entity:${entity.id}`, {

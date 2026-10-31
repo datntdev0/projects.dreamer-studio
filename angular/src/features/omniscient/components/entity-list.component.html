@@ -61,19 +61,6 @@
         }}</span>
       }
     </button>
-    @if (store.orphans().length) {
-      <button
-        type="button"
-        class="ds-world-entities-queue is-warning"
-        data-testid="world-orphans"
-        (click)="store.dialog.set({ kind: 'orphans' })"
-      >
-        <ds-icon name="alert-triangle" />
-        <span class="label">{{
-          pluralKey('orphanRow', store.orphans().length) | t: { count: store.orphans().length }
-        }}</span>
-      </button>
-    }
   </div>
   <p id="world-entities-keys" class="visually-hidden">{{ 'analysis.entities.keyboardHint' | t }}</p>
   <div
@@ -127,13 +114,6 @@
             [dsTooltip]="issueKeys[issue] | t"
             ><ds-icon [name]="issueIcons[issue]" size="sm" /><span class="visually-hidden">{{
               issueKeys[issue] | t
-            }}</span></span
-          >
-        }
-        @if (entity.overlay) {
-          <span class="ds-world-entity-edited" [dsTooltip]="'analysis.world.editedByYou' | t"
-            ><ds-icon name="pencil" size="sm" /><span class="visually-hidden">{{
-              'analysis.world.editedByYou' | t
             }}</span></span
           >
         }

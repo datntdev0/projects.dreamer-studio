@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { AnalysisEntity, AnalysisFact, Ontology, World, WorldDraftEdit, WorldEntity } from '../models/analysis';
-import { buildModel, entityOccurrences, findQuoteMatches, invalidEdits, mergeChapters, toGraph } from './world';
+import type { AnalysisEntity, AnalysisFact, ChapterResult, Ontology, World, WorldDraftEdit } from '../models/analysis';
+import type { WorldEntity } from '../models/analysis';
+import { buildModel, entityOccurrences, findQuoteMatches, mergeChapters, toGraph } from './world';
 import type { OccurrenceChapter, WorldModel, WorldScope, WorldSource } from './world';
+import { applyEdits } from './world-apply';
+import type { ApplyChapter, ApplyOutcome } from './world-apply';
 
 const ontology: Ontology = {
   name: 'test',
@@ -27,12 +30,12 @@ function source(index: number, entities: AnalysisEntity[], facts: AnalysisFact[]
   return { index, title: `Chapter ${index}`, stale, entities, facts };
 }
 
-function model(sources: WorldSource[], edits: WorldDraftEdit[] = []): WorldModel {
-  return buildModel({ sources, edits, ontology, texts: [] });
+function model(sources: WorldSource[]): WorldModel {
+  return buildModel({ sources, ontology, texts: [] });
 }
 
-function graph(sources: WorldSource[], scope: WorldScope = all, edits: WorldDraftEdit[] = []): World {
-  return toGraph(model(sources, edits), scope);
+function graph(sources: WorldSource[], scope: WorldScope = all): World {
+  return toGraph(model(sources), scope);
 }
 
 describe('[TH04-01] mergeChapters', () => {
@@ -164,134 +167,146 @@ describe('[TH04-01] entityOccurrences', () => {
   });
 });
 
-describe('[TH04-01] overlay', () => {
-  const people: AnalysisEntity[] = [entity('a', 'Lan'), entity('b', 'Hanoi', { type: 'Location' })];
-  const sources: WorldSource[] = [
-    source(1, people, [fact('f1', { quote: 'q1' })]),
-    source(2, people, [fact('f2', { quote: 'q2' })]),
-  ];
-  const added: WorldDraftEdit = {
-    kind: 'entity-add',
-    entity: { id: 'n1', type: 'Persona', name: 'New', aliases: ['N'], titles: [], chapters: [] },
+describe('[TH04-01] applyEdits', () => {
+  const lan: AnalysisEntity = entity('Persona:lan', 'Lan');
+  const hanoi: AnalysisEntity = entity('Location:hanoi', 'Hanoi', { type: 'Location' });
+  const link = (id: string, quote: string): AnalysisFact => fact(id, { subjectId: lan.id, objectId: hanoi.id, quote });
+  const texts: Record<number, string[]> = {
+    1: ['Lan walked to Hanoi. Lan said q1.'],
+    2: ['Lan stayed in Hanoi, said q2. Little Lan smiled. Old Mai came.'],
   };
 
-  function build(edits: WorldDraftEdit[]): World {
-    return graph(sources, all, edits);
+  function chapters(results: [number, AnalysisEntity[], AnalysisFact[]][]): ApplyChapter[] {
+    return results.map(([index, entities, facts]) => ({
+      index,
+      paragraphs: texts[index] ?? [],
+      result: { version: 1, file: `c${index}`, index, title: `C${index}`, analysedAt: '', llm: '', entities, facts },
+    }));
   }
 
-  function find(world: World, id: string): WorldEntity | undefined {
-    return world.entities.find((item: WorldEntity): boolean => item.id === id);
-  }
-
-  it('adds an entity marked as overlay', () => {
-    expect(find(build([added]), 'n1')).toMatchObject({ name: 'New', aliases: ['N'], overlay: true, chapters: [] });
-  });
-
-  it('edits an entity', () => {
-    const world: World = build([
-      { kind: 'entity-edit', entityId: 'a', patch: { name: 'Lan Anh', aliases: ['Lanny'] } },
+  const base = (): ApplyChapter[] =>
+    chapters([
+      [1, [lan, hanoi], [link('f-1', 'q1')]],
+      [2, [lan, hanoi], [link('f-1', 'q2')]],
     ]);
-    expect(find(world, 'a')).toMatchObject({ name: 'Lan Anh', aliases: ['Lanny'], overlay: true });
-    expect(find(world, 'b')?.overlay).toBeUndefined();
+
+  function run(edits: WorldDraftEdit[], input: ApplyChapter[] = base()): ApplyOutcome {
+    const world = mergeChapters(input.map((item) => source(item.index, item.result.entities, item.result.facts)));
+    return applyEdits({ chapters: input, entities: world.entities, edits, editedAt: 'now' });
+  }
+
+  function result(outcome: ApplyOutcome, index: number): ChapterResult | undefined {
+    return outcome.results?.find((item) => item.index === index);
+  }
+
+  it('deletes an entity and its facts from every chapter', () => {
+    const outcome = run([{ kind: 'entity-delete', entityId: hanoi.id }]);
+    expect(outcome.results).toHaveLength(2);
+    for (const index of [1, 2]) {
+      expect(result(outcome, index)?.entities.map((item) => item.name)).toEqual(['Lan']);
+      expect(result(outcome, index)?.facts).toEqual([]);
+      expect(result(outcome, index)?.editedAt).toBe('now');
+    }
   });
 
-  it('deletes an entity and its links', () => {
-    const world: World = build([{ kind: 'entity-delete', entityId: 'b' }]);
-    expect(find(world, 'b')).toBeUndefined();
-    expect(world.links).toEqual([]);
+  it('creates an entity only in chapters whose text has its name or alias', () => {
+    const outcome = run([
+      {
+        kind: 'entity-add',
+        entity: { id: 'n1', type: 'Persona', name: 'Mai', aliases: ['Old Mai'], titles: [], chapters: [] },
+      },
+    ]);
+    expect(result(outcome, 1)).toBeUndefined();
+    expect(result(outcome, 2)?.entities.at(-1)).toMatchObject({ id: 'Persona:mai', name: 'Mai', aliases: ['Old Mai'] });
   });
 
-  it('merges sources into the target as aliases and relinks the facts', () => {
-    const extra: WorldSource[] = [
-      source(1, [...people, entity('c', 'Tiny')], [fact('f3', { subjectId: 'c', objectId: 'b' })]),
-    ];
-    const world: World = graph(extra, all, [{ kind: 'entity-merge', sourceIds: ['c'], targetId: 'a' }]);
-    expect(find(world, 'c')).toBeUndefined();
-    expect(find(world, 'a')).toMatchObject({ aliases: ['Tiny'], overlay: true });
-    expect(world.links[0]).toMatchObject({ source: 'a', overlay: true });
+  it('refuses a name, alias or title that is in no chapter text', () => {
+    const add = (name: string, aliases: string[] = [], titles: string[] = []): WorldDraftEdit => ({
+      kind: 'entity-add',
+      entity: { id: 'n1', type: 'Persona', name, aliases, titles, chapters: [] },
+    });
+    expect(run([add('Ghost')]).problem).toEqual({ reason: 'word-not-in-text', word: 'Ghost' });
+    expect(run([add('Mai', ['Nobody'])]).problem).toEqual({ reason: 'word-not-in-text', word: 'Nobody' });
+    expect(run([add('Mai', [], ['Queen'])]).problem).toEqual({ reason: 'word-not-in-text', word: 'Queen' });
+    expect(run([add('lan')]).problem).toEqual({ reason: 'name-taken', word: 'lan' });
+  });
+
+  it('renames and edits aliases in every chapter and relinks facts', () => {
+    const outcome = run([{ kind: 'entity-edit', entityId: lan.id, patch: { name: 'Little Lan', aliases: ['Lan'] } }]);
+    for (const index of [1, 2]) {
+      expect(result(outcome, index)?.entities[0]).toMatchObject({ id: 'Persona:little lan', name: 'Little Lan' });
+      expect(result(outcome, index)?.facts[0]).toMatchObject({
+        subjectId: 'Persona:little lan',
+        subjectName: 'Little Lan',
+      });
+    }
+    expect(run([{ kind: 'entity-edit', entityId: lan.id, patch: { name: 'Nobody' } }]).problem?.reason).toBe(
+      'word-not-in-text',
+    );
+  });
+
+  it('refuses a rename to an existing entity of the same type', () => {
+    const input = chapters([[2, [lan, hanoi, entity('Persona:mai', 'Mai')], []]]);
+    expect(run([{ kind: 'entity-edit', entityId: lan.id, patch: { name: 'MAI' } }], input).problem).toEqual({
+      reason: 'name-taken',
+      word: 'MAI',
+    });
+  });
+
+  it('merges a source into the target per chapter', () => {
+    const tiny: AnalysisEntity = entity('Persona:tiny', 'Tiny');
+    const input = chapters([
+      [1, [lan, hanoi, tiny], [fact('f-1', { subjectId: tiny.id, objectId: hanoi.id, quote: 'q1' })]],
+      [2, [tiny], []],
+    ]);
+    const outcome = run([{ kind: 'entity-merge', sourceIds: [tiny.id], targetId: lan.id }], input);
+    expect(result(outcome, 1)?.entities.map((item) => item.name)).toEqual(['Lan', 'Hanoi']);
+    expect(result(outcome, 1)?.entities[0].aliases).toEqual(['Tiny']);
+    expect(result(outcome, 1)?.facts[0].subjectId).toBe(lan.id);
+    expect(result(outcome, 2)?.entities).toEqual([{ ...lan, aliases: ['Tiny'] }]);
   });
 
   it('splits an entity and moves only the ticked facts', () => {
-    const scalar: AnalysisFact = fact('f-2', { kind: 'scalar', predicate: 'gender', objectId: undefined });
-    const chapters: WorldSource[] = [
-      source(1, people, [fact('f-1'), scalar]),
-      source(2, people, [fact('f-1', { predicate: 'knows' })]),
-    ];
-    const world: World = graph(chapters, all, [
+    const outcome = run([
       {
         kind: 'entity-split',
-        entityId: 'a',
-        newEntity: { id: 'n2', type: 'Persona', name: 'Other', aliases: [], titles: [], chapters: [] },
+        entityId: lan.id,
+        newEntity: { id: 'n2', type: 'Persona', name: 'Little Lan', aliases: [], titles: [], chapters: [] },
         aliases: [],
-        facts: [
-          { factId: 'f-1', chapterIndex: 1 },
-          { factId: 'f-2', chapterIndex: 1 },
-        ],
+        facts: [{ factId: 'f-1', chapterIndex: 2 }],
       },
     ]);
-    const linkOf = (predicate: string): World['links'][number] | undefined =>
-      world.links.find((item) => item.predicate === predicate);
-    expect(linkOf('located_in')).toMatchObject({ source: 'n2', overlay: true });
-    expect(linkOf('knows')?.source).toBe('a');
-    expect(find(world, 'n2')?.scalars.map((item) => item.chapterIndex)).toEqual([1]);
-    expect(find(world, 'n2')?.chapters).toEqual([1]);
+    expect(result(outcome, 1)).toBeUndefined();
+    expect(result(outcome, 2)?.facts[0].subjectId).toBe('Persona:little lan');
   });
 
-  it('adds, edits and deletes facts', () => {
-    const userFact = { ...fact('u1', { subjectId: 'n1', objectId: 'b', quote: null }), chapterIndex: 2 };
-    const world: World = build([added, { kind: 'fact-add', fact: userFact }]);
-    expect(world.links.find((item) => item.source === 'n1')).toMatchObject({
-      target: 'b',
-      overlay: true,
-      chapters: [2],
-    });
-    const edited: World = build([{ kind: 'fact-edit', factId: 'f1', chapterIndex: 1, patch: { quote: 'new' } }]);
-    expect(edited.links[0]).toMatchObject({ quotes: ['new', 'q2'], overlay: true });
-    const removed: World = build([{ kind: 'fact-delete', factId: 'f1', chapterIndex: 1 }]);
-    expect(removed.links[0]).toMatchObject({ chapters: [2], quotes: ['q2'] });
-  });
-
-  it('marks only the edited fact of its own chapter when fact ids repeat', () => {
-    const scalar = (): AnalysisFact => fact('f-1', { kind: 'scalar', predicate: 'gender', objectId: undefined });
-    const world: World = graph([source(1, people, [scalar()]), source(2, people, [scalar()])], all, [
-      { kind: 'fact-edit', factId: 'f-1', chapterIndex: 2, patch: { quote: 'new' } },
+  it('adds, moves and deletes facts in their chapters', () => {
+    const added = run([
+      {
+        kind: 'fact-add',
+        fact: { ...fact('u1', { subjectId: lan.id, objectId: hanoi.id, quote: 'q2' }), chapterIndex: 2 },
+      },
     ]);
-    expect(find(world, 'a')?.scalars.map((item) => item.overlay)).toEqual([true, undefined]);
+    expect(result(added, 2)?.facts.map((item) => item.id)).toEqual(['f-1', 'f-2']);
+    const moved = run([{ kind: 'fact-edit', factId: 'f-1', chapterIndex: 1, patch: { chapterIndex: 2 } as never }]);
+    expect(result(moved, 1)?.facts).toEqual([]);
+    expect(result(moved, 2)?.facts).toHaveLength(2);
+    const removed = run([{ kind: 'fact-delete', factId: 'f-1', chapterIndex: 2 }]);
+    expect(result(removed, 2)?.facts).toEqual([]);
+    expect(run([{ kind: 'fact-delete', factId: 'nope', chapterIndex: 2 }]).problem?.reason).toBe('missing');
   });
 
-  it('reports an edit whose target is missing as an orphan and skips it', () => {
-    const missing: WorldDraftEdit[] = [
-      { kind: 'entity-edit', entityId: 'zz', patch: { name: 'X' } },
-      { kind: 'fact-edit', factId: 'nope', chapterIndex: 1, patch: { quote: 'x' } },
-    ];
-    const world: World = build(missing);
-    expect(world.orphans).toEqual(missing);
-    expect(world.entities.map((item: WorldEntity): string => item.name)).toEqual(['Lan', 'Hanoi']);
-  });
-
-  it('reports orphans for merges, adds and facts without their ends', () => {
-    const edits: WorldDraftEdit[] = [
-      { kind: 'entity-merge', sourceIds: ['a'], targetId: 'zz' },
-      { kind: 'entity-add', entity: { id: 'a', type: 'Persona', name: 'Dup', aliases: [], titles: [], chapters: [] } },
-      { kind: 'fact-add', fact: { ...fact('u1', { subjectId: 'zz' }), chapterIndex: 1 } },
-      { kind: 'fact-add', fact: { ...fact('u2', { objectId: 'zz' }), chapterIndex: 1 } },
-    ];
-    expect(model(sources, edits).orphans).toEqual(edits);
-  });
-});
-
-describe('[TH04-01] invalidEdits', () => {
-  const base: WorldModel = model([source(1, [entity('a', 'Lan')])]);
-
-  it('accepts valid edits', () => {
-    const edit: WorldDraftEdit = { kind: 'entity-edit', entityId: 'a', patch: { name: 'X', type: 'Location' } };
-    expect(invalidEdits(base, [edit])).toBeNull();
-  });
-
-  it('rejects orphans, empty names and unknown types', () => {
-    expect(invalidEdits(base, [{ kind: 'entity-delete', entityId: 'zz' }])).not.toBeNull();
-    expect(invalidEdits(base, [{ kind: 'entity-edit', entityId: 'a', patch: { name: ' ' } }])).not.toBeNull();
-    expect(invalidEdits(base, [{ kind: 'entity-edit', entityId: 'a', patch: { type: 'unknown' } }])).not.toBeNull();
+  it('links a persona to its character in the first chapter of the persona', () => {
+    const character: AnalysisEntity = entity('Character:lan', 'Lan', { type: 'Character' });
+    const input = [...chapters([[1, [lan, character], []]]), ...chapters([[2, [lan], []]])];
+    const outcome = run([{ kind: 'persona-character', personaId: lan.id, characterId: character.id }], input);
+    expect(result(outcome, 2)).toBeUndefined();
+    expect(result(outcome, 1)?.facts).toEqual([
+      expect.objectContaining({ predicate: 'has_persona', subjectId: character.id, objectId: lan.id, quote: 'Lan' }),
+    ]);
+    const linked = chapters([[1, [lan, character], result(outcome, 1)!.facts]]);
+    const cleared = run([{ kind: 'persona-character', personaId: lan.id, characterId: null }], linked);
+    expect(result(cleared, 1)?.facts).toEqual([]);
   });
 });
 

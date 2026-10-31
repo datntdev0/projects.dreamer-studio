@@ -154,11 +154,11 @@
 
     .library-chapters-title,
     .library-chapters-reader {
-  flex: none;
-  margin-right: var(--sp-xs);
-}
+      flex: none;
+      margin-right: var(--sp-xs);
+    }
 
-.library-chapters-num {
+    .library-chapters-num {
       color: var(--color-text-tertiary);
     }
   }

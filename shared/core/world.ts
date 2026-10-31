@@ -1,14 +1,14 @@
 import type { AnalysisEntity, AnalysisFact, EntityTypeName, FactRef, IssueSeverity } from '../models/analysis';
-import type { Occurrence, Ontology, QuoteMatch, World, WorldDraftEdit, WorldEditEntity } from '../models/analysis';
-import type { WorldEditPreview, WorldEditScope, WorldEntity, WorldFact, WorldIssue } from '../models/analysis';
+import type { Occurrence, Ontology, QuoteMatch, World, WorldEditEntity } from '../models/analysis';
+import type { WorldEditScope, WorldEntity, WorldFact, WorldIssue } from '../models/analysis';
 import type { WorldLink, WorldScalar } from '../models/analysis';
 import { ENTITY_TYPES } from '../models/analysis';
 import type { CandidateChapter } from './analysis-checks';
 import { mergeWords, nameKey } from './analysis-checks';
 import type { DraftState } from './world-edit';
-import { applyDraftEdits, applyOverlay, factKey, touchesEntity } from './world-edit';
+import { factKey, touchesEntity } from './world-edit';
 import { checkWorld } from './world-checks';
-import { findTextContext } from './text-match';
+import { foldedText } from './folded-text';
 
 export interface WorldSource {
   index: number;
@@ -21,8 +21,6 @@ export interface WorldSource {
 export interface WorldModel {
   state: DraftState;
   issues: WorldIssue[];
-  orphans: WorldDraftEdit[];
-  touched: { entities: string[]; facts: string[] };
   staleChapters: number[];
 }
 
@@ -68,16 +66,13 @@ export function mergeChapters(sources: WorldSource[]): DraftState {
 
 export function buildModel(input: {
   sources: WorldSource[];
-  edits: WorldDraftEdit[];
   ontology: Ontology;
   texts: CandidateChapter[];
 }): WorldModel {
-  const { state, orphans, touched } = applyOverlay(mergeChapters(input.sources), input.edits);
+  const state = mergeChapters(input.sources);
   return {
     state,
     issues: checkWorld({ ...state, ontology: input.ontology, texts: input.texts }),
-    orphans,
-    touched,
     staleChapters: input.sources.filter((source) => source.stale).map((source) => source.index),
   };
 }
@@ -112,8 +107,6 @@ function flag<K extends string>(key: K, on: boolean): { [P in K]?: true } {
 
 export function toGraph(model: WorldModel, scope: WorldScope): World {
   const stale = new Set(model.staleChapters);
-  const touchedEntities = new Set(model.touched.entities);
-  const touchedFacts = new Set(model.touched.facts);
   const severity = severities(model.issues);
   const entities = new Map<string, WorldEntity>();
   for (const item of model.state.entities) {
@@ -126,7 +119,6 @@ export function toGraph(model: WorldModel, scope: WorldScope): World {
       degree: 0,
       scalars: [],
       staleChapters,
-      ...flag('overlay', touchedEntities.has(item.id)),
       ...flag('stale', staleChapters.length > 0),
       ...(severity.entities.has(item.id) ? { issue: severity.entities.get(item.id) } : {}),
     });
@@ -144,7 +136,6 @@ export function toGraph(model: WorldModel, scope: WorldScope): World {
         predicate: fact.predicate,
         chapterIndex: fact.chapterIndex,
         quote: fact.quote,
-        ...flag('overlay', touchedFacts.has(key)),
         ...flag('stale', isStale),
         ...(issue ? { issue } : {}),
       };
@@ -171,7 +162,6 @@ export function toGraph(model: WorldModel, scope: WorldScope): World {
     link.factRefs.push({ factId: fact.id, chapterIndex: fact.chapterIndex });
     if (!link.chapters.includes(fact.chapterIndex)) link.chapters.push(fact.chapterIndex);
     if (fact.quote && !link.quotes.includes(fact.quote)) link.quotes.push(fact.quote);
-    if (touchedFacts.has(key)) link.overlay = true;
     if (isStale) {
       link.stale = true;
       if (!link.staleChapters.includes(fact.chapterIndex)) link.staleChapters.push(fact.chapterIndex);
@@ -184,7 +174,7 @@ export function toGraph(model: WorldModel, scope: WorldScope): World {
     entities.get(link.target)!.degree++;
   }
   for (const entity of entities.values()) entity.scalars.sort((a, b) => b.chapterIndex - a.chapterIndex);
-  return { entities: [...entities.values()], links: [...links.values()], orphans: model.orphans };
+  return { entities: [...entities.values()], links: [...links.values()] };
 }
 
 function isRefFact(fact: WorldFact, ref: FactRef | undefined): boolean {
@@ -215,34 +205,6 @@ export function editScope(
   };
 }
 
-export function previewEdits(
-  model: WorldModel,
-  input: { edits: WorldDraftEdit[]; issueKey: string | null; ontology: Ontology; texts: CandidateChapter[] },
-): WorldEditPreview {
-  const state = applyDraftEdits(model.state, input.edits);
-  const after = checkWorld({ ...state, ontology: input.ontology, texts: input.texts });
-  const before = new Set(model.issues.map((issue) => issue.key));
-  return {
-    resolved: input.issueKey ? !after.some((issue) => issue.key === input.issueKey) : true,
-    added: after.filter((issue) => !before.has(issue.key)),
-  };
-}
-
-function editedEntities(edit: WorldDraftEdit): { name?: string; type?: EntityTypeName }[] {
-  if (edit.kind === 'entity-add') return [edit.entity];
-  if (edit.kind === 'entity-split') return [edit.newEntity];
-  return edit.kind === 'entity-edit' ? [edit.patch] : [];
-}
-
-export function invalidEdits(model: WorldModel, edits: WorldDraftEdit[]): string | null {
-  if (applyOverlay(model.state, edits).orphans.length) return 'An edit refers to an entity or fact that is missing';
-  const entities = edits.flatMap(editedEntities);
-  if (entities.some((entity) => entity.name !== undefined && !entity.name.trim())) return 'An entity name is empty';
-  if (entities.some((entity) => entity.type !== undefined && !isEntityType(entity.type)))
-    return 'An entity type is not allowed';
-  return null;
-}
-
 export interface OccurrenceChapter {
   index: number;
   title: string;
@@ -256,7 +218,7 @@ export function entityOccurrences(entity: WorldEntity, chapters: OccurrenceChapt
       const chapter = chapters.find((item) => item.index === index);
       const context =
         [entity.name, ...entity.aliases]
-          .map((needle) => (chapter ? findTextContext(chapter.paragraphs, needle, { fold: true }) : null))
+          .map((needle) => (chapter ? foldedText(chapter.paragraphs).context(needle) : null))
           .find((item) => item !== null) ?? null;
       return { chapterIndex: index, chapterTitle: chapter?.title ?? '', context };
     });
@@ -266,7 +228,7 @@ export function findQuoteMatches(chapters: OccurrenceChapter[], quote: string): 
   const needle = quote.trim();
   if (!needle) return [];
   return chapters.flatMap((chapter) => {
-    const context = findTextContext(chapter.paragraphs, needle, { fold: true });
+    const context = foldedText(chapter.paragraphs).context(needle);
     return context ? [{ chapterIndex: chapter.index, chapterTitle: chapter.title, context }] : [];
   });
 }

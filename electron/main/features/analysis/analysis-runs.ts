@@ -1,10 +1,12 @@
 import { AnalysisChannel } from '@dreamer/shared/ipc/channels';
 import { AnalysisProgress, AnalysisRun } from '@dreamer/shared/models/analysis';
-import { broadcast } from '../../ipc/broadcast';
+import { Broadcaster } from '../../ipc/broadcast-provider';
 
 export class AnalysisRuns {
   private readonly runs: Map<string, AnalysisRun> = new Map<string, AnalysisRun>();
   private readonly listeners: Set<(novelId: string) => void> = new Set<(novelId: string) => void>();
+
+  constructor(private readonly broadcaster: Broadcaster) {}
 
   get(novelId: string): AnalysisRun | null {
     return this.runs.get(novelId) ?? null;
@@ -20,7 +22,7 @@ export class AnalysisRuns {
       total: run.total,
       failed: run.failed,
     };
-    broadcast(AnalysisChannel.Progress, progress);
+    this.broadcaster.send(AnalysisChannel.Progress, progress);
   }
 
   clear(novelId: string): void {
@@ -29,7 +31,7 @@ export class AnalysisRuns {
   }
 
   changed(novelId: string): void {
-    broadcast(AnalysisChannel.Changed, { novelId });
+    this.broadcaster.send(AnalysisChannel.Changed, { novelId });
     this.listeners.forEach((listener: (novelId: string) => void): void => listener(novelId));
   }
 

@@ -16,6 +16,9 @@ import { chapterResultFile, legacyWorldFile, readAnalysisIndex, worldOverlayFile
 import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { AnalysisRuns } from './analysis-runs';
 import { AnalysisService } from './analysis-service';
+import { LlmService } from '../llm/llm-service';
+import { SettingsStore } from '../settings/settings-store';
+import { AnalysisSnapshots } from './analysis-snapshot';
 import type { AnalysisSnapshot } from './analysis-snapshot';
 
 vi.mock('electron', () => ({
@@ -29,7 +32,6 @@ vi.mock('electron', () => ({
 vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
-vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
 const activeRuns = vi.hoisted(() => ({ list: [] as object[] }));
 vi.mock('@storage/repositories/pipeline-run-repository', () => ({
   PipelineRunRepository: class {
@@ -55,7 +57,13 @@ function newService(): AnalysisService {
     db: {},
     executor: { onRunFinished: vi.fn() },
   } as unknown as AppDataSession;
-  return new AnalysisService(() => session, { runs: new AnalysisRuns() } as never);
+  return new AnalysisService(
+    () => session,
+    {} as LlmService,
+    {} as SettingsStore,
+    new AnalysisRuns({ send: vi.fn() }),
+    new AnalysisSnapshots(),
+  );
 }
 
 function entity(id: string, name: string, over: Partial<AnalysisEntity> = {}): AnalysisEntity {

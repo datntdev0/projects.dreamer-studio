@@ -1,7 +1,7 @@
 import { app, dialog, MessageBoxReturnValue } from 'electron';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { t } from '../app-i18n';
-import { openFolder } from '../../ipc/app-ipc';
+import { openFolder } from '../../ipc/app-controller';
 import { isLoggingReady } from '../../logging/logger';
 import { AppPaths } from '@storage/paths';
 

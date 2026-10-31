@@ -14,7 +14,7 @@ import { TranslationIndexEntry, TranslationIndexFile } from '@dreamer/shared/mod
 import { TranslationLanguageSummary } from '@dreamer/shared/models/translation';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { TargetLanguage } from '@dreamer/shared/models/translation';
-import { broadcast } from '../../ipc/broadcast';
+import { Broadcaster } from '../../ipc/broadcast-provider';
 import { createLogger, Logger } from '../../logging/logger';
 import { readReviewParagraphs } from '../analysis/analysis-files';
 import { AnalysisSnapshots } from '../analysis/analysis-snapshot';
@@ -233,6 +233,7 @@ export async function recheckGlossaryChange(
   novelId: string,
   language: TargetLanguage,
   changed: Set<string>,
+  broadcaster: Broadcaster,
 ): Promise<void> {
   if (changed.size === 0) return;
   try {
@@ -241,8 +242,8 @@ export async function recheckGlossaryChange(
       if (novel === null) return;
       const rows: GlossaryRow[] = await loadGlossaryRows(snapshots, folder, novel, language);
       await recheckChapters(folder, novel, language, rows, changed);
-      broadcast(TranslationChannel.Changed, { novelId, language });
-      broadcast(LibraryChannel.Changed, { novelIds: [novelId] });
+      broadcaster.send(TranslationChannel.Changed, { novelId, language });
+      broadcaster.send(LibraryChannel.Changed, { novelIds: [novelId] });
     });
   } catch (error: unknown) {
     logger.error(`Translation re-check failed for ${novelId}`, error);

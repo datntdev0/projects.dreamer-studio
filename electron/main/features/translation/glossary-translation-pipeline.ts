@@ -10,14 +10,14 @@ import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { formatLlmChoice, LlmFeatureRunRequest, LlmRunResult, resolveLlm } from '@dreamer/shared/models/llm';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { PipelineStepDetail } from '@dreamer/shared/models/pipeline';
+import { PipelineStepDetail, PipelineType } from '@dreamer/shared/models/pipeline';
 import { GlossaryRow, GlossaryRunRequest, TranslationRun } from '@dreamer/shared/models/translation';
 import { AppPaths } from '@storage/paths';
-import { broadcast } from '../../ipc/broadcast';
+import { Broadcaster } from '../../ipc/broadcast-provider';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { LlmService } from '../llm/llm-service';
-import { isAbort, PipelineDefinition, StepContext } from '../pipelines/pipeline-definition';
+import { isAbort, PipelineDefinition, PipelineStep, StepContext } from '../pipelines/pipeline-definition';
 import { promptLogDir } from '../pipelines/run-log';
 import { SettingsStore } from '../settings/settings-store';
 import { AnalysisSnapshots } from '../analysis/analysis-snapshot';
@@ -26,13 +26,6 @@ import { hasAnalysedWorld, loadGlossaryRows, saveLlmEntries } from './translatio
 import { recheckGlossaryChange } from './translation-index';
 import { askGlossaryBatch } from './translation-llm';
 import { TranslationRuns } from './translation-runs';
-
-export interface GlossaryTranslationDeps {
-  llm: LlmService;
-  settings: SettingsStore;
-  runs: TranslationRuns;
-  snapshots: AnalysisSnapshots;
-}
 
 export interface GlossaryRunCheck {
   novel: NovelMetadata;
@@ -54,15 +47,17 @@ function readNovel(folder: NovelFolder, novelId: string): NovelMetadata {
 }
 
 export async function checkGlossaryRun(
-  deps: GlossaryTranslationDeps,
+  llm: LlmService,
+  settings: SettingsStore,
+  snapshots: AnalysisSnapshots,
   paths: AppPaths,
   request: GlossaryRunRequest,
 ): Promise<GlossaryRunCheck> {
   const folder: NovelFolder = novelFolder(paths, request.novelId);
   const novel: NovelMetadata = readNovel(folder, request.novelId);
-  const resolution = resolveLlm(deps.settings.get().llm, 'glossaryTranslation', await deps.llm.status());
+  const resolution = resolveLlm(settings.get().llm, 'glossaryTranslation', await llm.status());
   const llmLabel: string = resolution.choice ? formatLlmChoice(resolution.choice, 'Default') : '';
-  const rows: GlossaryRow[] = await loadGlossaryRows(deps.snapshots, folder, novel, request.language);
+  const rows: GlossaryRow[] = await loadGlossaryRows(snapshots, folder, novel, request.language);
   const queue: GlossaryRow[] = glossaryRunRows(rows, request.scope);
   const batches: GlossaryRow[][] = glossaryBatches(queue, request.batchSize);
   const blockedReason: ErrorCode | null =
@@ -94,125 +89,135 @@ function otherNames(entities: Map<string, GlossaryRow[]>, batch: GlossaryRow[]):
   );
 }
 
-function publish(deps: GlossaryTranslationDeps, novelId: string, run: TranslationRun, ctx: StepContext): void {
-  deps.runs.set(novelId, run);
+function publish(runs: TranslationRuns, novelId: string, run: TranslationRun, ctx: StepContext): void {
+  runs.set(novelId, run);
   if (run.total > 0) ctx.progress((run.done / run.total) * 100);
 }
 
-async function precondition(ctx: StepContext, deps: GlossaryTranslationDeps): Promise<void> {
-  const request: GlossaryRunRequest = requestFromParams(ctx.params);
-  const check: GlossaryRunCheck = await checkGlossaryRun(deps, ctx.paths, request);
-  if (check.blockedReason) {
-    throw new CodedError(check.blockedReason, `Glossary translation cannot run: ${check.blockedReason}`);
-  }
-  ctx.log.info(`LLM: ${check.llmLabel}; names ${check.queue.length}; batches ${check.batches.length}`);
-}
+export class GlossaryTranslationPipeline implements PipelineDefinition {
+  readonly type: PipelineType = 'glossary-translation';
+  readonly overallProgress: boolean = true;
+  readonly steps: PipelineStep[] = [
+    {
+      key: 'translation.run.step.check',
+      backend: false,
+      run: (ctx: StepContext): Promise<void> => this.precondition(ctx),
+    },
+    {
+      key: 'translation.run.step.glossary',
+      backend: false,
+      run: (ctx: StepContext): Promise<void> => this.translate(ctx),
+    },
+  ];
 
-async function translate(ctx: StepContext, deps: GlossaryTranslationDeps): Promise<void> {
-  const request: GlossaryRunRequest = requestFromParams(ctx.params);
-  const check: GlossaryRunCheck = await checkGlossaryRun(deps, ctx.paths, request);
-  if (check.blockedReason) {
-    throw new CodedError(check.blockedReason, `Glossary translation cannot run: ${check.blockedReason}`);
+  constructor(
+    private readonly llm: LlmService,
+    private readonly settings: SettingsStore,
+    private readonly runs: TranslationRuns,
+    private readonly snapshots: AnalysisSnapshots,
+    private readonly broadcaster: Broadcaster,
+  ) {}
+
+  private async precondition(ctx: StepContext): Promise<void> {
+    const request: GlossaryRunRequest = requestFromParams(ctx.params);
+    const check: GlossaryRunCheck = await checkGlossaryRun(this.llm, this.settings, this.snapshots, ctx.paths, request);
+    if (check.blockedReason) {
+      throw new CodedError(check.blockedReason, `Glossary translation cannot run: ${check.blockedReason}`);
+    }
+    ctx.log.info(`LLM: ${check.llmLabel}; names ${check.queue.length}; batches ${check.batches.length}`);
   }
-  const folder: NovelFolder = novelFolder(ctx.paths, request.novelId);
-  const instruction: string = (await loadInstruction(folder, request.novelId, request.language)).text;
-  const run: TranslationRun = {
-    kind: 'glossary',
-    language: request.language,
-    runningChapter: null,
-    done: 0,
-    total: check.queue.length,
-    failed: 0,
-  };
-  const entities: Map<string, GlossaryRow[]> = groupByEntity(check.rows);
-  const finish = (): void =>
-    deps.runs.finish(request.novelId, {
-      runId: ctx.runId,
+
+  private async translate(ctx: StepContext): Promise<void> {
+    const request: GlossaryRunRequest = requestFromParams(ctx.params);
+    const check: GlossaryRunCheck = await checkGlossaryRun(this.llm, this.settings, this.snapshots, ctx.paths, request);
+    if (check.blockedReason) {
+      throw new CodedError(check.blockedReason, `Glossary translation cannot run: ${check.blockedReason}`);
+    }
+    const folder: NovelFolder = novelFolder(ctx.paths, request.novelId);
+    const instruction: string = (await loadInstruction(folder, request.novelId, request.language)).text;
+    const run: TranslationRun = {
       kind: 'glossary',
       language: request.language,
-      translated: run.done - run.failed,
-      failed: run.failed,
-      issues: 0,
-    });
-  let callNumber: number = 0;
-  const saved: Set<string> = new Set();
-  const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
-    ctx.checkpoint();
-    const number: string = String(++callNumber).padStart(3, '0');
-    const promptFile: string = join(promptLogDir(ctx.paths, ctx.runId), `${number}-${name}.md`);
-    return deps.llm.runForFeature('glossaryTranslation', llmRequest, { signal: ctx.signal, log: ctx.log, promptFile });
-  };
-  try {
-    for (const [index, batchRows] of check.batches.entries()) {
+      runningChapter: null,
+      done: 0,
+      total: check.queue.length,
+      failed: 0,
+    };
+    const entities: Map<string, GlossaryRow[]> = groupByEntity(check.rows);
+    const finish = (): void =>
+      this.runs.finish(request.novelId, {
+        runId: ctx.runId,
+        kind: 'glossary',
+        language: request.language,
+        translated: run.done - run.failed,
+        failed: run.failed,
+        issues: 0,
+      });
+    let callNumber: number = 0;
+    const saved: Set<string> = new Set();
+    const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
       ctx.checkpoint();
-      const batch: number = index + 1;
-      const detail: PipelineStepDetail = {
-        key: 'translation.run.detail.batch',
-        params: { batch, batches: check.batches.length },
-      };
-      ctx.enterStep('translation.run.step.glossary', detail);
-      publish(deps, request.novelId, run, ctx);
-      try {
-        const translations: Map<GlossaryRow, string> = await askGlossaryBatch({
-          batch,
-          rows: batchRows,
-          otherNames: otherNames(entities, batchRows),
-          sourceLanguage: check.novel.language,
-          targetLanguage: request.language,
-          instruction,
-          ask,
-          log: ctx.log,
-        });
+      const number: string = String(++callNumber).padStart(3, '0');
+      const promptFile: string = join(promptLogDir(ctx.paths, ctx.runId), `${number}-${name}.md`);
+      return this.llm.runForFeature('glossaryTranslation', llmRequest, {
+        signal: ctx.signal,
+        log: ctx.log,
+        promptFile,
+      });
+    };
+    try {
+      for (const [index, batchRows] of check.batches.entries()) {
         ctx.checkpoint();
-        const batchSaved: string[] = await withNovelLock(request.novelId, (): Promise<string[]> =>
-          saveLlmEntries(
-            folder,
-            request.language,
-            [...translations].map(([key, translation]: [GlossaryRow, string]) => ({ key, translation })),
-          ),
-        );
-        broadcast(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
-        batchSaved.forEach((id: string): void => {
-          saved.add(id);
-        });
-        run.done += batchRows.length;
-        run.failed += batchRows.length - batchSaved.length;
-        ctx.log.info(`Glossary batch ${batch} saved ${batchSaved.length}/${batchRows.length}`);
-      } catch (error: unknown) {
-        if (!isBatchFailure(error)) throw error;
-        run.done += batchRows.length;
-        run.failed += batchRows.length;
-        ctx.log.warn(`Glossary batch ${batch} failed: ${error.code}`);
+        const batch: number = index + 1;
+        const detail: PipelineStepDetail = {
+          key: 'translation.run.detail.batch',
+          params: { batch, batches: check.batches.length },
+        };
+        ctx.enterStep('translation.run.step.glossary', detail);
+        publish(this.runs, request.novelId, run, ctx);
+        try {
+          const translations: Map<GlossaryRow, string> = await askGlossaryBatch({
+            batch,
+            rows: batchRows,
+            otherNames: otherNames(entities, batchRows),
+            sourceLanguage: check.novel.language,
+            targetLanguage: request.language,
+            instruction,
+            ask,
+            log: ctx.log,
+          });
+          ctx.checkpoint();
+          const batchSaved: string[] = await withNovelLock(request.novelId, (): Promise<string[]> =>
+            saveLlmEntries(
+              folder,
+              request.language,
+              [...translations].map(([key, translation]: [GlossaryRow, string]) => ({ key, translation })),
+            ),
+          );
+          this.broadcaster.send(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
+          batchSaved.forEach((id: string): void => {
+            saved.add(id);
+          });
+          run.done += batchRows.length;
+          run.failed += batchRows.length - batchSaved.length;
+          ctx.log.info(`Glossary batch ${batch} saved ${batchSaved.length}/${batchRows.length}`);
+        } catch (error: unknown) {
+          if (!isBatchFailure(error)) throw error;
+          run.done += batchRows.length;
+          run.failed += batchRows.length;
+          ctx.log.warn(`Glossary batch ${batch} failed: ${error.code}`);
+        }
+        publish(this.runs, request.novelId, run, ctx);
       }
-      publish(deps, request.novelId, run, ctx);
-    }
-    await recheckGlossaryChange(deps.snapshots, folder, request.novelId, request.language, saved);
-    ctx.checkpoint();
-    finish();
-  } catch (error: unknown) {
-    if (isAbort(error)) {
-      await recheckGlossaryChange(deps.snapshots, folder, request.novelId, request.language, saved);
+      await recheckGlossaryChange(this.snapshots, folder, request.novelId, request.language, saved, this.broadcaster);
+      ctx.checkpoint();
       finish();
+    } catch (error: unknown) {
+      if (isAbort(error)) {
+        await recheckGlossaryChange(this.snapshots, folder, request.novelId, request.language, saved, this.broadcaster);
+        finish();
+      }
+      throw error;
     }
-    throw error;
   }
-}
-
-export function glossaryTranslationPipeline(deps: GlossaryTranslationDeps): PipelineDefinition {
-  return {
-    type: 'glossary-translation',
-    overallProgress: true,
-    steps: [
-      {
-        key: 'translation.run.step.check',
-        backend: false,
-        run: (ctx: StepContext): Promise<void> => precondition(ctx, deps),
-      },
-      {
-        key: 'translation.run.step.glossary',
-        backend: false,
-        run: (ctx: StepContext): Promise<void> => translate(ctx, deps),
-      },
-    ],
-  };
 }

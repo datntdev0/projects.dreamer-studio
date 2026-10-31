@@ -8,6 +8,7 @@ import type { CheckOutcome } from '@dreamer/shared/models/diagnostics';
 describe('[TH02-02] L2-TH02-02-01 independent, stateless diagnostics', () => {
   let work: ReturnType<typeof workspace>;
   let context: CheckContext;
+  const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   beforeEach(() => {
     work = workspace();
     context = {
@@ -27,7 +28,7 @@ describe('[TH02-02] L2-TH02-02-01 independent, stateless diagnostics', () => {
   it('AC2/4 reports OK/Warning/Error and re-evaluates changed health on rerun', async () => {
     context.settings = { notice: 'invalidFields', invalid: ['language'] };
     context.backend = 'unavailable';
-    const engine = new SelfCheckEngine(() => context);
+    const engine = new SelfCheckEngine(() => context, logger);
     registerBuiltInChecks(engine);
     const first = await engine.run();
     expect(first.results.find((result) => result.id === 'database.integrity')).toMatchObject({
@@ -58,7 +59,7 @@ describe('[TH02-02] L2-TH02-02-01 independent, stateless diagnostics', () => {
     context.checkDatabase = () => {
       throw new Error('Database unavailable');
     };
-    const engine = new SelfCheckEngine(() => context, 100);
+    const engine = new SelfCheckEngine(() => context, logger, 100);
     registerBuiltInChecks(engine);
     engine.register({
       id: 'slow',

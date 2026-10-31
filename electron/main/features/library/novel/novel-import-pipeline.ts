@@ -1,3 +1,4 @@
+import { PipelineType } from '@dreamer/shared/models/pipeline';
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm, stat } from 'node:fs/promises';
 import { decodeUtf8 } from '@dreamer/shared/core/novel-text';
@@ -8,7 +9,7 @@ import type { ImportPreview, NovelImportRequest, PreviewChapter } from '@dreamer
 import { NOVEL_STORE_VERSION, normalizeTags, type NovelChapterEntry } from '@dreamer/shared/models/novel-store';
 import type { NovelCoverFile, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { t } from '../../../app/app-i18n';
-import { PipelineDefinition, StepContext } from '../../pipelines/pipeline-definition';
+import { PipelineDefinition, PipelineStep, StepContext } from '../../pipelines/pipeline-definition';
 import { readCoverImage } from '../cover-image';
 import { asWriteError, renameWithRetry } from '../library-io';
 import { importStagingDir, NovelFolder, novelFolder, novelFolderAt } from '../library-files';
@@ -29,8 +30,6 @@ interface SelectedChapter {
   choice: ImportChapterChoice;
 }
 
-const states: Map<string, ImportState> = new Map<string, ImportState>();
-
 function requestFrom(ctx: StepContext): NovelImportRequest {
   const request: unknown = ctx.params.request;
   if (typeof request !== 'object' || request === null) {
@@ -39,51 +38,8 @@ function requestFrom(ctx: StepContext): NovelImportRequest {
   return request as NovelImportRequest;
 }
 
-function stateFor(ctx: StepContext): ImportState {
-  const state: ImportState | undefined = states.get(ctx.runId);
-  if (!state) {
-    throw new Error('Novel import state is missing');
-  }
-  return state;
-}
-
 function packageChanged(message: string): CodedError {
   return new CodedError(ErrorCode.PackageChanged, message);
-}
-
-async function checkStep(ctx: StepContext): Promise<void> {
-  const request: NovelImportRequest = requestFrom(ctx);
-  let details: Awaited<ReturnType<typeof stat>>;
-  try {
-    details = await stat(request.path);
-  } catch (error: unknown) {
-    throw packageChanged(errorMessage(error));
-  }
-  if (!details.isFile() || details.size !== request.size || details.mtimeMs !== request.modifiedMs) {
-    throw packageChanged('The package changed after it was previewed');
-  }
-
-  const result: Awaited<ReturnType<typeof readPackage>> = await readPackage(request.path);
-  if (result.status !== 'ok') {
-    throw packageChanged('The package is no longer valid');
-  }
-  if (result.preview.file.size !== request.size || result.preview.file.modifiedMs !== request.modifiedMs) {
-    throw packageChanged('The package changed while it was being checked');
-  }
-  const indexes: Set<number> = new Set(result.preview.chapters.map((chapter: PreviewChapter): number => chapter.index));
-  request.chapters.forEach((chapter: ImportChapterChoice): void => {
-    if (!indexes.has(chapter.index)) {
-      throw new Error(`Chapter ${chapter.index} is not in the package preview`);
-    }
-  });
-  states.set(ctx.runId, {
-    request,
-    preview: result.preview,
-    staging: novelFolderAt(importStagingDir(ctx.paths, ctx.runId)),
-    chapters: [],
-    cover: null,
-  });
-  ctx.progress(100);
 }
 
 function selectedChapters(state: ImportState): SelectedChapter[] {
@@ -141,32 +97,6 @@ async function extractCover(archive: PackageArchive, state: ImportState): Promis
   }
 }
 
-async function extractStep(ctx: StepContext): Promise<void> {
-  try {
-    const state: ImportState = stateFor(ctx);
-    const selected: SelectedChapter[] = selectedChapters(state);
-    state.chapters = [];
-    state.cover = null;
-    const archive: PackageArchive = await openPackageArchive(state.request.path);
-    try {
-      for (let offset: number = 0; offset < selected.length; offset += 1) {
-        await extractChapter(archive, state, selected[offset], offset + 1);
-        ctx.progress(((offset + 1) / selected.length) * 100);
-        ctx.checkpoint();
-        if ((offset + 1) % 100 === 0) {
-          ctx.log.info(`Extracted ${offset + 1} of ${selected.length} chapters`);
-        }
-      }
-      await extractCover(archive, state);
-      ctx.progress(100);
-    } finally {
-      archive.close();
-    }
-  } catch (error: unknown) {
-    asWriteError(error);
-  }
-}
-
 function buildMetadata(state: ImportState, id: string): NovelMetadata {
   const now: string = new Date().toISOString();
   const language: string = Intl.getCanonicalLocales(state.request.metadata.language.trim())[0];
@@ -187,40 +117,116 @@ function buildMetadata(state: ImportState, id: string): NovelMetadata {
   };
 }
 
-async function saveStep(ctx: StepContext): Promise<void> {
-  try {
-    const state: ImportState = stateFor(ctx);
-    const id: string = randomUUID();
-    const metadata: NovelMetadata = buildMetadata(state, id);
-    await writeMetadata(state.staging, metadata);
-    await mkdir(ctx.paths.library, { recursive: true });
-    await renameWithRetry(state.staging.dir, novelFolder(ctx.paths, id).dir, ctx.signal);
-    ctx.setNovelId(id);
+export class NovelImportPipeline implements PipelineDefinition {
+  private readonly states: Map<string, ImportState> = new Map<string, ImportState>();
+
+  readonly type: PipelineType = 'novel-import';
+  readonly steps: PipelineStep[] = [
+    { key: 'library.import.step.check', backend: false, run: (ctx: StepContext): Promise<void> => this.checkStep(ctx) },
+    {
+      key: 'library.import.step.extract',
+      backend: false,
+      run: (ctx: StepContext): Promise<void> => this.extractStep(ctx),
+    },
+    { key: 'library.import.step.save', backend: false, run: (ctx: StepContext): Promise<void> => this.saveStep(ctx) },
+  ];
+
+  private stateFor(ctx: StepContext): ImportState {
+    const state: ImportState | undefined = this.states.get(ctx.runId);
+    if (!state) {
+      throw new Error('Novel import state is missing');
+    }
+    return state;
+  }
+
+  private async checkStep(ctx: StepContext): Promise<void> {
+    const request: NovelImportRequest = requestFrom(ctx);
+    let details: Awaited<ReturnType<typeof stat>>;
+    try {
+      details = await stat(request.path);
+    } catch (error: unknown) {
+      throw packageChanged(errorMessage(error));
+    }
+    if (!details.isFile() || details.size !== request.size || details.mtimeMs !== request.modifiedMs) {
+      throw packageChanged('The package changed after it was previewed');
+    }
+
+    const result: Awaited<ReturnType<typeof readPackage>> = await readPackage(request.path);
+    if (result.status !== 'ok') {
+      throw packageChanged('The package is no longer valid');
+    }
+    if (result.preview.file.size !== request.size || result.preview.file.modifiedMs !== request.modifiedMs) {
+      throw packageChanged('The package changed while it was being checked');
+    }
+    const indexes: Set<number> = new Set(
+      result.preview.chapters.map((chapter: PreviewChapter): number => chapter.index),
+    );
+    request.chapters.forEach((chapter: ImportChapterChoice): void => {
+      if (!indexes.has(chapter.index)) {
+        throw new Error(`Chapter ${chapter.index} is not in the package preview`);
+      }
+    });
+    this.states.set(ctx.runId, {
+      request,
+      preview: result.preview,
+      staging: novelFolderAt(importStagingDir(ctx.paths, ctx.runId)),
+      chapters: [],
+      cover: null,
+    });
     ctx.progress(100);
-    ctx.log.info(`Imported novel ${id} with ${state.chapters.length} chapters`);
-    states.delete(ctx.runId);
-  } catch (error: unknown) {
-    asWriteError(error);
+  }
+
+  private async extractStep(ctx: StepContext): Promise<void> {
+    try {
+      const state: ImportState = this.stateFor(ctx);
+      const selected: SelectedChapter[] = selectedChapters(state);
+      state.chapters = [];
+      state.cover = null;
+      const archive: PackageArchive = await openPackageArchive(state.request.path);
+      try {
+        for (let offset: number = 0; offset < selected.length; offset += 1) {
+          await extractChapter(archive, state, selected[offset], offset + 1);
+          ctx.progress(((offset + 1) / selected.length) * 100);
+          ctx.checkpoint();
+          if ((offset + 1) % 100 === 0) {
+            ctx.log.info(`Extracted ${offset + 1} of ${selected.length} chapters`);
+          }
+        }
+        await extractCover(archive, state);
+        ctx.progress(100);
+      } finally {
+        archive.close();
+      }
+    } catch (error: unknown) {
+      asWriteError(error);
+    }
+  }
+
+  private async saveStep(ctx: StepContext): Promise<void> {
+    try {
+      const state: ImportState = this.stateFor(ctx);
+      const id: string = randomUUID();
+      const metadata: NovelMetadata = buildMetadata(state, id);
+      await writeMetadata(state.staging, metadata);
+      await mkdir(ctx.paths.library, { recursive: true });
+      await renameWithRetry(state.staging.dir, novelFolder(ctx.paths, id).dir, ctx.signal);
+      ctx.setNovelId(id);
+      ctx.progress(100);
+      ctx.log.info(`Imported novel ${id} with ${state.chapters.length} chapters`);
+      this.states.delete(ctx.runId);
+    } catch (error: unknown) {
+      asWriteError(error);
+    }
+  }
+
+  async cleanup(ctx: StepContext): Promise<void> {
+    try {
+      await rm(importStagingDir(ctx.paths, ctx.runId), { recursive: true, force: true });
+    } finally {
+      this.states.delete(ctx.runId);
+    }
   }
 }
-
-async function cleanup(ctx: StepContext): Promise<void> {
-  try {
-    await rm(importStagingDir(ctx.paths, ctx.runId), { recursive: true, force: true });
-  } finally {
-    states.delete(ctx.runId);
-  }
-}
-
-export const novelImportPipeline: PipelineDefinition = {
-  type: 'novel-import',
-  steps: [
-    { key: 'library.import.step.check', backend: false, run: checkStep },
-    { key: 'library.import.step.extract', backend: false, run: extractStep },
-    { key: 'library.import.step.save', backend: false, run: saveStep },
-  ],
-  cleanup,
-};
 
 export function importParams(request: NovelImportRequest): Record<string, unknown> {
   return { request };

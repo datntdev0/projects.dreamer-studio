@@ -7,15 +7,17 @@ import type { NovelImportRequest } from '@dreamer/shared/models/novel-package';
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { importStagingDir, novelFolder } from '../../main/features/library/library-files';
 import { readMetadata } from '../../main/features/library/novel/novel-files';
-import { novelImportPipeline } from '../../main/features/library/novel/novel-import-pipeline';
+import { NovelImportPipeline } from '../../main/features/library/novel/novel-import-pipeline';
 import { readPackage } from '../../main/features/library/package-reader';
 import { writePackage } from '../../main/features/library/package-writer';
 
 describe('[TH03-01] L2-TH03-01-01 package import orchestration', () => {
   let work: ReturnType<typeof workspace>;
+  let novelImportPipeline: NovelImportPipeline;
   let request: NovelImportRequest;
   beforeEach(async () => {
     work = workspace();
+    novelImportPipeline = new NovelImportPipeline();
     const { novel, folder } = await seedNovel(work.paths);
     const path = join(work.root, 'source.zip');
     await writePackage(folder, novel, path, { checkpoint: vi.fn(), progress: vi.fn() });
@@ -73,7 +75,16 @@ describe('[TH03-01] L2-TH03-01-01 package import orchestration', () => {
     const { ctx, controller } = context(work.paths, { request });
     await novelImportPipeline.steps[0].run?.(ctx);
     ctx.progress = () => controller.abort();
-    await expect(execute({ ...novelImportPipeline, steps: novelImportPipeline.steps.slice(1) }, ctx)).rejects.toThrow();
+    await expect(
+      execute(
+        {
+          ...novelImportPipeline,
+          cleanup: novelImportPipeline.cleanup.bind(novelImportPipeline),
+          steps: novelImportPipeline.steps.slice(1),
+        },
+        ctx,
+      ),
+    ).rejects.toThrow();
     expect(existsSync(importStagingDir(work.paths, ctx.runId))).toBe(false);
     expect(readdirSync(work.paths.library)).toEqual(before);
     expect(ctx.setNovelId).not.toHaveBeenCalled();
@@ -95,7 +106,14 @@ describe('[TH03-01] L2-TH03-01-01 package import orchestration', () => {
       .mockRejectedValueOnce(Object.assign(new Error('Disk full'), { code: 'ENOSPC' }));
     try {
       await expect(
-        execute({ ...novelImportPipeline, steps: novelImportPipeline.steps.slice(2) }, ctx),
+        execute(
+          {
+            ...novelImportPipeline,
+            cleanup: novelImportPipeline.cleanup.bind(novelImportPipeline),
+            steps: novelImportPipeline.steps.slice(2),
+          },
+          ctx,
+        ),
       ).rejects.toMatchObject({ code: ErrorCode.LibraryWriteFailed });
       expect(existsSync(importStagingDir(work.paths, ctx.runId))).toBe(false);
       expect(readdirSync(work.paths.library)).toEqual(before);

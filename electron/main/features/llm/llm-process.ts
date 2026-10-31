@@ -72,70 +72,72 @@ function appendCapped(chunks: Buffer[], chunk: Buffer, size: number, cap: number
   return size + Math.min(Math.max(remaining, 0), chunk.length);
 }
 
-export function spawnCli(input: SpawnCliInput): Promise<SpawnCliResult> {
-  if (input.signal?.aborted) return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
-  const options: { command: string; args: string[]; verbatim: boolean } = spawnOptions(input);
-  const cap: number = input.maxOutputBytes ?? 8 * 1024 * 1024;
-  return new Promise<SpawnCliResult>((resolve, reject) => {
-    const child: ChildProcess = spawn(options.command, options.args, {
-      cwd: input.cwd,
-      shell: false,
-      windowsHide: true,
-      windowsVerbatimArguments: options.verbatim,
-      detached: process.platform !== 'win32',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    let stdoutSize: number = 0;
-    let stderrSize: number = 0;
-    let timedOut: boolean = false;
-    let aborted: boolean = false;
-    let settled: boolean = false;
-    let killPromise: Promise<void> = Promise.resolve();
-    const timeout: NodeJS.Timeout = setTimeout(() => {
-      timedOut = true;
-      killPromise = killTree(child);
-    }, input.timeoutMs);
-    const onAbort = (): void => {
-      aborted = true;
-      killPromise = killTree(child);
-    };
-    input.signal?.addEventListener('abort', onAbort, { once: true });
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdoutSize = appendCapped(stdout, chunk, stdoutSize, cap);
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderrSize = appendCapped(stderr, chunk, stderrSize, cap);
-    });
-    child.stdin?.on('error', () => undefined);
-    child.stdin?.end(input.stdin ?? undefined);
-    const cleanup = (): void => {
-      clearTimeout(timeout);
-      input.signal?.removeEventListener('abort', onAbort);
-    };
-    child.on('error', (error: Error) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new CodedError(ErrorCode.LlmCliFailed, `CLI could not start: ${error.message}`));
-    });
-    child.on('close', (exitCode: number | null) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      void killPromise.then(() => {
-        if (aborted) {
-          reject(new DOMException('The operation was aborted.', 'AbortError'));
-        } else {
-          resolve({
-            exitCode,
-            stdout: Buffer.concat(stdout).toString('utf8'),
-            stderr: Buffer.concat(stderr).toString('utf8'),
-            timedOut,
-          });
-        }
+export class LlmProcessProvider {
+  spawnCli(input: SpawnCliInput): Promise<SpawnCliResult> {
+    if (input.signal?.aborted) return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
+    const options: { command: string; args: string[]; verbatim: boolean } = spawnOptions(input);
+    const cap: number = input.maxOutputBytes ?? 8 * 1024 * 1024;
+    return new Promise<SpawnCliResult>((resolve, reject) => {
+      const child: ChildProcess = spawn(options.command, options.args, {
+        cwd: input.cwd,
+        shell: false,
+        windowsHide: true,
+        windowsVerbatimArguments: options.verbatim,
+        detached: process.platform !== 'win32',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      const stdout: Buffer[] = [];
+      const stderr: Buffer[] = [];
+      let stdoutSize: number = 0;
+      let stderrSize: number = 0;
+      let timedOut: boolean = false;
+      let aborted: boolean = false;
+      let settled: boolean = false;
+      let killPromise: Promise<void> = Promise.resolve();
+      const timeout: NodeJS.Timeout = setTimeout(() => {
+        timedOut = true;
+        killPromise = killTree(child);
+      }, input.timeoutMs);
+      const onAbort = (): void => {
+        aborted = true;
+        killPromise = killTree(child);
+      };
+      input.signal?.addEventListener('abort', onAbort, { once: true });
+      child.stdout?.on('data', (chunk: Buffer) => {
+        stdoutSize = appendCapped(stdout, chunk, stdoutSize, cap);
+      });
+      child.stderr?.on('data', (chunk: Buffer) => {
+        stderrSize = appendCapped(stderr, chunk, stderrSize, cap);
+      });
+      child.stdin?.on('error', () => undefined);
+      child.stdin?.end(input.stdin ?? undefined);
+      const cleanup = (): void => {
+        clearTimeout(timeout);
+        input.signal?.removeEventListener('abort', onAbort);
+      };
+      child.on('error', (error: Error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new CodedError(ErrorCode.LlmCliFailed, `CLI could not start: ${error.message}`));
+      });
+      child.on('close', (exitCode: number | null) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        void killPromise.then(() => {
+          if (aborted) {
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          } else {
+            resolve({
+              exitCode,
+              stdout: Buffer.concat(stdout).toString('utf8'),
+              stderr: Buffer.concat(stderr).toString('utf8'),
+              timedOut,
+            });
+          }
+        });
       });
     });
-  });
+  }
 }

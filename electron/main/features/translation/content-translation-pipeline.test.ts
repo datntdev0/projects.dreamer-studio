@@ -10,15 +10,14 @@ import { writeChapter, writeMetadata } from '../library/novel/novel-files';
 import { novelFolder } from '../library/library-files';
 import type { StepContext } from '../pipelines/pipeline-definition';
 import { WorkSlots } from '../pipelines/work-slots';
-import { contentTranslationPipeline } from './content-translation-pipeline';
+import { ContentTranslationPipeline } from './content-translation-pipeline';
 import { readChapterTranslation, readTranslationIndex, saveTranslationEntry } from './translation-index';
 
 vi.mock('electron', () => ({
   app: { getPath: () => 'appData', isPackaged: false, getAppPath: () => join(process.cwd(), 'electron') },
 }));
-vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
 
-describe('[TH04-05] contentTranslationPipeline', () => {
+describe('[TH04-05] ContentTranslationPipeline', () => {
   let root = '';
   afterEach(() => {
     if (root) rmSync(root, { recursive: true, force: true });
@@ -99,7 +98,14 @@ describe('[TH04-05] contentTranslationPipeline', () => {
       log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     } as unknown as StepContext;
 
-    const pipeline = contentTranslationPipeline(deps as never);
+    const pipeline = new ContentTranslationPipeline(
+      deps.llm as never,
+      deps.settings as never,
+      deps.runs as never,
+      deps.snapshots as never,
+      deps.chapterSlots,
+      { send: vi.fn() },
+    );
     await expect(pipeline.steps[1].run?.(ctx)).resolves.toBeUndefined();
 
     const index = readTranslationIndex(folder, 'vi');

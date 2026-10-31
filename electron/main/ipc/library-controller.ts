@@ -6,13 +6,8 @@ import { safeFileName } from '@dreamer/shared/core/file-name';
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
 import { DeleteNovelsResult } from '@dreamer/shared/models/novel';
 import { NovelDetail, NovelPatch, NovelSummary, NovelUpdateRequest } from '@dreamer/shared/models/novel';
-import {
-  ChapterChange,
-  ChapterChangeRequest,
-  ChapterRef,
-  ChapterRequest,
-  ChapterText,
-} from '@dreamer/shared/models/novel';
+import { ChapterChange, ChapterChangeRequest, ChapterRef } from '@dreamer/shared/models/novel';
+import { ChapterRequest, ChapterText } from '@dreamer/shared/models/novel';
 import { SearchRequest } from '@dreamer/shared/models/novel';
 import { isContentHash, isNovelId } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -26,6 +21,7 @@ import { exportLabel, exportParams } from '../features/library/novel/novel-expor
 import { importLabel, importParams } from '../features/library/novel/novel-import-pipeline';
 import { readPackage } from '../features/library/package-reader';
 import { handle, handleValidated } from './handle';
+import { IpcController } from './ipc-controller';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -121,8 +117,6 @@ export function createPackagePicker(): (event: IpcMainInvokeEvent) => Promise<st
   };
 }
 
-const pickPackage: (event: IpcMainInvokeEvent) => Promise<string | null> = createPackagePicker();
-
 async function pickImage(event: IpcMainInvokeEvent): Promise<NovelPackage.PickedImage | null> {
   const result: OpenDialogReturnValue = await openDialog(event, {
     title: t('library.import.dialog.image'),
@@ -136,30 +130,6 @@ async function pickImage(event: IpcMainInvokeEvent): Promise<NovelPackage.Picked
   const image: Awaited<ReturnType<typeof readCoverImage>> = await readCoverImage(path);
   const previewUrl: string = `data:${image.mime};base64,${Buffer.from(image.bytes).toString('base64')}`;
   return { path, name: basename(path), size: image.bytes.byteLength, previewUrl };
-}
-
-let lastExportDirectory: string | undefined;
-
-async function exportNovel(
-  event: IpcMainInvokeEvent,
-  session: AppDataSession,
-  id: string,
-): Promise<PipelineRun | null> {
-  const novel: NovelDetail = session.library.get(id);
-  const fileName: string = `${safeFileName(exportLabel(novel))}.zip`;
-  const result: SaveDialogReturnValue = await saveDialog(event, {
-    title: t('library.export.dialog.title'),
-    defaultPath: lastExportDirectory === undefined ? fileName : join(lastExportDirectory, fileName),
-    filters: [{ name: t('library.export.dialog.packageFilter'), extensions: ['zip'] }],
-  });
-  if (result.canceled || result.filePath === '') {
-    return null;
-  }
-  const outputPath: string = result.filePath.toLocaleLowerCase('en-US').endsWith('.zip')
-    ? result.filePath
-    : `${result.filePath}.zip`;
-  lastExportDirectory = dirname(outputPath);
-  return session.executor.startRun('novel-export', exportParams(id, outputPath), exportLabel(novel), id);
 }
 
 export function isNovelIdValue(value: unknown): value is string {
@@ -300,49 +270,81 @@ function isSearchId(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-export function registerLibraryIpc(session: () => AppDataSession): void {
-  const searches: NovelSearches = new NovelSearches(() => new NovelSearch(session().paths, session().index));
-  handleValidated(
-    LibraryChannel.Export,
-    isNovelIdValue,
-    (id: string, event: IpcMainInvokeEvent): Promise<PipelineRun | null> => exportNovel(event, session(), id),
-  );
-  handleValidated(LibraryChannel.ShowExport, isNovelIdValue, (runId: string): void =>
-    session().library.showExport(runId),
-  );
-  handle(LibraryChannel.PickPackage, pickPackage);
-  handleValidated(LibraryChannel.ReadPackage, isAbsolutePath, (path: string): ReturnType<typeof readPackage> =>
-    readPackage(path),
-  );
-  handle(LibraryChannel.PickImage, pickImage);
-  handleValidated(LibraryChannel.Import, isImportRequest, (request: NovelPackage.NovelImportRequest): PipelineRun =>
-    session().executor.startRun('novel-import', importParams(request), importLabel(request)),
-  );
-  handle(LibraryChannel.List, (): NovelSummary[] => session().library.list());
-  handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => session().library.get(id));
-  handleValidated(LibraryChannel.GetChapter, isChapterRequest, (request: ChapterRequest): Promise<ChapterText> =>
-    session().library.getChapter(request),
-  );
-  handleValidated(LibraryChannel.Search, isSearchRequest, (request: SearchRequest, event: IpcMainInvokeEvent): void =>
-    searches.start(event.sender, request),
-  );
-  handleValidated(LibraryChannel.SearchCancel, isSearchId, (searchId: string, event: IpcMainInvokeEvent): void =>
-    searches.cancel(event.sender, searchId),
-  );
-  handleValidated(
-    LibraryChannel.UpdateNovel,
-    isNovelUpdateRequest,
-    (request: NovelUpdateRequest): Promise<NovelDetail> => session().library.updateNovel(request),
-  );
-  handleValidated(
-    LibraryChannel.ChangeChapters,
-    isChapterChangeRequest,
-    (request: ChapterChangeRequest): Promise<NovelDetail> => session().library.changeChapters(request),
-  );
-  handleValidated(LibraryChannel.DeleteNovels, isNovelIdList, (ids: string[]): Promise<DeleteNovelsResult> =>
-    session().library.deleteNovels(ids),
-  );
-  handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> =>
-    session().library.openFolder(id),
-  );
+export class LibraryController implements IpcController {
+  private lastExportDirectory: string | undefined;
+  private readonly pickPackage: (event: IpcMainInvokeEvent) => Promise<string | null> = createPackagePicker();
+
+  constructor(private readonly session: () => AppDataSession) {}
+
+  private async exportNovel(
+    event: IpcMainInvokeEvent,
+    session: AppDataSession,
+    id: string,
+  ): Promise<PipelineRun | null> {
+    const novel: NovelDetail = session.library.get(id);
+    const fileName: string = `${safeFileName(exportLabel(novel))}.zip`;
+    const result: SaveDialogReturnValue = await saveDialog(event, {
+      title: t('library.export.dialog.title'),
+      defaultPath: this.lastExportDirectory === undefined ? fileName : join(this.lastExportDirectory, fileName),
+      filters: [{ name: t('library.export.dialog.packageFilter'), extensions: ['zip'] }],
+    });
+    if (result.canceled || result.filePath === '') {
+      return null;
+    }
+    const outputPath: string = result.filePath.toLocaleLowerCase('en-US').endsWith('.zip')
+      ? result.filePath
+      : `${result.filePath}.zip`;
+    this.lastExportDirectory = dirname(outputPath);
+    return session.executor.startRun('novel-export', exportParams(id, outputPath), exportLabel(novel), id);
+  }
+
+  register(): void {
+    const searches: NovelSearches = new NovelSearches(
+      () => new NovelSearch(this.session().paths, this.session().index),
+    );
+    handleValidated(
+      LibraryChannel.Export,
+      isNovelIdValue,
+      (id: string, event: IpcMainInvokeEvent): Promise<PipelineRun | null> =>
+        this.exportNovel(event, this.session(), id),
+    );
+    handleValidated(LibraryChannel.ShowExport, isNovelIdValue, (runId: string): void =>
+      this.session().library.showExport(runId),
+    );
+    handle(LibraryChannel.PickPackage, this.pickPackage);
+    handleValidated(LibraryChannel.ReadPackage, isAbsolutePath, (path: string): ReturnType<typeof readPackage> =>
+      readPackage(path),
+    );
+    handle(LibraryChannel.PickImage, pickImage);
+    handleValidated(LibraryChannel.Import, isImportRequest, (request: NovelPackage.NovelImportRequest): PipelineRun =>
+      this.session().executor.startRun('novel-import', importParams(request), importLabel(request)),
+    );
+    handle(LibraryChannel.List, (): NovelSummary[] => this.session().library.list());
+    handleValidated(LibraryChannel.Get, isNovelIdValue, (id: string): NovelDetail => this.session().library.get(id));
+    handleValidated(LibraryChannel.GetChapter, isChapterRequest, (request: ChapterRequest): Promise<ChapterText> =>
+      this.session().library.getChapter(request),
+    );
+    handleValidated(LibraryChannel.Search, isSearchRequest, (request: SearchRequest, event: IpcMainInvokeEvent): void =>
+      searches.start(event.sender, request),
+    );
+    handleValidated(LibraryChannel.SearchCancel, isSearchId, (searchId: string, event: IpcMainInvokeEvent): void =>
+      searches.cancel(event.sender, searchId),
+    );
+    handleValidated(
+      LibraryChannel.UpdateNovel,
+      isNovelUpdateRequest,
+      (request: NovelUpdateRequest): Promise<NovelDetail> => this.session().library.updateNovel(request),
+    );
+    handleValidated(
+      LibraryChannel.ChangeChapters,
+      isChapterChangeRequest,
+      (request: ChapterChangeRequest): Promise<NovelDetail> => this.session().library.changeChapters(request),
+    );
+    handleValidated(LibraryChannel.DeleteNovels, isNovelIdList, (ids: string[]): Promise<DeleteNovelsResult> =>
+      this.session().library.deleteNovels(ids),
+    );
+    handleValidated(LibraryChannel.OpenFolder, isNovelIdValue, (id: string): Promise<void> =>
+      this.session().library.openFolder(id),
+    );
+  }
 }

@@ -1,3 +1,4 @@
+import { IpcController } from './ipc-controller';
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { ENTITY_TYPES, EntityType } from '@dreamer/shared/models/analysis';
 import { GlossaryEditRequest } from '@dreamer/shared/models/translation';
@@ -17,7 +18,7 @@ import { isContentHash } from '@dreamer/shared/models/novel-store';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { TranslationService } from '../features/translation/translation-service';
 import { handleValidated } from './handle';
-import { isNovelIdValue } from './library-ipc';
+import { isNovelIdValue } from './library-controller';
 
 function isTargetLanguage(value: unknown): value is TargetLanguage {
   return typeof value === 'string' && TARGET_LANGUAGES.includes(value as TargetLanguage);
@@ -103,64 +104,68 @@ function isContentRunRequest(value: unknown): value is ContentRunRequest {
   );
 }
 
-export function registerTranslationIpc(service: TranslationService): void {
-  handleValidated(
-    TranslationChannel.Status,
-    isStatusQuery,
-    (query: TranslationStatusQuery): Promise<TranslationStatus> => service.status(query),
-  );
-  handleValidated(
-    TranslationChannel.Chapter,
-    isChapterRequest,
-    (request: TranslationChapterRequest): Promise<ChapterTranslation | null> => service.chapter(request),
-  );
-  handleValidated(
-    TranslationChannel.Save,
-    isSaveRequest,
-    (request: TranslationSaveRequest): Promise<ChapterTranslation> => service.save(request),
-  );
-  handleValidated(
-    TranslationChannel.Glossary,
-    isInstructionRequest,
-    (query: InstructionRequest): Promise<GlossaryPage> => service.glossary(query),
-  );
-  handleValidated(
-    TranslationChannel.EditGlossary,
-    isGlossaryEditRequest,
-    (request: GlossaryEditRequest): Promise<void> => service.editGlossary(request),
-  );
-  handleValidated(
-    TranslationChannel.Instruction,
-    isInstructionRequest,
-    (request: InstructionRequest): Promise<TranslationInstruction> => service.instruction(request),
-  );
-  handleValidated(
-    TranslationChannel.SaveInstruction,
-    isInstructionSaveRequest,
-    (request: InstructionSaveRequest): Promise<TranslationInstruction> => service.saveInstruction(request),
-  );
-  handleValidated(
-    TranslationChannel.ResetInstruction,
-    isInstructionRequest,
-    (request: InstructionRequest): Promise<TranslationInstruction> => service.resetInstruction(request),
-  );
-  handleValidated(
-    TranslationChannel.PlanGlossary,
-    isGlossaryRunRequest,
-    (request: GlossaryRunRequest): Promise<GlossaryRunPlan> => service.planGlossary(request),
-  );
-  handleValidated(
-    TranslationChannel.StartGlossary,
-    isGlossaryRunRequest,
-    (request: GlossaryRunRequest): Promise<void> => service.startGlossary(request),
-  );
-  handleValidated(
-    TranslationChannel.PlanContent,
-    isContentRunRequest,
-    (request: ContentRunRequest): Promise<ContentRunPlan> => service.planContent(request),
-  );
-  handleValidated(TranslationChannel.StartContent, isContentRunRequest, (request: ContentRunRequest): Promise<void> =>
-    service.startContent(request),
-  );
-  handleValidated(TranslationChannel.Cancel, isNovelIdValue, (novelId: string): void => service.cancel(novelId));
+export class TranslationController implements IpcController {
+  constructor(private readonly service: TranslationService) {}
+
+  register(): void {
+    handleValidated(
+      TranslationChannel.Status,
+      isStatusQuery,
+      (query: TranslationStatusQuery): Promise<TranslationStatus> => this.service.status(query),
+    );
+    handleValidated(
+      TranslationChannel.Chapter,
+      isChapterRequest,
+      (request: TranslationChapterRequest): Promise<ChapterTranslation | null> => this.service.chapter(request),
+    );
+    handleValidated(
+      TranslationChannel.Save,
+      isSaveRequest,
+      (request: TranslationSaveRequest): Promise<ChapterTranslation> => this.service.save(request),
+    );
+    handleValidated(
+      TranslationChannel.Glossary,
+      isInstructionRequest,
+      (query: InstructionRequest): Promise<GlossaryPage> => this.service.glossary(query),
+    );
+    handleValidated(
+      TranslationChannel.EditGlossary,
+      isGlossaryEditRequest,
+      (request: GlossaryEditRequest): Promise<void> => this.service.editGlossary(request),
+    );
+    handleValidated(
+      TranslationChannel.Instruction,
+      isInstructionRequest,
+      (request: InstructionRequest): Promise<TranslationInstruction> => this.service.instruction(request),
+    );
+    handleValidated(
+      TranslationChannel.SaveInstruction,
+      isInstructionSaveRequest,
+      (request: InstructionSaveRequest): Promise<TranslationInstruction> => this.service.saveInstruction(request),
+    );
+    handleValidated(
+      TranslationChannel.ResetInstruction,
+      isInstructionRequest,
+      (request: InstructionRequest): Promise<TranslationInstruction> => this.service.resetInstruction(request),
+    );
+    handleValidated(
+      TranslationChannel.PlanGlossary,
+      isGlossaryRunRequest,
+      (request: GlossaryRunRequest): Promise<GlossaryRunPlan> => this.service.planGlossary(request),
+    );
+    handleValidated(
+      TranslationChannel.StartGlossary,
+      isGlossaryRunRequest,
+      (request: GlossaryRunRequest): Promise<void> => this.service.startGlossary(request),
+    );
+    handleValidated(
+      TranslationChannel.PlanContent,
+      isContentRunRequest,
+      (request: ContentRunRequest): Promise<ContentRunPlan> => this.service.planContent(request),
+    );
+    handleValidated(TranslationChannel.StartContent, isContentRunRequest, (request: ContentRunRequest): Promise<void> =>
+      this.service.startContent(request),
+    );
+    handleValidated(TranslationChannel.Cancel, isNovelIdValue, (novelId: string): void => this.service.cancel(novelId));
+  }
 }

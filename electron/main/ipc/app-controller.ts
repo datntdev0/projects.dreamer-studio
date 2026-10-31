@@ -1,3 +1,4 @@
+import { IpcController } from './ipc-controller';
 import { BrowserWindow, shell } from 'electron';
 import { arch, release, type } from 'node:os';
 import { AppInfo } from '@dreamer/shared/ipc/app';
@@ -11,7 +12,7 @@ import { pickFolder } from '../app/dialogs/app-data-dialog';
 import { createLogger, Logger } from '../logging/logger';
 import { readSchemaVersion } from '@storage/migrator';
 import { defaultAppDataRoot } from '@storage/paths';
-import { broadcast } from './broadcast';
+import { Broadcaster } from './broadcast-provider';
 import { handle } from './handle';
 
 const logger: Logger = createLogger('app');
@@ -66,24 +67,31 @@ function requireLink(payload: unknown): string {
   return ABOUT_LINKS[payload];
 }
 
-export function registerAppIpc(manager: AppDataManager): void {
-  handle(AppChannel.Info, (): AppInfo => appInfo(manager));
-  handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(manager.paths().logs));
-  handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(manager.paths().root));
-  handle(AppChannel.OpenLink, (_event, payload: unknown): Promise<void> => shell.openExternal(requireLink(payload)));
-  handle(AppDataChannel.PickFolder, (event): Promise<string | null> =>
-    pickFolder(BrowserWindow.fromWebContents(event.sender), manager.paths().root),
-  );
-  handle(AppDataChannel.Inspect, (_event, payload: unknown): AppDataCandidate =>
-    manager.inspect(requirePath(AppDataChannel.Inspect, payload)),
-  );
-  handle(AppDataChannel.Switch, async (_event, payload: unknown): Promise<AppInfo> => {
-    await manager.switchTo(requirePath(AppDataChannel.Switch, payload), (step: AppDataStep) =>
-      broadcast(AppDataChannel.Progress, step),
+export class AppController implements IpcController {
+  constructor(
+    private readonly manager: AppDataManager,
+    private readonly broadcaster: Broadcaster,
+  ) {}
+
+  register(): void {
+    handle(AppChannel.Info, (): AppInfo => appInfo(this.manager));
+    handle(AppChannel.OpenLogs, (): Promise<void> => openFolder(this.manager.paths().logs));
+    handle(AppChannel.OpenDataDir, (): Promise<void> => openFolderOrThrow(this.manager.paths().root));
+    handle(AppChannel.OpenLink, (_event, payload: unknown): Promise<void> => shell.openExternal(requireLink(payload)));
+    handle(AppDataChannel.PickFolder, (event): Promise<string | null> =>
+      pickFolder(BrowserWindow.fromWebContents(event.sender), this.manager.paths().root),
     );
-    const info: AppInfo = appInfo(manager);
-    broadcast(AppDataChannel.Changed, info);
-    return info;
-  });
-  handle(AppDataChannel.Status, (): AppDataStatus => manager.status());
+    handle(AppDataChannel.Inspect, (_event, payload: unknown): AppDataCandidate =>
+      this.manager.inspect(requirePath(AppDataChannel.Inspect, payload)),
+    );
+    handle(AppDataChannel.Switch, async (_event, payload: unknown): Promise<AppInfo> => {
+      await this.manager.switchTo(requirePath(AppDataChannel.Switch, payload), (step: AppDataStep) =>
+        this.broadcaster.send(AppDataChannel.Progress, step),
+      );
+      const info: AppInfo = appInfo(this.manager);
+      this.broadcaster.send(AppDataChannel.Changed, info);
+      return info;
+    });
+    handle(AppDataChannel.Status, (): AppDataStatus => this.manager.status());
+  }
 }

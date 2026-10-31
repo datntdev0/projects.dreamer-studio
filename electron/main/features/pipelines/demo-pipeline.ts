@@ -1,3 +1,5 @@
+import { PipelineType } from '@dreamer/shared/models/pipeline';
+import { BackendProvider } from '../../backend/backend-provider';
 import { runBackendJob } from '../../backend/backend-job';
 import { PipelineDefinition, PipelineStep, sleep, StepContext } from './pipeline-definition';
 
@@ -22,19 +24,22 @@ async function runTicks(n: number, ctx: StepContext): Promise<void> {
   }
 }
 
-function buildStep(n: number): PipelineStep {
+function buildStep(backend: BackendProvider, n: number): PipelineStep {
   const isBackend: boolean = n === backendStep;
   return {
     key: `run.demo.step.${n}`,
     backend: isBackend,
     run: (ctx: StepContext): Promise<void> =>
       isBackend
-        ? runBackendJob('demo', { ticks, tickMs: tickMs(), fail: ctx.params.failAtStep === n }, ctx)
+        ? runBackendJob(backend, 'demo', { ticks, tickMs: tickMs(), fail: ctx.params.failAtStep === n }, ctx)
         : runTicks(n, ctx),
   };
 }
 
-export const demoPipeline: PipelineDefinition = {
-  type: 'demo',
-  steps: Array.from({ length: stepCount }, (_: unknown, index: number) => buildStep(index + 1)),
-};
+export class DemoPipeline implements PipelineDefinition {
+  readonly type: PipelineType = 'demo';
+  readonly steps: PipelineStep[];
+  constructor(backend: BackendProvider) {
+    this.steps = Array.from({ length: stepCount }, (_: unknown, index: number) => buildStep(backend, index + 1));
+  }
+}

@@ -2,11 +2,9 @@ import { stat } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { LLM_CLIS, LLM_VERSION_TIMEOUT_MS, LlmCliId, LlmCliStatus } from '@dreamer/shared/models/llm';
-import { createLogger, Logger } from '../../logging/logger';
-import { ADAPTERS } from './llm-adapter';
-import { spawnCli, SpawnCliResult } from './llm-process';
-
-const logger: Logger = createLogger('llm');
+import { Logger } from '../../logging/logger';
+import { LlmAdapter } from './llm-adapter';
+import { LlmProcessProvider, SpawnCliResult } from './llm-process';
 
 function knownPaths(id: LlmCliId): string[] {
   if (process.platform !== 'win32') {
@@ -33,64 +31,72 @@ function knownPaths(id: LlmCliId): string[] {
   return localAppData ? [join(localAppData, 'agy', 'bin', 'agy.exe')] : [];
 }
 
-async function pathResult(id: LlmCliId): Promise<string | null> {
-  try {
-    const result: SpawnCliResult = await spawnCli({
-      path: process.platform === 'win32' ? 'where.exe' : 'which',
-      args: [LLM_CLIS[id].executable],
-      stdin: null,
-      cwd: tmpdir(),
-      timeoutMs: LLM_VERSION_TIMEOUT_MS,
-    });
-    if (result.exitCode !== 0 || result.timedOut) return null;
-    const lines: string[] = result.stdout
-      .split(/\r?\n/)
-      .map((line: string) => line.trim())
-      .filter(Boolean);
-    return process.platform === 'win32'
-      ? (lines.find((line: string) => /\.(exe|cmd)$/i.test(line)) ?? null)
-      : (lines[0] ?? null);
-  } catch {
-    return null;
-  }
-}
+export class LlmDetector {
+  constructor(
+    private readonly process: LlmProcessProvider,
+    private readonly adapters: Record<LlmCliId, LlmAdapter>,
+    private readonly logger: Logger,
+  ) {}
 
-export async function checkCliPath(id: LlmCliId, path: string): Promise<string | null> {
-  try {
-    if (!(await stat(path)).isFile()) return null;
-    const result: SpawnCliResult = await spawnCli({
-      path,
-      args: ADAPTERS[id].versionArgs,
-      stdin: null,
-      cwd: tmpdir(),
-      timeoutMs: LLM_VERSION_TIMEOUT_MS,
-    });
-    const match: RegExpMatchArray | null =
-      result.exitCode === 0 && !result.timedOut ? result.stdout.trim().match(LLM_CLIS[id].versionPattern) : null;
-    if (match) return match[1];
-    logger.warn(`${id} version mismatch at ${path}: ${result.stdout.slice(0, 2048)}`);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    logger.warn(`${id} version check failed at ${path}: ${String(error)}`);
-  }
-  return null;
-}
-
-export async function detectCli(id: LlmCliId, customPath: string | undefined): Promise<LlmCliStatus> {
-  if (customPath !== undefined) {
-    const version: string | null = await checkCliPath(id, customPath);
-    logger.info(`${id} custom path ${customPath}: ${version ?? 'invalid'}`);
-    return { id, state: version === null ? 'invalidPath' : 'installed', version, path: customPath, customPath: true };
-  }
-  const fromPath: string | null = await pathResult(id);
-  const candidates: string[] = [...new Set([...(fromPath ? [fromPath] : []), ...knownPaths(id)])];
-  for (const path of candidates) {
-    const version: string | null = await checkCliPath(id, path);
-    if (version !== null) {
-      logger.info(`${id} found at ${path}, version ${version}`);
-      return { id, state: 'installed', version, path, customPath: false };
+  private async pathResult(id: LlmCliId): Promise<string | null> {
+    try {
+      const result: SpawnCliResult = await this.process.spawnCli({
+        path: process.platform === 'win32' ? 'where.exe' : 'which',
+        args: [LLM_CLIS[id].executable],
+        stdin: null,
+        cwd: tmpdir(),
+        timeoutMs: LLM_VERSION_TIMEOUT_MS,
+      });
+      if (result.exitCode !== 0 || result.timedOut) return null;
+      const lines: string[] = result.stdout
+        .split(/\r?\n/)
+        .map((line: string) => line.trim())
+        .filter(Boolean);
+      return process.platform === 'win32'
+        ? (lines.find((line: string) => /\.(exe|cmd)$/i.test(line)) ?? null)
+        : (lines[0] ?? null);
+    } catch {
+      return null;
     }
   }
-  logger.info(`${id} not installed`);
-  return { id, state: 'notInstalled', version: null, path: null, customPath: false };
+
+  async checkCliPath(id: LlmCliId, path: string): Promise<string | null> {
+    try {
+      if (!(await stat(path)).isFile()) return null;
+      const result: SpawnCliResult = await this.process.spawnCli({
+        path,
+        args: this.adapters[id].versionArgs,
+        stdin: null,
+        cwd: tmpdir(),
+        timeoutMs: LLM_VERSION_TIMEOUT_MS,
+      });
+      const match: RegExpMatchArray | null =
+        result.exitCode === 0 && !result.timedOut ? result.stdout.trim().match(LLM_CLIS[id].versionPattern) : null;
+      if (match) return match[1];
+      this.logger.warn(`${id} version mismatch at ${path}: ${result.stdout.slice(0, 2048)}`);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      this.logger.warn(`${id} version check failed at ${path}: ${String(error)}`);
+    }
+    return null;
+  }
+
+  async detectCli(id: LlmCliId, customPath: string | undefined): Promise<LlmCliStatus> {
+    if (customPath !== undefined) {
+      const version: string | null = await this.checkCliPath(id, customPath);
+      this.logger.info(`${id} custom path ${customPath}: ${version ?? 'invalid'}`);
+      return { id, state: version === null ? 'invalidPath' : 'installed', version, path: customPath, customPath: true };
+    }
+    const fromPath: string | null = await this.pathResult(id);
+    const candidates: string[] = [...new Set([...(fromPath ? [fromPath] : []), ...knownPaths(id)])];
+    for (const path of candidates) {
+      const version: string | null = await this.checkCliPath(id, path);
+      if (version !== null) {
+        this.logger.info(`${id} found at ${path}, version ${version}`);
+        return { id, state: 'installed', version, path, customPath: false };
+      }
+    }
+    this.logger.info(`${id} not installed`);
+    return { id, state: 'notInstalled', version: null, path: null, customPath: false };
+  }
 }

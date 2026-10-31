@@ -1,8 +1,8 @@
 import { LibraryChannel } from '@dreamer/shared/ipc/channels';
 import { AppDataStep } from '@dreamer/shared/models/app-data';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
-import { broadcast } from '../ipc/broadcast';
-import { initLogging } from '../logging/logger';
+import { Broadcaster } from '../ipc/broadcast-provider';
+import { createLogger, initLogging } from '../logging/logger';
 import { cleanLibrary } from '../features/library/library-cleanup';
 import { LibraryIndex } from '../features/library/library-index';
 import { LibraryService } from '../features/library/library-service';
@@ -17,6 +17,7 @@ export interface AppDataSessionDeps {
   migrations: () => Migration[];
   registry: PipelineRegistry;
   limit: () => number;
+  broadcaster: Broadcaster;
 }
 
 function refreshImported(index: LibraryIndex, notify: (novelIds: string[]) => void, run: PipelineRun): void {
@@ -53,12 +54,19 @@ export class AppDataSession {
       runMigrations(db, deps.migrations(), paths.databaseBackup);
       cleanLibrary(paths);
       const runs: PipelineRunRepository = new PipelineRunRepository(db);
-      const executor: PipelineExecutor = new PipelineExecutor(runs, paths, deps.registry, deps.limit);
+      const executor: PipelineExecutor = new PipelineExecutor(
+        runs,
+        paths,
+        deps.registry,
+        deps.limit,
+        createLogger('pipeline'),
+        deps.broadcaster,
+      );
       executor.recover();
       const index: LibraryIndex = new LibraryIndex(paths);
       index.scan();
       const notify: (novelIds: string[]) => void = (novelIds: string[]): void =>
-        broadcast(LibraryChannel.Changed, { novelIds });
+        deps.broadcaster.send(LibraryChannel.Changed, { novelIds });
       const library: LibraryService = new LibraryService(paths, index, runs, notify);
       executor.onRunFinished((run: PipelineRun): void => {
         refreshImported(index, notify, run);

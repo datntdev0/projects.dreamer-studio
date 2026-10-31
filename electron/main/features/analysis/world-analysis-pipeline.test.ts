@@ -10,7 +10,7 @@ import type { PipelineStepDetail } from '@dreamer/shared/models/pipeline';
 import { NOVEL_STORE_VERSION, NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { defaultSettings } from '@dreamer/shared/models/settings';
 import { AppPaths, resolveAppPaths } from '@storage/paths';
-import { broadcast } from '../../ipc/broadcast';
+import { Broadcaster } from '../../ipc/broadcast-provider';
 import { LlmRunOptions, LlmService } from '../llm/llm-service';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { writeChapter, writeMetadata } from '../library/novel/novel-files';
@@ -21,7 +21,7 @@ import { readAnalysisIndex, readChapterResult } from './analysis-files';
 import { novelOntologyFile } from './analysis-ontology';
 import { AnalysisRuns } from './analysis-runs';
 import { AnalysisSnapshots } from './analysis-snapshot';
-import { worldAnalysisPipeline } from './world-analysis-pipeline';
+import { WorldAnalysisPipeline } from './world-analysis-pipeline';
 
 vi.mock('electron', () => ({
   app: {
@@ -34,7 +34,7 @@ vi.mock('electron', () => ({
 vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
-vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
+const broadcaster: Broadcaster = { send: vi.fn() };
 
 const novelId: string = '12345678-1234-4abc-8def-1234567890ab';
 const texts: string[] = [
@@ -126,13 +126,13 @@ function fakeSettings(withLlm: boolean): SettingsStore {
 }
 
 function setup(withLlm: boolean = true): void {
-  pipeline = worldAnalysisPipeline({
-    llm: fakeLlm(),
-    settings: fakeSettings(withLlm),
+  pipeline = new WorldAnalysisPipeline(
+    fakeLlm(),
+    fakeSettings(withLlm),
     runs,
-    chapterSlots: new WorkSlots((): number => 1),
-    snapshots: new AnalysisSnapshots(),
-  });
+    new WorkSlots((): number => 1),
+    new AnalysisSnapshots(),
+  );
 }
 
 function request(overrides: Partial<AnalysisRunRequest> = {}): AnalysisRunRequest {
@@ -213,7 +213,7 @@ async function writeNovel(): Promise<void> {
 
 function progressSteps(): string[] {
   return vi
-    .mocked(broadcast)
+    .mocked(broadcaster.send)
     .mock.calls.filter(([channel]): boolean => channel === AnalysisChannel.Progress)
     .map(([, payload]): string => (payload as { step: string }).step);
 }
@@ -227,8 +227,8 @@ beforeEach(async () => {
   progress = vi.fn();
   enteredSteps = [];
   promptFiles = [];
-  runs = new AnalysisRuns();
-  vi.mocked(broadcast).mockClear();
+  runs = new AnalysisRuns(broadcaster);
+  vi.mocked(broadcaster.send).mockClear();
   await writeNovel();
   setup();
 });
@@ -421,7 +421,7 @@ describe('[TH04-01] analyse', () => {
     expect(steps).toEqual(expect.arrayContaining(['candidates', 'predicates', 'verification']));
     expect(steps[0]).toBe('candidates');
     const last = vi
-      .mocked(broadcast)
+      .mocked(broadcaster.send)
       .mock.calls.filter(([channel]) => channel === AnalysisChannel.Progress)
       .at(-1)![1];
     expect(last).toMatchObject({ novelId, done: 3, total: 3, failed: 0 });

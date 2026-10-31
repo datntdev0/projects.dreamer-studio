@@ -6,8 +6,8 @@ import { PipelineChannel } from '@dreamer/shared/ipc/channels';
 import { PipelineCancelReason, PipelineListQuery, PipelinePage } from '@dreamer/shared/models/pipeline';
 import { PipelineRun, PipelineRunStatus, PipelineStartRequest } from '@dreamer/shared/models/pipeline';
 import { PipelineStepDetail, PipelineType, PipelineTypeInfo } from '@dreamer/shared/models/pipeline';
-import { broadcast } from '../../ipc/broadcast';
-import { createLogger, Logger } from '../../logging/logger';
+import { Broadcaster } from '../../ipc/broadcast-provider';
+import { Logger } from '../../logging/logger';
 import { PipelineRunRepository, RecoveredRun } from '@storage/repositories/pipeline-run-repository';
 import { AppPaths } from '@storage/paths';
 import { abortError, PipelineDefinition, PipelineStep, StepContext } from './pipeline-definition';
@@ -35,7 +35,6 @@ function overallProgress(run: PipelineRun, percent: number): number {
 }
 
 export class PipelineExecutor {
-  private readonly logger: Logger = createLogger('pipeline');
   private readonly queue: RunState[] = [];
   private readonly active: Map<string, RunState> = new Map<string, RunState>();
   private readonly finishListeners: ((run: PipelineRun) => void)[] = [];
@@ -46,6 +45,8 @@ export class PipelineExecutor {
     private readonly paths: AppPaths,
     private readonly registry: PipelineRegistry,
     private readonly limit: () => number,
+    private readonly logger: Logger,
+    private readonly broadcaster: Broadcaster,
   ) {}
 
   types(): PipelineTypeInfo[] {
@@ -113,7 +114,7 @@ export class PipelineExecutor {
     const deleted: string[] = this.repo.deleteFinished(ids);
     deleted.forEach((id: string): void => this.deleteLogFile(id));
     if (deleted.length > 0) {
-      broadcast(PipelineChannel.Deleted, deleted);
+      this.broadcaster.send(PipelineChannel.Deleted, deleted);
     }
     return deleted;
   }
@@ -193,7 +194,7 @@ export class PipelineExecutor {
 
   private async execute(state: RunState): Promise<void> {
     const { run } = state;
-    const runLog: RunLog = new RunLog(runLogFile(this.paths, run.id), run.id, run.type);
+    const runLog: RunLog = new RunLog(runLogFile(this.paths, run.id), run.id, run.type, this.logger, this.broadcaster);
     const ctx: StepContext = this.createContext(state, runLog);
     try {
       run.status = 'running';
@@ -359,7 +360,7 @@ export class PipelineExecutor {
   }
 
   private publish(run: PipelineRun): void {
-    broadcast(PipelineChannel.Update, { ...run });
+    this.broadcaster.send(PipelineChannel.Update, { ...run });
   }
 
   private discardLeftovers(run: RecoveredRun): void {

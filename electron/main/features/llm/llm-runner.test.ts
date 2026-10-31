@@ -5,7 +5,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { ErrorCode } from '@dreamer/shared/errors/app-error';
 import { LlmRunRequest, LlmUsage } from '@dreamer/shared/models/llm';
 import { classifyCliError, LlmAdapter, outputObject, parseJson, parseUsage } from './llm-adapter';
-import { runLlm } from './llm-runner';
+import { LlmRunner } from './llm-runner';
+import { LlmProcessProvider } from './llm-process';
 
 const fakeScript: string = [
   "const fs = require('node:fs');",
@@ -62,7 +63,14 @@ function request(timeoutMs: number = 5000): LlmRunRequest {
 }
 
 async function run(timeoutMs?: number, signal?: AbortSignal): Promise<unknown> {
-  return runLlm({ adapter, path: launcher, request: request(timeoutMs), cacheDir, signal, log });
+  return new LlmRunner(new LlmProcessProvider(), log).run({
+    adapter,
+    path: launcher,
+    request: request(timeoutMs),
+    cacheDir,
+    signal,
+    log,
+  });
 }
 
 async function expectClean(): Promise<void> {
@@ -145,7 +153,14 @@ describe('[TH02-03] runLlm prompt file', () => {
   const logged = { ...log, warn };
 
   function runWithFile(promptFile: string): Promise<unknown> {
-    return runLlm({ adapter, path: launcher, request: request(), cacheDir, log: logged, promptFile });
+    return new LlmRunner(new LlmProcessProvider(), log).run({
+      adapter,
+      path: launcher,
+      request: request(),
+      cacheDir,
+      log: logged,
+      promptFile,
+    });
   }
 
   it('writes the header, prompt and answer', async () => {

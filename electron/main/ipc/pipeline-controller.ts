@@ -1,3 +1,4 @@
+import { IpcController } from './ipc-controller';
 import { PipelineChannel } from '@dreamer/shared/ipc/channels';
 import { pipelineRunStatuses, PipelineCursor, PipelineListQuery } from '@dreamer/shared/models/pipeline';
 import { PipelinePage, PipelineRun, PipelineRunStatus } from '@dreamer/shared/models/pipeline';
@@ -46,16 +47,20 @@ function isListQuery(value: unknown): value is PipelineListQuery {
   );
 }
 
-export function registerPipelineIpc(executor: () => PipelineExecutor): void {
-  handle(PipelineChannel.Types, (): PipelineTypeInfo[] => executor().types());
-  handleValidated(PipelineChannel.Start, isStartRequest, (request: PipelineStartRequest): PipelineRun =>
-    executor().start(request),
-  );
-  handleValidated(PipelineChannel.Cancel, isId, (id: string): void => executor().cancel(id));
-  handleValidated(PipelineChannel.List, isListQuery, (query: PipelineListQuery): PipelinePage =>
-    executor().list(query),
-  );
-  handleValidated(PipelineChannel.Get, isId, (id: string): PipelineRun => executor().get(id));
-  handleValidated(PipelineChannel.GetLog, isId, (id: string): string[] => executor().readLog(id));
-  handleValidated(PipelineChannel.Delete, isIdList, (ids: string[]): string[] => executor().delete(ids));
+export class PipelineController implements IpcController {
+  constructor(private readonly executor: () => PipelineExecutor) {}
+
+  register(): void {
+    handle(PipelineChannel.Types, (): PipelineTypeInfo[] => this.executor().types());
+    handleValidated(PipelineChannel.Start, isStartRequest, (request: PipelineStartRequest): PipelineRun =>
+      this.executor().start(request),
+    );
+    handleValidated(PipelineChannel.Cancel, isId, (id: string): void => this.executor().cancel(id));
+    handleValidated(PipelineChannel.List, isListQuery, (query: PipelineListQuery): PipelinePage =>
+      this.executor().list(query),
+    );
+    handleValidated(PipelineChannel.Get, isId, (id: string): PipelineRun => this.executor().get(id));
+    handleValidated(PipelineChannel.GetLog, isId, (id: string): string[] => this.executor().readLog(id));
+    handleValidated(PipelineChannel.Delete, isIdList, (ids: string[]): string[] => this.executor().delete(ids));
+  }
 }

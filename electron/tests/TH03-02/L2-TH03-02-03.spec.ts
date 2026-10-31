@@ -3,8 +3,8 @@ import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppDataSession } from '../../main/app/app-data-session';
-import { novelExportPipeline } from '../../main/features/library/novel/novel-export-pipeline';
-import { novelImportPipeline } from '../../main/features/library/novel/novel-import-pipeline';
+import { NovelExportPipeline } from '../../main/features/library/novel/novel-export-pipeline';
+import { NovelImportPipeline } from '../../main/features/library/novel/novel-import-pipeline';
 import { readPackage, openPackageArchive } from '../../main/features/library/package-reader';
 import { chapterPath, novelFolder } from '../../main/features/library/library-files';
 import { readMetadata, writeMetadata } from '../../main/features/library/novel/novel-files';
@@ -12,8 +12,12 @@ import { vi } from 'vitest';
 
 describe('[TH03-02] L2-TH03-02-03 delete/export data contract', () => {
   let work: ReturnType<typeof workspace>;
+  let novelExportPipeline: NovelExportPipeline;
+  let novelImportPipeline: NovelImportPipeline;
   beforeEach(() => {
     work = workspace();
+    novelExportPipeline = new NovelExportPipeline();
+    novelImportPipeline = new NovelImportPipeline();
   });
   afterEach(() => work.dispose());
 
@@ -72,7 +76,14 @@ describe('[TH03-02] L2-TH03-02-03 delete/export data contract', () => {
       if (reason === 'missing-source') rmSync(chapterPath(folder, novel.chapters[0].file));
       else ctx.progress = () => controller.abort();
       await expect(
-        execute({ ...novelExportPipeline, steps: novelExportPipeline.steps.slice(1) }, ctx),
+        execute(
+          {
+            ...novelExportPipeline,
+            cleanup: novelExportPipeline.cleanup.bind(novelExportPipeline),
+            steps: novelExportPipeline.steps.slice(1),
+          },
+          ctx,
+        ),
       ).rejects.toThrow();
       expect(existsSync(`${outputPath}.tmp`)).toBe(false);
       const { readFileSync } = await import('node:fs');

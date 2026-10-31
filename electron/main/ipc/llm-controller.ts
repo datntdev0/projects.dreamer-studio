@@ -1,10 +1,11 @@
+import { IpcController } from './ipc-controller';
 import { BrowserWindow, dialog, IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue } from 'electron';
 import { LlmChannel } from '@dreamer/shared/ipc/channels';
 import { LLM_CLIS, isLlmCliId, isLlmPathRequest } from '@dreamer/shared/models/llm';
 import { LlmCliId, LlmCliStatus, LlmPathRequest, LlmTestResult } from '@dreamer/shared/models/llm';
 import { t } from '../app/app-i18n';
 import { LlmService } from '../features/llm/llm-service';
-import { broadcast } from './broadcast';
+import { Broadcaster } from './broadcast-provider';
 import { handle, handleValidated } from './handle';
 
 async function pickPath(cli: LlmCliId, event: IpcMainInvokeEvent): Promise<string | null> {
@@ -22,13 +23,20 @@ async function pickPath(cli: LlmCliId, event: IpcMainInvokeEvent): Promise<strin
   return result.canceled ? null : (result.filePaths[0] ?? null);
 }
 
-export function registerLlmIpc(service: LlmService): void {
-  handle(LlmChannel.Status, (): Promise<LlmCliStatus[]> => service.status());
-  handle(LlmChannel.Detect, (): Promise<LlmCliStatus[]> => service.detect());
-  handleValidated(LlmChannel.Test, isLlmCliId, (cli: LlmCliId): Promise<LlmTestResult> => service.test(cli));
-  handleValidated(LlmChannel.PickPath, isLlmCliId, pickPath);
-  handleValidated(LlmChannel.SetPath, isLlmPathRequest, (request: LlmPathRequest): Promise<LlmCliStatus> =>
-    service.setPath(request),
-  );
-  service.onChanged((statuses: LlmCliStatus[]): void => broadcast(LlmChannel.Changed, statuses));
+export class LlmController implements IpcController {
+  constructor(
+    private readonly llm: LlmService,
+    private readonly broadcaster: Broadcaster,
+  ) {}
+
+  register(): void {
+    handle(LlmChannel.Status, (): Promise<LlmCliStatus[]> => this.llm.status());
+    handle(LlmChannel.Detect, (): Promise<LlmCliStatus[]> => this.llm.detect());
+    handleValidated(LlmChannel.Test, isLlmCliId, (cli: LlmCliId): Promise<LlmTestResult> => this.llm.test(cli));
+    handleValidated(LlmChannel.PickPath, isLlmCliId, pickPath);
+    handleValidated(LlmChannel.SetPath, isLlmPathRequest, (request: LlmPathRequest): Promise<LlmCliStatus> =>
+      this.llm.setPath(request),
+    );
+    this.llm.onChanged((statuses: LlmCliStatus[]): void => this.broadcaster.send(LlmChannel.Changed, statuses));
+  }
 }

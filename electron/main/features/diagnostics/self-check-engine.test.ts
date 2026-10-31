@@ -8,6 +8,8 @@ vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
 
+const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
 const context = (): CheckContext => ({}) as CheckContext;
 
 function fakeCheck(id: string, run: SelfCheck['run']): SelfCheck {
@@ -25,7 +27,7 @@ function byId(run: DiagnosticsRun, id: string): CheckResult {
 
 describe('[TH02-02] SelfCheckEngine', () => {
   it('turns a throwing and a hanging check into errors while the others still return, in registration order', async () => {
-    const engine: SelfCheckEngine = new SelfCheckEngine(context, 50);
+    const engine: SelfCheckEngine = new SelfCheckEngine(context, logger, 50);
     [okCheck('first'), throwingCheck, hangingCheck, okCheck('last')].forEach((check: SelfCheck): void =>
       engine.register(check),
     );
@@ -48,14 +50,14 @@ describe('[TH02-02] SelfCheckEngine', () => {
   });
 
   it('throws when a check id is registered twice', () => {
-    const engine: SelfCheckEngine = new SelfCheckEngine(context);
+    const engine: SelfCheckEngine = new SelfCheckEngine(context, logger);
     engine.register(okCheck('same'));
 
     expect(() => engine.register(okCheck('same'))).toThrow();
   });
 
   it('returns the same promise for a run called while another is running', async () => {
-    const engine: SelfCheckEngine = new SelfCheckEngine(context);
+    const engine: SelfCheckEngine = new SelfCheckEngine(context, logger);
     engine.register(okCheck('only'));
 
     const first: Promise<DiagnosticsRun> = engine.run();
@@ -68,7 +70,7 @@ describe('[TH02-02] SelfCheckEngine', () => {
   it('rejects the run when the context cannot be built', async () => {
     const engine: SelfCheckEngine = new SelfCheckEngine((): CheckContext => {
       throw new Error('switching');
-    });
+    }, logger);
     engine.register(okCheck('only'));
 
     await expect(engine.run()).rejects.toThrow();

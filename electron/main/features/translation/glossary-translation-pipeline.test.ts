@@ -13,14 +13,13 @@ import { writeChapter, writeMetadata } from '../library/novel/novel-files';
 import { novelFolder } from '../library/library-files';
 import { writeAnalysisIndex } from '../analysis/analysis-files';
 import { readGlossary } from './translation-glossary';
-import { glossaryTranslationPipeline } from './glossary-translation-pipeline';
+import { GlossaryTranslationPipeline } from './glossary-translation-pipeline';
 
 vi.mock('electron', () => ({
   app: { getPath: () => 'appData', isPackaged: false, getAppPath: () => join(process.cwd(), 'electron') },
 }));
-vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
 
-describe('[TH04-05] glossaryTranslationPipeline', () => {
+describe('[TH04-05] GlossaryTranslationPipeline', () => {
   let root = '';
   afterEach(() => {
     if (root) rmSync(root, { recursive: true, force: true });
@@ -106,7 +105,13 @@ describe('[TH04-05] glossaryTranslationPipeline', () => {
       log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     } as unknown as StepContext;
 
-    const pipeline = glossaryTranslationPipeline(deps as never);
+    const pipeline = new GlossaryTranslationPipeline(
+      deps.llm as never,
+      deps.settings as never,
+      deps.runs as never,
+      deps.snapshots as never,
+      { send: vi.fn() },
+    );
     await expect(pipeline.steps[1].run?.(ctx)).rejects.toMatchObject({ name: 'AbortError' });
 
     expect(calls).toBe(2);

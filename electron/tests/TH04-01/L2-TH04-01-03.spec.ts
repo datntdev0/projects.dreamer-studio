@@ -10,13 +10,15 @@ describe('[TH04-01] L2-TH04-01-03 explore and edit the world', () => {
   let session: AppDataSession;
   let seed: Awaited<ReturnType<typeof seedNovel>>;
   let service: AnalysisService;
+  let deps: ReturnType<typeof llmDeps>;
   beforeEach(async () => {
     work = workspace();
     seed = await seedNovel(work.paths);
     await seedAnalysis(seed, 1, [persona()]);
     await seedAnalysis(seed, 2, [persona('lan', 'Lan')]);
     session = AppDataSession.open(work.root, sessionDeps());
-    service = new AnalysisService(() => session, llmDeps(work.root));
+    deps = llmDeps(work.root);
+    service = new AnalysisService(() => session, deps.llm, deps.settings, deps.runs, deps.snapshots);
   });
   afterEach(() => {
     session.close();
@@ -37,7 +39,9 @@ describe('[TH04-01] L2-TH04-01-03 explore and edit the world', () => {
   it('AC3/4 saves edits into the chapter results, and a re-analysis of the chapter replaces them', async () => {
     const query = { novelId: seed.novel.id, chapter: null, only: false };
     const names = async (): Promise<string[]> =>
-      (await new AnalysisService(() => session, llmDeps(work.root)).world(query)).entities.map((entity) => entity.name);
+      (
+        await new AnalysisService(() => session, deps.llm, deps.settings, deps.runs, deps.snapshots).world(query)
+      ).entities.map((entity) => entity.name);
     const entityId = (await service.world(query)).entities.find((entity) => entity.name === 'Lan')!.id;
     await service.edit({ novelId: seed.novel.id, edits: [{ kind: 'entity-delete', entityId }] });
     expect(await names()).toEqual(['Mai']);

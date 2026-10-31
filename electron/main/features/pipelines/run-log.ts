@@ -4,14 +4,13 @@ import { errorStack } from '@dreamer/shared/errors/error-stack';
 import { PipelineChannel } from '@dreamer/shared/ipc/channels';
 import { LogLevel } from '@dreamer/shared/ipc/log';
 import { PipelineLogChunk, PipelineType } from '@dreamer/shared/models/pipeline';
-import { broadcast } from '../../ipc/broadcast';
-import { createLogger, Logger } from '../../logging/logger';
+import { Broadcaster } from '../../ipc/broadcast-provider';
+import { Logger } from '../../logging/logger';
 import { formatLogLine } from '../../logging/log-format';
 import { AppPaths } from '@storage/paths';
 
 const pushIntervalMs: number = 250;
 const baseModule: string = 'pipeline';
-const fileLogger: Logger = createLogger(baseModule);
 
 function formatRunLine(module: string, level: LogLevel, message: string, error?: unknown): string {
   const stack: string | undefined = error === undefined ? undefined : errorStack(error);
@@ -54,6 +53,8 @@ export class RunLog {
     private readonly file: string,
     private readonly runId: string,
     private readonly type: PipelineType,
+    private readonly fileLogger: Logger,
+    private readonly broadcaster: Broadcaster,
   ) {
     this.logger = {
       debug: (message: string): void => this.write('debug', message),
@@ -84,7 +85,7 @@ export class RunLog {
     if (!this.stream) {
       mkdirSync(dirname(this.file), { recursive: true });
       this.stream = createWriteStream(this.file, { flags: 'a' });
-      this.stream.on('error', (error: Error): void => fileLogger.warn(`run log failed: ${error.message}`));
+      this.stream.on('error', (error: Error): void => this.fileLogger.warn(`run log failed: ${error.message}`));
     }
     return this.stream;
   }
@@ -99,6 +100,6 @@ export class RunLog {
     }
     const chunk: PipelineLogChunk = { runId: this.runId, lines: this.pending };
     this.pending = [];
-    broadcast(PipelineChannel.Log, chunk);
+    this.broadcaster.send(PipelineChannel.Log, chunk);
   }
 }

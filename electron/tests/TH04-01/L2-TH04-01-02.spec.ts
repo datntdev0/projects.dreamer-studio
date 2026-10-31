@@ -9,6 +9,7 @@ describe('[TH04-01] L2-TH04-01-02 review source validation', () => {
   let session: AppDataSession;
   let seed: Awaited<ReturnType<typeof seedNovel>>;
   let service: AnalysisService;
+  let deps: ReturnType<typeof llmDeps>;
   beforeEach(async () => {
     work = workspace();
     seed = await seedNovel(work.paths);
@@ -28,7 +29,8 @@ describe('[TH04-01] L2-TH04-01-02 review source validation', () => {
       ],
     );
     session = AppDataSession.open(work.root, sessionDeps());
-    service = new AnalysisService(() => session, llmDeps(work.root));
+    deps = llmDeps(work.root);
+    service = new AnalysisService(() => session, deps.llm, deps.settings, deps.runs, deps.snapshots);
   });
   afterEach(() => {
     session.close();
@@ -60,7 +62,7 @@ describe('[TH04-01] L2-TH04-01-02 review source validation', () => {
       (await service.review({ novelId: seed.novel.id, chapterIndex: null, itemKind: 'all' })).counts.errors,
     ).toBeGreaterThan(0);
     await seedAnalysis(seed, 1, [persona()]);
-    service = new AnalysisService(() => session, llmDeps(work.root));
+    service = new AnalysisService(() => session, deps.llm, deps.settings, deps.runs, deps.snapshots);
     expect((await service.review({ novelId: seed.novel.id, chapterIndex: null, itemKind: 'all' })).items).toEqual([]);
   });
 });

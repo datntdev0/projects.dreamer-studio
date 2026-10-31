@@ -1,8 +1,6 @@
 import { CheckOutcome, CheckResult, CheckStatus, DiagnosticsRun } from '@dreamer/shared/models/diagnostics';
-import { createLogger, Logger } from '../../logging/logger';
+import { Logger } from '../../logging/logger';
 import { CheckContext, SelfCheck } from './self-check';
-
-const logger: Logger = createLogger('diagnostics');
 
 const failedOutcome: CheckOutcome = {
   status: 'error',
@@ -32,6 +30,7 @@ export class SelfCheckEngine {
 
   constructor(
     private readonly context: () => CheckContext,
+    private readonly logger: Logger,
     private readonly timeoutMs: number = 5000,
   ) {}
 
@@ -53,7 +52,7 @@ export class SelfCheckEngine {
     const ctx: CheckContext = this.context();
     const ranAt: string = new Date().toISOString();
     const results: CheckResult[] = await Promise.all(this.checks.map((check: SelfCheck) => this.runCheck(check, ctx)));
-    logger.info(`self-checks finished: ${summarize(results)}`);
+    this.logger.info(`self-checks finished: ${summarize(results)}`);
     return { ranAt, results };
   }
 
@@ -76,13 +75,13 @@ export class SelfCheckEngine {
     let timer: NodeJS.Timeout | undefined;
     const timeout: Promise<CheckOutcome> = new Promise<CheckOutcome>((resolve) => {
       timer = setTimeout((): void => {
-        logger.error(`self-check ${check.id} timed out after ${this.timeoutMs} ms`);
+        this.logger.error(`self-check ${check.id} timed out after ${this.timeoutMs} ms`);
         resolve(timeoutOutcome);
       }, this.timeoutMs);
     });
     const finished: Promise<CheckOutcome> = (async (): Promise<CheckOutcome> => check.run(ctx))().catch(
       (error: unknown): CheckOutcome => {
-        logger.error(`self-check ${check.id} failed`, error);
+        this.logger.error(`self-check ${check.id} failed`, error);
         return failedOutcome;
       },
     );

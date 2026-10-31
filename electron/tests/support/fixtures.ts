@@ -26,7 +26,6 @@ vi.mock('electron', () => ({
   app: { getPath: () => 'appData', isPackaged: false, getAppPath: () => resolve('electron') },
   shell: { openPath: vi.fn(), showItemInFolder: vi.fn() },
 }));
-vi.mock('../../main/ipc/broadcast', () => ({ broadcast: vi.fn() }));
 vi.mock('../../main/logging/logger', () => ({
   initLogging: () => true,
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
@@ -39,8 +38,13 @@ export function workspace() {
   return { root, paths, dispose: () => rmSync(root, { recursive: true, force: true }) };
 }
 
+export function fakeBroadcaster() {
+  return { send: vi.fn() };
+}
+
 export function sessionDeps(definitions: PipelineDefinition[] = []) {
   return {
+    broadcaster: fakeBroadcaster(),
     migrations: () => loadMigrations(resolve('electron/main/storage/migrations')),
     registry: new PipelineRegistry(definitions),
     limit: () => 1,
@@ -106,16 +110,18 @@ export function llmDeps(root: string) {
   const settings = defaultSettings(root);
   settings.llm.default = { cli: 'claude', model: null };
   const runForFeature = vi.fn();
+  const broadcaster = fakeBroadcaster();
   const status = vi.fn(async () => [
     { id: 'claude', state: 'installed', version: '1', path: 'claude', customPath: false },
   ]);
   return {
     settings: { get: () => settings } as SettingsStore,
     llm: { status, runForFeature } as unknown as LlmService,
-    runs: new AnalysisRuns(),
+    runs: new AnalysisRuns(broadcaster),
     snapshots: new AnalysisSnapshots(),
     chapterSlots: new WorkSlots(() => 1),
-    translationRuns: new TranslationRuns(),
+    translationRuns: new TranslationRuns(broadcaster),
+    broadcaster,
     runForFeature,
     status,
     settingsValue: settings,

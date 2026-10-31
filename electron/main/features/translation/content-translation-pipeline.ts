@@ -7,16 +7,16 @@ import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { TranslationChannel } from '@dreamer/shared/ipc/channels';
 import { formatLlmChoice, LlmFeatureRunRequest, LlmRunResult, resolveLlm } from '@dreamer/shared/models/llm';
 import { NovelChapterEntry, NovelMetadata } from '@dreamer/shared/models/novel-store';
-import { PipelineStepDetail } from '@dreamer/shared/models/pipeline';
+import { PipelineStepDetail, PipelineType } from '@dreamer/shared/models/pipeline';
 import { ChapterTranslationFile, ChapterTranslationSummary } from '@dreamer/shared/models/translation';
 import { ContentRunRequest, GlossaryRow, GlossaryUsed } from '@dreamer/shared/models/translation';
 import { TranslationIndexEntry, TranslationRun } from '@dreamer/shared/models/translation';
 import { AppPaths } from '@storage/paths';
-import { broadcast } from '../../ipc/broadcast';
+import { Broadcaster } from '../../ipc/broadcast-provider';
 import { readChapterParagraphs } from '../analysis/analysis-files';
 import { novelFolder, NovelFolder } from '../library/library-files';
 import { readMetadata, withNovelLock } from '../library/novel/novel-files';
-import { isAbort, PipelineDefinition, settleAll, StepContext } from '../pipelines/pipeline-definition';
+import { isAbort, PipelineDefinition, PipelineStep, settleAll, StepContext } from '../pipelines/pipeline-definition';
 import { promptLogDir } from '../pipelines/run-log';
 import { WorkSlots } from '../pipelines/work-slots';
 import { buildChapterTranslation, ChapterTranslationBuild, chapterStatusesFor } from './translation-index';
@@ -25,11 +25,10 @@ import { hasAnalysedWorld, loadGlossaryRows } from './translation-glossary';
 import { loadInstruction } from './translation-instruction';
 import { AskLlm } from '../llm/llm-checked';
 import { askChapterPart, ChapterPartTranslation } from './translation-llm';
-import { GlossaryTranslationDeps } from './glossary-translation-pipeline';
-
-export interface ContentTranslationDeps extends GlossaryTranslationDeps {
-  chapterSlots: WorkSlots;
-}
+import { LlmService } from '../llm/llm-service';
+import { SettingsStore } from '../settings/settings-store';
+import { AnalysisSnapshots } from '../analysis/analysis-snapshot';
+import { TranslationRuns } from './translation-runs';
 
 export interface ContentRunCheck {
   novel: NovelMetadata;
@@ -51,18 +50,20 @@ function readNovel(folder: NovelFolder, novelId: string): NovelMetadata {
 }
 
 export async function checkContentRun(
-  deps: ContentTranslationDeps,
+  llm: LlmService,
+  settings: SettingsStore,
+  snapshots: AnalysisSnapshots,
   paths: AppPaths,
   request: ContentRunRequest,
 ): Promise<ContentRunCheck> {
   const folder: NovelFolder = novelFolder(paths, request.novelId);
   const novel: NovelMetadata = readNovel(folder, request.novelId);
-  const resolution = resolveLlm(deps.settings.get().llm, 'contentTranslation', await deps.llm.status());
+  const resolution = resolveLlm(settings.get().llm, 'contentTranslation', await llm.status());
   const llmLabel: string = resolution.choice ? formatLlmChoice(resolution.choice, 'Default') : '';
   const statuses: ChapterTranslationSummary[] = await chapterStatusesFor(folder, novel, request.language);
   const queue: number[] = contentRunQueue(request, statuses);
   const rows: GlossaryRow[] = hasAnalysedWorld(folder)
-    ? await loadGlossaryRows(deps.snapshots, folder, novel, request.language)
+    ? await loadGlossaryRows(snapshots, folder, novel, request.language)
     : [];
   const blockedReason: ErrorCode | null =
     resolution.problem !== null || resolution.choice === null
@@ -82,8 +83,8 @@ function isChapterFailure(error: unknown): error is CodedError {
   );
 }
 
-function publish(deps: ContentTranslationDeps, novelId: string, run: TranslationRun, ctx: StepContext): void {
-  deps.runs.set(novelId, { ...run });
+function publish(runs: TranslationRuns, novelId: string, run: TranslationRun, ctx: StepContext): void {
+  runs.set(novelId, { ...run });
   if (run.total > 0) ctx.progress((run.done / run.total) * 100);
 }
 
@@ -131,129 +132,136 @@ async function askChapter(input: {
   };
 }
 
-async function precondition(ctx: StepContext, deps: ContentTranslationDeps): Promise<void> {
-  const request: ContentRunRequest = requestFromParams(ctx.params);
-  const check: ContentRunCheck = await checkContentRun(deps, ctx.paths, request);
-  if (check.blockedReason) {
-    throw new CodedError(check.blockedReason, `Content translation cannot run: ${check.blockedReason}`);
-  }
-  ctx.log.info(`LLM: ${check.llmLabel}; chapters ${check.queue.length}`);
-}
+export class ContentTranslationPipeline implements PipelineDefinition {
+  readonly type: PipelineType = 'content-translation';
+  readonly overallProgress: boolean = true;
+  readonly steps: PipelineStep[] = [
+    {
+      key: 'translation.run.step.check',
+      backend: false,
+      run: (ctx: StepContext): Promise<void> => this.precondition(ctx),
+    },
+    {
+      key: 'translation.run.step.content',
+      backend: false,
+      run: (ctx: StepContext): Promise<void> => this.translate(ctx),
+    },
+  ];
 
-async function translate(ctx: StepContext, deps: ContentTranslationDeps): Promise<void> {
-  const request: ContentRunRequest = requestFromParams(ctx.params);
-  const check: ContentRunCheck = await checkContentRun(deps, ctx.paths, request);
-  if (check.blockedReason) {
-    throw new CodedError(check.blockedReason, `Content translation cannot run: ${check.blockedReason}`);
+  constructor(
+    private readonly llm: LlmService,
+    private readonly settings: SettingsStore,
+    private readonly runs: TranslationRuns,
+    private readonly snapshots: AnalysisSnapshots,
+    private readonly chapterSlots: WorkSlots,
+    private readonly broadcaster: Broadcaster,
+  ) {}
+
+  private async precondition(ctx: StepContext): Promise<void> {
+    const request: ContentRunRequest = requestFromParams(ctx.params);
+    const check: ContentRunCheck = await checkContentRun(this.llm, this.settings, this.snapshots, ctx.paths, request);
+    if (check.blockedReason) {
+      throw new CodedError(check.blockedReason, `Content translation cannot run: ${check.blockedReason}`);
+    }
+    ctx.log.info(`LLM: ${check.llmLabel}; chapters ${check.queue.length}`);
   }
-  const folder: NovelFolder = novelFolder(ctx.paths, request.novelId);
-  const instruction: string = (await loadInstruction(folder, request.novelId, request.language)).text;
-  const hash: string = await instructionHash(instruction);
-  const run: TranslationRun = {
-    kind: 'content',
-    language: request.language,
-    runningChapter: null,
-    done: 0,
-    total: check.queue.length,
-    failed: 0,
-  };
-  let issues: number = 0;
-  let callNumber: number = 0;
-  const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
-    ctx.checkpoint();
-    const number: string = String(++callNumber).padStart(3, '0');
-    const promptFile: string = join(promptLogDir(ctx.paths, ctx.runId), `${number}-${name}.md`);
-    return deps.llm.runForFeature('contentTranslation', llmRequest, { signal: ctx.signal, log: ctx.log, promptFile });
-  };
-  const finish = (): void =>
-    deps.runs.finish(request.novelId, {
-      runId: ctx.runId,
+
+  private async translate(ctx: StepContext): Promise<void> {
+    const request: ContentRunRequest = requestFromParams(ctx.params);
+    const check: ContentRunCheck = await checkContentRun(this.llm, this.settings, this.snapshots, ctx.paths, request);
+    if (check.blockedReason) {
+      throw new CodedError(check.blockedReason, `Content translation cannot run: ${check.blockedReason}`);
+    }
+    const folder: NovelFolder = novelFolder(ctx.paths, request.novelId);
+    const instruction: string = (await loadInstruction(folder, request.novelId, request.language)).text;
+    const hash: string = await instructionHash(instruction);
+    const run: TranslationRun = {
       kind: 'content',
       language: request.language,
-      translated: run.done - run.failed,
-      failed: run.failed,
-      issues,
-    });
-  const save = async (entry: TranslationIndexEntry, result?: ChapterTranslationFile): Promise<void> => {
-    await withNovelLock(request.novelId, (): Promise<void> =>
-      saveTranslationEntry(folder, request.language, check.novel.chapters, entry, result),
-    );
-    broadcast(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
-  };
-  const translateChapter = async (index: number): Promise<void> => {
-    const chapter: NovelChapterEntry = check.novel.chapters[index - 1];
-    const base = { index, file: chapter.file, edited: false, instructionHash: hash };
+      runningChapter: null,
+      done: 0,
+      total: check.queue.length,
+      failed: 0,
+    };
+    let issues: number = 0;
+    let callNumber: number = 0;
+    const ask = (llmRequest: LlmFeatureRunRequest, name: string): Promise<LlmRunResult> => {
+      ctx.checkpoint();
+      const number: string = String(++callNumber).padStart(3, '0');
+      const promptFile: string = join(promptLogDir(ctx.paths, ctx.runId), `${number}-${name}.md`);
+      return this.llm.runForFeature('contentTranslation', llmRequest, { signal: ctx.signal, log: ctx.log, promptFile });
+    };
+    const finish = (): void =>
+      this.runs.finish(request.novelId, {
+        runId: ctx.runId,
+        kind: 'content',
+        language: request.language,
+        translated: run.done - run.failed,
+        failed: run.failed,
+        issues,
+      });
+    const save = async (entry: TranslationIndexEntry, result?: ChapterTranslationFile): Promise<void> => {
+      await withNovelLock(request.novelId, (): Promise<void> =>
+        saveTranslationEntry(folder, request.language, check.novel.chapters, entry, result),
+      );
+      this.broadcaster.send(TranslationChannel.Changed, { novelId: request.novelId, language: request.language });
+    };
+    const translateChapter = async (index: number): Promise<void> => {
+      const chapter: NovelChapterEntry = check.novel.chapters[index - 1];
+      const base = { index, file: chapter.file, edited: false, instructionHash: hash };
+      try {
+        ctx.checkpoint();
+        const detail: PipelineStepDetail = { key: 'translation.run.detail.chapter', params: { chapter: index } };
+        ctx.enterStep('translation.run.step.content', detail);
+        run.runningChapter = index;
+        publish(this.runs, request.novelId, run, ctx);
+        const paragraphs: string[] = await readChapterParagraphs(folder, chapter.file);
+        const names: GlossaryUsed[] = foundGlossary(check.rows, chapter.title, paragraphs);
+        const translated: ChapterPartTranslation = await askChapter({
+          index,
+          title: chapter.title,
+          paragraphs,
+          names,
+          sourceLanguage: check.novel.language,
+          request,
+          instruction,
+          ask,
+          ctx,
+        });
+        ctx.checkpoint();
+        const built: ChapterTranslationBuild = buildChapterTranslation({
+          source: { title: chapter.title, paragraphs },
+          translation: translated,
+          names,
+          ...base,
+          translatedAt: new Date().toISOString(),
+        });
+        await save(built.entry, built.result);
+        run.done++;
+        if (built.issues.length > 0) issues++;
+        ctx.log.info(`Chapter ${index} saved`);
+      } catch (error: unknown) {
+        if (!isChapterFailure(error)) throw error;
+        const translatedAt: string = new Date().toISOString();
+        await save({ ...base, title: null, issues: 0, glossaryUsed: [], error: error.code, translatedAt });
+        run.done++;
+        run.failed++;
+        ctx.log.warn(`Chapter ${index} failed: ${error.code}`);
+      }
+      publish(this.runs, request.novelId, run, ctx);
+    };
+    publish(this.runs, request.novelId, run, ctx);
     try {
+      await settleAll(
+        check.queue.map((index: number): Promise<void> =>
+          this.chapterSlots.run(ctx.signal, () => translateChapter(index)),
+        ),
+      );
       ctx.checkpoint();
-      const detail: PipelineStepDetail = { key: 'translation.run.detail.chapter', params: { chapter: index } };
-      ctx.enterStep('translation.run.step.content', detail);
-      run.runningChapter = index;
-      publish(deps, request.novelId, run, ctx);
-      const paragraphs: string[] = await readChapterParagraphs(folder, chapter.file);
-      const names: GlossaryUsed[] = foundGlossary(check.rows, chapter.title, paragraphs);
-      const translated: ChapterPartTranslation = await askChapter({
-        index,
-        title: chapter.title,
-        paragraphs,
-        names,
-        sourceLanguage: check.novel.language,
-        request,
-        instruction,
-        ask,
-        ctx,
-      });
-      ctx.checkpoint();
-      const built: ChapterTranslationBuild = buildChapterTranslation({
-        source: { title: chapter.title, paragraphs },
-        translation: translated,
-        names,
-        ...base,
-        translatedAt: new Date().toISOString(),
-      });
-      await save(built.entry, built.result);
-      run.done++;
-      if (built.issues.length > 0) issues++;
-      ctx.log.info(`Chapter ${index} saved`);
+      finish();
     } catch (error: unknown) {
-      if (!isChapterFailure(error)) throw error;
-      const translatedAt: string = new Date().toISOString();
-      await save({ ...base, title: null, issues: 0, glossaryUsed: [], error: error.code, translatedAt });
-      run.done++;
-      run.failed++;
-      ctx.log.warn(`Chapter ${index} failed: ${error.code}`);
+      if (isAbort(error)) finish();
+      throw error;
     }
-    publish(deps, request.novelId, run, ctx);
-  };
-  publish(deps, request.novelId, run, ctx);
-  try {
-    await settleAll(
-      check.queue.map((index: number): Promise<void> =>
-        deps.chapterSlots.run(ctx.signal, () => translateChapter(index)),
-      ),
-    );
-    ctx.checkpoint();
-    finish();
-  } catch (error: unknown) {
-    if (isAbort(error)) finish();
-    throw error;
   }
-}
-
-export function contentTranslationPipeline(deps: ContentTranslationDeps): PipelineDefinition {
-  return {
-    type: 'content-translation',
-    overallProgress: true,
-    steps: [
-      {
-        key: 'translation.run.step.check',
-        backend: false,
-        run: (ctx: StepContext): Promise<void> => precondition(ctx, deps),
-      },
-      {
-        key: 'translation.run.step.content',
-        backend: false,
-        run: (ctx: StepContext): Promise<void> => translate(ctx, deps),
-      },
-    ],
-  };
 }

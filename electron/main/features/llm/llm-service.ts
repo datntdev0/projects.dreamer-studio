@@ -4,13 +4,12 @@ import { LlmFeatureId, LlmFeatureRunRequest, LlmResolution } from '@dreamer/shar
 import { LlmRunRequest, LlmRunResult, LlmTestResult, resolveLlm } from '@dreamer/shared/models/llm';
 import { isAbsolutePath } from '@dreamer/shared/models/validation';
 import { AppPaths } from '@storage/paths';
-import { createLogger, Logger } from '../../logging/logger';
+import { Logger } from '../../logging/logger';
 import { SettingsStore } from '../settings/settings-store';
-import { ADAPTERS } from './llm-adapter';
-import { checkCliPath, detectCli } from './llm-detector';
-import { runLlm } from './llm-runner';
+import { LlmAdapter } from './llm-adapter';
+import { LlmDetector } from './llm-detector';
+import { LlmRunner } from './llm-runner';
 
-const logger: Logger = createLogger('llm');
 const testPrompt: string = 'Reply with the JSON object {"ok": true} and nothing else.';
 const testSchema: Record<string, unknown> = {
   type: 'object',
@@ -39,10 +38,14 @@ export class LlmService {
   constructor(
     private readonly settings: SettingsStore,
     private readonly paths: () => AppPaths,
+    private readonly detector: LlmDetector,
+    private readonly runner: LlmRunner,
+    private readonly adapters: Record<LlmCliId, LlmAdapter>,
+    private readonly logger: Logger,
   ) {}
 
   startDetection(): void {
-    void this.detect().catch((error: unknown): void => logger.error('CLI detection failed', error));
+    void this.detect().catch((error: unknown): void => this.logger.error('CLI detection failed', error));
   }
 
   status(): Promise<LlmCliStatus[]> {
@@ -54,7 +57,7 @@ export class LlmService {
     if (this.detection) return this.detection;
     const customPaths: Partial<Record<LlmCliId, string>> = { ...this.settings.get().llm.paths };
     const inFlight: Promise<LlmCliStatus[]> = Promise.all(
-      LLM_CLI_IDS.map((cli: LlmCliId): Promise<LlmCliStatus> => detectCli(cli, customPaths[cli])),
+      LLM_CLI_IDS.map((cli: LlmCliId): Promise<LlmCliStatus> => this.detector.detectCli(cli, customPaths[cli])),
     )
       .then((statuses: LlmCliStatus[]): LlmCliStatus[] => {
         this.cached = statuses;
@@ -104,7 +107,7 @@ export class LlmService {
     const { cli, path } = request;
     if (path !== null) {
       if (!isAbsolutePath(path)) throw new CodedError(ErrorCode.LlmPathInvalid, 'CLI path must be absolute', path);
-      const version: string | null = await checkCliPath(cli, path);
+      const version: string | null = await this.detector.checkCliPath(cli, path);
       if (version === null) throw new CodedError(ErrorCode.LlmPathInvalid, 'CLI path is not valid', path);
       if (this.detection) await this.detection;
       this.settings.setLlmPath(cli, path);
@@ -114,7 +117,7 @@ export class LlmService {
     }
     if (this.detection) await this.detection;
     this.settings.setLlmPath(cli, null);
-    const status: LlmCliStatus = await detectCli(cli, undefined);
+    const status: LlmCliStatus = await this.detector.detectCli(cli, undefined);
     this.updateStatus(status);
     return status;
   }
@@ -125,8 +128,8 @@ export class LlmService {
     if (status?.state !== 'installed' || status.path === null) {
       throw new CodedError(ErrorCode.LlmCliFailed, `${request.cli} is not installed`);
     }
-    return runLlm({
-      adapter: ADAPTERS[request.cli],
+    return this.runner.run({
+      adapter: this.adapters[request.cli],
       path: status.path,
       request,
       cacheDir: this.paths().llmCache,

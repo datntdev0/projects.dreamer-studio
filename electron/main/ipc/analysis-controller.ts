@@ -3,24 +3,21 @@ import { isEntityType } from '@dreamer/shared/core/ontology-rules';
 import { AnalysisEditRequest, AnalysisPlan, AnalysisRunRequest, AnalysisStatus } from '@dreamer/shared/models/analysis';
 import { WorldDraftEdit } from '@dreamer/shared/models/analysis';
 import { Occurrence, OntologyProblem, ReviewPage } from '@dreamer/shared/models/analysis';
-import {
-  OccurrenceQuery,
-  QuoteMatch,
-  QuoteQuery,
-  ReviewQuery,
-  World,
-  WorldQuery,
-} from '@dreamer/shared/models/analysis';
-import {
-  WorldEditPreview,
-  WorldEditScope,
-  WorldPreviewRequest,
-  WorldScopeRequest,
-} from '@dreamer/shared/models/analysis';
+import { OccurrenceQuery } from '@dreamer/shared/models/analysis';
+import { QuoteMatch } from '@dreamer/shared/models/analysis';
+import { QuoteQuery } from '@dreamer/shared/models/analysis';
+import { ReviewQuery } from '@dreamer/shared/models/analysis';
+import { World } from '@dreamer/shared/models/analysis';
+import { WorldQuery } from '@dreamer/shared/models/analysis';
+import { WorldEditPreview } from '@dreamer/shared/models/analysis';
+import { WorldEditScope } from '@dreamer/shared/models/analysis';
+import { WorldPreviewRequest } from '@dreamer/shared/models/analysis';
+import { WorldScopeRequest } from '@dreamer/shared/models/analysis';
 import { isPlainObject } from '@dreamer/shared/models/validation';
 import { AnalysisService } from '../features/analysis/analysis-service';
+import { IpcController } from './ipc-controller';
 import { handleValidated } from './handle';
-import { isNovelIdValue } from './library-ipc';
+import { isNovelIdValue } from './library-controller';
 
 function isChapterIndex(value: unknown): value is number | null {
   return value === null || (typeof value === 'number' && Number.isInteger(value) && value >= 1);
@@ -194,45 +191,51 @@ function isWorldPreviewRequest(value: unknown): value is WorldPreviewRequest {
   );
 }
 
-export function registerAnalysisIpc(service: AnalysisService): void {
-  handleValidated(AnalysisChannel.Status, isNovelIdValue, (novelId: string): Promise<AnalysisStatus> =>
-    service.status(novelId),
-  );
-  handleValidated(AnalysisChannel.Plan, isAnalysisRunRequest, (request: AnalysisRunRequest): Promise<AnalysisPlan> =>
-    service.plan(request),
-  );
-  handleValidated(AnalysisChannel.Start, isAnalysisRunRequest, (request: AnalysisRunRequest): Promise<void> =>
-    service.start(request),
-  );
-  handleValidated(AnalysisChannel.Cancel, isNovelIdValue, (novelId: string): void => service.cancel(novelId));
-  handleValidated(AnalysisChannel.World, isWorldQuery, (query: WorldQuery): Promise<World> => service.world(query));
-  handleValidated(AnalysisChannel.Review, isReviewQuery, (query: ReviewQuery): Promise<ReviewPage> =>
-    service.review(query),
-  );
-  handleValidated(AnalysisChannel.Occurrences, isOccurrenceQuery, (query: OccurrenceQuery): Promise<Occurrence[]> =>
-    service.occurrences(query),
-  );
-  handleValidated(AnalysisChannel.Edit, isAnalysisEditRequest, (request: AnalysisEditRequest): Promise<void> =>
-    service.edit(request),
-  );
-  handleValidated(AnalysisChannel.FindQuote, isQuoteQuery, (query: QuoteQuery): Promise<QuoteMatch[]> =>
-    service.findQuote(query),
-  );
-  handleValidated(AnalysisChannel.Scope, isWorldScopeRequest, (request: WorldScopeRequest): Promise<WorldEditScope> =>
-    service.scope(request),
-  );
-  handleValidated(
-    AnalysisChannel.Preview,
-    isWorldPreviewRequest,
-    (request: WorldPreviewRequest): Promise<WorldEditPreview> => service.preview(request),
-  );
-  handleValidated(AnalysisChannel.OntologyOpen, isNovelIdValue, (novelId: string): Promise<void> =>
-    service.ontologyOpen(novelId),
-  );
-  handleValidated(AnalysisChannel.OntologyReset, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
-    service.ontologyReset(novelId),
-  );
-  handleValidated(AnalysisChannel.OntologyCheck, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
-    service.ontologyCheck(novelId),
-  );
+export class AnalysisController implements IpcController {
+  constructor(private readonly service: AnalysisService) {}
+
+  register(): void {
+    handleValidated(AnalysisChannel.Status, isNovelIdValue, (novelId: string): Promise<AnalysisStatus> =>
+      this.service.status(novelId),
+    );
+    handleValidated(AnalysisChannel.Plan, isAnalysisRunRequest, (request: AnalysisRunRequest): Promise<AnalysisPlan> =>
+      this.service.plan(request),
+    );
+    handleValidated(AnalysisChannel.Start, isAnalysisRunRequest, (request: AnalysisRunRequest): Promise<void> =>
+      this.service.start(request),
+    );
+    handleValidated(AnalysisChannel.Cancel, isNovelIdValue, (novelId: string): void => this.service.cancel(novelId));
+    handleValidated(AnalysisChannel.World, isWorldQuery, (query: WorldQuery): Promise<World> =>
+      this.service.world(query),
+    );
+    handleValidated(AnalysisChannel.Review, isReviewQuery, (query: ReviewQuery): Promise<ReviewPage> =>
+      this.service.review(query),
+    );
+    handleValidated(AnalysisChannel.Occurrences, isOccurrenceQuery, (query: OccurrenceQuery): Promise<Occurrence[]> =>
+      this.service.occurrences(query),
+    );
+    handleValidated(AnalysisChannel.Edit, isAnalysisEditRequest, (request: AnalysisEditRequest): Promise<void> =>
+      this.service.edit(request),
+    );
+    handleValidated(AnalysisChannel.FindQuote, isQuoteQuery, (query: QuoteQuery): Promise<QuoteMatch[]> =>
+      this.service.findQuote(query),
+    );
+    handleValidated(AnalysisChannel.Scope, isWorldScopeRequest, (request: WorldScopeRequest): Promise<WorldEditScope> =>
+      this.service.scope(request),
+    );
+    handleValidated(
+      AnalysisChannel.Preview,
+      isWorldPreviewRequest,
+      (request: WorldPreviewRequest): Promise<WorldEditPreview> => this.service.preview(request),
+    );
+    handleValidated(AnalysisChannel.OntologyOpen, isNovelIdValue, (novelId: string): Promise<void> =>
+      this.service.ontologyOpen(novelId),
+    );
+    handleValidated(AnalysisChannel.OntologyReset, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
+      this.service.ontologyReset(novelId),
+    );
+    handleValidated(AnalysisChannel.OntologyCheck, isNovelIdValue, (novelId: string): Promise<OntologyProblem[]> =>
+      this.service.ontologyCheck(novelId),
+    );
+  }
 }

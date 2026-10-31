@@ -17,7 +17,6 @@ vi.mock('electron', () => ({ app: { getPath: (): string => 'appData', isPackaged
 vi.mock('../../logging/logger', () => ({
   createLogger: (): object => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }));
-vi.mock('../../ipc/broadcast', () => ({ broadcast: vi.fn() }));
 
 let tempDir: string;
 let paths: AppPaths;
@@ -47,7 +46,16 @@ function gatedStep(key: string, releases: Array<() => void>): PipelineDefinition
 }
 
 function setup(definition: PipelineDefinition): void {
-  executor = new PipelineExecutor(repository, paths, new PipelineRegistry([definition]), (): number => limit);
+  executor = new PipelineExecutor(
+    repository,
+    paths,
+    new PipelineRegistry([definition]),
+    (): number => limit,
+    { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    {
+      send: vi.fn(),
+    },
+  );
 }
 
 function makeRun(id: string, status: PipelineRunStatus): PipelineRun {

@@ -1,7 +1,7 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { StepContext } from '../features/pipelines/pipeline-definition';
 import { backendUrl } from './backend-launch';
-import { BackendConnection, getBackendConnection } from './backend-process';
+import { BackendConnection, BackendProvider } from './backend-provider';
 
 interface JobEvent {
   type: 'progress' | 'log' | 'done' | 'error';
@@ -18,8 +18,13 @@ function unavailable(reason: string): CodedError {
   return new CodedError(ErrorCode.BackendUnavailable, reason);
 }
 
-async function openJob(type: string, params: Record<string, unknown>, ctx: StepContext): Promise<Response> {
-  const connection: BackendConnection | null = getBackendConnection();
+async function openJob(
+  backend: BackendProvider,
+  type: string,
+  params: Record<string, unknown>,
+  ctx: StepContext,
+): Promise<Response> {
+  const connection: BackendConnection | null = backend.connection();
   if (!connection) {
     throw unavailable('Backend is not running');
   }
@@ -73,9 +78,14 @@ async function consumeEvents(response: Response, ctx: StepContext): Promise<void
   throw unavailable('Backend job stream ended unexpectedly');
 }
 
-export async function runBackendJob(type: string, params: Record<string, unknown>, ctx: StepContext): Promise<void> {
+export async function runBackendJob(
+  backend: BackendProvider,
+  type: string,
+  params: Record<string, unknown>,
+  ctx: StepContext,
+): Promise<void> {
   try {
-    await consumeEvents(await openJob(type, params, ctx), ctx);
+    await consumeEvents(await openJob(backend, type, params, ctx), ctx);
   } catch (error) {
     if (ctx.signal.aborted || error instanceof CodedError || error instanceof JobFailure) {
       throw error;

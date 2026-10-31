@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import type { ContentRunRequest } from '@dreamer/shared/models/translation';
 import {
-  contentTranslationPipeline,
+  ContentTranslationPipeline,
   checkContentRun,
 } from '../../main/features/translation/content-translation-pipeline';
 import {
@@ -96,17 +96,39 @@ describe('[TH04-05] L2-TH04-05-03 chapter translation contract', () => {
   it('preserves user-edited chapters unless overwrite is explicitly selected', async () => {
     await saveEdited();
     await editGlossaryEntry(seed.folder, 'vi', key, 'Mai');
-    const pipelineDeps = { ...deps, runs: deps.translationRuns };
-    expect((await checkContentRun(pipelineDeps, work.paths, request)).queue).toEqual([2]);
-    expect((await checkContentRun(pipelineDeps, work.paths, { ...request, overwrite: true })).queue).toEqual([1, 2]);
+    expect((await checkContentRun(deps.llm, deps.settings, deps.snapshots, work.paths, request)).queue).toEqual([2]);
+    expect(
+      (await checkContentRun(deps.llm, deps.settings, deps.snapshots, work.paths, { ...request, overwrite: true }))
+        .queue,
+    ).toEqual([1, 2]);
     deps.runForFeature.mockResolvedValue({
       value: { title: 'Automatic', paragraphs: ['Automatic text.'] },
       usage: null,
       durationMs: 1,
     });
-    await execute(contentTranslationPipeline(pipelineDeps), context(work.paths, request).ctx);
+    await execute(
+      new ContentTranslationPipeline(
+        deps.llm,
+        deps.settings,
+        deps.translationRuns,
+        deps.snapshots,
+        deps.chapterSlots,
+        deps.broadcaster,
+      ),
+      context(work.paths, request).ctx,
+    );
     expect(readChapterTranslation(seed.folder, 'vi', seed.novel.chapters[0].file)?.title).toBe('User title');
-    await execute(contentTranslationPipeline(pipelineDeps), context(work.paths, { ...request, overwrite: true }).ctx);
+    await execute(
+      new ContentTranslationPipeline(
+        deps.llm,
+        deps.settings,
+        deps.translationRuns,
+        deps.snapshots,
+        deps.chapterSlots,
+        deps.broadcaster,
+      ),
+      context(work.paths, { ...request, overwrite: true }).ctx,
+    );
     expect(readChapterTranslation(seed.folder, 'vi', seed.novel.chapters[0].file)?.title).toBe('Automatic');
   });
 
@@ -115,7 +137,7 @@ describe('[TH04-05] L2-TH04-05-03 chapter translation contract', () => {
   it.fails('known gap: preserves stale user-edited chapters without explicit overwrite', async () => {
     await saveEdited();
     await editGlossaryEntry(seed.folder, 'vi', key, 'Changed glossary');
-    const plan = await checkContentRun({ ...deps, runs: deps.translationRuns }, work.paths, request);
+    const plan = await checkContentRun(deps.llm, deps.settings, deps.snapshots, work.paths, request);
     expect(plan.statuses[0]).toMatchObject({ status: 'stale', edited: true });
     expect(plan.queue).toEqual([2]);
   });
@@ -130,7 +152,14 @@ describe('[TH04-05] L2-TH04-05-03 chapter translation contract', () => {
       reason === 'cancel' ? abortError() : new CodedError(ErrorCode.LlmTimeout, 'timeout'),
     );
     const run = execute(
-      contentTranslationPipeline({ ...deps, runs: deps.translationRuns }),
+      new ContentTranslationPipeline(
+        deps.llm,
+        deps.settings,
+        deps.translationRuns,
+        deps.snapshots,
+        deps.chapterSlots,
+        deps.broadcaster,
+      ),
       context(work.paths, request).ctx,
     );
     if (reason === 'cancel') await expect(run).rejects.toMatchObject({ name: 'AbortError' });

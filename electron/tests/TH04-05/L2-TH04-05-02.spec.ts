@@ -3,7 +3,7 @@ import { persona, seedAnalysis } from '../support/analysis';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GlossaryRunRequest } from '@dreamer/shared/models/translation';
 import {
-  glossaryTranslationPipeline,
+  GlossaryTranslationPipeline,
   checkGlossaryRun,
 } from '../../main/features/translation/glossary-translation-pipeline';
 import { editGlossaryEntry, readGlossary, saveLlmEntries } from '../../main/features/translation/translation-glossary';
@@ -25,8 +25,7 @@ describe('[TH04-05] L2-TH04-05-02 glossary translation persistence', () => {
   const key = { entityType: 'Persona' as const, entityName: 'Mai', term: null, kind: 'name' as const };
 
   it('AC1/2/3 excludes user entries and keeps an entity and its aliases in the same planned batch', async () => {
-    const pipelineDeps = { ...deps, runs: deps.translationRuns };
-    const initial = await checkGlossaryRun(pipelineDeps, work.paths, request);
+    const initial = await checkGlossaryRun(deps.llm, deps.settings, deps.snapshots, work.paths, request);
     const aliases = initial.batches.filter((batch) => batch.some((row) => row.entityName === 'Mai'));
     expect(aliases).toHaveLength(1);
     expect(
@@ -36,9 +35,12 @@ describe('[TH04-05] L2-TH04-05-02 glossary translation persistence', () => {
         .sort(),
     ).toEqual(['M', 'Mai']);
     await editGlossaryEntry(seed.folder, 'vi', key, 'User Mai');
-    const check = await checkGlossaryRun(pipelineDeps, work.paths, request);
+    const check = await checkGlossaryRun(deps.llm, deps.settings, deps.snapshots, work.paths, request);
     expect(check.queue.map((row) => row.term ?? row.entityName).sort()).toEqual(['Hanoi', 'M']);
-    const all = await checkGlossaryRun(pipelineDeps, work.paths, { ...request, scope: 'all' });
+    const all = await checkGlossaryRun(deps.llm, deps.settings, deps.snapshots, work.paths, {
+      ...request,
+      scope: 'all',
+    });
     expect(all.queue.some((row) => row.entityName === 'Mai' && row.kind === 'name')).toBe(false);
     // A concurrent automatic save must also preserve the user-authored value at the persistence boundary.
     await saveLlmEntries(seed.folder, 'vi', [{ key, translation: 'Automatic Mai' }]);
@@ -46,7 +48,7 @@ describe('[TH04-05] L2-TH04-05-02 glossary translation persistence', () => {
       translation: 'User Mai',
       source: 'user',
     });
-    const fresh = await checkGlossaryRun(pipelineDeps, work.paths, request);
+    const fresh = await checkGlossaryRun(deps.llm, deps.settings, deps.snapshots, work.paths, request);
     const maiRows = fresh.batches.find((batch) => batch.some((row) => row.entityName === 'Mai'))!;
     expect(maiRows.filter((row) => row.entityName === 'Mai').map((row) => row.term)).toEqual(['M']);
   });
@@ -66,7 +68,16 @@ describe('[TH04-05] L2-TH04-05-02 glossary translation persistence', () => {
     });
     deps.runForFeature.mockRejectedValueOnce(abortError());
     await expect(
-      execute(glossaryTranslationPipeline({ ...deps, runs: deps.translationRuns }), context(work.paths, request).ctx),
+      execute(
+        new GlossaryTranslationPipeline(
+          deps.llm,
+          deps.settings,
+          deps.translationRuns,
+          deps.snapshots,
+          deps.broadcaster,
+        ),
+        context(work.paths, request).ctx,
+      ),
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(readGlossary(seed.folder, 'vi')).toHaveLength(50);
     expect(deps.translationRuns.lastRun(seed.novel.id)).toMatchObject({ translated: 50, failed: 0 });

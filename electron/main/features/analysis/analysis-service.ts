@@ -6,21 +6,17 @@ import { applyEdits, ApplyChapter, ApplyOutcome } from '@dreamer/shared/core/wor
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { AnalysisEditRequest, AnalysisPlan, AnalysisRun, AnalysisRunRequest } from '@dreamer/shared/models/analysis';
 import { AnalysisIndexFile, ChapterResult, EditProblem, WorldDraftEdit } from '@dreamer/shared/models/analysis';
-import {
-  AnalysisStatus,
-  OntologyProblem,
-  Occurrence,
-  OccurrenceQuery,
-  QuoteMatch,
-} from '@dreamer/shared/models/analysis';
-import {
-  QuoteQuery,
-  ReviewPage,
-  ReviewQuery,
-  World,
-  WorldEditPreview,
-  WorldEditScope,
-} from '@dreamer/shared/models/analysis';
+import { AnalysisStatus } from '@dreamer/shared/models/analysis';
+import { OntologyProblem } from '@dreamer/shared/models/analysis';
+import { Occurrence } from '@dreamer/shared/models/analysis';
+import { OccurrenceQuery } from '@dreamer/shared/models/analysis';
+import { QuoteMatch } from '@dreamer/shared/models/analysis';
+import { QuoteQuery } from '@dreamer/shared/models/analysis';
+import { ReviewPage } from '@dreamer/shared/models/analysis';
+import { ReviewQuery } from '@dreamer/shared/models/analysis';
+import { World } from '@dreamer/shared/models/analysis';
+import { WorldEditPreview } from '@dreamer/shared/models/analysis';
+import { WorldEditScope } from '@dreamer/shared/models/analysis';
 import { WorldEntity, WorldPreviewRequest, WorldQuery, WorldScopeRequest } from '@dreamer/shared/models/analysis';
 import { NovelMetadata } from '@dreamer/shared/models/novel-store';
 import { PipelineRun } from '@dreamer/shared/models/pipeline';
@@ -32,22 +28,22 @@ import { readMetadata, withNovelLock } from '../library/novel/novel-files';
 import { deleteLegacyWorldFile, readAlignedIndex, readAnalysisIndex, readReviewParagraphs } from './analysis-files';
 import { writeAnalysisIndex, writeChapterResult } from './analysis-files';
 import { checkOntology, openOntology, resetOntology } from './analysis-ontology';
+import { LlmService } from '../llm/llm-service';
+import { SettingsStore } from '../settings/settings-store';
 import { AnalysisRuns } from './analysis-runs';
 import { AnalysisSnapshot, AnalysisSnapshots, modelWith } from './analysis-snapshot';
-import { AnalysisRunCheck, checkAnalysisRun, WorldAnalysisDeps } from './world-analysis-pipeline';
+import { AnalysisRunCheck, checkAnalysisRun } from './world-analysis-pipeline';
 
 export class AnalysisService {
   private readonly observed: WeakSet<AppDataSession> = new WeakSet<AppDataSession>();
 
   constructor(
     private readonly session: () => AppDataSession,
-    private readonly deps: WorldAnalysisDeps,
-    private readonly snapshots: AnalysisSnapshots = new AnalysisSnapshots(),
+    private readonly llm: LlmService,
+    private readonly settings: SettingsStore,
+    private readonly runs: AnalysisRuns,
+    private readonly snapshots: AnalysisSnapshots,
   ) {}
-
-  private get runs(): AnalysisRuns {
-    return this.deps.runs;
-  }
 
   private current(): AppDataSession {
     const session: AppDataSession = this.session();
@@ -86,7 +82,7 @@ export class AnalysisService {
 
   async plan(request: AnalysisRunRequest): Promise<AnalysisPlan> {
     const session: AppDataSession = this.current();
-    const check: AnalysisRunCheck = await checkAnalysisRun(this.deps, session.paths, request);
+    const check: AnalysisRunCheck = await checkAnalysisRun(this.llm, this.settings, session.paths, request);
     const blockedReason: ErrorCode | null = novelLocks(new PipelineRunRepository(session.db)).has(request.novelId)
       ? ErrorCode.NovelLocked
       : check.blockedReason;
@@ -104,7 +100,7 @@ export class AnalysisService {
 
   async start(request: AnalysisRunRequest): Promise<void> {
     const session: AppDataSession = this.current();
-    const check: AnalysisRunCheck = await checkAnalysisRun(this.deps, session.paths, request);
+    const check: AnalysisRunCheck = await checkAnalysisRun(this.llm, this.settings, session.paths, request);
     if (check.blockedReason)
       throw new CodedError(check.blockedReason, `World Analysis cannot run: ${check.blockedReason}`);
     const novel: NovelMetadata = this.readNovel(request.novelId);

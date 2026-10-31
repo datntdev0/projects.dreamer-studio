@@ -11,8 +11,8 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { LlmStore } from '@core/stores/llm-store';
 import { SettingsStore } from '@core/stores/settings-store';
 import { checkLlmChoice, formatLlmChoice, LLM_CLIS, LLM_FEATURE_IDS } from '@dreamer/shared/models/llm';
-import { LLM_MODEL_SUGGESTIONS, resolveLlm } from '@dreamer/shared/models/llm';
-import type { LlmChoice, LlmCliId, LlmCliStatus, LlmFeatureId } from '@dreamer/shared/models/llm';
+import { LLM_EFFORTS, LLM_MODEL_SUGGESTIONS, resolveLlm } from '@dreamer/shared/models/llm';
+import type { LlmChoice, LlmCliId, LlmCliStatus, LlmEffort, LlmFeatureId } from '@dreamer/shared/models/llm';
 import type { LlmProblem, LlmSettings } from '@dreamer/shared/models/llm';
 import { SettingsReset } from '../settings-reset';
 
@@ -37,6 +37,7 @@ interface LlmSlot {
   options: CliOption[];
   selectDisabled: boolean;
   suggestions: string[];
+  effortEnabled: boolean;
   problem: SlotProblem | null;
 }
 
@@ -59,6 +60,7 @@ export class LlmFeaturesSectionComponent implements OnInit {
   });
 
   protected readonly prefix: string = PREFIX;
+  protected readonly efforts: LlmEffort[] = LLM_EFFORTS;
   protected readonly noCliInstalled: Signal<boolean> = computed(() => this.llm.summary() === 'none');
   protected readonly defaultSlot: Signal<LlmSlot> = computed(() => {
     const settings: LlmSettings | undefined = this.settings.settings()?.llm;
@@ -108,6 +110,14 @@ export class LlmFeaturesSectionComponent implements OnInit {
     if (!(await this.write(slot.key, { ...slot.choice, model: value || null }))) field.revert();
   }
 
+  protected async setEffort(slot: LlmSlot, event: Event): Promise<void> {
+    if (!slot.choice) return;
+    const select: HTMLSelectElement = event.target as HTMLSelectElement;
+    const choice: LlmChoice = { cli: slot.choice.cli, model: slot.choice.model };
+    if (select.value) choice.effort = select.value as LlmEffort;
+    if (!(await this.write(slot.key, choice))) select.value = slot.choice.effort ?? '';
+  }
+
   protected reset(): void {
     void this.resetService.run('llm');
   }
@@ -122,7 +132,9 @@ export class LlmFeaturesSectionComponent implements OnInit {
     const settings: LlmSettings | undefined = this.settings.settings()?.llm;
     if (!settings) return Promise.resolve(false);
     const previous: LlmChoice | null = key === 'default' ? settings.default : (settings.features[key] ?? null);
-    if (previous?.cli === choice?.cli && previous?.model === choice?.model) return Promise.resolve(true);
+    if (previous?.cli === choice?.cli && previous?.model === choice?.model && previous?.effort === choice?.effort) {
+      return Promise.resolve(true);
+    }
     if (key === 'default') return this.settings.update({ llm: { default: choice } });
     const features: LlmSettings['features'] = { ...settings.features };
     if (choice) features[key] = choice;
@@ -144,6 +156,7 @@ export class LlmFeaturesSectionComponent implements OnInit {
       options,
       selectDisabled: !options.some((option: CliOption): boolean => !option.disabled && option.value !== current),
       suggestions: choice ? LLM_MODEL_SUGGESTIONS[choice.cli] : [],
+      effortEnabled: choice !== null && LLM_CLIS[choice.cli].effort,
       problem: problem
         ? {
             key: problem,

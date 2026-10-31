@@ -5,7 +5,7 @@ import { badOutput, classifyCliError, LlmAdapter, outputObject, parseJson, parse
 export const codexAdapter: LlmAdapter = {
   id: 'codex',
   versionArgs: ['--version'],
-  runCommand({ model, prompt, schemaFile }): { args: string[]; stdin: string | null } {
+  runCommand({ model, effort, prompt, schemaFile }): { args: string[]; stdin: string | null } {
     const args: string[] = [
       'exec',
       '--json',
@@ -17,6 +17,7 @@ export const codexAdapter: LlmAdapter = {
       schemaFile,
     ];
     if (model !== null) args.push('-m', model);
+    if (effort !== null) args.push('-c', `model_reasoning_effort=${effort}`);
     args.push('-');
     return { args, stdin: prompt };
   },

@@ -1,5 +1,5 @@
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
-import { LlmCliId, LlmUsage } from '@dreamer/shared/models/llm';
+import { LlmCliId, LlmEffort, LlmUsage } from '@dreamer/shared/models/llm';
 import { antigravityAdapter } from './adapters/antigravity';
 import { claudeAdapter } from './adapters/claude';
 import { codexAdapter } from './adapters/codex';
@@ -9,6 +9,7 @@ export interface LlmAdapter {
   versionArgs: string[];
   runCommand(input: {
     model: string | null;
+    effort: LlmEffort | null;
     prompt: string;
     schema: Record<string, unknown>;
     schemaFile: string;

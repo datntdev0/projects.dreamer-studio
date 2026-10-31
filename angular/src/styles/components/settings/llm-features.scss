@@ -1,4 +1,4 @@
-// Settings › LLM: models per feature section (default LLM row + one row per feature: CLI select, model id).
+// Settings › LLM: models per feature section (default LLM row + one row per feature: CLI select, model id, effort).
 
 .llm-features {
   scroll-margin-top: var(--sp-xl);
@@ -23,7 +23,7 @@
 
 .llm-features-control {
   display: grid;
-  grid-template-columns: calc(var(--control-h) * 6) calc(var(--control-h) * 7);
+  grid-template-columns: calc(var(--control-h) * 6) calc(var(--control-h) * 7) calc(var(--control-h) * 4);
   gap: var(--sp-sm);
 }
 

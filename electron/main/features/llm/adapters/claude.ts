@@ -5,7 +5,7 @@ import { badOutput, classifyCliError, LlmAdapter, outputObject, parseJson, parse
 export const claudeAdapter: LlmAdapter = {
   id: 'claude',
   versionArgs: ['--version'],
-  runCommand({ model, prompt, schema }): { args: string[]; stdin: string | null } {
+  runCommand({ model, effort, prompt, schema }): { args: string[]; stdin: string | null } {
     const args: string[] = [
       '-p',
       '--output-format',
@@ -20,6 +20,7 @@ export const claudeAdapter: LlmAdapter = {
       JSON.stringify(schema),
     ];
     if (model !== null) args.push('--model', model);
+    if (effort !== null) args.push('--effort', effort);
     return { args, stdin: prompt };
   },
   parseOutput(stdout): { value: unknown; usage: LlmUsage | null } {

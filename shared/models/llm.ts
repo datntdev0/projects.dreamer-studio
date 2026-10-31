@@ -17,6 +17,14 @@ export function isLlmCliId(value: unknown): value is LlmCliId {
   return typeof value === 'string' && LLM_CLI_IDS.includes(value as LlmCliId);
 }
 
+export type LlmEffort = 'low' | 'medium' | 'high';
+
+export const LLM_EFFORTS: LlmEffort[] = ['low', 'medium', 'high'];
+
+export function isLlmEffort(value: unknown): value is LlmEffort {
+  return typeof value === 'string' && LLM_EFFORTS.includes(value as LlmEffort);
+}
+
 export function isModelId(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9._:/-]{1,100}$/.test(value);
 }
@@ -28,6 +36,7 @@ export interface LlmCliInfo {
   versionPattern: RegExp;
   signIn: string;
   example: string;
+  effort: boolean;
 }
 
 export const LLM_CLIS: Record<LlmCliId, LlmCliInfo> = {
@@ -38,6 +47,7 @@ export const LLM_CLIS: Record<LlmCliId, LlmCliInfo> = {
     versionPattern: /^(\d+\.\d+\.\d+) \(Claude Code\)/,
     signIn: 'claude auth login',
     example: 'C:\\Users\\<you>\\.local\\bin\\claude.exe',
+    effort: true,
   },
   codex: {
     id: 'codex',
@@ -46,6 +56,7 @@ export const LLM_CLIS: Record<LlmCliId, LlmCliInfo> = {
     versionPattern: /^codex-cli (\d+\.\d+\.\d+)/,
     signIn: 'codex login',
     example: 'C:\\Users\\<you>\\AppData\\Local\\Programs\\OpenAI\\Codex\\bin\\codex.exe',
+    effort: true,
   },
   antigravity: {
     id: 'antigravity',
@@ -54,6 +65,7 @@ export const LLM_CLIS: Record<LlmCliId, LlmCliInfo> = {
     versionPattern: /^(\d+\.\d+\.\d+)\s*$/,
     signIn: 'agy',
     example: 'C:\\Users\\<you>\\AppData\\Local\\agy\\bin\\agy.exe',
+    effort: false,
   },
 };
 
@@ -66,10 +78,15 @@ export const LLM_MODEL_SUGGESTIONS: Record<LlmCliId, string[]> = {
 export interface LlmChoice {
   cli: LlmCliId;
   model: string | null;
+  effort?: LlmEffort;
 }
 
+const LLM_CHOICE_KEYS: string[] = ['cli', 'model', 'effort'];
+
 export function isLlmChoice(value: unknown): value is LlmChoice {
-  if (!isPlainObject(value) || Object.keys(value).length !== 2) return false;
+  if (!isPlainObject(value) || !('model' in value)) return false;
+  if (Object.keys(value).some((key: string): boolean => !LLM_CHOICE_KEYS.includes(key))) return false;
+  if ('effort' in value && !isLlmEffort(value.effort)) return false;
   return isLlmCliId(value.cli) && (value.model === null || isModelId(value.model));
 }
 
@@ -103,6 +120,7 @@ export interface LlmFeatureRunRequest {
 export interface LlmRunRequest extends LlmFeatureRunRequest {
   cli: LlmCliId;
   model: string | null;
+  effort?: LlmEffort;
 }
 
 export interface LlmRunResult {
@@ -224,7 +242,8 @@ export function resolveLlm(settings: LlmSettings, feature: LlmFeatureId, statuse
 }
 
 export function formatLlmChoice(choice: LlmChoice, cliDefaultLabel: string): string {
-  return `${LLM_CLIS[choice.cli].name} · ${choice.model ?? cliDefaultLabel}`;
+  const effort: string = choice.effort ? ` · ${choice.effort}` : '';
+  return `${LLM_CLIS[choice.cli].name} · ${choice.model ?? cliDefaultLabel}${effort}`;
 }
 
 export const LLM_TEST_TIMEOUT_MS: number = 30000;

@@ -3,7 +3,7 @@ import { ADAPTERS } from '../llm-adapter';
 
 describe('[TH02-03] LLM adapter contract', () => {
   it.each(Object.values(ADAPTERS))('$id builds a command and parses its structured result', (adapter) => {
-    const command = adapter.runCommand({ model: 'model-x', prompt: 'task', schema: { type: 'object' }, schemaFile: 'schema.json', timeoutMs: 1000 });
+    const command = adapter.runCommand({ model: 'model-x', effort: null, prompt: 'task', schema: { type: 'object' }, schemaFile: 'schema.json', timeoutMs: 1000 });
     expect(command.args.join(' ')).toContain('model-x');
     const output = adapter.id === 'claude'
       ? JSON.stringify({ subtype: 'success', structured_output: { ok: true } })

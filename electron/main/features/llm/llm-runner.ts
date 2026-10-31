@@ -4,7 +4,7 @@ import { appendFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { CodedError, ErrorCode } from '@dreamer/shared/errors/app-error';
 import { errorMessage } from '@dreamer/shared/errors/error-stack';
-import { isModelId, LlmRunRequest, LlmRunResult, LlmUsage } from '@dreamer/shared/models/llm';
+import { isLlmEffort, isModelId, LlmRunRequest, LlmRunResult, LlmUsage } from '@dreamer/shared/models/llm';
 import { createLogger, Logger } from '../../logging/logger';
 import { LlmAdapter } from './llm-adapter';
 import { spawnCli, SpawnCliResult } from './llm-process';
@@ -43,6 +43,9 @@ export async function runLlm({
   if (request.model !== null && !isModelId(request.model)) {
     throw new CodedError(ErrorCode.LlmCliFailed, 'Invalid model id', 'model');
   }
+  if (request.effort !== undefined && !isLlmEffort(request.effort)) {
+    throw new CodedError(ErrorCode.LlmCliFailed, 'Invalid effort', 'effort');
+  }
   if (adapter.id === 'antigravity' && /\.(cmd|bat)$/i.test(path)) {
     throw new CodedError(ErrorCode.LlmCliFailed, 'Antigravity requires a native executable');
   }
@@ -51,7 +54,7 @@ export async function runLlm({
   let stdout: string = '';
   let stderr: string = '';
   log.info(
-    `${adapter.id} run started: promptBytes=${Buffer.byteLength(request.prompt)}, model=${request.model ?? 'default'}`,
+    `${adapter.id} run started: promptBytes=${Buffer.byteLength(request.prompt)}, model=${request.model ?? 'default'}, effort=${request.effort ?? 'default'}`,
   );
   try {
     if (promptFile) {
@@ -64,6 +67,7 @@ export async function runLlm({
     await writeFile(schemaFile, JSON.stringify(request.schema), 'utf8');
     const command: { args: string[]; stdin: string | null } = adapter.runCommand({
       model: request.model,
+      effort: request.effort ?? null,
       prompt: request.prompt,
       schema: request.schema,
       schemaFile,

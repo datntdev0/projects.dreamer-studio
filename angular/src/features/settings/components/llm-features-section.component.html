@@ -121,6 +121,27 @@
         [toggleLabel]="'settings.llm.features.showModels' | t"
         (committed)="setModel(slot, $event, modelField)"
       />
+      <span class="ds-select llm-features-effort">
+        <select
+          class="ds-input"
+          [id]="'settings-llm-feature-' + slot.key + '-effort'"
+          [disabled]="!slot.effortEnabled"
+          [attr.aria-label]="'settings.llm.features.effortLabel' | t: { name: prefix + 'slot.' + slot.key | t }"
+          [attr.aria-describedby]="describedBy(slot)"
+          [attr.data-testid]="'settings-llm-feature-' + slot.key + '-effort'"
+          (change)="setEffort(slot, $event)"
+        >
+          <option value="" [selected]="!(slot.choice ?? slot.inherited)?.effort">
+            {{ 'settings.llm.features.effortDefault' | t }}
+          </option>
+          @for (effort of efforts; track effort) {
+            <option [value]="effort" [selected]="effort === (slot.choice ?? slot.inherited)?.effort">
+              {{ prefix + 'effort.' + effort | t }}
+            </option>
+          }
+        </select>
+        <ds-icon name="chevron-down" size="sm" />
+      </span>
     </div>
   </div>
 </ng-template>

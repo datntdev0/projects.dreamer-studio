@@ -149,7 +149,10 @@ export class LlmService {
         resolution.problem ?? 'noDefault',
       );
     }
-    return this.run({ ...request, cli: resolution.choice.cli, model: resolution.choice.model }, options);
+    return this.run(
+      { ...request, cli: resolution.choice.cli, model: resolution.choice.model, effort: resolution.choice.effort },
+      options,
+    );
   }
 
   onChanged(listener: (statuses: LlmCliStatus[]) => void): () => void {

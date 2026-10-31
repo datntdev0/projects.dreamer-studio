@@ -221,6 +221,7 @@
   [preview]="store.editPreview()"
   [checking]="store.editChecking()"
   [busy]="store.busy()"
+  [nameTranslations]="store.nameTranslations()"
   (draftChange)="store.draftChanged($event)"
   (confirmed)="store.saveEdits($event)"
   (closed)="store.closeEdit()"

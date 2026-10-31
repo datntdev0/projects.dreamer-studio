@@ -51,7 +51,7 @@
   </p>
 }
 <div class="ds-world-review-body">
-  @if (!store.review()) {
+  @if (!store.displayReview()) {
     <ds-area-state kind="loading" [heading]="'analysis.review.loading' | t" compact />
   } @else {
     @if (sections().length > 1) {

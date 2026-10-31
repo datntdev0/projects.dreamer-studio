@@ -13,7 +13,7 @@ export function readAppVersion() {
   return readRootPackage().version;
 }
 
-export function createBuildOptions() {
+export function createBuildOptions(onRebuild) {
   const { version, author } = readRootPackage();
   return {
     entryPoints: { 'main/index': `${electronDir}main/index.ts`, 'preload/index': `${electronDir}preload/index.ts` },
@@ -32,7 +32,9 @@ export function createBuildOptions() {
       BUILD_DATE: JSON.stringify(process.env.DREAMER_BUILD_DATE || null),
     },
     logLevel: 'info',
-    plugins: [],
+    plugins: onRebuild
+      ? [{ name: 'rebuild', setup: (b) => b.onEnd((result) => result.errors.length || onRebuild()) }]
+      : [],
   };
 }
 
@@ -40,8 +42,8 @@ export async function buildOnce() {
   await build(createBuildOptions());
 }
 
-export async function watchBuild() {
-  const ctx = await context(createBuildOptions());
+export async function watchBuild(onRebuild) {
+  const ctx = await context(createBuildOptions(onRebuild));
   await ctx.watch();
   return ctx;
 }

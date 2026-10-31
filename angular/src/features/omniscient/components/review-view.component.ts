@@ -71,7 +71,7 @@ export class ReviewViewComponent {
   });
   protected readonly disabled = computed(() => this.store.locked() || this.store.busy());
   protected readonly sections = computed<ReviewSection[]>(() => {
-    const items = this.store.review()?.items ?? [];
+    const items = this.store.displayReview()?.items ?? [];
     return REASON_ORDER.map((reason) => ({
       reason,
       severity: REASON_SEVERITY[reason],

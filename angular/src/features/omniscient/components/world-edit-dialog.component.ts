@@ -9,6 +9,7 @@ import { PillComponent } from '@components/status/pill.component';
 import { TooltipDirective } from '@components/tooltip/tooltip.directive';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { translateEntityNames } from '@dreamer/shared/core/glossary';
 import { hasProperty } from '@dreamer/shared/core/ontology-rules';
 import { addedFact, applyDraftEdits, creatorOf, factKey, mergeEntities } from '@dreamer/shared/core/world-edit';
 import { patchEntity, patchFact, removeEntity, removeFact, touchesEntity } from '@dreamer/shared/core/world-edit';
@@ -151,6 +152,7 @@ export class WorldEditDialogComponent {
   readonly preview = input<WorldEditPreview | null>(null);
   readonly checking = input<boolean, unknown>(false, { transform: booleanAttribute });
   readonly busy = input<boolean, unknown>(false, { transform: booleanAttribute });
+  readonly nameTranslations = input<Map<string, string>>(new Map());
   readonly draftChange = output<WorldDraftEdit[]>();
   readonly confirmed = output<WorldDraftEdit[]>();
   readonly closed = output<void>();
@@ -178,7 +180,9 @@ export class WorldEditDialogComponent {
 
   protected readonly detail = computed(() => {
     const issue = this.issue();
-    return issue ? this.i18n.t(issueDetailKeys[issue.reason], this.withTypeLabel(issue.params)) : '';
+    return issue
+      ? this.i18n.t(issueDetailKeys[issue.reason], this.withTypeLabel(this.translateParams(issue.params)))
+      : '';
   });
 
   protected readonly entityCards = computed<EntityCard[]>(() => {
@@ -266,12 +270,12 @@ export class WorldEditDialogComponent {
   }
 
   protected entityLabel(entity: WorldEditEntity): string {
-    return `${entity.name || this.i18n.t('analysis.edit.unnamed')} · ${this.typeLabel(entity.type)}`;
+    return `${this.displayName(entity) || this.i18n.t('analysis.edit.unnamed')} · ${this.typeLabel(entity.type)}`;
   }
 
   protected entityName(id: string | undefined, fallback: string | undefined): string {
     const entity = this.findEntity(id);
-    return entity ? entity.name || this.i18n.t('analysis.edit.unnamed') : (fallback ?? '?');
+    return entity ? this.displayName(entity) || this.i18n.t('analysis.edit.unnamed') : (fallback ?? '?');
   }
 
   protected hasEntity(id: string | undefined): boolean {
@@ -513,6 +517,28 @@ export class WorldEditDialogComponent {
     );
   }
 
+  private displayName(entity: WorldEditEntity): string {
+    const translations = this.nameTranslations();
+    return translations.size ? translateEntityNames(entity, translations).name : entity.name;
+  }
+
+  private translateParams(params: Record<string, string>): Record<string, string> {
+    const translations = this.nameTranslations();
+    if (!translations.size) return params;
+    const names = new Map<string, string>();
+    for (const entity of this.base().entities) {
+      const translated = translateEntityNames(entity, translations);
+      names.set(entity.name, translated.name);
+      entity.aliases.forEach((alias, index) => names.set(alias, translated.aliases[index]));
+    }
+    return Object.fromEntries(
+      Object.entries(params).map(([key, value]) => [
+        key,
+        key === 'name' || key === 'alias' ? (names.get(value) ?? value) : value,
+      ]),
+    );
+  }
+
   private withTypeLabel(params: Record<string, string>): Record<string, string> {
     return params['type'] ? { ...params, type: this.typeLabel(params['type']) } : params;
   }
@@ -557,8 +583,10 @@ export class WorldEditDialogComponent {
   }
 
   private describe(edit: WorldDraftEdit): string {
-    const name = (id: string): string =>
-      this.base().entities.find((entity) => entity.id === id)?.name ?? this.entityName(id, id);
+    const name = (id: string): string => {
+      const entity = this.base().entities.find((item) => item.id === id);
+      return entity ? this.displayName(entity) : this.entityName(id, id);
+    };
     const fields = (patch: object): string =>
       Object.entries(patch)
         .map(([field, value]) => this.fieldText(field, value))
